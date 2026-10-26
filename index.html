@@ -27,7 +27,7 @@ h4{font-size:12px;margin-bottom:12px;color:var(--mut);font-weight:500;text-trans
 .card{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;animation:fu .45s ease both}
 .hero{background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;border:0}
 .hero small{opacity:.85;font-size:13px}
-.big{font-size:38px;font-weight:300;letter-spacing:-.03em;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.big{font-size:38px;color:#2563eb;font-weight:300;letter-spacing:-.03em;margin:6px 0 4px;font-variant-numeric:tabular-nums}
 .mini small{display:block;color:var(--mut);font-size:12px;margin-bottom:4px}
 .mini b{font-size:19px;font-weight:500;word-break:break-word;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .grid2,.grid3{display:grid;gap:12px;margin-bottom:14px;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));max-width:100%;min-width:0}
@@ -162,7 +162,9 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bk-ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--line);color:var(--a1);box-shadow:0 0 18px -6px var(--a1);flex-shrink:0}
 .bk-ic .i{width:22px;height:22px;filter:drop-shadow(0 0 4px var(--a1))}
 .bk-val{font-size:26px;font-weight:300;letter-spacing:-.02em;margin:12px 0 2px;font-variant-numeric:tabular-nums}
-.hero .big{font-variant-numeric:tabular-nums}
+.hero .big{font-variant-numeric:tabular-nums;color:#fff}
+html.claro .big,html.claro .bk-val{background:linear-gradient(90deg,#2563eb,#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+html.claro .big.neg,html.claro .bk-val.neg{-webkit-text-fill-color:#e11d48;background:none}
 @media(min-width:900px){body{padding-left:248px}.side{transform:none}.ham,.sbClose,#ov{display:none}.top .logo{display:none}#app{max-width:880px}#toast{left:calc(50% + 124px)}}
 #modal{position:fixed;inset:0;background:rgba(3,6,12,.6);display:none;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
 #modal.on{display:flex}
@@ -347,7 +349,7 @@ html.claro .sumcard{background:linear-gradient(135deg,rgba(139,92,246,.09),rgba(
 .sb-item:hover{transform:translateX(3px)}
 .sb-item{transition:color .25s,background .25s,box-shadow .25s,transform .25s}
 .sb-item.on{box-shadow:0 10px 28px -10px rgba(139,92,246,.6),0 0 22px -10px var(--a1),inset 0 0 0 1px rgba(255,255,255,.05)}
-html.claro{--txt:#334155;--hd:#1e293b;--mut:#64748b;--line:#dbe3ef;--card2:#f1f5fb;--card:#ffffff;--bg:#eef2f8}
+html.claro{--txt:#475569;--hd:#2563eb;--mut:#64748b;--line:#dbe3ef;--card2:#f1f5fb;--card:#ffffff;--bg:#eef2f8}
 html.claro .acard{border-color:rgba(15,23,42,.08)}
 html.claro .gbtn{border-color:rgba(15,23,42,.14)}
 html.claro .sb-item:hover{background:rgba(15,23,42,.04)}
