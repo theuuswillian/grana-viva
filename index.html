@@ -161,6 +161,24 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bk-l small{font-size:12px;color:var(--mut)}
 .bk-ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--line);color:var(--a1);box-shadow:0 0 18px -6px var(--a1);flex-shrink:0}
 .bk-ic .i{width:22px;height:22px;filter:drop-shadow(0 0 4px var(--a1))}
+.bk-logo{padding:0;overflow:hidden;position:relative}
+.bl-wrap{position:relative}
+.bl-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px;box-sizing:border-box;display:block;border-radius:inherit}
+.bo-logo img{width:100%;height:100%;object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;display:block}
+.bl-ini{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--a1);border:1px solid var(--a1);box-shadow:0 0 12px -4px var(--a1);box-sizing:border-box}
+.bl-wrap>.bl-ini{position:absolute;inset:0}
+.bo-logo{width:34px;height:34px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.bkPick{margin-bottom:12px}
+.bkPickLbl{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+.bkList{display:grid;gap:6px;max-height:260px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--card2)}
+.bkOpt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:12px;padding:6px 8px;cursor:pointer;color:inherit;font:inherit;min-width:0}
+.bkOpt:hover{border-color:rgba(139,92,246,.35)}
+.bkOpt.on{border-color:var(--a1);box-shadow:0 0 16px -6px var(--a1)}
+.bo-txt{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;text-align:left}
+.bo-txt b{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bo-txt small{font-size:11px;color:var(--mut)}
+.bo-plain{border:1px dashed var(--line)}
+.bkOutro{display:block;margin-top:8px}
 .bk-val{font-size:26px;font-weight:300;letter-spacing:-.02em;margin:12px 0 2px;font-variant-numeric:tabular-nums}
 .hero .big{font-variant-numeric:tabular-nums;color:#fff}
 html.claro .big,html.claro .bk-val{background:linear-gradient(90deg,#2563eb,#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
@@ -1386,6 +1404,67 @@ function viewCfg(){
 
 const CARD_COR=[['#22c55e','#0f766e','Verde'],['#8b5cf6','#312e81','Violeta'],['#06b6d4','#1e3a8a','Azul'],['#ec4899','#7e1d6b','Rosa'],['#f59e0b','#9a3412','Âmbar']];
 const BANCO_TIPOS=['Conta corrente','Poupança','Carteira digital','Investimentos','Dinheiro','Outros'];
+/* bancos e instituições brasileiros: c = código de compensação (compe), d = domínio para a logo, t = tipo sugerido */
+const BANCOS_BR=[
+{c:'001',n:'Banco do Brasil',d:'bb.com.br'},
+{c:'033',n:'Santander',d:'santander.com.br'},
+{c:'104',n:'Caixa Econômica Federal',d:'caixa.gov.br'},
+{c:'237',n:'Bradesco',d:'bradesco.com.br'},
+{c:'341',n:'Itaú Unibanco',d:'itau.com.br'},
+{c:'260',n:'Nubank',d:'nubank.com.br'},
+{c:'077',n:'Banco Inter',d:'bancointer.com.br'},
+{c:'336',n:'Banco C6',d:'c6bank.com.br'},
+{c:'208',n:'BTG Pactual',d:'btgpactual.com'},
+{c:'399',n:'BTG Pactual Digital',d:'btgpactual.com'},
+{c:'409',n:'Unibanco',d:'unibanco.com.br'},
+{c:'735',n:'Neon',d:'neon.com.br'},
+{c:'290',n:'PagBank',d:'pagbank.com.br'},
+{c:'380',n:'PicPay',d:'picpay.com'},
+{c:'197',n:'Stone',d:'stone.com.br'},
+{c:'323',n:'Mercado Pago',d:'mercadopago.com.br'},
+{c:'748',n:'Sicredi',d:'sicredi.com.br'},
+{c:'756',n:'Sicoob',d:'sicoob.com.br'},
+{c:'422',n:'Banco Safra',d:'safra.com.br'},
+{c:'745',n:'Citibank',d:'citibank.com.br'},
+{c:'655',n:'Banco Votorantim',d:'bv.com.br'},
+{c:'318',n:'Banco BMG',d:'bmg.com.br'},
+{c:'623',n:'Banco Pan',d:'bancopan.com.br'},
+{c:'212',n:'Banco Original',d:'original.com.br'},
+{c:'707',n:'Banco Daycoval',d:'daycoval.com.br'},
+{c:'246',n:'Banco ABC Brasil',d:'abcbrasil.com.br'},
+{c:'243',n:'Banco Master',d:'bancomaster.com.br'},
+{c:'746',n:'Banco Modal',d:'modal.com.br'},
+{c:'271',n:'Banco Genial',d:'genialinvestimentos.com.br'},
+{c:'280',n:'Will Bank',d:'willbank.com.br'},
+{c:'335',n:'Banco Digio',d:'digio.com.br'},
+{c:'637',n:'Banco Sofisa',d:'sofisa.com.br'},
+{c:'218',n:'Banco BS2',d:'bs2.com'},
+{c:'082',n:'Banco Topázio',d:'bancotopazio.com.br'},
+{c:'634',n:'Banco Triângulo',d:'bancotriangulo.com.br'},
+{c:'613',n:'Omni Banco',d:'omni.com.br'},
+{c:'102',n:'XP Investimentos',d:'xpi.com.br'},
+{c:'121',n:'Agibank',d:'agibank.com.br'},
+{c:'403',n:'Cora',d:'cora.com.br'},
+{c:'136',n:'Unicred',d:'unicred.com.br'},
+{c:'084',n:'Uniprime',d:'uniprime.com.br'},
+{c:'041',n:'Banrisul',d:'banrisul.com.br'},
+{c:'070',n:'BRB Banco de Brasília',d:'brb.com.br'},
+{c:'004',n:'Banco do Nordeste',d:'bnb.gov.br'},
+{c:'003',n:'Banco da Amazônia',d:'basa.com.br'},
+{c:'389',n:'Banco Mercantil do Brasil',d:'mercantildobrasil.com.br'},
+{c:'',n:'Dinheiro',d:'',t:'Dinheiro'},
+{c:'',n:'Carteira digital',d:'',t:'Carteira digital'},
+{c:'',n:'Binance',d:'binance.com',t:'Carteira digital'}
+];
+function bancoLogo(d){return d?'https://www.google.com/s2/favicons?domain='+d+'&sz=64':'';}
+function bancoIni(n){const w=String(n||'').split(/\s+/).filter(x=>x&&!/^(do|da|de|dos|das|e)$/i.test(x));return ((w[0]||'?').charAt(0)+(w[1]?w[1].charAt(0):'')).toUpperCase();}
+/* logo em <img>; se não carregar, troca por círculo com as iniciais */
+function bancoLogoHTML(logo,nome,cls){
+  const ini=bancoIni(nome).replace(/[^A-Za-zÀ-ÿ0-9?]/g,'');
+  const fb='<span class="bl-ini">'+ini+'</span>';
+  if(!logo)return '<span class="'+cls+'">'+fb+'</span>';
+  return '<span class="'+cls+' bl-wrap">'+fb+'<img src="'+esc(logo)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+}
 function cicloCartao(c){
   const h=new Date(),y=h.getFullYear(),mo=h.getMonth();
   const fe=Math.max(1,Math.min(31,c.fechamento||1)),ve=Math.max(1,Math.min(31,c.vencimento||1));
@@ -1445,7 +1524,7 @@ function viewBancos(){
     const share=pos&&sb>0?sb/pos*100:0;
     return `<div class="card bk hov ${b.principal?'main':''}">
       <button class="bk-star ${b.principal?'on':''}" data-act="principal" data-id="${b.id}" title="${b.principal?'conta principal':'definir como principal'}" aria-label="${b.principal?'conta principal':'definir como principal'}" aria-pressed="${b.principal?'true':'false'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="${b.principal?'currentColor':'none'}" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
-      <div class="row"><div class="bk-l"><span class="bk-ic">${I('bank')}</span><div><b>${esc(b.nome)}</b><small>${esc(b.tipo)}</small></div></div></div>
+      <div class="row"><div class="bk-l">${(()=>{const inf=BANCOS_BR.find(x=>x.n===b.nome);return (inf||b.logo)?bancoLogoHTML(b.logo||bancoLogo(inf.d),b.nome,'bk-ic bk-logo'):'<span class="bk-ic">'+I('bank')+'</span>';})()}<div><b title="${esc(b.nome)}" aria-label="${esc(b.nome)}">${esc(b.nome)}</b><small>${b.codigo?'cód. '+esc(b.codigo)+' · ':''}${esc(b.tipo)}</small></div></div></div>
       <div class="bk-val ${sb<0?'neg':''}">${brl(sb)}</div>
       <small>informado ${brl(Number(b.saldo)||0)}${b.saldoData?' em '+fmtDate(b.saldoData):''}</small>
       <div class="bar"><i data-w="${share.toFixed(1)}"></i></div>
@@ -1482,23 +1561,45 @@ function cartaoForm(id){
 }
 function bancoForm(id){
   const b=id?S.bancos.find(x=>x.id===id):null;
+  const info=b?BANCOS_BR.find(x=>x.n===b.nome):null;
   form(b?'Editar conta':'Nova conta',[
-    {name:'nome',label:'Banco ou conta',value:b?b.nome:'',required:true,placeholder:'ex: Nubank'},
+    {name:'nome',type:'bancoPick',value:info?info.n:'',outro:(b&&!info)?b.nome:''},
+    {name:'codigo',type:'hidden',value:b?(b.codigo||(info?info.c:'')):''},
+    {name:'logo',type:'hidden',value:b?(b.logo||(info?bancoLogo(info.d):'')):''},
     {name:'tipo',label:'Tipo',type:'select',value:b?b.tipo:BANCO_TIPOS[0],options:BANCO_TIPOS.map(x=>({v:x,t:x}))},
     {name:'saldo',label:'Saldo atual (R$)',value:b?num(b.saldo):'',inputmode:'decimal',placeholder:'0,00'}
   ],v=>{
-    const nome=String(v.nome).trim();
-    if(!nome)return 'Informe o nome da conta.';
+    const lv=(document.querySelector('#mf [name="nomeLivre"]')||{}).value||'';
+    const nome=String(v.nome||lv).trim();
+    if(!nome)return 'Escolha um banco da lista ou informe o nome.';
     const sal=parseBR(v.saldo);
-    const obj={nome,tipo:v.tipo||BANCO_TIPOS[0],saldo:sal,saldoData:(b&&Number(b.saldo)===sal&&b.saldoData)?b.saldoData:hojeISO()};
+    const obj={nome,codigo:String(v.codigo||'').trim(),logo:String(v.logo||'').trim(),tipo:v.tipo||BANCO_TIPOS[0],saldo:sal,saldoData:(b&&Number(b.saldo)===sal&&b.saldoData)?b.saldoData:hojeISO()};
     if(b)Object.assign(b,obj);else S.bancos.push(Object.assign({id:uid(),principal:S.bancos.length===0},obj));
     if(!S.bancos.some(x=>x.principal)&&S.bancos.length)S.bancos[0].principal=true;
     salvar();render();toast('Conta salva');
+  });
+  const mf=$('#mf');
+  const bl=mf.querySelector('.bkList');
+  bl.addEventListener('click',e=>{
+    const o=e.target.closest('.bkOpt');if(!o)return;
+    bl.querySelectorAll('.bkOpt').forEach(x=>{const on=x===o;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on));});
+    const other=o.classList.contains('bkOther');
+    mf.querySelector('[name="nome"]').value=other?'':o.dataset.n;
+    mf.querySelector('[name="codigo"]').value=other?'':o.dataset.c;
+    mf.querySelector('[name="logo"]').value=other?'':o.dataset.l;
+    mf.querySelector('.bkOutro').style.display=other?'':'none';
+    if(!other&&o.dataset.t)mf.querySelector('[name="tipo"]').value=o.dataset.t;
+    if(other)setTimeout(()=>{const i=mf.querySelector('[name="nomeLivre"]');if(i)i.focus();},30);
   });
 }
 
 /* ---------- modal de formulário genérico ---------- */
 function campoHTML(c){
+  if(c.type==='hidden')return `<input type="hidden" name="${c.name}" value="${esc(c.value==null?'':c.value)}">`;
+  if(c.type==='bancoPick'){
+    const opts=BANCOS_BR.map(b=>{const sel=c.value===b.n;const lg=bancoLogo(b.d);return `<button type="button" class="bkOpt${sel?' on':''}" aria-selected="${sel}" data-n="${esc(b.n)}" data-c="${esc(b.c)}" data-l="${esc(lg)}" data-t="${esc(b.t||'')}" title="${esc(b.n)}">${bancoLogoHTML(lg,b.n,'bo-logo')}<span class="bo-txt"><b>${esc(b.n)}</b><small>${b.c?'código '+esc(b.c):'sem código'}</small></span></button>`;}).join('');
+    return `<div class="bkPick"><input type="hidden" name="${c.name}" value="${esc(c.value||'')}"><span class="bkPickLbl">Banco ou instituição</span><div class="bkList" role="listbox" aria-label="lista de bancos">${opts}<button type="button" class="bkOpt bkOther${c.outro?' on':''}" aria-selected="${!!c.outro}" data-n="" data-c="" data-l="" data-t=""><span class="bo-logo bo-plain"><span class="bl-ini">+</span></span><span class="bo-txt"><b>outra instituição</b><small>digitar o nome</small></span></button></div><label class="bkOutro" style="${c.outro?'':'display:none'}">Nome da instituição<input name="nomeLivre" value="${esc(c.outro||'')}" placeholder="ex: cooperativa X" autocomplete="off"></label></div>`;
+  }
   if(c.type==='checkbox')return `<label class="ckrow"><input type="checkbox" name="${c.name}" value="1" ${c.value?'checked':''}><span>${esc(c.label)}</span></label>`;
   if(c.type==='select')return `<label>${esc(c.label)}<select name="${c.name}">${c.options.map(o=>`<option value="${esc(o.v)}" ${String(o.v)===String(c.value)?'selected':''}>${esc(o.t)}</option>`).join('')}</select></label>`;
   const attrs=[
