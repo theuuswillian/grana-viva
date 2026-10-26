@@ -44,7 +44,10 @@ h4{font-size:12px;margin-bottom:12px;color:var(--mut);font-weight:500;text-trans
 .sr{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 input,select{width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:15px;margin-top:6px;outline:none}
 input:focus,select:focus{border-color:var(--a2)}
-.filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:100%;box-sizing:border-box;min-width:0}
+.filtros label{min-width:0;max-width:100%}
+.filtros input{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;text-overflow:ellipsis;overflow:hidden}
+#app>*,#app section,.card{max-width:100%;box-sizing:border-box}
 .filtros label,form label{display:block;font-size:12px;color:var(--mut)}
 form label{margin-bottom:12px}
 .lista{padding:6px 14px}
@@ -291,6 +294,7 @@ body:has(#auth.on) .fab{display:none!important}
 .relWrap .card{margin-bottom:18px}
 .relWrap .card h4{font-size:13px}
 .relWrap .legend{font-size:14px;gap:18px}
+@media(max-width:300px){.filtros{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:420px){.relT .rh,.relT .rrow{grid-template-columns:62px repeat(2,minmax(0,1fr)) 66px;gap:6px}.relT .rrow b,.relT .rrow span{font-size:14px}.relT .rh{font-size:12px}.relT .rrow .sb{font-size:12px}.logo{font-size:32px}}
 @media print{
   .side,.ham,#ov,#toast,.fab,.noprint,#modal,#auth,.sync,.sbClose{display:none!important}
