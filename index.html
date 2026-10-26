@@ -15,7 +15,7 @@ html.claro{--bg:#f2f5fb;--card:#ffffff;--card2:#eef2fa;--txt:#1b2236;--mut:#6570
 button,input,select,textarea,optgroup{font-family:inherit;font-size:inherit}
 .cc-num,.big,.mono{font-family:Inter,sans-serif}
 html,body{background:var(--bg);color:var(--txt);font-family:Inter,sans-serif;font-feature-settings:"cv11","ss01";letter-spacing:-.005em;line-height:1.45;transition:background .3s,color .3s}
-body{min-height:100vh;padding-bottom:40px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding-bottom:150px;-webkit-font-smoothing:antialiased}
 #app{max-width:720px;margin:0 auto;padding:18px 14px}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-top:10px;position:relative;z-index:1;overflow:visible}
 .logo{font-size:30px;line-height:1.25;padding:2px 4px 6px 0;font-weight:600;letter-spacing:-.02em;background:linear-gradient(90deg,var(--a1),var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -347,7 +347,7 @@ html.claro .sumcard{background:linear-gradient(135deg,rgba(139,92,246,.09),rgba(
 .sb-item:hover{transform:translateX(3px)}
 .sb-item{transition:color .25s,background .25s,box-shadow .25s,transform .25s}
 .sb-item.on{box-shadow:0 10px 28px -10px rgba(139,92,246,.6),0 0 22px -10px var(--a1),inset 0 0 0 1px rgba(255,255,255,.05)}
-html.claro{--txt:#1e293b;--mut:#64748b;--line:#dbe3ef;--card2:#f1f5fb;--card:#ffffff;--bg:#eef2f8}
+html.claro{--txt:#334155;--hd:#1e293b;--mut:#64748b;--line:#dbe3ef;--card2:#f1f5fb;--card:#ffffff;--bg:#eef2f8}
 html.claro .acard{border-color:rgba(15,23,42,.08)}
 html.claro .gbtn{border-color:rgba(15,23,42,.14)}
 html.claro .sb-item:hover{background:rgba(15,23,42,.04)}
@@ -362,6 +362,7 @@ html.claro .neg{color:#b91c1c}
 html.claro .badge.warn{color:#b45309}
 html.claro .badge.over{color:#b91c1c}
 html.claro .sb-item.on{color:#1e293b}
+html.claro h1,html.claro h2,html.claro h3,html.claro .big,html.claro .bk-val,html.claro .mini b,html.claro .sumcard b,html.claro .fx-total,html.claro .ringInfo b,html.claro .txt b,html.claro .bk-l b,html.claro .sh-head h3{color:var(--hd)}
 html.claro input,html.claro select{color:#1e293b;border-color:#cdd6e4}
 html.claro input::placeholder{color:#94a3b8}
 /* ===== card bonito (padrão unificado) ===== */
@@ -386,7 +387,8 @@ html.claro .sheet{background:radial-gradient(120% 60% at 100% 0%,rgba(139,92,246
 .bk > .row:first-child{flex-wrap:wrap;align-items:flex-start;row-gap:8px}
 .bk-l{flex:1 1 180px;min-width:0}
 .bk-l>div{min-width:0;flex:1 1 auto}
-.bk-l b,.bk-l small{overflow-wrap:anywhere;display:block}
+.bk-l b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bk-l small{overflow-wrap:anywhere;display:block}
 .bk > .row:first-child>.pill{flex-shrink:0;margin-left:auto}
 /* estrela fora do fluxo do texto: coluna própria à direita, sem position absolute */
 .bk{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:start}
@@ -394,7 +396,7 @@ html.claro .sheet{background:radial-gradient(120% 60% at 100% 0%,rgba(139,92,246
 .bk > .row:not(.small){grid-column:1;grid-row:1;padding-right:0;min-width:0}
 .bk > :not(.bk-star):not(.row:not(.small)){grid-column:1 / -1}
 .bk-l{min-width:0;flex:1 1 0}
-.bk-l b{overflow-wrap:anywhere}
+.bk-l b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .row{flex-wrap:wrap}
 
 .catCell{background:radial-gradient(120% 100% at 100% 0%,rgba(139,92,246,.10),transparent 60%),var(--card2);border-color:rgba(139,92,246,.16)}
