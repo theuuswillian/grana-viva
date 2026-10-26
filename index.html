@@ -272,8 +272,23 @@ body:has(#auth.on) .fab{display:none!important}
 .colPick button.on{border-color:var(--txt);transform:scale(1.1)}
 .aviso-card{border-left:3px solid #f59e0b;font-size:14px;margin-bottom:12px;padding:12px 16px}
 .aviso-card .i{width:15px;height:15px;vertical-align:-3px;margin-right:4px;stroke:#f59e0b}
-.relT{display:grid;grid-template-columns:1.3fr 1fr 1fr .9fr;gap:8px;align-items:center;font-size:14px}
-.relT .h{color:var(--mut);font-size:12px}
+.relHead{gap:10px;flex-wrap:nowrap}
+.relHead h2{white-space:nowrap;min-width:0}
+.relPills{display:flex;gap:6px;margin:0;flex:none}
+.relPills button{padding:5px 11px;font-size:12px;border-radius:999px;background:transparent;color:var(--mut);border:1px solid var(--line);box-shadow:none}
+.relWrap{padding-bottom:120px}
+.relT{font-size:14px;font-variant-numeric:tabular-nums}
+.relT .rh,.relT .rrow{display:grid;grid-template-columns:78px repeat(2,minmax(0,1fr)) 58px;gap:6px;align-items:center}
+.relT .rh{color:var(--mut);font-size:12px;white-space:nowrap;padding-bottom:6px}
+.relT .rrow{padding:10px 0;border-top:1px solid var(--line)}
+.relT .rh span,.relT .rrow span,.relT .rrow b{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.relT .rh span:first-child,.relT .rrow span:first-child{text-align:left}
+.relT .rrow b{font-weight:500}
+.relT .rrow .sb{font-style:normal;color:var(--mut);font-size:12px}
+.relT .rrow .vr{font-weight:600}
+.relT .nw{white-space:nowrap}
+.relChart{padding-bottom:18px}
+@media(max-width:420px){.relT .rh,.relT .rrow{grid-template-columns:66px repeat(2,minmax(0,1fr)) 50px;gap:4px}.relT .rrow b,.relT .rrow span{font-size:12px}.relT .rh{font-size:11px}}
 @media print{
   .side,.ham,#ov,#toast,.fab,.noprint,#modal,#auth,.sync,.sbClose{display:none!important}
   html,body{background:#fff!important;color:#000!important;padding:0!important}
@@ -869,43 +884,48 @@ function relCats(a,b){
   B.forEach(s=>{mp[s.l]=mp[s.l]||{l:s.l,va:0,vb:0};mp[s.l].vb=s.v;});
   return Object.values(mp).sort((x,y)=>Math.max(y.va,y.vb)-Math.max(x.va,x.vb));
 }
+function mesCurto(m){return MESES[+m.slice(5,7)-1]+' '+m.slice(0,4);}
 function viewRel(){
   const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
   const ra=resumoMes(a),rb=resumoMes(b);
-  const top=m=>despesasPorCat(m).slice(0,5).map(s=>`<div class="legItem"><span><i class="dot" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)}</span></div>`).join('')||'<p class="vazio">sem despesas</p>';
-  const linha=(nome,x,y,inv)=>{
+  const top=m=>despesasPorCat(m).slice(0,5).map(s=>`<div class="legItem"><span><i class="dot" style="background:${s.color}"></i>${esc(s.l)}</span><span class="nw">${brl(s.v)}</span></div>`).join('')||'<p class="vazio">sem despesas</p>';
+  const cel=(v,c)=>`<b class="nw ${c}">${brl(v)}</b>`;
+  const linha=(nome,x,y,inv,fixo)=>{
     const v=x?Math.round((y-x)/Math.abs(x)*100):null,up=y>x,bom=inv?!up:up;
-    const cls=(v===null||y===x)?'':(bom?'pos':'neg');
-    return `<span>${nome}</span><b>${brl(x)}</b><b>${brl(y)}</b><span class="${cls}">${v===null?'sem base':(v>0?'+':'')+v+'%'}</span>`;
+    const vc=(v===null||y===x)?'':(bom?'pos':'neg');
+    const col=c=>fixo||(c>=0?'pos':'neg');
+    const va=v===null?'<span class="sb">sem base</span>':`<span class="vr ${vc}">${(v>0?'+':'')+v}%</span>`;
+    return `<div class="rrow"><span>${nome}</span>${cel(y,col(y))}${cel(x,col(x))}${va}</div>`;
   };
-  return `
-  <div class="head"><h2>Relatório mensal</h2><div class="acts2" style="margin:0"><button class="btn2 noprint" data-act="rel-csv">csv</button><button class="btn noprint" data-act="rel-print">imprimir</button></div></div>
+  return `<div class="relWrap">
+  <div class="head relHead"><h2>Relatório mensal</h2><div class="relPills noprint"><button class="btn2" data-act="rel-csv">csv</button><button class="btn2" data-act="rel-print">imprimir</button></div></div>
   <div class="card filtros noprint">
     <label>Mês de referência<input type="month" data-filter="relA" value="${a}"></label>
     <label>Comparar com<input type="month" data-filter="relB" value="${b}"></label>
   </div>
   <div class="card relT" style="margin-top:14px">
-    <span class="h"></span><span class="h">${mesNome(a)}</span><span class="h">${mesNome(b)}</span><span class="h">variação</span>
-    ${linha('receitas',rb.rec,ra.rec,false)}
-    ${linha('despesas',rb.des,ra.des,true)}
-    ${linha('saldo',rb.sal,ra.sal,false)}
+    <div class="rh"><span></span><span>${mesCurto(a)}</span><span>${mesCurto(b)}</span><span>variação</span></div>
+    ${linha('receitas',rb.rec,ra.rec,false,'pos')}
+    ${linha('despesas',rb.des,ra.des,true,'neg')}
+    ${linha('saldo',rb.sal,ra.sal,false,null)}
   </div>
-  <div class="card">
+  <div class="card relChart">
     <h4>Comparação por categoria de despesa</h4>
     <canvas id="cRel" class="cv"></canvas>
-    <div class="legend"><span><i class="dot" style="background:#a78bfa"></i>${mesNome(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesNome(b)}</span></div>
+    <div class="legend"><span><i class="dot" style="background:#a78bfa"></i>${mesCurto(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesCurto(b)}</span></div>
   </div>
   <div class="grid2">
     <div class="card"><h4>maiores categorias · ${mesNome(a)}</h4>${top(a)}</div>
     <div class="card"><h4>maiores categorias · ${mesNome(b)}</h4>${top(b)}</div>
+  </div>
   </div>`;
 }
 function drawRel(c,p){
   const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
   const cats=relCats(a,b).slice(0,6);
-  const {ctx,w,h}=fitCanvas(c,240);
+  const {ctx,w,h}=fitCanvas(c,260);
   const max=Math.max(1,...cats.flatMap(x=>[x.va,x.vb]));
-  const top=14,base=h-44,H=base-top,gw=w/Math.max(1,cats.length);
+  const top=14,base=h-40,H=base-top,gw=w/Math.max(1,cats.length);
   ctx.clearRect(0,0,w,h);
   ctx.strokeStyle=cor('--line');ctx.lineWidth=1;
   for(let i=0;i<=3;i++){const y=top+H*i/3;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
@@ -914,8 +934,8 @@ function drawRel(c,p){
     const ha=x.va/max*H*p,hb=x.vb/max*H*p;
     bar(ctx,cx-bw-2,base-ha,bw,ha,'#a78bfa');
     bar(ctx,cx+2,base-hb,bw,hb,'#34d399');
-    ctx.fillStyle=cor('--mut');ctx.font='11px system-ui';ctx.textAlign='center';
-    ctx.fillText(x.l.length>9?x.l.slice(0,8)+'.':x.l,cx,h-22);
+    ctx.fillStyle=cor('--txt');ctx.font='12px system-ui';ctx.textAlign='center';
+    ctx.fillText(x.l.length>9?x.l.slice(0,8)+'.':x.l,cx,h-14);
   });
   if(!cats.length){ctx.fillStyle=cor('--mut');ctx.font='13px system-ui';ctx.textAlign='center';ctx.fillText('sem despesas nesses meses',w/2,h/2);}
 }
