@@ -637,6 +637,22 @@ function toast(m,erro){
 function somaMes(m,tipo,cat,comCartao){
   return S.tx.filter(t=>t.data.startsWith(m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)).reduce((a,t)=>a+t.valor,0);
 }
+function contaDinheiroId(){const d=S.bancos.find(b=>b.tipo==='Dinheiro')||S.bancos.find(b=>b.principal);return d?d.id:null;}
+function contaDoLanc(t){
+  if(t.tipo==='despesa'){if(t.forma==='pix')return t.conta||null;if(t.forma==='dinheiro')return contaDinheiroId();return null;}
+  if(t.tipo==='receita'&&t.forma==='pix')return t.conta||null;
+  return null;
+}
+function saldoBanco(b){
+  let s=Number(b.saldo)||0;
+  S.tx.forEach(t=>{
+    if(!t.data||(b.saldoData&&t.data<b.saldoData))return;
+    if(contaDoLanc(t)!==b.id)return;
+    s+=t.tipo==='receita'?t.valor:-t.valor;
+  });
+  return Math.round(s*100)/100;
+}
+function usadoCartaoTotal(c){return S.tx.filter(t=>t.cartao===c.id&&t.tipo==='despesa').reduce((a,t)=>a+t.valor,0);}
 function saldoTotal(){
   return S.tx.reduce((a,t)=>a+(t.tipo==='receita'?t.valor:(t.cartao?0:-t.valor)),0);
 }
@@ -1352,7 +1368,7 @@ function viewCfg(){
 }
 
 const CARD_COR=[['#22c55e','#0f766e','Verde'],['#8b5cf6','#312e81','Violeta'],['#06b6d4','#1e3a8a','Azul'],['#ec4899','#7e1d6b','Rosa'],['#f59e0b','#9a3412','Âmbar']];
-const BANCO_TIPOS=['Conta corrente','Poupança','Carteira digital','Investimentos','Outros'];
+const BANCO_TIPOS=['Conta corrente','Poupança','Carteira digital','Investimentos','Dinheiro','Outros'];
 function cicloCartao(c){
   const h=new Date(),y=h.getFullYear(),mo=h.getMonth();
   const fe=Math.max(1,Math.min(31,c.fechamento||1)),ve=Math.max(1,Math.min(31,c.vencimento||1));
@@ -1375,17 +1391,18 @@ function usoCartao(c){
 function viewCartoes(){
   const tL=S.cartoes.reduce((a,c)=>a+c.limite,0);
   const us=S.cartoes.map(c=>usoCartao(c));
-  const tU=us.reduce((a,u)=>a+u.used,0);
+  const tU=S.cartoes.reduce((a,c)=>a+usadoCartaoTotal(c),0);
   const lst=S.cartoes.map((c,i)=>{
     const u=us[i],pal=CARD_COR[c.cor%CARD_COR.length]||CARD_COR[0];
-    const pct=c.limite?Math.min(100,u.used/c.limite*100):0,over=u.used>c.limite,disp=Math.max(0,c.limite-u.used);
+    const usedT=usadoCartaoTotal(c);
+    const pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite,disp=c.limite-usedT;
     return `<div class="card hov">
       <div class="ccard" style="--c1:${pal[0]};--c2:${pal[1]}">
         <div class="cc-top"><span class="cc-bank">${esc(c.banco||'Cartão')}</span><span class="cc-chip"></span></div>
         <div class="cc-num">•••• •••• •••• ${esc(c.final||'••••')}</div>
         <div class="cc-bot"><div>${esc(c.nome)}</div><div style="text-align:right">limite<b>${brl(c.limite)}</b></div></div>
       </div>
-      <div class="row"><span class="small" style="margin:0">usado no ciclo atual</span><b class="${over?'neg':''}">${brl(u.used)}</b></div>
+      <div class="row"><span class="small" style="margin:0">usado (tudo lançado no cartão)</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
       <div class="bar ${over?'over':''}"><i data-w="${pct}"></i></div>
       <div class="row small"><span>disponível ${brl(disp)}</span><span>${Math.round(pct)}% do limite</span></div>
       <p class="small">ciclo ${fmtData(u.ci.ini)} a ${fmtData(u.ci.fim)} · ${u.n} lançamento${u.n===1?'':'s'}</p>
@@ -1397,21 +1414,23 @@ function viewCartoes(){
   <div class="head"><h2>Cartões</h2><button class="btn" data-act="novo-cartao">${I('plus')} novo</button></div>
   ${S.cartoes.length?`<div class="grid3">
       <div class="card mini"><small>limite total</small><b>${brl(tL)}</b></div>
-      <div class="card mini"><small>usado no ciclo</small><b class="${tU>tL?'neg':''}">${brl(tU)}</b></div>
-      <div class="card mini"><small>disponível</small><b class="pos">${brl(Math.max(0,tL-tU))}</b></div>
+      <div class="card mini"><small>usado</small><b class="${tU>tL?'neg':''}">${brl(tU)}</b></div>
+      <div class="card mini"><small>disponível</small><b class="${tL-tU<0?'neg':'pos'}">${brl(tL-tU)}</b></div>
     </div><div class="cgrid">${lst}</div>`
     :'<div class="card"><p class="vazio">nenhum cartão cadastrado. adicione o primeiro e vincule as despesas no extrato.</p></div>'}`;
 }
 function viewBancos(){
-  const total=S.bancos.reduce((a,b)=>a+(Number(b.saldo)||0),0);
-  const pos=S.bancos.reduce((a,b)=>a+Math.max(0,Number(b.saldo)||0),0);
+  const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
+  const pos=S.bancos.reduce((a,b)=>a+Math.max(0,saldoBanco(b)),0);
   const main=S.bancos.find(b=>b.principal);
   const lst=S.bancos.map(b=>{
-    const share=pos&&b.saldo>0?b.saldo/pos*100:0;
+    const sb=saldoBanco(b);
+    const share=pos&&sb>0?sb/pos*100:0;
     return `<div class="card bk hov ${b.principal?'main':''}">
       <button class="bk-star ${b.principal?'on':''}" data-act="principal" data-id="${b.id}" title="${b.principal?'conta principal':'definir como principal'}" aria-label="${b.principal?'conta principal':'definir como principal'}" aria-pressed="${b.principal?'true':'false'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="${b.principal?'currentColor':'none'}" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
       <div class="row"><div class="bk-l"><span class="bk-ic">${I('bank')}</span><div><b>${esc(b.nome)}</b><small>${esc(b.tipo)}</small></div></div></div>
-      <div class="bk-val ${b.saldo<0?'neg':''}">${brl(b.saldo)}</div>
+      <div class="bk-val ${sb<0?'neg':''}">${brl(sb)}</div>
+      <small>informado ${brl(Number(b.saldo)||0)}${b.saldoData?' em '+fmtDate(b.saldoData):''}</small>
       <div class="bar"><i data-w="${share.toFixed(1)}"></i></div>
       <div class="row small"><span>${pos?Math.round(share)+'% do saldo positivo':'sem saldo positivo'}</span></div>
       <div class="acts2"><button class="btn2" data-act="edit-banco" data-id="${b.id}">editar</button><button class="btn2 danger" data-act="del-banco" data-id="${b.id}">excluir</button></div>
@@ -1419,7 +1438,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} nova conta</button></div>
-  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${S.bancos.length} conta${S.bancos.length===1?'':'s'} · principal: ${main?esc(main.nome)+' ('+brl(main.saldo)+')':'nenhuma'}</small></div>
+  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${S.bancos.length} conta${S.bancos.length===1?'':'s'} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
     <div class="grid2">${lst}</div>`
     :'<div class="card"><p class="vazio">nenhuma conta cadastrada. adicione seus bancos pra ver o total.</p></div>'}`;
 }
@@ -1453,7 +1472,8 @@ function bancoForm(id){
   ],v=>{
     const nome=String(v.nome).trim();
     if(!nome)return 'Informe o nome da conta.';
-    const obj={nome,tipo:v.tipo||BANCO_TIPOS[0],saldo:parseBR(v.saldo)};
+    const sal=parseBR(v.saldo);
+    const obj={nome,tipo:v.tipo||BANCO_TIPOS[0],saldo:sal,saldoData:(b&&Number(b.saldo)===sal&&b.saldoData)?b.saldoData:hojeISO()};
     if(b)Object.assign(b,obj);else S.bancos.push(Object.assign({id:uid(),principal:S.bancos.length===0},obj));
     if(!S.bancos.some(x=>x.principal)&&S.bancos.length)S.bancos[0].principal=true;
     salvar();render();toast('Conta salva');
@@ -1505,9 +1525,9 @@ function novoTx(id,tipoPre){
     {name:'tipo',label:'Tipo',type:'select',value:t?t.tipo:(tipoPre||'despesa'),options:[{v:'despesa',t:'Despesa'},{v:'receita',t:'Receita'}]},
     {name:'valor',label:'Valor (R$)',value:t?num(t.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'categoria',label:'Categoria',type:'select',value:t?t.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
-    {name:'forma',label:'Forma de pagamento',type:'select',value:t?(t.forma||(t.cartao?'cartao':'dinheiro')):'pix',options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
+    {name:'forma',label:'Forma de pagamento',type:'select',value:t?(t.forma||(t.cartao?'cartao':'dinheiro')):((tipoPre||'despesa')==='receita'?'dinheiro':'pix'),options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:t&&t.cartao?t.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
-    {name:'conta',label:'De qual conta saiu',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
+    {name:'conta',label:'Conta bancária (pix)',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
     {name:'descricao',label:'Descrição',value:t?t.descricao:'',placeholder:'ex: mercado do mês'},
     {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true},
     {name:'fixa',label:'conta fixa mensal (repete todo mês)',type:'checkbox',value:false}
@@ -1524,8 +1544,8 @@ function novoTx(id,tipoPre){
       if(!S.gerados)S.gerados={};S.gerados['fx|'+fxId+'|'+v.data.slice(0,7)]=1;
     }
     const isDesp=v.tipo==='despesa';
-    const forma=isDesp?(v.forma||'pix'):'';
-    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:(isDesp&&forma==='cartao')?(v.cartao||''):'',forma,conta:(isDesp&&forma==='pix')?(v.conta||''):''};
+    const forma=v.forma||(isDesp?'pix':'dinheiro');
+    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:(isDesp&&forma==='cartao')?(v.cartao||''):'',forma,conta:(forma==='pix')?(v.conta||''):''};
     if(t)Object.assign(t,obj);else S.tx.push(Object.assign({id:uid()},obj));
     salvar();render();toast('Lançamento salvo');
   });
@@ -1539,7 +1559,7 @@ function novoTx(id,tipoPre){
   const selK=mf.querySelector('select[name="cartao"]'),wK=selK.closest('label');
   const selF=mf.querySelector('select[name="forma"]'),wF=selF.closest('label');
   const selB=mf.querySelector('select[name="conta"]'),wB=selB.closest('label');
-  const pintaK=()=>{const rec=selT.value==='receita';wF.style.display=rec?'none':'';wK.style.display=(!rec&&selF.value==='cartao')?'':'none';wB.style.display=(!rec&&selF.value==='pix')?'':'none';};
+  const pintaK=()=>{const rec=selT.value==='receita';const ops=rec?[['dinheiro','dinheiro'],['pix','pix']]:[['dinheiro','dinheiro'],['pix','pix'],['boleto','boleto'],['cartao','cartão']];const cur=ops.some(o=>o[0]===selF.value)?selF.value:'dinheiro';selF.innerHTML=ops.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('');selF.value=cur;wF.style.display='';wK.style.display=(!rec&&selF.value==='cartao')?'':'none';wB.style.display=(selF.value==='pix')?'':'none';};
   selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();};
   selF.onchange=pintaK;
   pintaK();
