@@ -397,6 +397,21 @@ html.claro .sheet{background:radial-gradient(120% 60% at 100% 0%,rgba(139,92,246
 .catCell{background:radial-gradient(120% 100% at 100% 0%,rgba(139,92,246,.10),transparent 60%),var(--card2);border-color:rgba(139,92,246,.16)}
 .acard,.ccard{border-color:rgba(139,92,246,.2)}
 .orc.alerta{box-shadow:0 0 0 1px #ef4444,var(--shadow)}
+/* calendario do relatorio */
+.filtros .mcal{grid-column:1/-1;min-width:0;width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.mcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.mcal-h b{font-size:15px;font-weight:600;color:var(--txt);text-transform:capitalize;text-align:center;min-width:0}
+.mcal-nav{flex:0 0 auto;width:34px;height:34px;padding:0;display:grid;place-items:center;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--txt);cursor:pointer}
+.mcal-nav.sm{width:28px;height:28px;border-radius:8px}
+.mcal-nav .i{width:16px;height:16px;stroke:var(--a2);stroke-width:1.4}
+.mcal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.mcal-w{font-size:11px;color:var(--mut);text-align:center;padding-bottom:4px}
+.mcal-g>span:not(.mcal-w){aspect-ratio:1/1;display:grid;place-items:center;min-width:0;border-radius:50%;font-size:13px;color:var(--txt);font-variant-numeric:tabular-nums}
+.mcal-d.hoje{background:var(--a1);color:#fff;font-weight:600;box-shadow:0 0 12px rgba(34,197,94,.35)}
+.mcal-cmp{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.mcal-ctl{display:flex;align-items:center;gap:6px;min-width:0}
+.mcal-ctl b{font-size:13px;font-weight:600;color:var(--txt);text-transform:capitalize;white-space:nowrap}
+html.claro .mcal-d.hoje{background:#16a34a}
 </style>
 </head>
 <body>
@@ -458,6 +473,8 @@ const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho'
 
 const ICONS={
 report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"/><rect x="10.5" y="7" width="3" height="11.5" rx="1"/><rect x="15.5" y="4" width="3" height="14.5" rx="1"/>',
+chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
+chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
 receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 gauge:'<path d="M4 16.5a8 8 0 1 1 16 0"/><path d="M12 16.5 16 11"/><circle cx="12" cy="16.5" r="1.2"/>',
@@ -895,6 +912,18 @@ function relCats(a,b){
   return Object.values(mp).sort((x,y)=>Math.max(y.va,y.vb)-Math.max(x.va,x.vb));
 }
 function mesCurto(m){return MESES[+m.slice(5,7)-1]+' '+m.slice(0,4);}
+function mesAdd(m,k){const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,1);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+function relShift(k,n){const cur=REL[k]||(k==='a'?mesOff(0):mesOff(1));REL[k]=mesAdd(cur,n);render();}
+function calGrid(m){
+  const y=+m.slice(0,4),mo=+m.slice(5,7)-1,hoje=new Date();
+  const ini=new Date(y,mo,1).getDay(),n=new Date(y,mo+1,0).getDate();
+  let h='';for(let i=0;i<ini;i++)h+='<span></span>';
+  for(let d=1;d<=n;d++){
+    const isHoje=hoje.getFullYear()===y&&hoje.getMonth()===mo&&hoje.getDate()===d;
+    h+=`<span class="mcal-d${isHoje?' hoje':''}">${d}</span>`;
+  }
+  return h;
+}
 function viewRel(){
   const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
   const ra=resumoMes(a),rb=resumoMes(b);
@@ -910,8 +939,11 @@ function viewRel(){
   return `<div class="relWrap">
   <div class="head relHead"><h2>Relatório mensal</h2><div class="relPills noprint"><button class="btn2" data-act="rel-csv">csv</button><button class="btn2" data-act="rel-print">imprimir</button></div></div>
   <div class="card filtros noprint">
-    <label>Mês de referência<input type="month" data-filter="relA" value="${a}"></label>
-    <label>Comparar com<input type="month" data-filter="relB" value="${b}"></label>
+    <div class="mcal">
+      <div class="mcal-h"><button class="mcal-nav" data-act="rel-a-prev" aria-label="mês anterior">${I('chevL')}</button><b>${mesNome(a)}</b><button class="mcal-nav" data-act="rel-a-next" aria-label="próximo mês">${I('chevR')}</button></div>
+      <div class="mcal-g">${['D','S','T','Q','Q','S','S'].map(x=>`<span class="mcal-w">${x}</span>`).join('')}${calGrid(a)}</div>
+      <div class="mcal-cmp"><span>comparar com</span><span class="mcal-ctl"><button class="mcal-nav sm" data-act="rel-b-prev" aria-label="mês de comparação anterior">${I('chevL')}</button><b>${mesCurto(b)}</b><button class="mcal-nav sm" data-act="rel-b-next" aria-label="próximo mês de comparação">${I('chevR')}</button></span></div>
+    </div>
   </div>
   <div class="card relT" style="margin-top:14px">
     <div class="rh"><span></span><span>${mesCurto(a)}</span><span>${mesCurto(b)}</span><span>variação</span></div>
@@ -1759,6 +1791,10 @@ const ACT={
   'ftab':id=>{FTAB=id;render();},
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
   'rel-print':()=>window.print(),
+  'rel-a-prev':()=>relShift('a',-1),
+  'rel-a-next':()=>relShift('a',1),
+  'rel-b-prev':()=>relShift('b',-1),
+  'rel-b-next':()=>relShift('b',1),
   'rel-csv':()=>relCSV(),
   'limpar':limpar,
   'novo-cartao':()=>cartaoForm(),
