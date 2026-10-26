@@ -33,7 +33,7 @@ h4{font-size:12px;margin-bottom:12px;color:var(--mut);font-weight:500;text-trans
 .grid2,.grid3{display:grid;gap:12px;margin-bottom:14px;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));max-width:100%;min-width:0}
 .grid2 .card,.grid3 .card{margin-bottom:0}
 .pos{color:#34d399}.neg{color:#f87171}
-.hero .neg,.hero .pos{color:#fff}
+
 .btn{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(139,92,246,.25);transition:transform .15s}
 .btn:active{transform:scale(.97)}
 .btn2{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px;cursor:pointer;transition:transform .15s}
@@ -1126,7 +1126,7 @@ function viewInicio(){
   return `
   <div class="card hero">
     <small>saldo total</small>
-    <div class="big">${brl(saldo)}</div>
+    <div class="big ${saldo<0?'neg':'pos'}">${brl(saldo)}</div>
     <small>receitas menos despesas, desde o começo</small>
   </div>
   <div class="grid3">
