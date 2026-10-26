@@ -213,6 +213,9 @@ body:has(#auth.on) .fab{display:none!important}
 #mf .fld{margin-bottom:16px;min-height:46px}
 #mf .fld input,#mf .fld select{width:100%;font-size:15px;font-weight:600}
 #mf .btn.full{margin-top:6px;padding:14px;font-size:15px;font-weight:700}
+#mf label.ckrow{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 14px;margin:6px 0 18px;cursor:pointer;line-height:1.3}
+#mf label.ckrow input{width:20px;height:20px;flex:none;margin:0;accent-color:var(--a2);cursor:pointer}
+#mf label.ckrow span{display:block}
 .fld{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:0 12px;margin-bottom:12px;transition:border-color .2s,box-shadow .2s}
 .fld:focus-within{border-color:var(--a2);box-shadow:0 0 16px -6px var(--a2)}
 .fld .i{color:var(--mut);width:18px;height:18px}
@@ -1182,7 +1185,7 @@ function viewLanc(){
   const td=lista.filter(t=>t.tipo==='despesa').reduce((a,t)=>a+t.valor,0);
   const item=t=>`<div class="tx hov">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
-      <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${esc(t.categoria)}${(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;return cn?' · '+esc(cn.nome):'';})()} · ${fmtData(t.data)}</small></div>
+      <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${esc(t.categoria)}${(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk?' · '+esc(bk.nome):'');})()} · ${fmtData(t.data)}</small></div>
       <div class="val ${t.tipo==='receita'?'pos':'neg'}">${t.tipo==='receita'?'+':'-'} ${brl(t.valor)}</div>
       <div class="acts"><button data-act="edit-tx" data-id="${t.id}" title="editar">${I('edit')}</button><button data-act="del-tx" data-id="${t.id}" title="excluir">${I('trash')}</button></div>
     </div>`;
@@ -1459,7 +1462,7 @@ function bancoForm(id){
 
 /* ---------- modal de formulário genérico ---------- */
 function campoHTML(c){
-  if(c.type==='checkbox')return `<label class="ck"><input type="checkbox" name="${c.name}" value="1" ${c.value?'checked':''}> ${esc(c.label)}</label>`;
+  if(c.type==='checkbox')return `<label class="ckrow"><input type="checkbox" name="${c.name}" value="1" ${c.value?'checked':''}><span>${esc(c.label)}</span></label>`;
   if(c.type==='select')return `<label>${esc(c.label)}<select name="${c.name}">${c.options.map(o=>`<option value="${esc(o.v)}" ${String(o.v)===String(c.value)?'selected':''}>${esc(o.t)}</option>`).join('')}</select></label>`;
   const attrs=[
     c.required?'required':'',
@@ -1502,7 +1505,9 @@ function novoTx(id,tipoPre){
     {name:'tipo',label:'Tipo',type:'select',value:t?t.tipo:(tipoPre||'despesa'),options:[{v:'despesa',t:'Despesa'},{v:'receita',t:'Receita'}]},
     {name:'valor',label:'Valor (R$)',value:t?num(t.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'categoria',label:'Categoria',type:'select',value:t?t.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
-    {name:'cartao',label:'Cartão de crédito (opcional)',type:'select',value:t&&t.cartao?t.cartao:'',options:[{v:'',t:'nenhum'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
+    {name:'forma',label:'Forma de pagamento',type:'select',value:t?(t.forma||(t.cartao?'cartao':'dinheiro')):'pix',options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
+    {name:'cartao',label:'Qual cartão',type:'select',value:t&&t.cartao?t.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
+    {name:'conta',label:'De qual conta saiu',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
     {name:'descricao',label:'Descrição',value:t?t.descricao:'',placeholder:'ex: mercado do mês'},
     {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true},
     {name:'fixa',label:'conta fixa mensal (repete todo mês)',type:'checkbox',value:false}
@@ -1518,7 +1523,9 @@ function novoTx(id,tipoPre){
       S.fixas.push({id:fxId,nome:String(v.descricao).trim()||'conta fixa',valor,dia,categoria:v.categoria,criadoEm:hojeISO()});
       if(!S.gerados)S.gerados={};S.gerados['fx|'+fxId+'|'+v.data.slice(0,7)]=1;
     }
-    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:v.tipo==='despesa'?(v.cartao||''):''};
+    const isDesp=v.tipo==='despesa';
+    const forma=isDesp?(v.forma||'pix'):'';
+    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:(isDesp&&forma==='cartao')?(v.cartao||''):'',forma,conta:(isDesp&&forma==='pix')?(v.conta||''):''};
     if(t)Object.assign(t,obj);else S.tx.push(Object.assign({id:uid()},obj));
     salvar();render();toast('Lançamento salvo');
   });
@@ -1530,8 +1537,11 @@ function novoTx(id,tipoPre){
   const atual=t&&t.tipo===selT.value?t.categoria:'';
   selC.innerHTML=mkOpts(atual&&!l0.includes(atual)?[atual].concat(l0):l0,atual||l0[0]);
   const selK=mf.querySelector('select[name="cartao"]'),wK=selK.closest('label');
-  const pintaK=()=>{const rec=selT.value==='receita';wK.style.display=rec?'none':'';if(rec)selK.value='';};
+  const selF=mf.querySelector('select[name="forma"]'),wF=selF.closest('label');
+  const selB=mf.querySelector('select[name="conta"]'),wB=selB.closest('label');
+  const pintaK=()=>{const rec=selT.value==='receita';wF.style.display=rec?'none':'';wK.style.display=(!rec&&selF.value==='cartao')?'':'none';wB.style.display=(!rec&&selF.value==='pix')?'':'none';};
   selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();};
+  selF.onchange=pintaK;
   pintaK();
 }
 function defOrc(c){
