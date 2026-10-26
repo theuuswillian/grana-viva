@@ -287,7 +287,7 @@ body:has(#auth.on) .fab{display:none!important}
 .relT .rrow .sb{font-style:normal;color:var(--mut);font-size:13px}
 .relT .rrow .vr{font-weight:600}
 .relT .nw{white-space:nowrap}
-.relChart{padding-bottom:22px}
+.relChart{padding-bottom:22px;overflow:hidden}
 .relWrap .card{margin-bottom:18px}
 .relWrap .card h4{font-size:13px}
 .relWrap .legend{font-size:14px;gap:18px}
@@ -928,13 +928,14 @@ function drawRel(c,p){
   const cats=relCats(a,b).slice(0,6);
   const {ctx,w,h}=fitCanvas(c,260);
   const max=Math.max(1,...cats.flatMap(x=>[x.va,x.vb]));
-  const top=14,base=h-40,H=base-top,gw=w/Math.max(1,cats.length);
+  const top=14,base=h-40,H=Math.max(0,base-top),gw=w/Math.max(1,cats.length);
   ctx.clearRect(0,0,w,h);
   ctx.strokeStyle=cor('--line');ctx.lineWidth=1;
   for(let i=0;i<=3;i++){const y=top+H*i/3;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
   cats.forEach((x,i)=>{
     const cx=i*gw+gw/2,bw=Math.min(16,gw*0.28);
-    const ha=x.va/max*H*p,hb=x.vb/max*H*p;
+    const clamp=v=>Math.max(0,Math.min(H,v));
+    const ha=clamp(x.va/max*H*p),hb=clamp(x.vb/max*H*p);
     bar(ctx,cx-bw-2,base-ha,bw,ha,'#a78bfa');
     bar(ctx,cx+2,base-hb,bw,hb,'#34d399');
     ctx.fillStyle=cor('--txt');ctx.font='14px system-ui';ctx.textAlign='center';
