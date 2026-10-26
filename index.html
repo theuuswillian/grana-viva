@@ -1749,6 +1749,14 @@ const ACT={
 };
 
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='logoHome')go('inicio');});
+// logo: checa pela posição do toque, então funciona com menu aberto (#ov/#side por cima) e com a tela de login (#auth)
+document.addEventListener('click',e=>{
+  const lg=document.getElementById('logoHome');
+  if(!lg)return;
+  const r=lg.getBoundingClientRect();
+  const hitLogo=e.target.closest&&e.target.closest('#logoHome')||(e.clientX>=r.left-10&&e.clientX<=r.right+10&&e.clientY>=r.top-10&&e.clientY<=r.bottom+10);
+  if(hitLogo&&r.width>0){toggleSide(false);go('inicio');e.stopPropagation();e.preventDefault();}
+},true);
 document.addEventListener('click',e=>{
   if(e.target.closest('#fab')){abreRapido();return;}
   if(e.target.closest('#logoHome')){go('inicio');return;}
