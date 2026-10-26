@@ -641,7 +641,7 @@ function somaMes(m,tipo,cat,comCartao){
 }
 function contaDinheiroId(){const d=S.bancos.find(b=>b.tipo==='Dinheiro')||S.bancos.find(b=>b.principal);return d?d.id:null;}
 function contaDoLanc(t){
-  if(t.tipo==='despesa'){if(t.forma==='pix')return t.conta||null;if(t.forma==='dinheiro')return contaDinheiroId();return null;}
+  if(t.tipo==='despesa'){if(t.forma==='pix'||t.forma==='boleto')return t.conta||null;if(t.forma==='dinheiro')return contaDinheiroId();return null;}
   if(t.tipo==='receita'&&t.forma==='pix')return t.conta||null;
   return null;
 }
@@ -1528,8 +1528,9 @@ function novoTx(id,tipoPre){
     {name:'valor',label:'Valor (R$)',value:t?num(t.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'categoria',label:'Categoria',type:'select',value:t?t.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
     {name:'forma',label:'Forma de pagamento',type:'select',value:t?(t.forma||(t.cartao?'cartao':'dinheiro')):((tipoPre||'despesa')==='receita'?'dinheiro':'pix'),options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
+    {name:'pagoCom',label:'Boleto pago com',type:'select',value:t?(t.pagoCom||(t.cartao?'cartao':(t.conta&&t.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:t&&t.cartao?t.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
-    {name:'conta',label:'Conta bancária (pix)',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
+    {name:'conta',label:'Conta bancária',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
     {name:'descricao',label:'Descrição',value:t?t.descricao:'',placeholder:'ex: mercado do mês'},
     {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true},
     {name:'fixa',label:'conta fixa mensal (repete todo mês)',type:'checkbox',value:false}
@@ -1547,7 +1548,13 @@ function novoTx(id,tipoPre){
     }
     const isDesp=v.tipo==='despesa';
     const forma=v.forma||(isDesp?'pix':'dinheiro');
-    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:(isDesp&&forma==='cartao')?(v.cartao||''):'',forma,conta:(forma==='pix')?(v.conta||''):''};
+    const bol=isDesp&&forma==='boleto';
+    const pagoCom=bol?(v.pagoCom||'dinheiro'):'';
+    if(bol&&pagoCom==='cartao'&&!v.cartao)return 'Escolha o cartão que pagou o boleto.';
+    if(bol&&pagoCom==='conta'&&!v.conta)return 'Escolha a conta que pagou o boleto.';
+    const usaCartao=(isDesp&&forma==='cartao')||(bol&&pagoCom==='cartao');
+    const usaConta=(forma==='pix')||(bol&&pagoCom==='conta');
+    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:usaCartao?(v.cartao||''):'',forma,conta:usaConta?(v.conta||''):'',pagoCom};
     if(t)Object.assign(t,obj);else S.tx.push(Object.assign({id:uid()},obj));
     salvar();render();toast('Lançamento salvo');
   });
@@ -1561,8 +1568,10 @@ function novoTx(id,tipoPre){
   const selK=mf.querySelector('select[name="cartao"]'),wK=selK.closest('label');
   const selF=mf.querySelector('select[name="forma"]'),wF=selF.closest('label');
   const selB=mf.querySelector('select[name="conta"]'),wB=selB.closest('label');
-  const pintaK=()=>{const rec=selT.value==='receita';const ops=rec?[['dinheiro','dinheiro'],['pix','pix']]:[['dinheiro','dinheiro'],['pix','pix'],['boleto','boleto'],['cartao','cartão']];const cur=ops.some(o=>o[0]===selF.value)?selF.value:'dinheiro';selF.innerHTML=ops.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('');selF.value=cur;wF.style.display='';wK.style.display=(!rec&&selF.value==='cartao')?'':'none';wB.style.display=(selF.value==='pix')?'':'none';};
+  const pintaK=()=>{const rec=selT.value==='receita';const ops=rec?[['dinheiro','dinheiro'],['pix','pix']]:[['dinheiro','dinheiro'],['pix','pix'],['boleto','boleto'],['cartao','cartão']];const cur=ops.some(o=>o[0]===selF.value)?selF.value:'dinheiro';selF.innerHTML=ops.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('');selF.value=cur;wF.style.display='';const bol=selF.value==='boleto';const pc=mf.querySelector('select[name="pagoCom"]');if(pc){pc.closest('label').style.display=(!rec&&bol)?'':'none';}const pcv=pc?pc.value:'dinheiro';wK.style.display=(!rec&&(selF.value==='cartao'||(bol&&pcv==='cartao')))?'':'none';wB.style.display=(selF.value==='pix'||(!rec&&bol&&pcv==='conta'))?'':'none';};
   selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();};
+  const selP=mf.querySelector('select[name="pagoCom"]'),wP=selP.closest('label');
+  selP.onchange=pintaK;
   selF.onchange=pintaK;
   pintaK();
 }
