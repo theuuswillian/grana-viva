@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
 <title>GranaViva</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{pierre:{bg:'#0a0a0c',card:'#1a1a1e',lime:'#a3e635',mut:'#9ca3af'}},borderRadius:{pierre:'24px'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style type="text/tailwindcss">
+#modal .sheet{@apply !w-full !max-w-md !rounded-pierre !border-0 !shadow-none !p-6 !bg-gradient-to-b !from-pierre-card !to-[#101012];}
+html.claro #modal .sheet{@apply !bg-gradient-to-b !from-white !to-[#eef2fa];}
+</style>
 <style>
 :root{--a1:#a3e635;--a2:#84cc16;--bg:#0a0a0c;--card:#1a1a1e;--card2:#101012;--txt:#f5f5f5;--mut:#9ca3af;--hd:#ffffff;--line:#222d45;--shadow:0 10px 30px rgba(0,0,0,.35);}
 html.claro{--bg:#f2f5fb;--card:#ffffff;--card2:#eef2fa;--txt:#1b2236;--mut:#65708a;--line:#dfe5f1;--shadow:0 10px 24px rgba(40,50,90,.12);}
@@ -169,7 +178,7 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bl-wrap>.bl-wrap{position:relative;overflow:hidden}
 .bl-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px;box-sizing:border-box;display:block;border-radius:inherit}
 .bl-ini{position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.14),transparent 60%),var(--card2)}
-.bo-logo{width:34px;height:34px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.bo-logo{position:relative;width:34px;height:34px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .bkPick{margin-bottom:12px}
 .bkPickLbl{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
 .bkList{display:grid;gap:6px;max-height:260px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--card2)}
@@ -1531,6 +1540,7 @@ function bancoLogo2(d){return d?'https://icon.horse/icon/'+d:'';}
 function bancoNext(im){if(im.dataset.s2){const u=im.dataset.s2;im.removeAttribute('data-s2');im.src=u;}else{im.remove();}}
 /* se a primeira fonte devolver ícone pequeno (ex.: 16px borrado), troca pela segunda */
 function bancoLoad(im){if(im.naturalWidth<40&&im.dataset.s2)bancoNext(im);}
+window.bancoNext=bancoNext;window.bancoLoad=bancoLoad;
 function bancoIni(n){const w=String(n||'').split(/\s+/).filter(x=>x&&!/^(do|da|de|dos|das|e)$/i.test(x));return ((w[0]||'?').charAt(0)+(w[1]?w[1].charAt(0):'')).toUpperCase();}
 /* logo em <img>; se não carregar, troca por círculo com as iniciais */
 function bancoLogoHTML(logo,nome,cls,logo2){
