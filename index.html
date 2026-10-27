@@ -2138,8 +2138,8 @@ function lerCSV(txt){
 }
 const REGRAS_CAT=[
   [/ifood|rappi|restaur|lanchon|padaria|mercado|supermerc|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|burger|mc ?donald|pizza|cafe/,'Alimentação'],
-  [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|ipiranga|shell|petrobras br|estacion|metro|onibus|brt|pedagio|sem parar|veloe/,'Transporte'],
-  [/farmac|drogar|droga ?raia|pague menos|hospital|clinica|laborat|odonto|unimed|amil|hapvida/,'Saúde'],
+  [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe/,'Transporte'],
+  [/farmac|drogar|academia|smart ?fit|bluefit|selfit|crossfit|droga ?raia|pague menos|hospital|clinica|laborat|odonto|unimed|amil|hapvida/,'Saúde'],
   [/netflix|spotify|disney|hbo|max\b|prime video|youtube|cinema|ingresso|steam|playstation|xbox|bar\b|show/,'Lazer'],
   [/aluguel|condomin|energia|neoenergia|enel|cemig|light\b|caesb|sabesp|saneamento|agua|internet|vivo|claro|tim\b|oi\b|net\b|gas\b/,'Moradia'],
   [/escola|faculdade|universid|curso|udemy|alura|livrar|mensalidade/,'Educação']
@@ -2151,7 +2151,7 @@ function catSugerida(desc,tipo){
   if(tipo==='despesa')for(const [re,c] of REGRAS_CAT){if(re.test(n)&&S.cats.includes(c))return c;}
   return S.cats.includes('Outros')?'Outros':S.cats[0];
 }
-const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgate|rdb|cdb|poupanca|caixinha|guardad/,'movimentação de investimento/caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
+const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/limite convertido|aplicacao|resgate|rdb|cdb|poupanca|caixinha|guardad/,'movimentação de investimento, caixinha ou limite convertido'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
 function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
 let IMP=null;
 function importarExtrato(){
