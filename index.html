@@ -166,7 +166,9 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bl-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px;box-sizing:border-box;display:block;border-radius:inherit}
 .bo-logo img{width:100%;height:100%;object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;display:block}
 .bl-ini{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--a1);border:1px solid var(--a1);box-shadow:0 0 12px -4px var(--a1);box-sizing:border-box}
-.bl-wrap>.bl-ini{position:absolute;inset:0}
+.bl-wrap>.bl-wrap{position:relative;overflow:hidden}
+.bl-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px;box-sizing:border-box;display:block;border-radius:inherit}
+.bl-ini{position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.14),transparent 60%),var(--card2)}
 .bo-logo{width:34px;height:34px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .bkPick{margin-bottom:12px}
 .bkPickLbl{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
@@ -1454,14 +1456,20 @@ const BANCOS_BR=[
 {c:'',n:'Carteira digital',d:'',t:'Carteira digital'},
 {c:'',n:'Binance',d:'binance.com',t:'Carteira digital'}
 ];
-function bancoLogo(d){return d?'https://www.google.com/s2/favicons?domain='+d+'&sz=64':'';}
+function bancoLogo(d){return d?'https://www.google.com/s2/favicons?domain='+d+'&sz=128':'';}
+/* segunda fonte da cadeia de logos (usada se a primeira falhar) */
+function bancoLogo2(d){return d?'https://icon.horse/icon/'+d:'';}
+function bancoNext(im){if(im.dataset.s2){const u=im.dataset.s2;im.removeAttribute('data-s2');im.src=u;}else{im.remove();}}
+/* se a primeira fonte devolver ícone pequeno (ex.: 16px borrado), troca pela segunda */
+function bancoLoad(im){if(im.naturalWidth<40&&im.dataset.s2)bancoNext(im);}
 function bancoIni(n){const w=String(n||'').split(/\s+/).filter(x=>x&&!/^(do|da|de|dos|das|e)$/i.test(x));return ((w[0]||'?').charAt(0)+(w[1]?w[1].charAt(0):'')).toUpperCase();}
 /* logo em <img>; se não carregar, troca por círculo com as iniciais */
-function bancoLogoHTML(logo,nome,cls){
+function bancoLogoHTML(logo,nome,cls,logo2){
   const ini=bancoIni(nome).replace(/[^A-Za-zÀ-ÿ0-9?]/g,'');
   const fb='<span class="bl-ini">'+ini+'</span>';
-  if(!logo)return '<span class="'+cls+'">'+fb+'</span>';
-  return '<span class="'+cls+' bl-wrap">'+fb+'<img src="'+esc(logo)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+  if(!logo)return '<span class="'+cls+' bl-wrap">'+fb+'</span>';
+  const s2=logo2?' data-s2="'+esc(logo2)+'"':'';
+  return '<span class="'+cls+' bl-wrap">'+fb+'<img src="'+esc(logo)+'"'+s2+' alt="" decoding="async" loading="lazy" onerror="bancoNext(this)" onload="bancoLoad(this)"></span>';
 }
 function cicloCartao(c){
   const h=new Date(),y=h.getFullYear(),mo=h.getMonth();
@@ -1522,7 +1530,7 @@ function viewBancos(){
     const share=pos&&sb>0?sb/pos*100:0;
     return `<div class="card bk hov ${b.principal?'main':''}">
       <button class="bk-star ${b.principal?'on':''}" data-act="principal" data-id="${b.id}" title="${b.principal?'conta principal':'definir como principal'}" aria-label="${b.principal?'conta principal':'definir como principal'}" aria-pressed="${b.principal?'true':'false'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="${b.principal?'currentColor':'none'}" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg></button>
-      <div class="row"><div class="bk-l">${(()=>{const inf=BANCOS_BR.find(x=>x.n===b.nome);return (inf||b.logo)?bancoLogoHTML(b.logo||bancoLogo(inf.d),b.nome,'bk-ic bk-logo'):'<span class="bk-ic">'+I('bank')+'</span>';})()}<div><b title="${esc(b.nome)}" aria-label="${esc(b.nome)}">${esc(b.nome)}</b><small>${b.codigo?'cód. '+esc(b.codigo)+' · ':''}${esc(b.tipo)}</small></div></div></div>
+      <div class="row"><div class="bk-l">${(()=>{const inf=BANCOS_BR.find(x=>x.n===b.nome);const dm=inf?inf.d:'';return (dm||b.logo)?bancoLogoHTML(dm?bancoLogo(dm):b.logo,b.nome,'bk-ic bk-logo',dm?bancoLogo2(dm):''):'<span class="bk-ic">'+I('bank')+'</span>';})()}<div><b title="${esc(b.nome)}" aria-label="${esc(b.nome)}">${esc(b.nome)}</b><small>${b.codigo?'cód. '+esc(b.codigo)+' · ':''}${esc(b.tipo)}</small></div></div></div>
       <div class="bk-val ${sb<0?'neg':''}">${brl(sb)}</div>
       <small>informado ${brl(Number(b.saldo)||0)}${b.saldoData?' em '+fmtDate(b.saldoData):''}</small>
       <div class="bar"><i data-w="${share.toFixed(1)}"></i></div>
@@ -1595,7 +1603,7 @@ function bancoForm(id){
 function campoHTML(c){
   if(c.type==='hidden')return `<input type="hidden" name="${c.name}" value="${esc(c.value==null?'':c.value)}">`;
   if(c.type==='bancoPick'){
-    const opts=BANCOS_BR.map(b=>{const sel=c.value===b.n;const lg=bancoLogo(b.d);return `<button type="button" class="bkOpt${sel?' on':''}" aria-selected="${sel}" data-n="${esc(b.n)}" data-c="${esc(b.c)}" data-l="${esc(lg)}" data-t="${esc(b.t||'')}" title="${esc(b.n)}">${bancoLogoHTML(lg,b.n,'bo-logo')}<span class="bo-txt"><b>${esc(b.n)}</b><small>${b.c?'código '+esc(b.c):'sem código'}</small></span></button>`;}).join('');
+    const opts=BANCOS_BR.map(b=>{const sel=c.value===b.n;const lg=bancoLogo(b.d);return `<button type="button" class="bkOpt${sel?' on':''}" aria-selected="${sel}" data-n="${esc(b.n)}" data-c="${esc(b.c)}" data-l="${esc(lg)}" data-t="${esc(b.t||'')}" title="${esc(b.n)}">${bancoLogoHTML(lg,b.n,'bo-logo',bancoLogo2(b.d))}<span class="bo-txt"><b>${esc(b.n)}</b><small>${b.c?'código '+esc(b.c):'sem código'}</small></span></button>`;}).join('');
     return `<div class="bkPick"><input type="hidden" name="${c.name}" value="${esc(c.value||'')}"><span class="bkPickLbl">Banco ou instituição</span><div class="bkList" role="listbox" aria-label="lista de bancos">${opts}<button type="button" class="bkOpt bkOther${c.outro?' on':''}" aria-selected="${!!c.outro}" data-n="" data-c="" data-l="" data-t=""><span class="bo-logo bo-plain"><span class="bl-ini">+</span></span><span class="bo-txt"><b>outra instituição</b><small>digitar o nome</small></span></button></div><label class="bkOutro" style="${c.outro?'':'display:none'}">Nome da instituição<input name="nomeLivre" value="${esc(c.outro||'')}" placeholder="ex: cooperativa X" autocomplete="off"></label></div>`;
   }
   if(c.type==='checkbox')return `<label class="ckrow"><input type="checkbox" name="${c.name}" value="1" ${c.value?'checked':''}><span>${esc(c.label)}</span></label>`;
