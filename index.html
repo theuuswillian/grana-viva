@@ -13,6 +13,43 @@ tailwind.config={corePlugins:{preflight:false},theme:{extend:{colors:{pierre:{bg
 <style type="text/tailwindcss">
 #modal .sheet{@apply !w-full !max-w-md !rounded-pierre !border-0 !shadow-none !p-6 !bg-gradient-to-b !from-pierre-card !to-[#101012];}
 html.claro #modal .sheet{@apply !bg-gradient-to-b !from-white !to-[#eef2fa];}
+
+/* barra unica do topo */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:30;margin:-18px -14px 14px;padding:12px 14px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);overflow:visible}
+.top .tl{display:flex;align-items:center;min-width:0;flex:1 1 auto}
+.top .ham{margin-right:10px}
+.top .brand{display:flex;align-items:center;gap:9px;min-width:0;cursor:pointer;padding:2px 0;user-select:none;-webkit-user-select:none}
+.top .brandMk{display:block;flex-shrink:0;line-height:0}
+.top .brandMk svg{width:30px;height:30px;display:block}
+.top .logo{font-size:20px;line-height:1.2;padding:0;white-space:nowrap}
+.top .tr{display:flex;align-items:center;gap:8px;flex-shrink:0;min-width:0}
+.top .saud{font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;min-width:0}
+.tbtn{width:38px;height:38px;border-radius:12px;background:var(--card2);border:1px solid var(--line);color:var(--txt);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.tbtn .i{width:18px;height:18px}
+.tbtn.on{border-color:var(--a2);color:var(--a1)}
+.pwrap{position:relative;display:flex;flex-shrink:0}
+.pav{width:38px;height:38px;border-radius:50%;background:var(--card2);border:1px solid var(--line);color:var(--a1);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;padding:0;box-shadow:0 0 12px -4px var(--a2)}
+.pav .i{width:18px;height:18px}
+.pav img{width:100%;height:100%;object-fit:cover;display:block}
+#syncTxt{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--mut);border:2px solid var(--bg);font-size:0;padding:0;display:block}
+#syncTxt i{display:none}
+#syncTxt.synced{background:#34d399}
+#syncTxt.syncing{background:#f59e0b}
+#syncTxt.offline{background:#f87171}
+#syncTxt:empty{display:none}
+.pmenu{position:absolute;right:0;top:calc(100% + 10px);min-width:230px;max-width:calc(100vw - 28px);background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow);z-index:60}
+.pmenu[hidden]{display:none}
+.pmMail{font-size:12px;color:var(--mut);word-break:break-all;margin-bottom:10px}
+.pmOut{width:100%;background:var(--card2);border:1px solid var(--line);color:#f87171;border-radius:12px;padding:9px 12px;font-size:14px;cursor:pointer}
+@media(min-width:900px){.sb-brand{display:none}}
+.perfRow{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.perfAv{width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--card2);border:1px solid var(--line);color:var(--a1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.perfAv img{width:100%;height:100%;object-fit:cover}
+.perfAv .i{width:26px;height:26px}
+.perfBtns{display:grid;gap:8px;flex:1;min-width:0}
+.perfNome{display:grid;gap:6px;font-size:13px;color:var(--mut)}
+.perfNome input{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--txt);font-size:15px}
+@media(max-width:420px){.top .logo{font-size:17px}.top .brandMk svg{width:26px;height:26px}.top .saud{font-size:12px;max-width:112px}.tbtn,.pav{width:34px;height:34px}.top .tr{gap:6px}.top .brand{gap:7px}.top .ham{margin-right:6px}}
 </style>
 <style>
 .pv{font-size:24px;font-weight:700;color:#fff;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
@@ -196,7 +233,7 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bkOutro{display:block;margin-top:8px}
 .bk-val{font-size:26px;font-weight:300;letter-spacing:-.02em;margin:12px 0 2px;font-variant-numeric:tabular-nums}
 .hero .big{font-variant-numeric:tabular-nums;color:#fff}
-@media(min-width:900px){body{padding-left:248px}.side{transform:none}.ham,.sbClose,#ov{display:none}.top .logo{display:none}#app{max-width:880px}#toast{left:calc(50% + 124px)}}
+@media(min-width:900px){body{padding-left:248px}.side{transform:none}.ham,.sbClose,#ov{display:none}#app{max-width:880px}#toast{left:calc(50% + 124px)}}
 #modal{position:fixed;inset:0;background:rgba(3,6,12,.6);display:none;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
 #modal.on{display:flex}
 .sheet{background:var(--card);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px;box-shadow:var(--shadow);max-height:90vh;overflow:auto;animation:up .3s ease}
@@ -505,14 +542,19 @@ html.claro .flx-tot b{color:#1f2330}
 <aside class="side" id="side">
   <div class="sb-brand"><span id="logo"></span><button class="sbClose" id="btnClose" aria-label="fechar menu"></button></div>
   <nav class="sb-nav" id="sbNav"></nav>
-  <div class="sb-foot"><div class="uchip" id="uchip"></div></div>
 </aside>
 <div id="ov"></div>
 <div id="app">
-  <div class="top">
-    <div class="tl"><button class="ham" id="btnMenu" aria-label="abrir menu"></button><div><span class="logo" id="logoHome" role="link" tabindex="0">GranaViva</span><small id="sub"></small></div></div>
-    <div class="syncPill" id="syncTxt"></div>
-  </div>
+  <header class="top" id="topbar">
+    <div class="tl"><button class="ham" id="btnMenu" aria-label="abrir menu"></button>
+      <div class="brand" id="logoHome" role="link" tabindex="0"><span class="brandMk" id="logoTop"></span><span class="logo">GranaViva</span></div></div>
+    <div class="tr">
+      <span class="saud" id="saud"></span>
+      <button class="tbtn" id="btnCfg" aria-label="ajustes" title="ajustes"></button>
+      <div class="pwrap" id="pwrap"><button class="pav" id="pbtn" aria-label="perfil" title="perfil"></button><span class="syncPill" id="syncTxt"></span>
+        <div class="pmenu" id="pmenu" hidden><p class="pmMail" id="pmMail"></p><button class="pmOut" id="btnOut">sair da conta</button></div></div>
+    </div>
+  </header>
   <main id="view"></main>
 </div>
 
@@ -618,7 +660,7 @@ function catIcon(c){return (S.catIcons&&S.catIcons[c])||CAT_ICON[c]||'outros';}
 function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
-const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'}];
 function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 function carregar(){
   try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&typeof d==='object')return Object.assign(vazio(),d);}catch(e){}
@@ -638,7 +680,7 @@ function setSync(t){
   else if(/pendente/.test(t)){k='offline';lab='pendente';}
   else if(/sincronizando|carregando/.test(t)){k='syncing';lab='sincronizando…';}
   else {k='synced';lab='sincronizado';}
-  el.className='syncPill '+k;el.innerHTML='<i></i>'+lab;
+  el.className='syncPill '+k;el.innerHTML='<i></i>'+lab;el.title=lab;
 }
 window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
@@ -1198,7 +1240,7 @@ function go(t){
   render();window.scrollTo(0,0);
 }
 function render(){
-  $('#sub').textContent=DATA_HOJE();
+  pintaTopo();$('#btnCfg').classList.toggle('on',TAB==='cfg');
   const v=$('#view');
   v.innerHTML=VIEWS[TAB]();
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
@@ -1479,6 +1521,13 @@ function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
   <h2 style="margin-bottom:12px">Ajustes</h2>
+  <div class="card">
+    <h4>Perfil</h4>
+    <div class="perfRow"><span class="perfAv">${fotoAtual()?`<img src="${esc(fotoAtual())}" alt="" referrerpolicy="no-referrer">`:I('user')}</span>
+      <div class="perfBtns"><label class="btn2 full file">escolher foto<input type="file" id="fotoIn" accept="image/*" class="sr"></label>
+      ${S.cfg.foto?'<button class="btn2 full" data-act="foto-rm">remover foto enviada</button>':''}</div></div>
+    <label class="perfNome">nome de exibição<input id="nomeIn" value="${esc(nomeAtual())}" placeholder="seu nome" autocomplete="given-name"></label>
+  </div>
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
@@ -2030,6 +2079,7 @@ function confirma(o,cb){
   });
 }
 const ACT={
+  'foto-rm':()=>{delete S.cfg.foto;salvar();pintaUsuario();render();toast('foto removida');},
   'fechar':closeModal,
   'novo-tx':()=>novoTx(),
   'edit-tx':id=>novoTx(id),
@@ -2117,6 +2167,25 @@ document.addEventListener('input',e=>{
 
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.id==='nomeIn'){S.cfg.nome=t.value.trim();salvar();pintaUsuario();render();return;}
+  if(t.id==='fotoIn'){
+    const f=t.files[0];t.value='';if(!f)return;
+    if(!/^image\//.test(f.type)){toast('escolha um arquivo de imagem',true);return;}
+    const r=new FileReader();
+    r.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{
+        const c=document.createElement('canvas');c.width=256;c.height=256;
+        const x=c.getContext('2d');const lado=Math.min(im.width,im.height);
+        x.drawImage(im,(im.width-lado)/2,(im.height-lado)/2,lado,lado,0,0,256,256);
+        S.cfg.foto=c.toDataURL('image/jpeg',0.86);
+        salvar();pintaUsuario();render();toast('foto atualizada');
+      };
+      im.onerror=()=>toast('não consegui ler essa imagem',true);
+      im.src=r.result;
+    };
+    r.readAsDataURL(f);return;
+  }
   if(t.dataset&&(t.dataset.filter==='relA'||t.dataset.filter==='relB')){REL[t.dataset.filter==='relA'?'a':'b']=t.value;render();return;}
   if(t.dataset&&t.dataset.filter){F[t.dataset.filter]=t.value;render();return;}
   if(t.id==='imp'){
@@ -2140,12 +2209,15 @@ window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(T
 
 $('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+n.l+'</span></button>').join('');
 $('#logo').innerHTML=LOGO;
+$('#logoTop').innerHTML=LOGO;
+$('#btnCfg').innerHTML=I('sliders');
 $('#btnMenu').innerHTML=I('menu');
 $('#btnClose').innerHTML=I('close');
 $('#fab').innerHTML=I('plus');
 restauraAba();
 if(geraRecorrentes())salvar();
 applyCfg();
+pintaUsuario();
 document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===TAB));
 render();
 
@@ -2243,14 +2315,41 @@ function pedeNovaSenha(){
     return null;
   });
 }
-function pintaUsuario(){
-  const ch=$('#uchip');
-  if(!USER){ch.innerHTML='';return;}
-  ch.innerHTML='<span class="av">'+I('user')+'</span><span class="who">'+esc(USER.email||'conta')+'<small>conectado</small></span><button id="btnOut" aria-label="sair da conta" title="sair">'+I('logout')+'</button>';
+function fotoAtual(){
+  if(S.cfg&&S.cfg.foto)return S.cfg.foto;
+  const m=(USER&&USER.user_metadata)||{};
+  return m.avatar_url||m.picture||'';
 }
-$('#uchip').addEventListener('click',async e=>{
-  if(!e.target.closest('#btnOut'))return;
-  confirma({titulo:'Sair da conta?',texto:'Você sai desta conta neste aparelho. Seus dados continuam salvos na nuvem.',ok:'Sair'},async()=>{await sb.auth.signOut();});
+function nomeAtual(){
+  if(S.cfg&&S.cfg.nome)return S.cfg.nome;
+  const m=(USER&&USER.user_metadata)||{};
+  const p=String(m.full_name||m.name||'').trim().split(/\s+/)[0];
+  return p||String((USER&&USER.email)||'').split('@')[0];
+}
+function saudacao(){const h=new Date().getHours();return h>=5&&h<12?'bom dia':h>=12&&h<18?'boa tarde':'boa noite';}
+function pintaTopo(){
+  const el=$('#saud');if(!el)return;
+  const n=USER?nomeAtual():'';
+  el.textContent=USER?saudacao()+(n?', '+n.toLowerCase():''):'';
+}
+function pintaUsuario(){
+  const pw=$('#pwrap');if(!pw)return;
+  if(!USER){pw.style.display='none';$('#pmenu').hidden=true;pintaTopo();return;}
+  pw.style.display='';
+  const f=fotoAtual();
+  $('#pbtn').innerHTML=f?'<img src="'+esc(f)+'" alt="" referrerpolicy="no-referrer">':I('user');
+  $('#pmMail').textContent=USER.email||'conta';
+  pintaTopo();
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#pbtn')){const m=$('#pmenu');m.hidden=!m.hidden;return;}
+  if(e.target.closest('#btnOut')){
+    $('#pmenu').hidden=true;
+    confirma({titulo:'Sair da conta?',texto:'Você sai desta conta neste aparelho. Seus dados continuam salvos na nuvem.',ok:'Sair'},async()=>{await sb.auth.signOut();});
+    return;
+  }
+  if(!e.target.closest('#pmenu'))$('#pmenu').hidden=true;
+  if(e.target.closest('#btnCfg'))go('cfg');
 });
 async function entraComSessao(sess){
   if(!sess||!sess.user)return;
