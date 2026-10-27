@@ -546,14 +546,16 @@ const KEY='grana-viva-v1';
 const CATS_PADRAO=['Moradia','Alimentação','Transporte','Lazer','Saúde','Educação','Outros'];
 const CATS_RECEITA=['Salário','Horas extras','Aposentadoria','Dividendos','Bônus/Promoções','Rendimentos','Outros'];
 const ACCENTS={verde:['#22c55e','#8b5cf6'],violeta:['#a855f7','#6366f1'],azul:['#3b82f6','#06b6d4'],rosa:['#ec4899','#f97316']};
-const PAL=['#22c55e','#8b5cf6','#06b6d4','#f59e0b','#ec4899','#3b82f6','#84cc16','#f97316','#14b8a6','#a855f7','#eab308','#ef4444'];
-const COR_DEF={};CATS_PADRAO.forEach((c,i)=>{COR_DEF[c]=PAL[i];});
-CATS_RECEITA.forEach((c,i)=>{if(!COR_DEF[c])COR_DEF[c]=PAL[(i+7)%PAL.length];});
+const PAL=['#22c55e','#f472b6','#8b5cf6','#f97316','#06b6d4','#facc15','#38bdf8','#ef4444','#14b8a6','#d946ef','#6366f1','#f59e0b'];
+function hashCat(s){let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))>>>0;return h;}
+// cor estável por nome: hash -> paleta, com sondagem para não repetir cor entre categorias
 function corCat(c){
   if(catCor(c))return catCor(c);
-  if(COR_DEF[c])return COR_DEF[c];
-  let h=0;for(const ch of String(c))h=(h*31+ch.charCodeAt(0))>>>0;
-  return PAL[h%PAL.length];
+  const custom=new Set((S.cats||[]).map(n=>catCor(n)).filter(Boolean));
+  const names=[...new Set([...CATS_PADRAO,...(S.cats||[]),...CATS_RECEITA])].filter(n=>!catCor(n)).sort();
+  const used=new Set(custom),map={};
+  names.forEach(n=>{let i=hashCat(n)%PAL.length,k=0;while(used.has(PAL[i])&&k<PAL.length){i=(i+1)%PAL.length;k++;}used.add(PAL[i]);map[n]=PAL[i];});
+  return map[c]||PAL[hashCat(c)%PAL.length];
 }
 const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -1261,8 +1263,8 @@ function viewInicio(){
   const saldo=saldoTotal(),rec=somaMes(m,'receita'),des=somaMes(m,'despesa');
   const sl=despesasPorCat(m),tot=sl.reduce((a,s)=>a+s.v,0);
   const p=proximoPag();
-  const segCat=tot>0?'<div class="flex h-3 w-full overflow-hidden rounded-full bg-white/5 mt-4">'+sl.map((s,i)=>`<i class="h-full" style="width:${(s.v/tot*100).toFixed(2)}%;background:${PIE_CORES[i%3]}" title="${esc(s.l)}"></i>`).join('')+'</div>'
-    +'<div class="mt-3 grid gap-1.5">'+sl.map((s,i)=>`<div class="flex justify-between text-sm text-[var(--mut)]"><span class="flex items-center gap-2"><i class="inline-block h-2 w-2 rounded-full" style="background:${PIE_CORES[i%3]}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${Math.round(s.v/tot*100)}%</span></div>`).join('')+'</div>':'';
+  const segCat=tot>0?'<div class="flex h-3 w-full overflow-hidden rounded-full bg-white/5 mt-4">'+sl.map((s,i)=>`<i class="h-full" style="width:${(s.v/tot*100).toFixed(2)}%;background:${s.color}" title="${esc(s.l)}"></i>`).join('')+'</div>'
+    +'<div class="mt-3 grid gap-1.5">'+sl.map((s,i)=>`<div class="flex justify-between text-sm text-[var(--mut)]"><span class="flex items-center gap-2"><i class="inline-block h-2 w-2 rounded-full" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${Math.round(s.v/tot*100)}%</span></div>`).join('')+'</div>':'';
   const mx=Math.max(rec,des,1);
   const fluxo=`<div class="${PC}">
     <p class="${PL}">Fluxo de caixa · mês</p>
