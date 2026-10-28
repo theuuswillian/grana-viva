@@ -225,6 +225,7 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .syncPill.offline i{background:#f87171}
 .top .tr{display:flex;align-items:center;gap:8px}
 .bell{position:relative;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--card2);border:1px solid var(--line);color:var(--txt);cursor:pointer}
+.olhoBtn{background:none;border:0;color:var(--mut);padding:4px;margin:-4px;cursor:pointer;-webkit-tap-highlight-color:transparent}.olhoBtn .i{width:20px;height:20px}
 .bell .i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .bell .bdg{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 .instCard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-color:rgba(139,92,246,.4)}
@@ -696,7 +697,7 @@ html.privado #app{filter:blur(18px)}
 <div id="app">
   <div class="top">
     <div class="tl"><button class="ham" id="btnMenu" aria-label="abrir menu"></button><div><span class="logo" id="logoHome" role="link" tabindex="0">GranaViva</span><small id="sub"></small></div></div>
-    <div class="tr"><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><div class="syncPill" id="syncTxt"></div></div>
+    <div class="tr"><button class="bell" id="btnEye" data-act="oculta" aria-label="ocultar valores"></button><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><div class="syncPill" id="syncTxt"></div></div>
   </div>
   <main id="view"></main>
 </div>
@@ -1027,7 +1028,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 /* ---------- utilidades ---------- */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const brl=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+/* ocultar valores: guardado só neste aparelho; com ele ligado todo valor em R$ aparece como R$ ••••• */
+let OCULTO=(()=>{try{return localStorage.getItem('gv-oculto')==='1';}catch(e){return false;}})();
+const brl=v=>OCULTO?'R$ •••••':(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const num=v=>(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 /* tags: minúsculas, sem #, até 8 por lançamento */
 function limpaTags(x){
@@ -2197,6 +2200,8 @@ function previsaoHTML(){
     <div class="mt-3 grid gap-1.5">${it('a receber',p.rec,'pos')}${it('a pagar',p.des,'neg')}${it('cartão que fecha este mês',p.cart,'neg')}</div>
     <p class="${PD}">saldo de hoje mais o que está previsto até o fim do mês. é uma estimativa, não garantia.</p></div>`;
 }
+ICONS.eye='<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>';
+ICONS.eyeOff='<path d="M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.6 3.3M6.6 7.6C4 9.3 2.5 12 2.5 12S6 18 12 18c1.9 0 3.5-.6 4.9-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>';
 function viewInicio(){
   const per=periodo(),pl=per.label;
   const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa');
@@ -2219,7 +2224,7 @@ function viewInicio(){
   <div class="perBar"><span class="perLbl">Período</span><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="${PC}">
-    <p class="${PL}">Saldo total</p>
+    <div class="flex items-center justify-between"><p class="${PL}">Saldo total</p><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
     <div class="pv-xl mt-2 ${saldo<0?'neg':'pos'}">${brl(saldo)}</div>
     <p class="${PD}">receitas menos despesas pagas, desde o começo</p>
   </div>
@@ -3437,6 +3442,7 @@ const ACT={
   'lock-off':()=>lockPedeAtual('Digite o PIN para desativar',()=>{lockSalva(null);lockFecha();render();toast('Bloqueio desativado');}),
   'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);render();toast('Face ID desativado');}else lockBioAtiva();},
   'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
+  'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
@@ -3547,7 +3553,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.6';
+const GV_BUILD='2026-10-28.7';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -3766,6 +3772,8 @@ lockAbre();
   document.addEventListener('touchend',fim,{passive:true});
   document.addEventListener('touchcancel',fim,{passive:true});
 })();
+function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.classList.toggle('on',OCULTO);}
+pintaOlho();
 $('#aLogo').innerHTML=LOGO;
 $('#icMail').innerHTML=I('mail');
 $('#icLock').innerHTML=I('lock');
