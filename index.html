@@ -1215,8 +1215,8 @@ async function atualizaPushUI(){
   if(!pushSuportado()){t.textContent=ios&&!instalado()?'No iPhone, primeiro instale o app: no Safari, toque em Compartilhar e em Adicionar à Tela de Início. Depois abra pelo ícone e ative aqui.':'Este navegador não aceita notificações push.';b.innerHTML='';return;}
   if(Notification.permission==='denied'){t.textContent='As notificações estão bloqueadas para o GranaViva. Libere nos ajustes do aparelho e volte aqui.';b.innerHTML='';return;}
   let s=null;try{s=await inscricaoAtual();}catch(e){}
-  if(s){t.textContent='Ativadas neste aparelho. Todo dia às 9h aviso de faturas que vencem em 3 dias, amanhã ou hoje, faturas atrasadas e contas fixas do dia.';b.innerHTML='<button class="btn2 sm" data-act="push-teste">enviar teste</button><button class="btn2 sm danger" data-act="push-off">desativar</button>';}
-  else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
+  if(s){t.textContent='Ativadas neste aparelho. Todo dia às 9h aviso de faturas que vencem em 3 dias, amanhã ou hoje, faturas atrasadas, contas fixas do dia e orçamentos que passaram de 80% ou estouraram.';b.innerHTML='<button class="btn2 sm" data-act="push-teste">enviar teste</button><button class="btn2 sm danger" data-act="push-off">desativar</button>';}
+  else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
