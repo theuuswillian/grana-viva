@@ -697,6 +697,71 @@ html.claro .atalho{background:linear-gradient(160deg,color-mix(in srgb,var(--c) 
   .head:has(.fx-top)>.row>[data-act="novo-tx"]{order:-1}
   .head:has(.fx-top)>.row>[data-act="nova-fixa"]{order:-1}
 }
+/* ---------- v10.12: maiores categorias do relatório ---------- */
+.topCats .card h4{line-height:1.45}
+.tcRow{padding:11px 0;border-bottom:1px solid var(--line,rgba(255,255,255,.07))}
+.tcRow:last-child{border-bottom:0;padding-bottom:2px}
+.tcTop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tcN{display:flex;align-items:center;gap:8px;min-width:0;flex:1;font-size:14px;color:var(--txt)}
+.tcN>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tcN .dot{flex:none}
+.tcV{flex:none;white-space:nowrap;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums;color:var(--txt)}
+.tcBar{height:5px;border-radius:9px;background:color-mix(in srgb,var(--txt) 8%,transparent);margin:8px 0 4px;overflow:hidden}
+.tcBar i{display:block;height:100%;border-radius:9px}
+.tcP{font-size:11px;color:var(--mut)}
+@media(max-width:700px){.topCats{grid-template-columns:1fr!important}}
+/* ---------- v10.12: relatório mensal reformulado ---------- */
+.relSel{padding:14px 14px 12px}
+.rsTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rsTop .mcal-nav{width:40px;height:40px;border-radius:12px}
+.rsTop .mcal-nav[disabled]{opacity:.3;pointer-events:none}
+.rsMes{text-align:center;min-width:0}
+.rsMes small{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.rsMes b{display:block;font-size:19px;font-weight:700;color:var(--txt);margin-top:2px}
+.rsMes b::first-letter{text-transform:uppercase}
+.rsPills{display:flex;gap:6px;overflow-x:auto;margin:12px -14px 0;padding:2px 14px 4px;scrollbar-width:none;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.rsPills::-webkit-scrollbar{display:none}
+.rsPill{flex:none;min-width:52px;height:50px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--txt);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rsPill span{font-size:14px;font-weight:600}
+.rsPill small{font-size:10px;color:var(--mut)}
+.rsPill.on{background:linear-gradient(135deg,var(--a1,#22c55e),var(--a2,#8b5cf6));border-color:transparent;color:#fff}
+.rsPill.on small{color:rgba(255,255,255,.8)}
+.rsCmp{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.rsCmp>span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);white-space:nowrap}
+.rsCmp>span .i{width:15px;height:15px}
+.rsCmp select{width:100%;height:44px;border-radius:12px;padding:0 12px;font-size:16px}
+.relRes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+@media(min-width:900px){.relRes{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.rsT{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.rsL{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.rsL .i{width:15px;height:15px;padding:4px;border-radius:8px;box-sizing:content-box}
+.rsT.rec .rsL .i{color:#4ade80;background:rgba(74,222,128,.12)}
+.rsT.des .rsL .i{color:#f87171;background:rgba(248,113,113,.12)}
+.rsT.sal .rsL .i{color:#60a5fa;background:rgba(96,165,250,.12)}
+.rsT.pou .rsL .i{color:#fbbf24;background:rgba(251,191,36,.12)}
+.rsT b{font-size:18px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.rsT.rec b{color:#4ade80}.rsT.des b{color:#f87171}.rsT.sal.neg b{color:#f87171}
+html.claro .rsT.rec b{color:#16a34a}html.claro .rsT.des b,html.claro .rsT.sal.neg b{color:#dc2626}
+.rsD{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsD.pos{color:#4ade80}.rsD.neg{color:#f87171}
+html.claro .rsD.pos{color:#16a34a}html.claro .rsD.neg{color:#dc2626}
+.rsX{font-size:12px;color:var(--mut);margin:8px 4px 0}
+.relDia .rdStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 12px}
+.rdS{background:var(--card2);border-radius:12px;padding:9px 10px;min-width:0}
+.rdS small{display:block;font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdS b{display:block;font-size:13.5px;font-weight:700;color:var(--txt);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+.rdS .rdSub{margin-top:1px;font-size:10.5px}
+.rdProj{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--mut);margin-top:10px;line-height:1.45}
+.rdProj .i{flex:none;width:16px;height:16px;margin-top:1px;color:var(--a2,#8b5cf6)}
+.rdProj b{color:var(--txt)}
+.rmRow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rmRow:last-child{border-bottom:0}
+.rmI{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:var(--cc);background:color-mix(in srgb,var(--cc) 15%,transparent)}
+.rmI .i{width:17px;height:17px}
+.rmT{flex:1;min-width:0}
+.rmT b{display:block;font-size:14px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmT small{display:block;font-size:11.5px;color:var(--mut);margin-top:1px}
+.rmV{flex:none;font-weight:700;font-size:14px;color:var(--txt);font-variant-numeric:tabular-nums}
 /* ---------- v10.8: tela sempre encaixada, sem zoom nem rolagem lateral ---------- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden;overflow-x:clip}
 html,body{max-width:100%;width:100%}
@@ -859,6 +924,11 @@ const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 const ICONS={
+  swap:'<path d="M7 4 3.5 7.5 7 11M3.5 7.5h13M17 13l3.5 3.5L17 20M20.5 16.5h-13"/>',
+  arrowUp:'<path d="M12 19V5M6 11l6-6 6 6"/>',
+  arrowDown:'<path d="M12 5v14M6 13l6 6 6-6"/>',
+  wallet:'<rect x="3.5" y="6" width="17" height="13" rx="3"/><path d="M3.5 10h17M15.5 14.5h2"/>',
+  piggy:'<path d="M5 11a7 6 0 0 1 12.5-3.2L20 7v4l-1.2.6A7 6 0 0 1 16 16.5V19h-3v-1.6a8 8 0 0 1-3 0V19H7v-2.6A6 6 0 0 1 5 11z"/><path d="M10 7.5h3"/>',
   calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   chevD:'<path d="m6 9 6 6 6-6"/>',
 bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
@@ -1863,8 +1933,17 @@ function relPorCat(a,b){
   return `<div class="card relCat"><h4>todas as categorias</h4>${rows}</div>`;
 }
 
+/* v10.12: relatório — dados extras */
+function despMes(m){return S.tx.filter(t=>efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data&&noPer(t.data,m));}
+function relDias(m){const y=+m.slice(0,4),mo=+m.slice(5,7)-1,n=new Date(y,mo+1,0).getDate(),v=new Array(n).fill(0);
+  despMes(m).forEach(t=>{const d=+t.data.slice(8,10);if(d>=1&&d<=n)v[d-1]+=cents(t.valor);});return v.map(x=>x/100);}
+function relDiasInfo(m){const v=relDias(m),hoje=new Date(),atual=m===mesOff(0),futuro=m>mesOff(0);
+  const ate=atual?hoje.getDate():futuro?0:v.length,tot=v.slice(0,ate).reduce((a,b)=>a+b,0);
+  let mi=-1,mv=0;v.forEach((x,i)=>{if(x>mv){mv=x;mi=i;}});
+  const sem=v.slice(0,ate).filter(x=>!x).length;
+  return {v,ate,tot,media:ate?tot/ate:0,maxD:mi+1,maxV:mv,sem,proj:atual&&ate?tot/ate*v.length:null,atual};}
 function mesAdd(m,k){const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,1);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
-function relShift(k,n){const cur=REL[k]||(k==='a'?mesOff(0):mesOff(1));REL[k]=mesAdd(cur,n);render();}
+function relShift(k,n){const cur=REL[k]||(k==='a'?mesOff(0):mesOff(1));REL[k]=mesAdd(cur,n);if(k==='a')REL.b=mesAdd(REL.a,-1);render();}
 function calGrid(m){
   const y=+m.slice(0,4),mo=+m.slice(5,7)-1,hoje=new Date();
   const ini=new Date(y,mo,1).getDay(),n=new Date(y,mo+1,0).getDate();
@@ -1878,7 +1957,7 @@ function calGrid(m){
 function viewRel(){
   const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
   const ra=resumoMes(a),rb=resumoMes(b);
-  const top=m=>despesasPorCat(m).slice(0,5).map(s=>`<div class="legItem"><span><i class="dot" style="background:${s.color}"></i>${esc(s.l)}</span><span class="nw">${brl(s.v)}</span></div>`).join('')||'<p class="vazio">sem despesas</p>';
+  const top=m=>{const L=despesasPorCat(m),T=L.reduce((t,x)=>t+x.v,0)||1,mx=(L[0]&&L[0].v)||1;return L.slice(0,5).map(s=>`<div class="tcRow"><div class="tcTop"><span class="tcN"><i class="dot" style="background:${s.color}"></i><span>${esc(s.l)}</span></span><span class="tcV">${brl(s.v)}</span></div><div class="tcBar"><i style="width:${(s.v/mx*100).toFixed(1)}%;background:${s.color}"></i></div><span class="tcP">${Math.round(s.v/T*100)}% do mês</span></div>`).join('')||'<p class="vazio">sem despesas</p>';};
   const cel=(v,c)=>`<b class="nw ${c}">${brl(v)}</b>`;
   const linha=(nome,x,y,inv,fixo)=>{
     const v=x?Math.round((y-x)/Math.abs(x)*100):null,up=y>x,bom=inv?!up:up;
@@ -1889,32 +1968,62 @@ function viewRel(){
   };
   return `<div class="relWrap">
   <div class="head relHead"><h2>Relatório mensal</h2><div class="relPills noprint"><button class="btn2" data-act="rel-csv">csv</button><button class="btn2" data-act="rel-print">imprimir</button></div></div>
-  <div class="card filtros noprint">
-    <div class="mcal">
-      <div class="mcal-h"><button class="mcal-nav" data-act="rel-a-prev" aria-label="mês anterior">${I('chevL')}</button><b>${mesNome(a)}</b><button class="mcal-nav" data-act="rel-a-next" aria-label="próximo mês">${I('chevR')}</button></div>
-      <div class="mcal-g">${['D','S','T','Q','Q','S','S'].map(x=>`<span class="mcal-w">${x}</span>`).join('')}${calGrid(a)}</div>
-      <div class="mcal-cmp"><span>comparar com</span><span class="mcal-ctl"><button class="mcal-nav sm" data-act="rel-b-prev" aria-label="mês de comparação anterior">${I('chevL')}</button><b>${mesCurto(b)}</b><button class="mcal-nav sm" data-act="rel-b-next" aria-label="próximo mês de comparação">${I('chevR')}</button></span></div>
-    </div>
+  <div class="card relSel noprint">
+    <div class="rsTop"><button class="mcal-nav" data-act="rel-a-prev" aria-label="mês anterior">${I('chevL')}</button><div class="rsMes"><small>mês analisado</small><b>${mesNome(a)}</b></div><button class="mcal-nav" data-act="rel-a-next" aria-label="próximo mês" ${a>=mesOff(0)?'disabled':''}>${I('chevR')}</button></div>
+    <div class="rsPills" id="rsPills">${Array.from({length:12},(_,k)=>mesOff(11-k)).map(m=>`<button class="rsPill${m===a?' on':''}" data-act="rel-mes" data-id="${m}"><span>${MESES[+m.slice(5,7)-1]}</span><small>${m.slice(2,4)}</small></button>`).join('')}</div>
+    <label class="rsCmp"><span>${I('swap')}comparar com</span><select data-filter="relB">${Array.from({length:24},(_,k)=>mesAdd(a,-(k+1))).map(m=>`<option value="${m}"${m===b?' selected':''}>${m===mesAdd(a,-1)?'mês anterior · ':m===mesAdd(a,-12)?'mesmo mês do ano passado · ':''}${mesCurto(m)}</option>`).join('')}${b>a||b<mesAdd(a,-24)?`<option value="${b}" selected>${mesCurto(b)}</option>`:''}</select></label>
   </div>
+  ${relResumo(a,b,ra,rb)}
   ${relDestaques(a,b,ra,rb)}
-  <div class="card relT" style="margin-top:14px">
-    <div class="rh"><span></span><span>${mesCurto(a)}</span><span>${mesCurto(b)}</span><span>variação</span></div>
-    ${linha('receitas',rb.rec,ra.rec,false,'pos')}
-    ${linha('despesas',rb.des,ra.des,true,'neg')}
-    ${linha('saldo',rb.sal,ra.sal,false,null)}
-    ${(()=>{const ea=encargosMes(a),eb=encargosMes(b);return (ea.enc||eb.enc?linha('juros e multas',eb.enc,ea.enc,true,'neg'):'')+(ea.desc||eb.desc?linha('descontos obtidos',eb.desc,ea.desc,false,'pos'):'');})()}
-  </div>
+  ${relDiario(a,b)}
   <div class="card relChart">
     <h4>Comparação por categoria de despesa</h4>
     <canvas id="cRel" class="cv"></canvas>
     <div class="legend"><span><i class="dot" style="background:#a78bfa"></i>${mesCurto(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesCurto(b)}</span></div>
   </div>
   ${relPorCat(a,b)}
-  <div class="grid2">
+  <div class="grid2 topCats">
     <div class="card"><h4>maiores categorias · ${mesNome(a)}</h4>${top(a)}</div>
     <div class="card"><h4>maiores categorias · ${mesNome(b)}</h4>${top(b)}</div>
   </div>
+  ${relMaiores(a)}
   </div>`;
+}
+function relResumo(a,b,ra,rb){
+  const pou=x=>x.rec>0?Math.round(x.sal/x.rec*100):null;
+  const pa=pou(ra),pb=pou(rb);
+  const dl=(y,x,inv)=>{if(!x&&!y)return '<span class="rsD">—</span>';if(!x)return '<span class="rsD">novo</span>';const v=Math.round((y-x)/Math.abs(x)*100);if(!v)return `<span class="rsD">= ${mesCurto(b)}</span>`;const bom=inv?v<0:v>0;return `<span class="rsD ${bom?'pos':'neg'}">${v>0?'▲':'▼'} ${Math.abs(v)}% vs ${MESES[+b.slice(5,7)-1]}</span>`;};
+  const t=(cls,ic,lb,val,d)=>`<div class="rsT ${cls}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b>${d}</div>`;
+  const ea=encargosMes(a);
+  const extra=(ea.enc||ea.desc)?`<p class="rsX">${ea.enc?`juros e multas <b class="neg">${brl(ea.enc)}</b>`:''}${ea.enc&&ea.desc?' · ':''}${ea.desc?`descontos obtidos <b class="pos">${brl(ea.desc)}</b>`:''}</p>`:'';
+  return `<div class="relRes">${t('rec','arrowUp','receitas',brl(ra.rec),dl(ra.rec,rb.rec,false))}${t('des','arrowDown','despesas',brl(ra.des),dl(ra.des,rb.des,true))}${t('sal '+(ra.sal<0?'neg':''),'wallet','saldo do mês',brl(ra.sal),dl(ra.sal,rb.sal,false))}${t('pou','piggy','você guardou',pa===null?'—':(OCULTO?'••%':pa+'%'),pa===null?'<span class="rsD">sem receitas</span>':pb===null?'<span class="rsD">da renda</span>':`<span class="rsD ${pa>=pb?'pos':'neg'}">${pa>=pb?'▲':'▼'} ${Math.abs(pa-pb)} p.p. vs ${MESES[+b.slice(5,7)-1]}</span>`)}</div>${extra}`;
+}
+function relDiario(a,b){
+  const A=relDiasInfo(a);
+  if(!A.ate||!A.tot)return '';
+  const st=(l,v,sub)=>`<div class="rdS"><small>${l}</small><b class="nw">${v}</b>${sub?`<small class="rdSub">${sub}</small>`:''}</div>`;
+  return `<div class="card relDia"><h4>gastos por dia · ${mesNome(a)}</h4>
+    <div class="rdStats">${st('média por dia',brl(A.media))}${st('dia mais caro',A.maxV?brl(A.maxV):'—',A.maxV?`em ${pad(A.maxD)}/${a.slice(5,7)}`:'')}${st('dias sem gastos',A.sem+' de '+A.ate)}</div>
+    <canvas id="cRelDia" class="cv"></canvas>
+    ${A.proj!==null?`<p class="rdProj">${I('gauge')}<span>no ritmo atual, ${MESES_LONGO[+a.slice(5,7)-1]} deve fechar em <b>${brl(A.proj)}</b> de despesas${resumoMes(b).des?` (${mesCurto(b)}: ${brl(resumoMes(b).des)})`:''}.</span></p>`:''}
+  </div>`;
+}
+function relMaiores(a){
+  const L=despMes(a).slice().sort((x,y)=>(+y.valor||0)-(+x.valor||0)).slice(0,5);
+  if(!L.length)return '';
+  return `<div class="card relMai"><h4>maiores despesas · ${mesNome(a)}</h4>${L.map(t=>`<div class="rmRow"><span class="rmI" style="--cc:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span><div class="rmT"><b>${esc(t.descricao||t.categoria||'despesa')}</b><small>${esc(t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}</small></div><span class="rmV nw">${brl(t.valor)}</span></div>`).join('')}</div>`;
+}
+function drawRelDia(c,p){
+  const a=REL.a||mesOff(0),A=relDiasInfo(a),v=A.v;
+  const {ctx,w,h}=fitCanvas(c,150);ctx.clearRect(0,0,w,h);
+  const top=8,base=h-20,H=base-top,mx=Math.max(1,...v),gw=w/v.length,bw=Math.max(2,Math.min(10,gw*0.62));
+  ctx.strokeStyle=cor('--line');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,base+.5);ctx.lineTo(w,base+.5);ctx.stroke();
+  if(A.media){const y=base-A.media/mx*H;ctx.setLineDash([4,4]);ctx.strokeStyle=cor('--mut');ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();ctx.setLineDash([]);}
+  v.forEach((x,i)=>{const cx=i*gw+gw/2;const hh=Math.max(x?2:0,x/mx*H*p);const fut=A.atual&&i>=A.ate;
+    if(fut){ctx.fillStyle=cor('--line');ctx.fillRect(cx-bw/2,base-2,bw,2);return;}
+    if(hh)bar(ctx,cx-bw/2,base-hh,bw,hh,i+1===A.maxD?'#f87171':'#a78bfa');});
+  ctx.fillStyle=cor('--mut');ctx.font='11px system-ui';ctx.textAlign='center';
+  [1,8,15,22,v.length].forEach(d=>ctx.fillText(d,(d-1)*gw+gw/2,h-5));
 }
 function drawRel(c,p){
   const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
@@ -2204,7 +2313,7 @@ const AFTER={
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
   },
   fii:()=>{updCountdown();},
-  rel:()=>{const c=$('#cRel');if(c)animar(800,p=>drawRel(c,p));}
+  rel:()=>{const c=$('#cRel'),d=$('#cRelDia');if(c||d)animar(800,p=>{if(c)drawRel(c,p);if(d)drawRelDia(d,p);});const ps=$('#rsPills');if(ps){const on=ps.querySelector('.on');if(on)ps.scrollLeft=on.offsetLeft-ps.clientWidth/2+on.clientWidth/2;}}
 };
 
 function nomeUsuario(){
@@ -3562,6 +3671,7 @@ const ACT={
   'rel-a-next':()=>relShift('a',1),
   'rel-b-prev':()=>relShift('b',-1),
   'rel-b-next':()=>relShift('b',1),
+  'rel-mes':(id)=>{REL.a=id;REL.b=mesAdd(id,-1);render();},
   'rel-csv':()=>relCSV(),
   'tx-planilha':()=>txPlanilha(),
   'limpar':limpar,
@@ -3645,7 +3755,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.13';
+const GV_BUILD='2026-10-28.15';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
