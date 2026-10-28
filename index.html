@@ -677,6 +677,26 @@ html.claro .atalho{background:linear-gradient(160deg,color-mix(in srgb,var(--c) 
   background:linear-gradient(135deg,color-mix(in srgb,var(--a1) 16%,var(--card2)),color-mix(in srgb,var(--a2) 16%,var(--card2)))!important;border:1px solid color-mix(in srgb,var(--a1) 28%,transparent)!important;color:var(--txt)!important;cursor:pointer}
 .perSel .i,.perSel svg{position:absolute;right:12px;width:16px;height:16px;pointer-events:none;color:var(--txt);opacity:.8}
 .perBar input[type=date]{flex:1 1 140px;border-radius:12px}
+/* ---------- v10.11: áreas de toque confortáveis (mín. ~40px) ---------- */
+.olhoBtn{width:40px;height:40px;display:grid!important;place-items:center;margin:-10px -10px -10px 0!important;padding:0!important;border-radius:12px}
+.olhoBtn:active{background:color-mix(in srgb,var(--txt) 8%,transparent)}
+.relPills .btn2{min-height:38px;padding:8px 16px}
+.mcal-nav.sm{min-width:38px;min-height:38px}
+.ohRow{min-height:42px;align-items:center}
+.catCell>button[data-act="del-cat"]{width:34px!important;height:34px!important;display:grid;place-items:center;top:2px!important;right:2px!important;padding:0!important;border-radius:10px}
+.catCell .cc-n{padding:6px 4px;margin:-6px -4px}
+.acts2 .btn2{min-height:36px}
+/* ---------- v10.11: títulos padronizados, ações de Despesas organizadas ---------- */
+#view .head h2{font-size:30px;font-weight:700;letter-spacing:-.035em;line-height:1.1;color:var(--txt)}
+.mcal-h b,.mcal-ctl b{text-transform:none!important}
+.mcal-h b::first-letter,.mcal-ctl b::first-letter{text-transform:uppercase}
+@media(max-width:560px){
+  .head:has(.fx-top)>h2{width:100%}
+  .head:has(.fx-top)>.row{width:100%;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}
+  .head:has(.fx-top)>.row>button{width:100%;min-height:42px;justify-content:center;display:flex;align-items:center;gap:6px;margin:0}
+  .head:has(.fx-top)>.row>[data-act="novo-tx"]{order:-1}
+  .head:has(.fx-top)>.row>[data-act="nova-fixa"]{order:-1}
+}
 /* ---------- v10.8: tela sempre encaixada, sem zoom nem rolagem lateral ---------- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden;overflow-x:clip}
 html,body{max-width:100%;width:100%}
@@ -3625,7 +3645,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.12';
+const GV_BUILD='2026-10-28.13';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
