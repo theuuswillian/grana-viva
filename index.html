@@ -654,6 +654,29 @@ html.claro .pushChips b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42
 }
 
 #toast{margin-bottom:env(safe-area-inset-bottom,0px)}
+/* ---------- v10.10: atalhos em grade + barra de período ---------- */
+.atalhos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:2px 0 14px}
+.atalho{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;padding:14px 6px 12px;border-radius:20px;cursor:pointer;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 12%,var(--card)) 0%,var(--card) 70%);
+  border:1px solid color-mix(in srgb,var(--c) 18%,var(--line));color:var(--txt);overflow:hidden;
+  transition:transform .15s ease,border-color .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+.atalho::after{content:"";position:absolute;inset:auto -20% -60% auto;width:70%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c) 22%,transparent),transparent 70%);pointer-events:none}
+.atalho:active{transform:scale(.95)}
+.atalho:hover{border-color:color-mix(in srgb,var(--c) 45%,var(--line));box-shadow:0 10px 26px -14px var(--c)}
+.atIc{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:var(--c);
+  background:color-mix(in srgb,var(--c) 16%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 28%,transparent),0 6px 16px -8px var(--c)}
+.atIc .i,.atIc svg{width:21px;height:21px}
+.atLb{font-size:12.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+html.claro .atalho{background:linear-gradient(160deg,color-mix(in srgb,var(--c) 10%,#fff) 0%,#fff 70%);box-shadow:0 6px 18px -12px rgba(15,23,42,.25)}
+@media(min-width:700px){.atalhos{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.perBar{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px!important;margin:0 0 14px!important;padding:8px 8px 8px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line)}
+.perBar .perLbl{display:flex;align-items:center;gap:8px;font-size:12px!important;font-weight:700!important;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.perBar .perLbl .i,.perBar .perLbl svg{width:17px;height:17px;color:var(--a1)}
+.perSel{position:relative;display:flex;align-items:center;margin:0}
+.perSel select{-webkit-appearance:none;appearance:none;width:auto!important;padding:9px 38px 9px 16px!important;border-radius:13px!important;font-weight:600;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--a1) 16%,var(--card2)),color-mix(in srgb,var(--a2) 16%,var(--card2)))!important;border:1px solid color-mix(in srgb,var(--a1) 28%,transparent)!important;color:var(--txt)!important;cursor:pointer}
+.perSel .i,.perSel svg{position:absolute;right:12px;width:16px;height:16px;pointer-events:none;color:var(--txt);opacity:.8}
+.perBar input[type=date]{flex:1 1 140px;border-radius:12px}
 /* ---------- v10.8: tela sempre encaixada, sem zoom nem rolagem lateral ---------- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden;overflow-x:clip}
 html,body{max-width:100%;width:100%}
@@ -816,6 +839,8 @@ const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 const ICONS={
+  calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  chevD:'<path d="m6 9 6 6 6-6"/>',
 bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   list:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
 report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"/><rect x="10.5" y="7" width="3" height="11.5" rx="1"/><rect x="15.5" y="4" width="3" height="14.5" rx="1"/>',
@@ -2267,8 +2292,8 @@ function viewInicio(){
   </div>`;
   return `
   <div class="px-1 pt-2 pb-3"><h1 class="text-3xl font-bold tracking-tight text-[var(--txt)]">${saudHora()}${nomeUsuario()?', <span class="text-[#a3e635]">'+esc(nomeUsuario())+'</span>':''}</h1></div>
-  <div class="mb-3 flex flex-wrap gap-2"><button class="chip on" data-act="ir-inicio">visão geral</button><button class="chip" data-act="ir-lanc">despesas</button><button class="chip" data-act="ir-orc">orçamentos</button><button class="chip" data-act="ir-cartoes">cartões</button><button class="chip" data-act="ir-rel">relatório</button><button class="chip" data-act="ir-plan">planejamento</button><button class="chip" data-act="ir-pat">patrimônio</button></div>
-  <div class="perBar"><span class="perLbl">Período</span><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>
+  <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
+  <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="${PC}">
     <div class="flex items-center justify-between"><p class="${PL}">Saldo total</p><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
@@ -3533,7 +3558,7 @@ const ACT={
   'principal':id=>{if((S.bancos.find(x=>x.id===id)||{}).arq)return;S.bancos.forEach(b=>{b.principal=b.id===id;});salvar();render();toast('Conta principal definida');}
 };
 
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip[data-act]');if(!c)return;const t=c.dataset.act.replace('ir-','');go(t);});
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip[data-act^="ir-"],.atalho[data-act^="ir-"]');if(!c)return;const t=c.dataset.act.replace('ir-','');go(t);});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='logoHome')go('inicio');});
 // logo: checa pela posição do toque, então funciona com menu aberto (#ov/#side por cima) e com a tela de login (#auth)
 document.addEventListener('click',e=>{
@@ -3600,7 +3625,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.11';
+const GV_BUILD='2026-10-28.12';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
