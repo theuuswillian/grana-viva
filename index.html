@@ -767,6 +767,7 @@ function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
 const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+const FREQS=['diaria','semanal','quinzenal','mensal','anual','intervalo'],ISO_RE=/^\d{4}-\d{2}-\d{2}$/;
 function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},bens:[],passivos:[],patHist:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 /* saneamento: tudo que vem do aparelho, da nuvem ou de um backup passa por aqui.
    garante tipos (números, datas, ids seguros) e impede que um backup adulterado injete HTML pelos ids/cores. */
@@ -787,7 +788,7 @@ function sanea(d){
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal}));
-  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:['mensal','semanal','anual'].includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false}));
+  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:''}));
   // patrimônio: bens, dívidas e fotografia mensal
   const BEM_T=['imovel','veiculo','outro'],PAS_T=['emprestimo','financiamento','divida','outro'];
   o.bens=arr(o.bens).map(b=>({id:sid(b.id),nome:str(b.nome,80),tipo:BEM_T.includes(b.tipo)?b.tipo:'outro',valor:Math.max(0,c2(b.valor))})).filter(b=>b.nome);
@@ -1306,11 +1307,31 @@ function statusFatura(t){
   return venceFatura(t)<hojeISO()?'vencida':'aberta';
 }
 const idGerado=k=>k.replace(/[^A-Za-z0-9_|:.\-]/g,'_');
-const FREQ_L={mensal:'mensal',semanal:'semanal',anual:'anual'};
+const FREQ_L={diaria:'diária',semanal:'semanal',quinzenal:'quinzenal',mensal:'mensal',anual:'anual',intervalo:'personalizado'};
+/* diária, quinzenal e personalizada viram "a cada n unidades" a partir de uma data inicial */
+function regraIntervalo(f){const fr=f.freq;if(fr==='diaria')return {n:1,un:'dia'};if(fr==='quinzenal')return {n:2,un:'semana'};if(fr==='intervalo')return {n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia'};return null;}
+function addMeses(iso,k){const y=+iso.slice(0,4),m=+iso.slice(5,7)-1+k,d=+iso.slice(8,10),Y=y+Math.floor(m/12),M=((m%12)+12)%12;return isoDe(new Date(Y,M,Math.min(d,ultimoDia(Y,M))));}
+function addDias(iso,k){return isoDe(new Date(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10)+k));}
 const DOW_L=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
 /* datas (ISO) em que a conta fixa acontece entre ini e fim. chaves: mensal fx|id|AAAA-MM (compatível), semanal fx|id|AAAA-MM-DD, anual fx|id|AAAA */
 function ocorrenciasFixa(f,ini,fim){
+  if(f.fim&&ISO_RE.test(f.fim)&&f.fim<fim)fim=f.fim;
+  if(fim<ini)return [];
   const out=[],fr=f.freq||'mensal',cr=f.criadoEm||'';
+  const ri=regraIntervalo(f);
+  if(ri){
+    const a0=ISO_RE.test(f.inicio||'')?f.inicio:(cr||ini).slice(0,10);
+    if(ri.un==='mes'){
+      let k=0;if(a0<ini){const meses=(+ini.slice(0,4)-+a0.slice(0,4))*12+(+ini.slice(5,7)-+a0.slice(5,7));k=Math.max(0,Math.floor(meses/ri.n)-1)*ri.n;}
+      for(let g=0;g<2000;g++,k+=ri.n){const s=addMeses(a0,k);if(s>fim)break;if(s<ini||(cr&&s<cr.slice(0,10)))continue;out.push({data:s,key:'fx|'+f.id+'|'+s});}
+      return out;
+    }
+    const passo=ri.n*(ri.un==='semana'?7:1);
+    const t0=Date.UTC(+a0.slice(0,4),+a0.slice(5,7)-1,+a0.slice(8,10)),ti=Date.UTC(+ini.slice(0,4),+ini.slice(5,7)-1,+ini.slice(8,10));
+    let k=a0<ini?Math.ceil((ti-t0)/864e5/passo)*passo:0;
+    for(let g=0;g<2000;g++,k+=passo){const s=addDias(a0,k);if(s>fim)break;if(s<ini||(cr&&s<cr.slice(0,10)))continue;out.push({data:s,key:'fx|'+f.id+'|'+s});}
+    return out;
+  }
   const y0=+ini.slice(0,4),m0=+ini.slice(5,7)-1,y1=+fim.slice(0,4),m1=+fim.slice(5,7)-1;
   if(fr==='semanal'){
     const dow=Math.max(0,Math.min(6,+f.dow||0));
@@ -1333,8 +1354,9 @@ function ocorrenciasFixa(f,ini,fim){
   return out;
 }
 function dataDaChave(f,key){const p=key.split('|')[2]||'';if((f.freq||'mensal')!=='mensal'||p.length!==7)return '';const y=+p.slice(0,4),m=+p.slice(5,7)-1;return isoDe(new Date(y,m,Math.min(Math.max(1,f.dia||1),ultimoDia(y,m))));}
-function descFreq(f){const fr=f.freq||'mensal';if(fr==='semanal'){const d=DOW_L[+f.dow||0];return (d==='sábado'||d==='domingo'?'todo ':'toda ')+d;}if(fr==='anual')return 'todo ano em '+pad(f.dia||1)+'/'+pad(f.mes||1);return 'todo dia '+(f.dia||1);}
-function mensalEq(f){const v=+f.valor||0,fr=f.freq||'mensal';return fr==='semanal'?v*52/12:fr==='anual'?v/12:v;}
+function descFreq(f){const ate=f.fim&&ISO_RE.test(f.fim)?' até '+fmtData(f.fim):'';return descFreq0(f)+ate;}
+function descFreq0(f){const fr=f.freq||'mensal';if(fr==='diaria')return 'todo dia';if(fr==='quinzenal')return 'a cada 2 semanas';if(fr==='intervalo'){const r=regraIntervalo(f),U={dia:['dia','dias'],semana:['semana','semanas'],mes:['mês','meses']}[r.un];return r.n===1?(r.un==='semana'?'toda semana':r.un==='mes'?'todo mês':'todo dia'):'a cada '+r.n+' '+U[1];}if(fr==='semanal'){const d=DOW_L[+f.dow||0];return (d==='sábado'||d==='domingo'?'todo ':'toda ')+d;}if(fr==='anual')return 'todo ano em '+pad(f.dia||1)+'/'+pad(f.mes||1);return 'todo dia '+(f.dia||1);}
+function mensalEq(f){const v=+f.valor||0,fr=f.freq||'mensal',ri=regraIntervalo(f);if(ri)return ri.un==='dia'?v*365/12/ri.n:ri.un==='semana'?v*52/12/ri.n:v/ri.n;return fr==='semanal'?v*52/12:fr==='anual'?v/12:v;}
 function geraRecorrentes(){
   const h=new Date(),hoje=hojeISO();let mudou=false;
   if(!S.gerados)S.gerados={};
@@ -1515,22 +1537,33 @@ function fixaForm(id){
     {name:'tipo',label:'Tipo',type:'select',value:tp0,options:[{v:'despesa',t:'Despesa (sai dinheiro)'},{v:'receita',t:'Receita (entra dinheiro)'}]},
     {name:'nome',label:'Nome',value:f?f.nome:'',required:true,placeholder:'ex: aluguel, salário'},
     {name:'valor',label:'Valor (R$)',value:f?num(f.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
-    {name:'freq',label:'Repete',type:'select',value:f?(f.freq||'mensal'):'mensal',options:[{v:'mensal',t:'todo mês'},{v:'semanal',t:'toda semana'},{v:'anual',t:'todo ano'}]},
+    {name:'freq',label:'Repete',type:'select',value:f?(f.freq||'mensal'):'mensal',options:[{v:'diaria',t:'todo dia'},{v:'semanal',t:'toda semana'},{v:'quinzenal',t:'a cada 2 semanas'},{v:'mensal',t:'todo mês'},{v:'anual',t:'todo ano'},{v:'intervalo',t:'personalizado (a cada…)'}]},
+    {name:'n',label:'A cada',type:'number',min:1,max:365,value:f&&f.freq==='intervalo'?f.n||1:3},
+    {name:'un',label:'Unidade',type:'select',value:f&&f.un||'dia',options:[{v:'dia',t:'dias'},{v:'semana',t:'semanas'},{v:'mes',t:'meses'}]},
+    {name:'inicio',label:'Primeira vez em',type:'date',value:f&&f.inicio||hojeISO()},
     {name:'dia',label:'Dia (1 a 31)',type:'number',min:1,max:31,value:f?f.dia||'':''},
     {name:'dow',label:'Dia da semana',type:'select',value:f?String(f.dow||1):'1',options:DOW_L.map((d,i)=>({v:String(i),t:d}))},
     {name:'mes',label:'Mês',type:'select',value:f?String(f.mes||1):String(new Date().getMonth()+1),options:MESES_LONGO.map((m,i)=>({v:String(i+1),t:m}))},
     {name:'categoria',label:'Categoria',type:'select',value:f?f.categoria:(tp0==='receita'?CATS_RECEITA[0]:S.cats[0]),options:(tp0==='receita'?CATS_RECEITA:S.cats).map(c=>({v:c,t:c}))},
+    {name:'fim',label:'Termina em (opcional)',type:'date',value:f&&f.fim||''},
     {name:'manual',label:'confirmar manualmente (fica "previsto" até eu marcar como pago)',type:'checkbox',value:!!(f&&f.auto===false)}
   ],v=>{
     const nome=String(v.nome).trim(),valor=parseBR(v.valor),dia=parseInt(v.dia,10),freq=FREQ_L[v.freq]?v.freq:'mensal';
     if(!nome)return 'Dê um nome à conta.';
     if(!(valor>0))return 'Informe o valor.';
-    if(freq!=='semanal'&&!(dia>=1&&dia<=31))return 'Dia entre 1 e 31.';
-    const obj={nome,valor,tipo:v.tipo==='receita'?'receita':'despesa',freq,categoria:v.categoria||S.cats[0],auto:!v.manual};
-    if(freq==='semanal'){obj.dow=parseInt(v.dow,10)||0;obj.dia=f&&f.dia||1;}else obj.dia=dia;
+    const porIntervalo=['diaria','quinzenal','intervalo'].includes(freq);
+    if(!porIntervalo&&freq!=='semanal'&&!(dia>=1&&dia<=31))return 'Dia entre 1 e 31.';
+    const n=parseInt(v.n,10),inicio=String(v.inicio||''),fimR=String(v.fim||'');
+    if(freq==='intervalo'&&!(n>=1&&n<=365))return 'Intervalo entre 1 e 365.';
+    if(porIntervalo&&!ISO_RE.test(inicio))return 'Informe a primeira data.';
+    if(fimR&&!ISO_RE.test(fimR))return 'Data final inválida.';
+    if(fimR&&porIntervalo&&fimR<inicio)return 'A data final vem antes da primeira.';
+    const obj={nome,valor,tipo:v.tipo==='receita'?'receita':'despesa',freq,categoria:v.categoria||S.cats[0],auto:!v.manual,fim:fimR};
+    if(porIntervalo){obj.inicio=inicio;obj.dia=+inicio.slice(8,10);if(freq==='intervalo'){obj.n=n;obj.un=['dia','semana','mes'].includes(v.un)?v.un:'dia';}}
+    if(freq==='semanal'){obj.dow=parseInt(v.dow,10)||0;obj.dia=f&&f.dia||1;}else if(!porIntervalo)obj.dia=dia;
     if(freq==='anual')obj.mes=parseInt(v.mes,10)||1;
     if(f){
-      const mudouRegra=(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes);
+      const mudouRegra=(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes)||(porIntervalo&&(f.inicio!==obj.inicio||(freq==='intervalo'&&(+f.n!==obj.n||f.un!==obj.un))))||(f.fim||'')!==fimR;
       Object.assign(f,obj);
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
       if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj;}
@@ -1538,7 +1571,7 @@ function fixaForm(id){
     geraRecorrentes();salvar();render();toast('Conta fixa salva');
   });
   const mf=$('#mf'),q=n=>mf.querySelector('[name="'+n+'"]'),w=n=>q(n).closest('label');
-  const pinta=()=>{const fr=q('freq').value;w('dia').style.display=fr==='semanal'?'none':'';w('dow').style.display=fr==='semanal'?'':'none';w('mes').style.display=fr==='anual'?'':'none';};
+  const pinta=()=>{const fr=q('freq').value,pi=['diaria','quinzenal','intervalo'].includes(fr);w('dia').style.display=fr==='semanal'||pi?'none':'';w('dow').style.display=fr==='semanal'?'':'none';w('mes').style.display=fr==='anual'?'':'none';w('n').style.display=w('un').style.display=fr==='intervalo'?'':'none';w('inicio').style.display=pi?'':'none';};
   q('freq').onchange=pinta;pinta();
   q('tipo').onchange=()=>{const l=q('tipo').value==='receita'?CATS_RECEITA:S.cats;q('categoria').innerHTML=l.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');};
 }
@@ -3376,7 +3409,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
