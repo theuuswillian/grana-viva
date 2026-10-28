@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -554,6 +554,13 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--a1);outline-off
 .tagChip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--mut);cursor:pointer}
 .txObs{font-size:11px;color:var(--mut);font-style:italic;overflow:hidden;text-overflow:ellipsis}
 textarea{width:100%;resize:vertical;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:15px;margin-top:6px;outline:none}
+.acts button{position:relative}.acts .temAnx{color:var(--accent,#a3e635)}
+.anxN0{position:absolute;top:-2px;right:-2px;font-style:normal;font-size:9px;line-height:14px;min-width:14px;height:14px;border-radius:7px;background:#a3e635;color:#0a0a0c;font-weight:700}
+.anxList{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.anxIt{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:12px}
+.anxIc{font-size:10px;font-weight:700;padding:6px;border-radius:8px;background:var(--card2);color:var(--mut)}
+.anxN{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.anxN small{display:block;color:var(--mut);font-size:11px}
+.anxAdd{display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .maisLista{margin-top:12px;width:100%}
 .mesNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
 .mesNav b{font-size:15px}.mesNav .btn2{min-width:44px;font-size:18px;line-height:1}
@@ -704,6 +711,7 @@ chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
 receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
+clip:'<path d="M20 11.5 12.3 19.2a5 5 0 0 1-7.1-7.1l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"/>',
 copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
 compass:'<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
 gauge:'<path d="M4 16.5a8 8 0 1 1 16 0"/><path d="M12 16.5 16 11"/><circle cx="12" cy="16.5" r="1.2"/>',
@@ -774,7 +782,7 @@ function dia31(v){const d=parseInt(v,10);return d>=1&&d<=31?d:0;}
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
@@ -958,6 +966,57 @@ function limpaTags(x){
   const a=Array.isArray(x)?x:String(x==null?'':x).split(/[,;#]/);const out=[];
   a.forEach(s=>{const t=String(s==null?'':s).toLowerCase().replace(/[<>"'`]/g,'').replace(/\s+/g,' ').trim().slice(0,30);if(t&&!out.includes(t)&&out.length<8)out.push(t);});
   return out;
+}
+/* comprovantes no Supabase Storage (bucket privado "comprovantes", pasta = id do usuário) */
+const ANX_PATH=/^[A-Za-z0-9-]{1,64}\/[A-Za-z0-9_|:.-]{1,90}\/[A-Za-z0-9_.-]{1,140}$/;
+function limpaAnexos(x){
+  return (Array.isArray(x)?x:[]).filter(a=>a&&ANX_PATH.test(String(a.p||''))).slice(0,10).map(a=>({p:String(a.p),n:String(a.n||'arquivo').replace(/[<>"'`]/g,'').slice(0,80),t:String(a.t||'').replace(/[^\w./+-]/g,'').slice(0,40),s:Math.max(0,Math.min(6e6,parseInt(a.s,10)||0))}));
+}
+const ANX_TIPOS=['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf'];
+function nomeSeguro(n){return String(n||'arquivo').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9_.-]+/g,'-').replace(/^-+|-+$/g,'').slice(-80)||'arquivo';}
+function reduzImagem(file){
+  return new Promise(res=>{
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size<900e3)return res(file);
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{const k=Math.min(1,1600/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      c.toBlob(b=>res(b&&b.size<file.size?new File([b],file.name.replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'}):file),'image/jpeg',.82);};
+    img.onerror=()=>{URL.revokeObjectURL(url);res(file);};img.src=url;
+  });
+}
+async function anexar(txId,file){
+  const t=S.tx.find(x=>x.id===txId);if(!t)return 'Lançamento não encontrado.';
+  if(!USER)return 'Entre na sua conta para guardar comprovantes.';
+  if((t.anexos||[]).length>=10)return 'Limite de 10 comprovantes por lançamento.';
+  const tipo=file.type||(/\.pdf$/i.test(file.name)?'application/pdf':'');
+  if(!ANX_TIPOS.includes(tipo))return 'Envie uma foto (JPG, PNG, WEBP, HEIC) ou PDF.';
+  const f=await reduzImagem(file);
+  if(f.size>5*1024*1024)return 'Arquivo maior que 5 MB.';
+  const path=USER.id+'/'+String(t.id).replace(/[^A-Za-z0-9_|:.-]/g,'').slice(0,90)+'/'+uid()+'-'+nomeSeguro(f.name);
+  const {error}=await sb.storage.from('comprovantes').upload(path,f,{contentType:f.type||tipo,upsert:false});
+  if(error)return 'Não foi possível enviar o comprovante.';
+  if(!t.anexos)t.anexos=[];t.anexos.push({p:path,n:String(file.name).slice(0,80),t:f.type||tipo,s:f.size});
+  salvar();return '';
+}
+async function removeArquivos(paths){paths=paths.filter(p=>ANX_PATH.test(p));if(!paths.length||!USER)return;try{await sb.storage.from('comprovantes').remove(paths);}catch(e){}}
+function anexosDe(lista){return lista.reduce((a,t)=>a.concat((t.anexos||[]).map(x=>x.p)),[]);}
+async function abreAnexo(p){
+  const w=window.open('','_blank');
+  const {data,error}=await sb.storage.from('comprovantes').createSignedUrl(p,120);
+  if(error||!data||!data.signedUrl){if(w)w.close();return toast('Não foi possível abrir o comprovante',true);}
+  if(w)w.location=data.signedUrl;else location.href=data.signedUrl;
+}
+function telaAnexos(txId){
+  const t=S.tx.find(x=>x.id===txId);if(!t)return;
+  const box=$('#modal');const kb=s=>s>=1048576?(s/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(s/1024))+' KB';
+  box.innerHTML=`<div class="sheet"><div class="sh-head"><h3>Comprovantes</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small" style="margin:0 0 10px">${esc(t.descricao||t.categoria)} · ${brl(t.valor)} · ${fmtData(t.data)}</p>
+    <div class="anxList">${(t.anexos||[]).map((a,i)=>`<div class="anxIt"><span class="anxIc">${a.t==='application/pdf'?'PDF':'IMG'}</span><span class="anxN">${esc(a.n)}<small>${kb(a.s)}</small></span><button class="btn2 sm" data-act="anx-ver" data-id="${i}">ver</button><button class="btn2 sm danger" data-act="anx-del" data-id="${i}">remover</button></div>`).join('')||'<p class="vazio">nenhum comprovante ainda.</p>'}</div>
+    ${USER?`<label class="btn full anxAdd">${I('plus')} adicionar foto ou PDF<input type="file" id="anxIn" accept="image/*,application/pdf" hidden></label><p class="small" style="margin:8px 0 0">guardado no seu espaço privado · até 5 MB · fotos grandes são reduzidas</p>`:'<p class="aviso warn">entre na sua conta para guardar comprovantes.</p>'}
+  </div>`;
+  box.classList.add('on');box.dataset.tx=txId;
+  const inp=$('#anxIn');if(inp)inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;const lb=inp.closest('label');lb.classList.add('busy');lb.firstChild&&(lb.style.opacity='.6');
+    const err=await anexar(txId,f);if(err)toast(err,true);else toast('Comprovante guardado');render();telaAnexos(txId);};
 }
 function todasTags(){const s=new Set();S.tx.forEach(t=>(t.tags||[]).forEach(g=>s.add(g)));return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
 function subsDe(cat){const s=new Set();S.tx.forEach(t=>{if(t.sub&&(!cat||t.categoria===cat))s.add(t.sub);});return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
@@ -2110,7 +2169,7 @@ function viewLanc(){
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
-      <div class="acts">${t.faturaKey||t.tipo==='transf'?'':`<button data-act="dup-tx" data-id="${t.id}" title="duplicar" aria-label="duplicar">${I('copy')}</button>`}${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
+      <div class="acts">${t.faturaKey?'':`<button data-act="anexos" data-id="${t.id}" title="comprovantes" aria-label="comprovantes" class="${t.anexos&&t.anexos.length?'temAnx':''}">${I('clip')}${t.anexos&&t.anexos.length?`<i class="anxN0">${t.anexos.length}</i>`:''}</button>`}${t.faturaKey||t.tipo==='transf'?'':`<button data-act="dup-tx" data-id="${t.id}" title="duplicar" aria-label="duplicar">${I('copy')}</button>`}${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
       ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
   return `
@@ -3184,11 +3243,15 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
+  'anexos':id=>telaAnexos(id),
+  'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
+  'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
+    confirma({titulo:'Remover comprovante?',texto:a.n,ok:'Remover',perigo:true},()=>{t.anexos=t.anexos.filter(x=>x!==a);removeArquivos([a.p]);salvar();render();telaAnexos(id);toast('Comprovante removido');});},
   'dup-tx':id=>{const t=S.tx.find(x=>x.id===id);if(!t||t.faturaKey||t.tipo==='transf')return;
-    novoTx(null,t.tipo,Object.assign({},t,{data:hojeISO(),status:'pago',parcelas:1,parcela:0,descricao:String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,'')}));},
+    novoTx(null,t.tipo,Object.assign({},t,{anexos:[],data:hojeISO(),status:'pago',parcelas:1,parcela:0,descricao:String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,'')}));},
   'edit-tx':id=>{const t=S.tx.find(x=>x.id===id);return t&&t.tipo==='transf'?novaTransf(id):novoTx(id);},
   'nova-transf':()=>novaTransf(),
-  'del-tx':id=>{const tx=S.tx.find(x=>x.id===id);if(tx&&tx.grupo&&tx.parcelas>1){const rest=S.tx.filter(x=>x.grupo===tx.grupo);return confirma({titulo:'Excluir compra parcelada?',texto:'Isso exclui as '+rest.length+' parcelas restantes de "'+String(tx.descricao).replace(/ \(\d+\/\d+\)$/,'')+'". Faturas já fechadas serão recalculadas.',ok:'Excluir parcelas',perigo:true},()=>{S.tx=S.tx.filter(x=>x.grupo!==tx.grupo);geraRecorrentes();salvar();render();toast('Parcelas excluídas');});}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
+  'del-tx':id=>{const tx=S.tx.find(x=>x.id===id);if(tx&&tx.grupo&&tx.parcelas>1){const rest=S.tx.filter(x=>x.grupo===tx.grupo);return confirma({titulo:'Excluir compra parcelada?',texto:'Isso exclui as '+rest.length+' parcelas restantes de "'+String(tx.descricao).replace(/ \(\d+\/\d+\)$/,'')+'". Faturas já fechadas serão recalculadas.',ok:'Excluir parcelas',perigo:true},()=>{removeArquivos(anexosDe(S.tx.filter(x=>x.grupo===tx.grupo)));S.tx=S.tx.filter(x=>x.grupo!==tx.grupo);geraRecorrentes();salvar();render();toast('Parcelas excluídas');});}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';if(t)removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
   'mais-lista':()=>{const y=scrollY;LIM_LISTA+=50;render();scrollTo(0,y);},
   'tag-filtro':g=>{F.tag=F.tag===g?'':g;render();},
@@ -3313,7 +3376,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
