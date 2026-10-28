@@ -654,38 +654,39 @@ html.claro .pushChips b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42
 }
 
 #toast{margin-bottom:env(safe-area-inset-bottom,0px)}
-/* ---------- topo v10.6: marca grande com brilho, barra de ações em vidro ---------- */
-.top{display:block!important;position:relative;margin:0 0 18px!important;padding-top:4px!important;isolation:isolate}
-.top::before{content:"";position:absolute;z-index:-1;left:-40px;right:-40px;top:-120px;height:300px;pointer-events:none;
-  background:radial-gradient(42% 60% at 22% 62%,color-mix(in srgb,var(--a1) 26%,transparent),transparent 70%),radial-gradient(38% 55% at 70% 40%,color-mix(in srgb,var(--a2) 22%,transparent),transparent 72%);
-  filter:blur(24px);opacity:.75;animation:auroraTopo 14s ease-in-out infinite alternate}
-@keyframes auroraTopo{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(18px,-6px,0) scale(1.06)}100%{transform:translate3d(-14px,8px,0) scale(.98)}}
-.topBar{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.topBar .ham{margin-right:0!important}
-.topBar .ham,.topBar .bell,.topBar .syncPill{background:color-mix(in srgb,var(--card) 62%,transparent)!important;-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);border:1px solid color-mix(in srgb,var(--txt) 9%,transparent)!important;box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 6%,transparent)}
-.topBar .ham,.topBar .bell{width:42px!important;height:42px!important;border-radius:14px!important;transition:transform .15s}
-.topBar .ham:active,.topBar .bell:active{transform:scale(.92)}
-.topBar .bell.on{color:var(--a1)}
-.topBar .syncPill{height:42px;border-radius:14px}
-.brand{display:flex!important;align-items:center;gap:14px;margin-top:22px;min-width:0}
-.brandMark{flex-shrink:0;width:58px;height:58px;border-radius:18px;display:grid;place-items:center;position:relative;
-  background:linear-gradient(145deg,color-mix(in srgb,var(--a1) 20%,var(--card)),color-mix(in srgb,var(--a2) 18%,var(--card)));
-  border:1px solid color-mix(in srgb,var(--a1) 30%,transparent);box-shadow:0 10px 30px -8px color-mix(in srgb,var(--a2) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.08);animation:marcaFlutua 5s ease-in-out infinite}
-.brandMark .logo-mark{width:40px!important;height:40px!important}
-@keyframes marcaFlutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* ---------- topo v10.7: uma barra só, em vidro, com a marca no meio ---------- */
+.top{display:block!important;position:relative;margin:0 0 20px!important;padding-top:2px!important;isolation:isolate}
+.top::before{content:"";position:absolute;z-index:-2;left:-30px;right:-30px;top:-110px;height:240px;pointer-events:none;
+  background:radial-gradient(40% 60% at 25% 70%,color-mix(in srgb,var(--a1) 24%,transparent),transparent 70%),radial-gradient(36% 55% at 75% 55%,color-mix(in srgb,var(--a2) 22%,transparent),transparent 72%);
+  filter:blur(26px);opacity:.7;animation:auroraTopo 14s ease-in-out infinite alternate}
+@keyframes auroraTopo{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(16px,-5px,0) scale(1.05)}100%{transform:translate3d(-12px,6px,0) scale(.98)}}
+.topBar{position:relative;display:flex;align-items:center;gap:12px;padding:8px;border-radius:24px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--card) 78%,transparent),color-mix(in srgb,var(--card) 55%,transparent));
+  -webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid color-mix(in srgb,var(--txt) 8%,transparent);
+  box-shadow:0 18px 40px -22px color-mix(in srgb,var(--a2) 60%,transparent),inset 0 1px 0 rgba(255,255,255,.06)}
+.topBar::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:1px;border-radius:1px;background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);opacity:.8;pointer-events:none}
+.topBar .ham,.topBar .bell,.topBar .syncPill{margin:0!important;width:44px!important;height:44px!important;border-radius:16px!important;flex-shrink:0;
+  background:color-mix(in srgb,var(--txt) 5%,transparent)!important;border:1px solid color-mix(in srgb,var(--txt) 7%,transparent)!important;box-shadow:none!important;transition:transform .15s,background .2s}
+.topBar .ham:active,.topBar .bell:active{transform:scale(.9)}
+.topBar .syncPill{padding:0!important;justify-content:center;font-size:0!important;gap:0}
+.topBar .syncPill i{width:9px;height:9px}
+.topBar .tr{display:flex;align-items:center;gap:8px;margin-left:auto!important}
+.brand{display:flex!important;align-items:center;gap:10px;flex:1;min-width:0;margin:0!important}
+.brandMark{display:none}
 .brandTxt{min-width:0}
-.top .logo{display:block!important;font-size:42px!important;line-height:1.02!important;font-weight:800!important;letter-spacing:-.045em!important;padding:0 6px 4px 0!important;white-space:nowrap;overflow:visible!important;
+.top .logo{display:block!important;font-size:29px!important;line-height:1.05!important;font-weight:800!important;letter-spacing:-.045em!important;padding:0 4px 1px 0!important;white-space:nowrap;overflow:visible!important;
   background:linear-gradient(100deg,var(--a1) 0%,var(--a2) 42%,#ffffff 50%,var(--a2) 58%,var(--a1) 100%)!important;background-size:260% 100%!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
-  animation:brilhoMarca 7s ease-in-out infinite;filter:drop-shadow(0 4px 18px color-mix(in srgb,var(--a2) 35%,transparent))}
+  animation:brilhoMarca 7s ease-in-out infinite;filter:drop-shadow(0 3px 14px color-mix(in srgb,var(--a2) 35%,transparent))}
 .top .logo .lgB{font-weight:300;letter-spacing:-.03em}
 @keyframes brilhoMarca{0%,55%{background-position:100% 0}85%,100%{background-position:0 0}}
-.top small#sub{display:flex!important;align-items:center;gap:8px;margin-top:6px!important;font-size:12px!important;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
-.top small#sub::before{content:"";width:18px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--a1),var(--a2))}
+.top small#sub{display:block!important;margin-top:1px!important;font-size:10.5px!important;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html.claro .top .logo{background:linear-gradient(100deg,var(--a1) 0%,var(--a2) 42%,#c7d2fe 50%,var(--a2) 58%,var(--a1) 100%)!important;background-size:260% 100%!important;-webkit-background-clip:text!important;background-clip:text!important}
-html.claro .top::before{opacity:.45}
-@media(max-width:360px){.top .logo{font-size:36px!important}.brandMark{width:50px;height:50px}}
-@media(min-width:900px){.brand{margin-top:0}.brandMark,.top .logo{display:none!important}.topBar .ham{visibility:hidden}.top{display:flex!important;flex-direction:row-reverse;align-items:center;justify-content:space-between}.top .topBar{gap:10px}}
-@media(prefers-reduced-motion:reduce){.top::before,.brandMark,.top .logo{animation:none!important}}
+html.claro .top::before{opacity:.4}
+html.claro .topBar{box-shadow:0 14px 34px -20px rgba(79,70,229,.35),inset 0 1px 0 #fff}
+@media(max-width:370px){.top .logo{font-size:25px!important}.topBar .ham,.topBar .bell,.topBar .syncPill{width:40px!important;height:40px!important}}
+@media(min-width:900px){.top .logo{display:none!important}.topBar .ham{display:none!important}.brand{padding-left:10px}.top small#sub{font-size:12px!important}}
+@media(prefers-reduced-motion:reduce){.top::before,.top .logo{animation:none!important}}
 /* menu fechado não deixa sombra vazando na borda esquerda */
 .side{box-shadow:none}.side.open{box-shadow:14px 0 40px rgba(0,0,0,.35)}
 html.claro .side.open{box-shadow:14px 0 40px rgba(15,23,42,.12)}
@@ -728,8 +729,11 @@ html.privado #app{filter:blur(18px)}
 <div id="ov"></div>
 <div id="app">
   <div class="top">
-    <div class="topBar"><button class="ham" id="btnMenu" aria-label="abrir menu"></button><div class="tr"><button class="bell" id="btnEye" data-act="oculta" aria-label="ocultar valores"></button><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><div class="syncPill" id="syncTxt"></div></div></div>
-    <div class="tl brand"><span class="brandMark" id="topMark" aria-hidden="true"></span><div class="brandTxt"><span class="logo" id="logoHome" role="link" tabindex="0"><span class="lgA">Grana</span><span class="lgB">Viva</span></span><small id="sub"></small></div></div>
+    <div class="topBar">
+      <button class="ham" id="btnMenu" aria-label="abrir menu"></button>
+      <div class="tl brand"><span class="brandMark" id="topMark" aria-hidden="true"></span><div class="brandTxt"><span class="logo" id="logoHome" role="link" tabindex="0"><span class="lgA">Grana</span><span class="lgB">Viva</span></span><small id="sub"></small></div></div>
+      <div class="tr"><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><div class="syncPill" id="syncTxt"></div></div>
+    </div>
   </div>
   <main id="view"></main>
 </div>
@@ -3585,7 +3589,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.8';
+const GV_BUILD='2026-10-28.9';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
