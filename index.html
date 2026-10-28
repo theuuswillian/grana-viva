@@ -561,6 +561,7 @@ textarea{width:100%;resize:vertical;background:var(--card2);color:var(--txt);bor
 .anxIc{font-size:10px;font-weight:700;padding:6px;border-radius:8px;background:var(--card2);color:var(--mut)}
 .anxN{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.anxN small{display:block;color:var(--mut);font-size:11px}
 .anxAdd{display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.arqBox summary{cursor:pointer;color:var(--mut);font-size:13px}.arqRow{margin-top:8px;opacity:.85}.arqRow .acts2{display:flex;gap:6px}
 .maisLista{margin-top:12px;width:100%}
 .mesNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
 .mesNav b{font-size:15px}.mesNav .btn2{min-width:44px;font-size:18px;line-height:1}
@@ -787,7 +788,7 @@ function sanea(d){
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
-  o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal}));
+  o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:''}));
   // patrimônio: bens, dívidas e fotografia mensal
   const BEM_T=['imovel','veiculo','outro'],PAS_T=['emprestimo','financiamento','divida','outro'];
@@ -1060,6 +1061,8 @@ function somaMes(m,tipo,cat,comCartao){
   return somaC(S.tx.filter(t=>efetivo(t)&&noPer(t.data,m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
 }
 // dinheiro em espécie só movimenta uma conta do tipo Dinheiro (antes caía na conta principal, misturando espécie com banco)
+/* contas arquivadas: somem das escolhas (menos a já selecionada), continuam no saldo, histórico e relatórios */
+function bancosAtivos(sel){return S.bancos.filter(b=>!b.arq||(sel&&b.id===sel));}
 function contaDinheiroId(){const d=S.bancos.find(b=>b.tipo==='Dinheiro');return d?d.id:null;}
 function contaDoLanc(t){
   if(t.tipo==='despesa'){if(t.forma==='pix'||t.forma==='boleto')return t.conta||null;if(t.forma==='dinheiro')return contaDinheiroId();return null;}
@@ -1851,8 +1854,8 @@ function garanteInicial(f){
 }
 const OP_L={inicial:'posição inicial',compra:'compra',venda:'venda',provento:'provento'};
 function contaCampo(tipo){
-  const pr=(S.bancos.find(b=>b.principal)||S.bancos[0]||{}).id||'';
-  return tipo==='compra'?{name:'conta',label:'Pago com a conta',type:'select',value:pr,options:[{v:'',t:'não descontar de nenhuma conta'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome})))}:{name:'conta',label:'Lançar como receita na conta',type:'select',value:pr,options:[{v:'',t:'não lançar no fluxo de caixa'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome})))};
+  const pr=(S.bancos.find(b=>b.principal)||bancosAtivos()[0]||{}).id||'';
+  return tipo==='compra'?{name:'conta',label:'Pago com a conta',type:'select',value:pr,options:[{v:'',t:'não descontar de nenhuma conta'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))}:{name:'conta',label:'Lançar como receita na conta',type:'select',value:pr,options:[{v:'',t:'não lançar no fluxo de caixa'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))};
 }
 function opForm(fid,tipo){
   const f=S.fiis.find(x=>x.id===fid);if(!f)return;
@@ -2619,7 +2622,8 @@ function viewBancos(){
   const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
   const pos=S.bancos.reduce((a,b)=>a+Math.max(0,saldoBanco(b)),0);
   const main=S.bancos.find(b=>b.principal);
-  const lst=S.bancos.map(b=>{
+  const ativos=bancosAtivos(),arqs=S.bancos.filter(b=>b.arq);
+  const lst=ativos.map(b=>{
     const sb=saldoBanco(b);
     const share=pos&&sb>0?sb/pos*100:0;
     return `<div class="card bk hov ${b.principal?'main':''}">
@@ -2629,13 +2633,14 @@ function viewBancos(){
       <small>informado ${brl(Number(b.saldo)||0)}${b.saldoData?' em '+fmtData(b.saldoData):''}</small>
       <div class="bar"><i data-w="${share.toFixed(1)}"></i></div>
       <div class="row small"><span>${pos?Math.round(share)+'% do saldo positivo':'sem saldo positivo'}</span></div>
-      <div class="acts2"><button class="btn2" data-act="edit-banco" data-id="${b.id}">editar</button><button class="btn2 danger" data-act="del-banco" data-id="${b.id}">excluir</button></div>
+      <div class="acts2"><button class="btn2" data-act="edit-banco" data-id="${b.id}">editar</button><button class="btn2" data-act="arq-banco" data-id="${b.id}">arquivar</button><button class="btn2 danger" data-act="del-banco" data-id="${b.id}">excluir</button></div>
     </div>`;
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><div class="row" style="gap:8px"><button class="btn2" data-act="importar">importar extrato</button><button class="btn2" data-act="nova-transf">transferir</button><button class="btn" data-act="novo-banco">${I('plus')} nova conta</button></div></div>
-  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${S.bancos.length} conta${S.bancos.length===1?'':'s'} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
-    <div class="grid2">${lst}</div>`
+  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${ativos.length} conta${ativos.length===1?'':'s'}${arqs.length?' + '+arqs.length+' arquivada'+(arqs.length===1?'':'s'):''} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
+    <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
+    ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
     :'<div class="card"><p class="vazio">nenhuma conta cadastrada. adicione seus bancos pra ver o total.</p></div>'}`;
 }
 function cartaoForm(id){
@@ -2675,7 +2680,7 @@ function bancoForm(id){
     const sal=parseBR(v.saldo);
     const obj={nome,codigo:String(v.codigo||'').trim(),logo:String(v.logo||'').trim(),tipo:v.tipo||BANCO_TIPOS[0],saldo:sal,saldoData:(b&&Number(b.saldo)===sal&&b.saldoData)?b.saldoData:hojeISO()};
     if(b)Object.assign(b,obj);else S.bancos.push(Object.assign({id:uid(),principal:S.bancos.length===0},obj));
-    if(!S.bancos.some(x=>x.principal)&&S.bancos.length)S.bancos[0].principal=true;
+    if(!S.bancos.some(x=>x.principal)&&bancosAtivos().length)bancosAtivos()[0].principal=true;
     salvar();render();toast('Conta salva');
   });
   const mf=$('#mf');
@@ -2842,7 +2847,7 @@ function abreImport(nome,txt){
   if(!r.linhas.length){toast('Não encontrei lançamentos nesse arquivo.',true);return;}
   IMP={nome,cartao:r.cartao,linhas:r.linhas.slice(0,3000),destino:''};
   if(r.cartao&&S.cartoes.length)IMP.destino='c:'+S.cartoes[0].id;
-  else if(!r.cartao&&S.bancos.length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||S.bancos[0]).id);
+  else if(!r.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
   montaImport();
 }
 function montaImport(){
@@ -2864,7 +2869,7 @@ function montaImport(){
     if(l._d!==d){l.on=!ign;l._d=d;}
     l.ign=ign;l.dup=dup||dupT;
   });
-  const opts=[].concat(S.bancos.map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),S.cartoes.map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
+  const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),S.cartoes.map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
   const catOpts=(c,tp)=>(tp==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===c?'selected':''}>${esc(x)}</option>`).join('');
   const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;
   const box=$('#modal');
@@ -2875,7 +2880,7 @@ function montaImport(){
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
-        ${l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${S.bancos.map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
+        ${l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
     <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
   </div>`;
@@ -2913,14 +2918,14 @@ document.addEventListener('keydown',e=>{
 
 /* ---------- ações ---------- */
 function nomeLado(k){if(!k)return '?';const id=k.slice(2);const x=k[0]==='c'?S.cartoes.find(c=>c.id===id):S.bancos.find(b=>b.id===id);return x?(k[0]==='c'?'cartão '+x.nome:x.nome):'(removido)';}
-function bancoPadrao(){const b=S.bancos.find(x=>x.principal&&x.tipo!=='Dinheiro')||S.bancos.find(x=>x.tipo!=='Dinheiro')||S.bancos[0];return b?b.id:'';}
+function bancoPadrao(){const A=bancosAtivos();const b=A.find(x=>x.principal&&x.tipo!=='Dinheiro')||A.find(x=>x.tipo!=='Dinheiro')||A[0];return b?b.id:'';}
 function novaTransf(id){
   const t=id?S.tx.find(x=>x.id===id&&x.tipo==='transf'):null;
-  if(!S.bancos.length){toast('Cadastre uma conta em Bancos primeiro.',true);return;}
-  const de=[].concat(S.bancos.map(b=>({v:'b:'+b.id,t:'conta · '+b.nome})),S.cartoes.map(c=>({v:'c:'+c.id,t:'cartão · '+c.nome+' (limite convertido em saldo)'})));
+  if(!bancosAtivos().length){toast('Cadastre uma conta em Bancos primeiro.',true);return;}
+  const de=[].concat(bancosAtivos(t&&t.de&&t.de.slice(2)).map(b=>({v:'b:'+b.id,t:'conta · '+b.nome})),S.cartoes.map(c=>({v:'c:'+c.id,t:'cartão · '+c.nome+' (limite convertido em saldo)'})));
   form(t?'Editar transferência':'Nova transferência',[
     {name:'de',label:'De',type:'select',value:t?t.de:'b:'+bancoPadrao(),options:de},
-    {name:'para',label:'Para',type:'select',value:t?t.para:'b:'+((S.bancos.find(b=>'b:'+b.id!=='b:'+bancoPadrao())||{}).id||bancoPadrao()),options:S.bancos.map(b=>({v:'b:'+b.id,t:b.nome}))},
+    {name:'para',label:'Para',type:'select',value:t?t.para:'b:'+((bancosAtivos().find(b=>'b:'+b.id!=='b:'+bancoPadrao())||{}).id||bancoPadrao()),options:bancosAtivos(t&&t.para&&t.para.slice(2)).map(b=>({v:'b:'+b.id,t:b.nome}))},
     {name:'valor',label:'Valor (R$)',value:t?num(t.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'descricao',label:'Descrição',value:t?t.descricao:'',placeholder:'ex: guardar na reserva'},
     {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true}
@@ -2944,7 +2949,7 @@ function novoTx(id,tipoPre,base){
     {name:'forma',label:'Forma de pagamento',type:'select',value:P?(P.forma||(P.cartao?'cartao':'dinheiro')):((tipoPre||'despesa')==='receita'?'dinheiro':'pix'),options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
     {name:'pagoCom',label:'Boleto pago com',type:'select',value:P?(P.pagoCom||(P.cartao?'cartao':(P.conta&&P.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:P&&P.cartao?P.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
-    {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
+    {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(bancosAtivos(P&&P.conta).map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
     {name:'parcelas',label:'Parcelas',type:'select',value:'1',options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
     {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
@@ -3022,7 +3027,7 @@ function pagarFatura(id){
   const resta=restanteFatura(t)||t.valor;
   form('Pagar '+t.descricao,[
     {name:'valor',label:'Valor pago (R$)',value:num(resta),required:true,inputmode:'decimal'},
-    {name:'conta',label:'Pago com a conta',type:'select',value:(S.bancos.find(b=>b.principal)||{}).id||'',options:[{v:'',t:S.bancos.length?'não descontar de nenhuma conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome})))},
+    {name:'conta',label:'Pago com a conta',type:'select',value:(S.bancos.find(b=>b.principal)||{}).id||'',options:[{v:'',t:S.bancos.length?'não descontar de nenhuma conta':'nenhuma conta cadastrada'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))},
     {name:'data',label:'Data do pagamento',type:'date',value:hojeISO(),required:true}
   ],v=>{
     const val=parseBR(v.valor);
@@ -3348,8 +3353,12 @@ const ACT={
   'del-cartao':id=>confirma({titulo:'Excluir cartão?',texto:'Faturas já fechadas continuam no extrato. Compras do ciclo aberto viram despesas comuns.',ok:'Excluir',perigo:true},()=>{const c=S.cartoes.find(x=>x.id===id),hj=hojeISO();if(c)S.tx.forEach(t=>{if(t.cartao===id&&t.tipo==='despesa'&&fechamentoDe(c,t.data).fecha>hj){t.cartao='';t.forma='outro';}});S.cartoes=S.cartoes.filter(x=>x.id!==id);salvar();render();toast('Cartão excluído');}),
   'novo-banco':()=>bancoForm(),
   'edit-banco':id=>bancoForm(id),
-  'del-banco':id=>confirma({titulo:'Excluir conta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.bancos=S.bancos.filter(x=>x.id!==id);if(S.bancos.length&&!S.bancos.some(x=>x.principal))S.bancos[0].principal=true;salvar();render();toast('Conta excluída');}),
-  'principal':id=>{S.bancos.forEach(b=>{b.principal=b.id===id;});salvar();render();toast('Conta principal definida');}
+  'del-banco':id=>confirma({titulo:'Excluir conta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.bancos=S.bancos.filter(x=>x.id!==id);if(bancosAtivos().length&&!S.bancos.some(x=>x.principal))bancosAtivos()[0].principal=true;salvar();render();toast('Conta excluída');}),
+  'arq-banco':id=>{const b=S.bancos.find(x=>x.id===id);if(!b)return;const sd=saldoBanco(b);
+    confirma({titulo:'Arquivar '+b.nome+'?',texto:(Math.abs(sd)>=0.005?'Ela ainda tem saldo de '+brl(sd)+', que continua contando no total. ':'')+'A conta sai das listas de escolha; o histórico fica no extrato e nos relatórios. Dá para desarquivar depois.',ok:'Arquivar'},()=>{
+      b.arq=true;b.arqEm=hojeISO();if(b.principal){b.principal=false;const n=bancosAtivos()[0];if(n)n.principal=true;}salvar();render();toast('Conta arquivada');});},
+  'desarq-banco':id=>{const b=S.bancos.find(x=>x.id===id);if(!b)return;b.arq=false;delete b.arqEm;if(!S.bancos.some(x=>x.principal))b.principal=true;salvar();render();toast('Conta desarquivada');},
+  'principal':id=>{if((S.bancos.find(x=>x.id===id)||{}).arq)return;S.bancos.forEach(b=>{b.principal=b.id===id;});salvar();render();toast('Conta principal definida');}
 };
 
 document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip[data-act]');if(!c)return;const t=c.dataset.act.replace('ir-','');go(t);});
@@ -3409,7 +3418,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
