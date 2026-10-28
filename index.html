@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -654,9 +654,20 @@ html.claro .pushChips b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42
 }
 
 #toast{margin-bottom:env(safe-area-inset-bottom,0px)}
+/* ---------- v10.8: tela sempre encaixada, sem zoom nem rolagem lateral ---------- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden;overflow-x:clip}
+html,body{max-width:100%;width:100%}
+body{overflow-x:hidden;overflow-x:clip;overscroll-behavior-x:none}
+*,*::before,*::after{box-sizing:border-box}
+#app{width:100%;min-width:0;overflow-x:clip}
+#view,#view>*{min-width:0;max-width:100%}
+img,svg,canvas,video,table{max-width:100%}
+.card,.panel,section{min-width:0}
+input,select,textarea{max-width:100%}
+@media(max-width:899px){input,select,textarea{font-size:16px!important}}
 /* ---------- topo v10.7: uma barra só, em vidro, com a marca no meio ---------- */
 .top{display:block!important;position:relative;margin:0 0 20px!important;padding-top:2px!important;isolation:isolate}
-.top::before{content:"";position:absolute;z-index:-2;left:-30px;right:-30px;top:-110px;height:240px;pointer-events:none;
+.top::before{content:"";position:absolute;z-index:-2;left:0;right:0;top:-110px;height:240px;pointer-events:none;
   background:radial-gradient(40% 60% at 25% 70%,color-mix(in srgb,var(--a1) 24%,transparent),transparent 70%),radial-gradient(36% 55% at 75% 55%,color-mix(in srgb,var(--a2) 22%,transparent),transparent 72%);
   filter:blur(26px);opacity:.7;animation:auroraTopo 14s ease-in-out infinite alternate}
 @keyframes auroraTopo{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(16px,-5px,0) scale(1.05)}100%{transform:translate3d(-12px,6px,0) scale(.98)}}
@@ -3589,7 +3600,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.9';
+const GV_BUILD='2026-10-28.10';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -3993,6 +4004,10 @@ if(!navigator.onLine){
   // sem conexão: se já há sessão guardada, o onAuthStateChange carrega o cache local
 }
 })();
+</script>
+<script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
+['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
 </script>
 </body>
 </html>
