@@ -548,6 +548,16 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--a1);outline-off
 .badge.mut{background:rgba(148,163,184,.16);color:var(--mut)}
 .tx-cancel{opacity:.55}.tx-cancel .val{text-decoration:line-through}
 .tx-prev .val{opacity:.8}
+.mesNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+.mesNav b{font-size:15px}.mesNav .btn2{min-width:44px;font-size:18px;line-height:1}
+.ohRow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:6px 4px;border-radius:10px;cursor:pointer}
+.ohRow.on{background:var(--card2)}
+.ohM{font-size:12px;color:var(--mut);text-transform:lowercase}
+.ohBars{display:flex;flex-direction:column;gap:3px}
+.ohBars i{display:block;height:6px;border-radius:4px;min-width:2px}
+.ohBars i.p,.ohLeg.p{background:rgba(255,255,255,.18)}.ohBars i.g,.ohLeg.g{background:#a3e635}.ohBars i.g.over{background:#ef4444}
+.ohV{font-size:12px;font-variant-numeric:tabular-nums;text-align:right}.ohV em{font-style:normal;color:#f87171;font-size:11px}
+.ohLeg{display:inline-block;width:10px;height:6px;border-radius:3px;margin:0 3px 0 8px;vertical-align:middle}
 .perBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
 .perBar .perLbl{font-size:12px;color:var(--mut);font-weight:600}
 .perBar select,.perBar input{width:auto;min-width:0;flex:0 1 auto;padding:8px 12px;font-size:13px;border-radius:12px}
@@ -740,7 +750,7 @@ function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
 const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
-function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
+function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 /* saneamento: tudo que vem do aparelho, da nuvem ou de um backup passa por aqui.
    garante tipos (números, datas, ids seguros) e impede que um backup adulterado injete HTML pelos ids/cores. */
 const ID_OK=/^[A-Za-z0-9_|:.\-]{1,80}$/;
@@ -767,6 +777,8 @@ function sanea(d){
   if(!o.cats.length)o.cats=CATS_PADRAO.slice();
   const obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
   o.orc={};Object.entries(obj(d&&d.orc)).forEach(([k,v])=>{if(n0(v)>0)o.orc[str(k,60)]=c2(v);});
+  // limites por mês (histórico): {'AAAA-MM':{categoria:limite}}; vale para o mês e os seguintes até o próximo registro
+  o.orcMes={};Object.entries(obj(d&&d.orcMes)).forEach(([mk,mp])=>{if(!/^\d{4}-\d{2}$/.test(mk))return;const l={};Object.entries(obj(mp)).forEach(([k,v])=>{if(n0(v)>0)l[str(k,60)]=c2(v);});o.orcMes[mk]=l;});
   o.catCores={};Object.entries(obj(d&&d.catCores)).forEach(([k,v])=>{if(COR_OK.test(String(v)))o.catCores[str(k,60)]=v;});
   o.catIcons={};Object.entries(obj(d&&d.catIcons)).forEach(([k,v])=>{if(ICONS[v])o.catIcons[str(k,60)]=v;});
   o.gerados=obj(o.gerados);
@@ -826,7 +838,7 @@ let SNAP=null,syncFalhas=0;
 function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return t.length+':'+h;}
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
-function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
+function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
 async function upTabela(tab,arr){
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
@@ -1335,7 +1347,7 @@ function listaAlertas(completo){
   });
   if(completo){
     const m=mesAtual();
-    S.cats.filter(c=>S.orc[c]>0).forEach(c=>{const g=somaMes(m,'despesa',c,true),p=g/S.orc[c]*100;
+    const LO=limOrc(m);S.cats.filter(c=>LO[c]>0).forEach(c=>{const g=somaMes(m,'despesa',c,true),p=g/LO[c]*100;
       if(p>=80)out.push({k:p>=100?'venc':'aviso',h:`${I('alert')} orçamento de <b>${esc(c)}</b> ${p>=100?'estourou':'em '+Math.round(p)+'%'} · ${brl(g)} de ${brl(S.orc[c])}`});});
     S.cartoes.forEach(c=>{if(!(c.limite>0))return;const u=usadoCartaoTotal(c),p=u/c.limite*100;
       if(p>=90)out.push({k:p>=100?'venc':'aviso',h:`${I('card')} cartão <b>${esc(c.nome)}</b> com ${Math.round(p)}% do limite usado · livre ${brl(Math.max(0,c.limite-u))}`});});
@@ -2039,7 +2051,7 @@ function viewInicio(){
 
 function orcInicioHTML(){
   const m=mesAtual();
-  const lst=S.cats.filter(c=>S.orc[c]>0).map(c=>{const lim=S.orc[c],gasto=somaMes(m,'despesa',c,true);return {c,lim,gasto,pct:gasto/lim*100};}).sort((a,b)=>b.pct-a.pct).slice(0,4);
+  const LO=limOrc(m),lst=S.cats.filter(c=>LO[c]>0).map(c=>{const lim=LO[c],gasto=somaMes(m,'despesa',c,true);return {c,lim,gasto,pct:gasto/lim*100};}).sort((a,b)=>b.pct-a.pct).slice(0,4);
   if(!lst.length)return '';
   return `<div class="card">
     <h4>Orçamentos do mês</h4>
@@ -2091,16 +2103,49 @@ function viewLanc(){
   ${fixasCard()}`;
 }
 
+/* orçamentos com histórico: limOrc(m) devolve os limites válidos no mês m */
+let OMES='';
+function limOrc(m){
+  const om=S.orcMes||{};let k='';Object.keys(om).forEach(x=>{if(x<=m&&x>k)k=x;});
+  return k?om[k]:(S.orc||{});
+}
+function setLimOrc(m,c,n){
+  if(!S.orcMes)S.orcMes={};
+  if(!S.orcMes[m])S.orcMes[m]=Object.assign({},limOrc(m));
+  if(n>0)S.orcMes[m][c]=c2(n);else delete S.orcMes[m][c];
+}
+function mesMais(m,k){const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,1);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+function nomeMes(m){return MESES[+m.slice(5,7)-1]+'/'+m.slice(0,4);}
+function copiaOrcAnterior(m){
+  const ant=limOrc(mesMais(m,-1));
+  if(!S.orcMes)S.orcMes={};
+  S.orcMes[m]=Object.assign({},ant);
+}
+function histOrc(m,n){
+  let first='';S.tx.forEach(t=>{if(t.data&&(!first||t.data<first))first=t.data;});const fm=first.slice(0,7);
+  const out=[];for(let k=n-1;k>=0;k--){const mm=mesMais(m,-k);if(fm&&mm<fm&&mm!==m)continue;const lim=limOrc(mm);
+    const plan=Object.values(lim).reduce((a,b)=>a+cents(b),0)/100;
+    const gasto=Object.keys(lim).reduce((a,c)=>a+cents(somaMes(mm,'despesa',c,true)),0)/100;
+    const est=Object.keys(lim).filter(c=>somaMes(mm,'despesa',c,true)>lim[c]).length;
+    out.push({m:mm,plan,gasto,est});}
+  return out;
+}
 function viewOrc(){
-  const m=mesAtual();
-  const totLim=Object.values(S.orc).reduce((a,b)=>a+b,0);
+  const atual=mesAtual();if(!OMES||OMES>mesMais(atual,12))OMES=atual;
+  const m=OMES,L=limOrc(m),passado=m<atual;
+  const totLim=Object.values(L).reduce((a,b)=>a+b,0);
   const totGasto=somaMes(m,'despesa',undefined,true);
+  const proprio=!!(S.orcMes&&S.orcMes[m]);
+  const H=histOrc(m,6),mx=Math.max(1,...H.map(h=>Math.max(h.plan,h.gasto)));
+  const hist=H.map(h=>`<div class="ohRow ${h.m===m?'on':''}" data-act="orc-mes" data-id="${h.m}"><span class="ohM">${MESES[+h.m.slice(5,7)-1]}</span>
+    <span class="ohBars"><i class="p" style="width:${h.plan/mx*100}%"></i><i class="g ${h.plan&&h.gasto>h.plan?'over':''}" style="width:${h.gasto/mx*100}%"></i></span>
+    <span class="ohV">${h.plan?Math.round(h.gasto/h.plan*100)+'%':'—'}${h.est?` <em>${h.est} estourou</em>`:''}</span></div>`).join('');
   const cards=S.cats.map(c=>{
-    const lim=S.orc[c]||0,gasto=somaMes(m,'despesa',c,true);
+    const lim=L[c]||0,gasto=somaMes(m,'despesa',c,true);
     const pct=lim?gasto/lim*100:0,over=lim>0&&gasto>lim;
     let aviso='';
-    if(over)aviso=`<p class="aviso">${I('alert')}estourou em ${brl(gasto-lim)} este mês</p>`;
-    else if(lim&&pct>=80)aviso=`<p class="aviso warn">perto do limite: restam ${brl(lim-gasto)}</p>`;
+    if(over)aviso=`<p class="aviso">${I('alert')}estourou em ${brl(gasto-lim)} ${passado?'neste mês':'este mês'}</p>`;
+    else if(lim&&pct>=80&&!passado)aviso=`<p class="aviso warn">perto do limite: restam ${brl(lim-gasto)}</p>`;
     return `<div class="card orc hov ${over?'alerta':''}">
       <div class="row"><span class="catName"><span class="ic despesa" style="color:${corCat(c)}">${I(catIcon(c))}</span><b>${esc(c)}</b></span><button class="btn2" data-act="def-orc" data-id="${esc(c)}">${lim?'editar limite':'definir limite'}</button></div>
       ${lim?`<div class="row small"><span>${brl(gasto)} de ${brl(lim)}</span><span>${Math.round(pct)}%</span></div>
@@ -2110,10 +2155,16 @@ function viewOrc(){
   }).join('');
   return `
   <div class="head"><h2>Orçamentos</h2></div>
+  <div class="mesNav"><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,-1)}" aria-label="mês anterior">‹</button><b>${nomeMes(m)}${m===atual?' · atual':''}</b><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,1)}" aria-label="próximo mês">›</button></div>
+  <div class="card">
+    <p class="small" style="margin:0 0 8px">${proprio?'limites definidos para este mês':'limites herdados do mês anterior'} · alterar um limite vale para ${nomeMes(m)} e os meses seguintes.</p>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn2" data-act="orc-copia">copiar limites de ${nomeMes(mesMais(m,-1))}</button>${m!==atual?`<button class="btn2" data-act="orc-mes" data-id="${atual}">voltar ao mês atual</button>`:''}</div>
+  </div>
   <div class="card">
     <div class="row"><span class="small" style="margin:0">gasto total do mês</span><b class="neg">${brl(totGasto)}</b></div>
     <div class="row" style="margin-top:6px"><span class="small" style="margin:0">soma dos limites</span><b>${brl(totLim)}</b></div>
   </div>
+  <div class="card"><h4 style="margin:0 0 10px">Histórico · planejado x gasto</h4>${hist}<p class="small" style="margin:8px 0 0"><span class="ohLeg p"></span> planejado <span class="ohLeg g"></span> gasto nas categorias com limite</p></div>
   ${cards}`;
 }
 
@@ -2789,13 +2840,14 @@ function desfazPagamento(id){
 const FAT_ST={paga:['paga','ok'],parcial:['pago em parte','warn'],vencida:['vencida','over'],aberta:['a pagar','warn']};
 function faturaBadge(t){const st=statusFatura(t),[l,k]=FAT_ST[st];return `<span class="badge ${k}">${l}${st==='parcial'?' · falta '+brl(restanteFatura(t)):''}</span>`;}
 function defOrc(c){
-  form('Limite mensal: '+c,[
-    {name:'valor',label:'Limite (R$). deixe 0 pra remover',value:S.orc[c]?num(S.orc[c]):'',inputmode:'decimal',placeholder:'0,00'}
+  const m=OMES||mesAtual(),lim=limOrc(m);
+  form('Limite de '+c+' · '+nomeMes(m),[
+    {name:'valor',label:'Limite (R$). deixe 0 pra remover',value:lim[c]?num(lim[c]):'',inputmode:'decimal',placeholder:'0,00'}
   ],v=>{
     const n=parseBR(v.valor);
     if(n<0)return 'Valor inválido.';
-    if(n>0)S.orc[c]=n;else delete S.orc[c];
-    salvar();render();toast('Limite salvo');
+    setLimOrc(m,c,n);
+    salvar();render();toast('Limite salvo para '+nomeMes(m)+' em diante');
   });
 }
 function assetIco(t,tipo){
@@ -2960,6 +3012,7 @@ function catForm(id){
       const i=S.cats.indexOf(edit);if(i>=0)S.cats[i]=n;
       S.tx.forEach(t=>{if(t.categoria===edit)t.categoria=n;});
       if(S.orc[edit]!=null){S.orc[n]=S.orc[edit];delete S.orc[edit];}
+      Object.values(S.orcMes||{}).forEach(mp=>{if(mp[edit]!=null){mp[n]=mp[edit];delete mp[edit];}});
       if(S.catIcons[edit]){S.catIcons[n]=S.catIcons[edit];delete S.catIcons[edit];}
       if(S.catCores[edit]){S.catCores[n]=S.catCores[edit];delete S.catCores[edit];}
       if(S.fixas)S.fixas.forEach(f=>{if(f.categoria===edit)f.categoria=n;});
@@ -3026,6 +3079,9 @@ const ACT={
   'nova-transf':()=>novaTransf(),
   'del-tx':id=>{const tx=S.tx.find(x=>x.id===id);if(tx&&tx.grupo&&tx.parcelas>1){const rest=S.tx.filter(x=>x.grupo===tx.grupo);return confirma({titulo:'Excluir compra parcelada?',texto:'Isso exclui as '+rest.length+' parcelas restantes de "'+String(tx.descricao).replace(/ \(\d+\/\d+\)$/,'')+'". Faturas já fechadas serão recalculadas.',ok:'Excluir parcelas',perigo:true},()=>{S.tx=S.tx.filter(x=>x.grupo!==tx.grupo);geraRecorrentes();salvar();render();toast('Parcelas excluídas');});}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
+  'orc-mes':m=>{if(/^\d{4}-\d{2}$/.test(m)){OMES=m;render();}},
+  'orc-copia':()=>{const m=OMES||mesAtual(),ant=mesMais(m,-1),L=limOrc(ant);if(!Object.keys(L).length)return toast('Sem limites em '+nomeMes(ant));
+    confirma({titulo:'Copiar limites?',texto:'Os limites de '+nomeMes(m)+' passam a ser iguais aos de '+nomeMes(ant)+'.',ok:'Copiar'},()=>{copiaOrcAnterior(m);salvar();render();toast('Limites copiados');});},
   'pagar-fat':id=>pagarFatura(id),
   'desfaz-pag':id=>desfazPagamento(id),
   'novo-fii':()=>fiiForm(),
@@ -3050,7 +3106,7 @@ const ACT={
   'nova-cat':()=>catForm(),
   'edit-cat':c=>catForm(c),
   'del-cat':c=>confirma({titulo:'Remover categoria?',texto:'Remover a categoria "'+c+'"? Lançamentos antigos continuam com esse nome.',ok:'Remover',perigo:true},()=>{
-    S.cats=S.cats.filter(x=>x!==c);delete S.orc[c];delete S.catIcons[c];delete S.catCores[c];salvar();render();toast('Categoria removida');
+    S.cats=S.cats.filter(x=>x!==c);delete S.orc[c];Object.values(S.orcMes||{}).forEach(mp=>delete mp[c]);delete S.catIcons[c];delete S.catCores[c];salvar();render();toast('Categoria removida');
   }),
   'exportar':exportar,
   'q-gasto':()=>novoTx(undefined,'despesa'),
@@ -3140,7 +3196,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
