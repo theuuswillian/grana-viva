@@ -659,6 +659,29 @@ html.claro .side.open{box-shadow:14px 0 40px rgba(15,23,42,.12)}
 /* botão do Google legível nos dois temas (o .btn global força texto escuro) */
 .btn.gbtn{background:var(--card2)!important;color:var(--txt)!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 0 18px -10px var(--a2)!important}
 html.claro .btn.gbtn{background:#fff!important;color:#0f172a!important;border-color:rgba(15,23,42,.14)!important}
+/* bloqueio do app (PIN e Face ID) */
+#lock{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;padding:calc(var(--sat,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 18px);background:radial-gradient(90% 60% at 10% 0%,rgba(139,92,246,.22),transparent 60%),radial-gradient(80% 50% at 100% 100%,rgba(34,197,94,.16),transparent 60%),var(--bg);overflow:auto;-webkit-user-select:none;user-select:none}
+#lock.on{display:flex}
+html.travado body{overflow:hidden}
+html.travado .fab{display:none!important}
+html.privado #app{filter:blur(18px)}
+.lkBox{width:100%;max-width:330px;text-align:center;animation:up .35s ease both}
+.lkBox .ahead{margin-bottom:6px}
+.lkTit{font-size:17px;font-weight:600;color:var(--txt);margin-top:4px}
+.lkSub{min-height:18px;font-size:13px;color:var(--mut);margin-top:6px;line-height:1.4}
+.lkSub.err{color:#f87171}
+.lkDots{display:flex;justify-content:center;gap:18px;margin:22px 0 26px}
+.lkDots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--mut);transition:background .15s,border-color .15s}
+.lkDots i.on{background:var(--a1);border-color:var(--a1)}
+.lkDots.shake{animation:lkShake .4s}
+@keyframes lkShake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.lkPad{display:grid;grid-template-columns:repeat(3,72px);gap:16px 26px;justify-content:center}
+.lkPad button{width:72px;height:72px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:26px;font-weight:500;font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .1s}
+.lkPad button:active{background:var(--card2);transform:scale(.94)}
+.lkPad .lkAlt{background:none;border-color:transparent;font-size:22px;color:var(--mut)}
+.lkPad .lkAlt .i{width:32px;height:32px;color:var(--a1)}
+.lkPad .lkAlt:disabled{visibility:hidden}
+.lkFoot{margin-top:24px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -681,6 +704,8 @@ html.claro .btn.gbtn{background:#fff!important;color:#0f172a!important;border-co
 <div id="modal"></div>
 <div id="toast"></div>
 <button class="fab" id="fab" aria-label="adicionar rápido"></button>
+<div id="lock" role="dialog" aria-modal="true" aria-label="app bloqueado"></div>
+<script>try{var lk=JSON.parse(localStorage.getItem('gv-lock')||'null');if(lk&&lk.hash){document.getElementById('lock').classList.add('on');document.documentElement.classList.add('travado');}}catch(e){}</script>
 
 <div id="auth">
   <form class="acard" id="authForm" novalidate>
@@ -2067,7 +2092,7 @@ function render(){
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
   requestAnimationFrame(()=>{
     if(AFTER[TAB])AFTER[TAB]();
-    if(TAB==='cfg')atualizaPushUI();
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
   });
@@ -2536,6 +2561,7 @@ function viewCfg(){
     <div class="catGrid">${S.cats.map(c=>`<div class="catCell hov" style="--cc:${corCat(c)}"><button data-act="del-cat" data-id="${esc(c)}" title="remover" aria-label="remover">${I('close')}</button><span class="cc-i">${I(catIcon(c))}</span><span class="cc-n" data-act="edit-cat" data-id="${esc(c)}" title="editar" aria-label="editar">${esc(c)}</span></div>`).join('')}</div>
     <button class="btn full" data-act="nova-cat">+ nova categoria</button>
   </div>
+  ${lockCardHTML()}
   <div class="card">
     <h4>Notificações no celular</h4>
     <p class="pushTxt" id="pushTxt">verificando…</p>
@@ -3407,6 +3433,10 @@ const ACT={
   'edit-meta':id=>metaForm(id),
   'aporte':id=>aporte(id),
   'del-meta':id=>confirma({titulo:'Excluir meta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.metas=S.metas.filter(x=>x.id!==id);salvar();render();toast('Meta excluída');}),
+  'lock-pin':()=>lockCfg()?lockPedeAtual('Digite o PIN atual',lockNovoPin):lockNovoPin(),
+  'lock-off':()=>lockPedeAtual('Digite o PIN para desativar',()=>{lockSalva(null);lockFecha();render();toast('Bloqueio desativado');}),
+  'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);render();toast('Face ID desativado');}else lockBioAtiva();},
+  'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
@@ -3517,14 +3547,14 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.3';
+const GV_BUILD='2026-10-28.4';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
   try{const r=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;const h=await r.text();
     const m=h.match(/const GV_BUILD='([^']+)'/);if(!m||m[1]===GV_BUILD)return;
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)reg.update().catch(()=>{});
-    const ocupado=$('#modal').classList.contains('on')||document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    const ocupado=$('#modal').classList.contains('on')||$('#lock').classList.contains('on')||document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
     if(!ocupado)location.reload();else toast('Nova versão do GranaViva. Ela entra quando você fechar este formulário.');
   }catch(e){}
 }
@@ -3548,6 +3578,155 @@ document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.datas
 render();
 
 atualizaCotacoes();
+/* ---------- bloqueio do app: PIN e Face ID / Touch ID, guardado só neste aparelho (não vai para a nuvem) ---------- */
+var LOCK_KEY='gv-lock',LOCK_LEN=4,LK={o:null,buf:'',saiu:0,bioBusy:false};
+ICONS.faceid='<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>';
+function lockCfg(){try{const c=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return c&&c.hash&&c.salt?c:null;}catch(e){return null;}}
+function lockSalva(c){try{if(c)localStorage.setItem(LOCK_KEY,JSON.stringify(c));else localStorage.removeItem(LOCK_KEY);}catch(e){}}
+function lkB64(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));}
+function lkDeB64(t){return Uint8Array.from(atob(t),ch=>ch.charCodeAt(0));}
+async function lockHash(pin,salt){
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
+  return lkB64(await crypto.subtle.deriveBits({name:'PBKDF2',salt:lkDeB64(salt),iterations:150000,hash:'SHA-256'},k,256));
+}
+async function lockConfere(pin){const c=lockCfg();if(!c)return true;return (await lockHash(pin,c.salt))===c.hash;}
+async function bioDisponivel(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+function lockTela(o){
+  LK.o=o;LK.buf='';
+  const el=$('#lock');
+  el.innerHTML=`<div class="lkBox">
+    <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
+    <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
+    <div class="lkDots" id="lkDots">${'<i></i>'.repeat(LOCK_LEN)}</div>
+    <div class="lkPad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" data-k="${n}">${n}</button>`).join('')}
+      <button type="button" class="lkAlt" data-k="bio" ${o.bio?'':'disabled'} aria-label="usar Face ID">${o.bio?I('faceid'):''}</button>
+      <button type="button" data-k="0">0</button>
+      <button type="button" class="lkAlt" data-k="del" aria-label="apagar">&#9003;</button>
+    </div>
+    <div class="lkFoot" id="lkFoot">${o.cancelar?'<button type="button" class="alink" data-k="cancel">cancelar</button>':'<button type="button" class="alink" data-k="esqueci">esqueci o PIN</button>'}</div>
+  </div>`;
+  el.classList.add('on');document.documentElement.classList.add('travado');
+}
+function lockFecha(){const el=$('#lock');if(el){el.classList.remove('on');el.innerHTML='';}LK.o=null;LK.buf='';document.documentElement.classList.remove('travado');}
+function lockPinta(){document.querySelectorAll('#lkDots i').forEach((x,i)=>x.classList.toggle('on',i<LK.buf.length));}
+function lockMsg(t,erro){const e=$('#lkSub');if(e){e.textContent=t;e.classList.toggle('err',!!erro);}}
+function lockErro(t){LK.buf='';lockPinta();lockMsg(t,true);const d=$('#lkDots');if(d){d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');}try{if(navigator.vibrate)navigator.vibrate(80);}catch(e){}}
+function lockTecla(k){
+  const o=LK.o;if(!o)return;
+  if(k==='bio'){lockBio();return;}
+  if(k==='cancel'){lockFecha();return;}
+  if(k==='esqueci'){lockEsqueci();return;}
+  if(k==='volta'){lockAbre(true);return;}
+  if(k==='sair'){lockSair();return;}
+  const c=lockCfg();
+  if(o.modo==='abrir'&&c&&c.ate&&Date.now()<c.ate){lockMsg('muitas tentativas, aguarde '+Math.ceil((c.ate-Date.now())/1000)+' s',true);return;}
+  if(k==='del'){LK.buf=LK.buf.slice(0,-1);lockPinta();return;}
+  if(!/^\d$/.test(k)||LK.buf.length>=LOCK_LEN)return;
+  LK.buf+=k;lockPinta();
+  if(LK.buf.length===LOCK_LEN){const pin=LK.buf,cb=o.cb;setTimeout(()=>{if(LK.o===o)cb(pin);},120);}
+}
+function lockAbre(forca){
+  const c=lockCfg();if(!c){lockFecha();return;}
+  if(!forca&&LK.o&&LK.o.modo==='abrir')return;
+  lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:c.bio?'ou use o Face ID':'',bio:!!c.bio,cb:async pin=>{
+    const ok=await lockConfere(pin),cc=lockCfg();
+    if(ok){if(cc){cc.falhas=0;cc.ate=0;lockSalva(cc);}lockFecha();return;}
+    if(!cc){lockFecha();return;}
+    cc.falhas=(cc.falhas||0)+1;
+    if(cc.falhas>=5){const seg=Math.min(300,30*Math.pow(2,cc.falhas-5));cc.ate=Date.now()+seg*1000;lockSalva(cc);lockErro('PIN incorreto. Tente de novo em '+seg+' s');}
+    else{lockSalva(cc);lockErro('PIN incorreto');}
+  }});
+  if(c.bio)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
+}
+async function lockBio(auto){
+  const c=lockCfg();if(!c||!c.bio||LK.bioBusy)return;
+  LK.bioBusy=true;
+  try{
+    const r=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:lkDeB64(c.bio),transports:['internal']}],userVerification:'required',timeout:60000}});
+    const fl=r&&r.response&&r.response.authenticatorData?new Uint8Array(r.response.authenticatorData)[32]:0;
+    if(fl&4){c.falhas=0;c.ate=0;lockSalva(c);lockFecha();return;}
+    lockMsg('não deu certo, use o PIN',true);
+  }catch(e){if(!auto)lockMsg('Face ID cancelado, use o PIN ou toque no ícone',true);}
+  finally{setTimeout(()=>{LK.bioBusy=false;},400);}
+}
+async function lockBioAtiva(){
+  const c=lockCfg();if(!c){toast('Crie um PIN primeiro',true);return;}
+  if(!await bioDisponivel()){toast('Este aparelho não tem Face ID ou Touch ID disponível para o app',true);return;}
+  LK.bioBusy=true;
+  try{
+    const cred=await navigator.credentials.create({publicKey:{
+      challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'GranaViva'},
+      user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'GranaViva · bloqueio do app',displayName:'GranaViva'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},
+      timeout:60000,attestation:'none'}});
+    if(!cred)throw new Error('sem credencial');
+    const cc=lockCfg();if(!cc)return;cc.bio=lkB64(cred.rawId);lockSalva(cc);render();toast('Face ID ativado');
+  }catch(e){toast('Face ID não foi ativado',true);}
+  finally{setTimeout(()=>{LK.bioBusy=false;},400);}
+}
+function lockNovoPin(){
+  lockTela({modo:'novo',titulo:'Crie um PIN de '+LOCK_LEN+' dígitos',sub:'ele vai ser pedido ao abrir o app neste aparelho',cancelar:true,cb:pin1=>{
+    lockTela({modo:'confirma',titulo:'Confirme o PIN',sub:'digite o mesmo PIN de novo',cancelar:true,cb:async pin2=>{
+      if(pin2!==pin1){lockErro('os PINs não batem, comece de novo');setTimeout(()=>{if(LK.o&&LK.o.modo==='confirma')lockNovoPin();},1100);return;}
+      const ant=lockCfg()||{},salt=lkB64(crypto.getRandomValues(new Uint8Array(16)));
+      lockSalva({hash:await lockHash(pin1,salt),salt:salt,bio:ant.bio||null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
+      lockFecha();render();toast(ant.hash?'PIN trocado':'Bloqueio ativado');
+      if(!ant.hash&&await bioDisponivel())setTimeout(()=>confirma({titulo:'Usar Face ID também?',texto:'Você abre o app com o rosto (ou a digital) e o PIN fica de reserva.',ok:'Ativar'},lockBioAtiva),400);
+    }});
+  }});
+}
+function lockPedeAtual(titulo,depois){
+  lockTela({modo:'atual',titulo:titulo,cancelar:true,cb:async pin=>{if(await lockConfere(pin))depois();else lockErro('PIN incorreto');}});
+}
+function lockEsqueci(){
+  lockMsg('Para criar outro PIN, saia da conta e entre de novo com seu e-mail e senha. Seus dados continuam salvos na nuvem.',false);
+  const f=$('#lkFoot');if(f)f.innerHTML='<button type="button" class="btn2" data-k="volta">voltar</button><button type="button" class="btn2 danger" data-k="sair">sair da conta</button>';
+}
+async function lockSair(){
+  lockMsg('saindo…',false);
+  try{if(typeof temPendencia==='function'&&temPendencia()&&navigator.onLine)await enviar();}catch(e){}
+  lockSalva(null);lockFecha();
+  try{await sb.auth.signOut({scope:'local'});}catch(e){}
+}
+function lockCardHTML(){
+  const c=lockCfg();
+  if(!c)return `<div class="card"><h4>Bloqueio do app</h4><p class="small" style="margin-bottom:12px">Peça um PIN (ou Face ID) para abrir o GranaViva neste aparelho.</p><button class="btn full" data-act="lock-pin">ativar bloqueio com PIN</button></div>`;
+  const a=c.atraso||0;
+  return `<div class="card"><h4>Bloqueio do app</h4><p class="small">ativo neste aparelho${c.bio?' · Face ID ligado':''}</p>
+    <h4 style="margin-top:16px">Pedir de novo depois de</h4>
+    <div class="seg">${[[0,'na hora'],[1,'1 min'],[5,'5 min'],[15,'15 min']].map(([v,l])=>`<button data-act="lock-atraso" data-id="${v}" class="${a===v?'on':''}">${l}</button>`).join('')}</div>
+    <div class="pushBtns"><button class="btn2" data-act="lock-bio" id="lockBioBtn">${c.bio?'desativar Face ID':'ativar Face ID'}</button><button class="btn2" data-act="lock-pin">trocar PIN</button></div>
+    <button class="btn2 full danger" data-act="lock-off" style="margin-top:10px">desativar bloqueio</button></div>`;
+}
+async function atualizaLockUI(){const b=document.getElementById('lockBioBtn');if(!b)return;const c=lockCfg();if(c&&c.bio)return;if(!await bioDisponivel())b.remove();}
+window.addEventListener('click',e=>{
+  const lk=e.target.closest&&e.target.closest('#lock');if(!lk)return;
+  e.stopPropagation();
+  const b=e.target.closest('[data-k]');if(!b||b.disabled)return;
+  e.preventDefault();lockTecla(b.dataset.k);
+},true);
+document.addEventListener('keydown',e=>{
+  if(!LK.o)return;
+  if(/^\d$/.test(e.key)){lockTecla(e.key);e.preventDefault();}
+  else if(e.key==='Backspace'){lockTecla('del');e.preventDefault();}
+  else if(e.key==='Escape'&&LK.o.cancelar){lockFecha();}
+});
+document.addEventListener('visibilitychange',()=>{
+  const c=lockCfg();if(!c){document.documentElement.classList.remove('privado');return;}
+  if(document.visibilityState==='hidden'){
+    if(LK.bioBusy)return;
+    LK.saiu=Date.now();
+    if(LK.o&&LK.o.modo!=='abrir')lockFecha();
+    if(!c.atraso)lockAbre();else document.documentElement.classList.add('privado');
+  }else{
+    document.documentElement.classList.remove('privado');
+    if(LK.saiu&&Date.now()-LK.saiu>=(c.atraso||0)*60000)lockAbre();
+    LK.saiu=0;
+  }
+});
+window.addEventListener('pageshow',e=>{if(e.persisted&&lockCfg())lockAbre();});
+lockAbre();
 $('#aLogo').innerHTML=LOGO;
 $('#icMail').innerHTML=I('mail');
 $('#icLock').innerHTML=I('lock');
@@ -3697,6 +3876,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
   if(ev==='PASSWORD_RECOVERY'&&sess)setTimeout(pedeNovaSenha,300);
   if(!sess){
     if(ev==='SIGNED_OUT'){
+      lockSalva(null);lockFecha();
       USER=null;pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
