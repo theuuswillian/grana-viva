@@ -999,6 +999,8 @@ const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 const ICONS={
+  refresh:'<path d="M20 11a8 8 0 0 0-14.6-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.6 4.5L21 15M21 20v-5h-5"/>',
+  link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
   swap:'<path d="M7 4 3.5 7.5 7 11M3.5 7.5h13M17 13l3.5 3.5L17 20M20.5 16.5h-13"/>',
   arrowUp:'<path d="M12 19V5M6 11l6-6 6 6"/>',
   arrowDown:'<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -2372,7 +2374,7 @@ function render(){
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
   requestAnimationFrame(()=>{
     if(AFTER[TAB])AFTER[TAB]();
-    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();}
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
   });
@@ -2599,7 +2601,7 @@ function viewLanc(){
       ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
   return `
-  <div class="head"><h2>Despesas</h2><div class="row" style="gap:8px"><button class="btn2 fx-top" data-act="importar" aria-label="importar extrato">importar</button><button class="btn2 fx-top" data-act="tx-planilha" aria-label="baixar planilha dos lançamentos filtrados">planilha</button><button class="btn2 fx-top" data-act="nova-fixa">${I('plus')} conta fixa</button><button class="btn" data-act="novo-tx">+ novo</button></div></div>
+  <div class="head"><h2>Despesas</h2><div class="row" style="gap:8px">${S.cfg.pluggyOn?'<button class="btn2 fx-top" data-act="banco-sync" aria-label="buscar lançamentos do banco">'+I('refresh')+'banco</button>':''}<button class="btn2 fx-top" data-act="importar" aria-label="importar extrato">importar</button><button class="btn2 fx-top" data-act="tx-planilha" aria-label="baixar planilha dos lançamentos filtrados">planilha</button><button class="btn2 fx-top" data-act="nova-fixa">${I('plus')} conta fixa</button><button class="btn" data-act="novo-tx">+ novo</button></div></div>
   <div class="seg" style="margin-bottom:12px">${[['despesa','Despesas'],['receita','Receitas'],['','Tudo']].map(([k,l])=>`<button class="${F.tipo===k?'on':''}" data-act="set-tipo" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="card filtros">
     <label class="srch">Buscar<input type="search" data-filter="q" value="${esc(F.q)}" placeholder="descrição, categoria, tag ou observação"></label>
@@ -2899,6 +2901,11 @@ function viewCfg(){
     <label class="avisoSel"><span>${I('bell')}avisar contas com antecedência de</span><select data-aviso="1">${[[0,'só no dia'],[1,'1 dia'],[2,'2 dias'],[3,'3 dias'],[5,'5 dias'],[7,'7 dias']].map(([v,l])=>`<option value="${v}" ${avisoDias()===v?'selected':''}>${l}</option>`).join('')}</select></label>
     <p class="hmNota">vale para os avisos do app e para as notificações. no dia e na véspera você também é avisado.</p>
   </div>
+  <div class="card bcCard">
+    <h4>Conexão com o banco</h4>
+    <p class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</p>
+    <div class="pushBtns" id="bcBtns"></div>
+  </div>
   <div class="card">
     <h4>Integração de cotações</h4>
     <button class="btn2 full" data-act="brapi-token">token brapi (opcional): ${S.cfg.brapi?'configurado':'não configurado'}</button>
@@ -3069,7 +3076,7 @@ function viewBancos(){
     </div>`;
   }).join('');
   return `
-  <div class="head"><h2>Bancos</h2><div class="row" style="gap:8px"><button class="btn2" data-act="importar">importar extrato</button><button class="btn2" data-act="nova-transf">transferir</button><button class="btn" data-act="novo-banco">${I('plus')} nova conta</button></div></div>
+  <div class="head"><h2>Bancos</h2><div class="row" style="gap:8px">${S.cfg.pluggyOn?'<button class="btn2" data-act="banco-sync">'+I('refresh')+'sincronizar'+'</button>':''}<button class="btn2" data-act="importar">importar extrato</button><button class="btn2" data-act="nova-transf">transferir</button><button class="btn" data-act="novo-banco">${I('plus')} nova conta</button></div></div>
   ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${ativos.length} conta${ativos.length===1?'':'s'}${arqs.length?' + '+arqs.length+' arquivada'+(arqs.length===1?'':'s'):''} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
@@ -3282,6 +3289,78 @@ function catSugerida(desc,tipo){
 const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgate|rdb|cdb|poupanca|caixinha|guardad/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
 function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
 let IMP=null;
+/* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
+async function pluggy(body){
+  const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
+  if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
+  if(data&&data.erro)throw new Error(data.erro);
+  return data;
+}
+async function atualizaBancoUI(){
+  const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
+  if(!USER){bt.innerHTML='';return;}
+  try{
+    const st=await pluggy({acao:'status'});
+    if(!!st.conectado!==!!S.cfg.pluggyOn){S.cfg.pluggyOn=!!st.conectado;salvar();}
+    if(st.conectado){
+      tx.innerHTML=`conectado pelo Meu Pluggy · ${st.itens} ${st.itens>1?'conexões':'conexão'}${st.ultima?' · última busca '+new Date(st.ultima).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}. o banco atualiza os dados mais ou menos uma vez por dia.`;
+      bt.innerHTML=`<button class="btn" data-act="banco-sync">${I('refresh')}buscar agora</button><button class="btn2" data-act="banco-config">editar</button><button class="btn2 danger" data-act="banco-remover">desconectar</button>`;
+    }else{
+      tx.innerHTML='traga os lançamentos das suas contas e cartões direto do banco, sem digitar. usa o Meu Pluggy, gratuito para uso pessoal. você revisa tudo antes de entrar no app.';
+      bt.innerHTML=`<button class="btn" data-act="banco-config">${I('link')}conectar banco</button>`;
+    }
+  }catch(e){tx.textContent='a conexão com o banco ainda não está disponível no servidor.';bt.innerHTML='';}
+}
+function bancoConfig(){
+  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  form('Conectar banco',[
+    {name:'clientId',label:'Client ID (dashboard.pluggy.ai → Aplicações)',value:'',required:true,placeholder:'xxxxxxxx-xxxx-…'},
+    {name:'clientSecret',label:'Client Secret',type:'password',value:'',required:true,placeholder:'aparece uma vez só, quando você gera'},
+    {name:'itemIds',label:'itemId (um por conexão, separe por vírgula)',type:'textarea',value:'',required:true,placeholder:'Demo → Itens conectados → copie o id'}
+  ],v=>{
+    if(!String(v.clientId).trim()||!String(v.clientSecret).trim()||!String(v.itemIds).trim())return 'Preencha os três campos.';
+    (async()=>{toast('Conferindo com o Pluggy…');
+    try{const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
+      S.cfg.pluggyOn=true;salvar();render();toast('Banco conectado · '+r.contas+' '+(r.contas===1?'conta encontrada':'contas encontradas'));setTimeout(bancoSync,400);
+    }catch(e){toast(e.message,true);}
+    })();
+  });
+}
+const CAT_PLUGGY=[[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
+function catDoBanco(l){
+  const sg=sugestaoCat(l.desc,l.valor<0?'despesa':'receita');if(sg&&sg.por!=='palavra')return sg.c;
+  const lista=l.valor<0?S.cats:CATS_RECEITA;
+  for(const [re,c] of CAT_PLUGGY)if(re.test(l.catBanco||'')&&lista.includes(c))return c;
+  return sg?sg.c:catSugerida(l.desc,l.valor<0?'despesa':'receita');
+}
+async function bancoSync(){
+  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  toast('Buscando lançamentos no banco…');
+  try{
+    const r=await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
+    const mapa=S.cfg.pluggyMap||{};
+    const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
+      const cartao=c.tipo==='CREDIT';
+      const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
+      return {nome:c.nome,conta:c.id,cartao,linhas};
+    }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
+      .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
+    S.cfg.pluggyDesde=hojeISO();salvar();
+    if(!fila.length){toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
+    IMP_FILA=fila;proxImportBanco();
+  }catch(e){toast(e.message,true);}
+}
+let IMP_FILA=[];
+function proxImportBanco(){
+  const c=IMP_FILA.shift();if(!c)return;
+  const mapa=S.cfg.pluggyMap||{};
+  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true};
+  const salvo=mapa[c.conta];
+  if(salvo&&((salvo[0]==='c'&&S.cartoes.some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&S.bancos.some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
+  else if(c.cartao&&S.cartoes.length)IMP.destino='c:'+S.cartoes[0].id;
+  else if(!c.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
+  montaImport();
+}
 function importarExtrato(){
   const inp=document.createElement('input');inp.type='file';inp.accept='.ofx,.csv,.txt,text/csv,application/x-ofx';
   inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;
@@ -3309,8 +3388,8 @@ function montaImport(){
     l.tipo=l.valor<0?'despesa':'receita';
     l.transf=ehCartao&&l.valor<0&&/limite convertido|credito do limite|saldo .*limite/.test(norm(l.desc));
     if(l.transf){l.tipo='transf';if(!l.para||l._d!==d)l.para='b:'+bancoPadrao();}
-    l.id=idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id)||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)));
+    l.id=IMP.banco?l.fitid:idImport(d,l);
+    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)));
     const n=norm(l.desc);let ign='';
     const dupT=!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     if(dup||dupT)l.dup=true;
@@ -3318,7 +3397,7 @@ function montaImport(){
     else if(dupT)ign='já lançado como transferência';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
-    if(l.cat==null||l._d!==d){l.cat=l.transf?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
+    if(l.cat==null||l._d!==d){l.cat=l.transf?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign;l._d=d;}
     l.ign=ign;l.dup=dup||dupT;
   });
@@ -3326,8 +3405,8 @@ function montaImport(){
   const catOpts=(c,tp)=>(tp==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===c?'selected':''}>${esc(x)}</option>`).join('');
   const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;
   const box=$('#modal');
-  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
+  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>${IMP.banco?'Lançamentos do banco':'Importar extrato'}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}${IMP.banco&&IMP_FILA.length?' · depois: '+IMP_FILA.length+(IMP_FILA.length>1?' contas':' conta'):''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
@@ -3335,14 +3414,16 @@ function montaImport(){
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
-    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
+    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
   </div>`;
   box.classList.add('on');
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
   box.querySelectorAll('input[data-i]').forEach(c=>c.onchange=()=>{IMP.linhas[+c.dataset.i].on=c.checked;c.closest('.impRow').classList.toggle('off',!c.checked);resumoImp();});
   box.querySelectorAll('select[data-c]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.c].cat=s.value;});
   box.querySelectorAll('select[data-p]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.p].para=s.value;});
-  box.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
+  box.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{
+    if(b.dataset.imp==='pular'||b.dataset.imp==='nunca'){if(b.dataset.imp==='nunca'){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]='x';salvar();}IMP=null;closeModal();if(IMP_FILA.length)setTimeout(proxImportBanco,250);return;}
+    const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
 function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
@@ -3351,11 +3432,18 @@ function confirmaImport(){
   let n=0;
   IMP.linhas.forEach(l=>{if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:l.id,tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
+    if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
     if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
     else if(ehCartao){t.forma='cartao';t.cartao=alvo;}else{t.forma='pix';t.conta=alvo;}
     if(!l.transf&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     S.tx.push(t);n++;});
+  if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
+    /* o que ficou desmarcado não volta a aparecer nas próximas buscas */
+    const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
+    S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
+  const eraBanco=IMP.banco;
   IMP=null;geraRecorrentes();salvar();closeModal();render();toast(n+' lançamentos importados');
+  if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);
 }
 function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;}
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
@@ -3760,6 +3848,9 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
+  'banco-sync':()=>bancoSync(),
+  'banco-config':()=>bancoConfig(),
+  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await pluggy({acao:'remover'});S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
@@ -3915,7 +4006,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.17';
+const GV_BUILD='2026-10-28.18';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
