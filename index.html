@@ -541,6 +541,15 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--a1);outline-off
 .cotInfo{opacity:.75}
 .btn2.sm{padding:4px 10px;font-size:12px;border-radius:9px}
 .fatAct{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.tx:has(.stLine){flex-wrap:wrap}
+.stLine{flex-basis:100%;display:flex;align-items:center;gap:8px;padding-left:48px;margin-top:-4px}
+.stLine .stb{font-size:10.5px;padding:3px 8px}
+.stLine .btn2.sm{padding:5px 10px;font-size:12px}
+.badge.mut{background:rgba(148,163,184,.16);color:var(--mut)}
+.tx-cancel{opacity:.55}.tx-cancel .val{text-decoration:line-through}
+.tx-prev .val{opacity:.8}
+.fx-entra{display:block;color:#34d399;font-size:12px;font-weight:600;margin-top:2px}
+html.claro .fx-entra{color:#059669}
 .fatList{margin:10px 0 4px;border-top:1px solid var(--line);padding-top:8px}
 .fatRow{padding:4px 0;flex-wrap:wrap}
 .opSum{margin:4px 0 12px}.opSum .card.mini b{font-size:16px}
@@ -736,7 +745,9 @@ function sanea(d){
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal}));
-  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros'}));
+  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:['mensal','semanal','anual'].includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false}));
+  // status do lançamento: só valores conhecidos (sem status = pago)
+  o.tx.forEach(t=>{if(!['pago','previsto','cancelado'].includes(t.status))delete t.status;if(t.status!=='previsto')delete t.fxAuto;});
   o.cats=(Array.isArray(o.cats)?o.cats:CATS_PADRAO).map(c=>str(c,60).trim()).filter(Boolean);
   if(!o.cats.length)o.cats=CATS_PADRAO.slice();
   const obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -928,8 +939,13 @@ function toast(m,erro){
 /* dinheiro: somas feitas em centavos inteiros para não acumular erro de ponto flutuante */
 const cents=v=>Math.round((Number(v)||0)*100);
 const somaC=(arr,f)=>arr.reduce((a,x)=>a+cents(f(x)),0)/100;
+/* status do lançamento: sem status (dados antigos) = pago.
+   só "pago" mexe em saldo, orçamento, relatório e fatura. "previsto" entra apenas na previsão; "cancelado" não conta em nada. */
+const efetivo=t=>!t.status||t.status==='pago';
+function statusTx(t){if(t.status==='cancelado')return 'cancelado';if(t.status==='previsto')return t.data<hojeISO()?'atrasado':'previsto';return 'pago';}
+const ST_TX={previsto:['previsto','warn'],atrasado:['atrasado','over'],cancelado:['cancelado','mut']};
 function somaMes(m,tipo,cat,comCartao){
-  return somaC(S.tx.filter(t=>t.data.startsWith(m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
+  return somaC(S.tx.filter(t=>efetivo(t)&&t.data.startsWith(m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
 }
 // dinheiro em espécie só movimenta uma conta do tipo Dinheiro (antes caía na conta principal, misturando espécie com banco)
 function contaDinheiroId(){const d=S.bancos.find(b=>b.tipo==='Dinheiro');return d?d.id:null;}
@@ -943,6 +959,7 @@ function saldoBanco(b){
   S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!(b.saldoData&&o.data<b.saldoData))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
     if(t.faturaKey&&t.pagoConta===b.id&&t.pagaEm&&!(b.saldoData&&t.pagaEm<b.saldoData))s-=cents(t.pagoValor);
+    if(!efetivo(t))return;
     if(!t.data||(b.saldoData&&t.data<b.saldoData))return;
     if(t.tipo==='transf'){if(t.de==='b:'+b.id)s-=cents(t.valor);if(t.para==='b:'+b.id)s+=cents(t.valor);return;}
     if(contaDoLanc(t)!==b.id)return;
@@ -955,7 +972,7 @@ function saldoBanco(b){
 function usadoCartaoTotal(c){
   const hj=hojeISO();let tot=0;
   S.tx.forEach(t=>{
-    if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data)return;
+    if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
     const f=fechamentoDe(c,t.data);
     if(f.fecha>hj){tot+=cents(t.valor);return;} // ciclo aberto ou parcela futura: limite reservado
     const fat=S.tx.find(x=>x.faturaKey==='fat|'+c.id+'|'+f.fecha.slice(0,7));
@@ -967,11 +984,11 @@ function usadoCartaoTotal(c){
   return tot/100;
 }
 function saldoTotal(){
-  return S.tx.reduce((a,t)=>a+(t.tipo==='transf'?0:t.tipo==='receita'?cents(t.valor):(t.cartao?0:-cents(t.valor))),0)/100;
+  return S.tx.reduce((a,t)=>a+(!efetivo(t)||t.tipo==='transf'?0:t.tipo==='receita'?cents(t.valor):(t.cartao?0:-cents(t.valor))),0)/100;
 }
 function despesasPorCat(m){
   const mp={};
-  S.tx.forEach(t=>{if(t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m))mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
+  S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m))mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
   return Object.keys(mp).map(c=>({l:c,v:mp[c]/100})).sort((a,b)=>b.v-a.v).map(s=>Object.assign(s,{color:corCat(s.l)}));
 }
 function barData(){
@@ -1176,6 +1193,35 @@ function statusFatura(t){
   return venceFatura(t)<hojeISO()?'vencida':'aberta';
 }
 const idGerado=k=>k.replace(/[^A-Za-z0-9_|:.\-]/g,'_');
+const FREQ_L={mensal:'mensal',semanal:'semanal',anual:'anual'};
+const DOW_L=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+/* datas (ISO) em que a conta fixa acontece entre ini e fim. chaves: mensal fx|id|AAAA-MM (compatível), semanal fx|id|AAAA-MM-DD, anual fx|id|AAAA */
+function ocorrenciasFixa(f,ini,fim){
+  const out=[],fr=f.freq||'mensal',cr=f.criadoEm||'';
+  const y0=+ini.slice(0,4),m0=+ini.slice(5,7)-1,y1=+fim.slice(0,4),m1=+fim.slice(5,7)-1;
+  if(fr==='semanal'){
+    const dow=Math.max(0,Math.min(6,+f.dow||0));
+    const d=new Date(y0,m0,+ini.slice(8,10));while(d.getDay()!==dow)d.setDate(d.getDate()+1);
+    for(;isoDe(d)<=fim;d.setDate(d.getDate()+7)){const s=isoDe(d);if(cr&&s<cr)continue;out.push({data:s,key:'fx|'+f.id+'|'+s});}
+    return out;
+  }
+  if(fr==='anual'){
+    const mes=Math.max(1,Math.min(12,+f.mes||1))-1;
+    for(let y=y0;y<=y1;y++){const s=isoDe(new Date(y,mes,Math.min(Math.max(1,f.dia||1),ultimoDia(y,mes))));if(s<ini||s>fim||(cr&&s<cr))continue;out.push({data:s,key:'fx|'+f.id+'|'+y});}
+    return out;
+  }
+  for(let k=0;;k++){
+    const D=new Date(y0,m0+k,1);if(D.getFullYear()>y1||(D.getFullYear()===y1&&D.getMonth()>m1))break;
+    const ym=isoDe(D).slice(0,7);
+    const s=isoDe(new Date(D.getFullYear(),D.getMonth(),Math.min(Math.max(1,f.dia||1),ultimoDia(D.getFullYear(),D.getMonth()))));
+    // não cria lançamento retroativo para datas antes do cadastro (evita duplicar o que já foi lançado à mão)
+    if(s<ini||s>fim||(cr&&s<cr.slice(0,10)))continue;out.push({data:s,key:'fx|'+f.id+'|'+ym});
+  }
+  return out;
+}
+function dataDaChave(f,key){const p=key.split('|')[2]||'';if((f.freq||'mensal')!=='mensal'||p.length!==7)return '';const y=+p.slice(0,4),m=+p.slice(5,7)-1;return isoDe(new Date(y,m,Math.min(Math.max(1,f.dia||1),ultimoDia(y,m))));}
+function descFreq(f){const fr=f.freq||'mensal';if(fr==='semanal'){const d=DOW_L[+f.dow||0];return (d==='sábado'||d==='domingo'?'todo ':'toda ')+d;}if(fr==='anual')return 'todo ano em '+pad(f.dia||1)+'/'+pad(f.mes||1);return 'todo dia '+(f.dia||1);}
+function mensalEq(f){const v=+f.valor||0,fr=f.freq||'mensal';return fr==='semanal'?v*52/12:fr==='anual'?v/12:v;}
 function geraRecorrentes(){
   const h=new Date(),hoje=hojeISO();let mudou=false;
   if(!S.gerados)S.gerados={};
@@ -1184,18 +1230,26 @@ function geraRecorrentes(){
   const vistos=new Set(),antes=S.tx.length;
   S.tx=S.tx.filter(t=>{const k=t.fixaKey||t.faturaKey;if(!k)return true;if(vistos.has(k))return false;vistos.add(k);return true;});
   if(S.tx.length!==antes)mudou=true;
+  /* recorrências: janela de 2 meses para trás até o fim do mês atual.
+     ocorrência futura nasce "prevista"; com confirmação automática vira "paga" no dia. id e chave determinísticos = sem duplicar. */
+  const iniJ=isoDe(new Date(h.getFullYear(),h.getMonth()-2,1)),fimJ=isoDe(new Date(h.getFullYear(),h.getMonth()+1,0));
   S.fixas.forEach(f=>{
-    for(let k=2;k>=0;k--){
-      const D=new Date(h.getFullYear(),h.getMonth()-k,1),ym=isoDe(D).slice(0,7);
-      if(f.criadoEm&&ym<f.criadoEm.slice(0,7))continue;
-      const key='fx|'+f.id+'|'+ym;
-      if(S.gerados[key])continue;
-      const dia=Math.min(Math.max(1,f.dia||1),ultimoDia(D.getFullYear(),D.getMonth()));
-      if(k===0&&h.getDate()<dia)continue;
-      // id determinístico: dois aparelhos geram o MESMO registro, sem duplicar
-      S.tx.push({id:idGerado(key),tipo:'despesa',valor:f.valor,categoria:f.categoria||'Outros',descricao:f.nome+' (fixa)',data:isoDe(new Date(D.getFullYear(),D.getMonth(),dia)),fixaKey:key});
-      S.gerados[key]=1;mudou=true;
+    ocorrenciasFixa(f,iniJ,fimJ).forEach(o=>{
+      if(S.gerados[o.key])return;
+      const tx={id:idGerado(o.key),tipo:f.tipo==='receita'?'receita':'despesa',valor:f.valor,categoria:f.categoria||'Outros',descricao:f.nome+' (fixa)',data:o.data,fixaKey:o.key};
+      if(o.data>hoje||f.auto===false){tx.status='previsto';if(f.auto!==false)tx.fxAuto=1;}
+      S.tx.push(tx);S.gerados[o.key]=1;mudou=true;
+    });
+  });
+  S.tx.forEach(t=>{
+    if(!t.fixaKey||t.status!=='previsto')return;
+    const f=S.fixas.find(x=>x.id===t.fixaKey.split('|')[1]);
+    // previstas ainda não mexidas acompanham a conta fixa editada
+    if(f&&t.fxAuto!==undefined&&t.data>hoje){
+      const tp=f.tipo==='receita'?'receita':'despesa',ds=f.nome+' (fixa)',dt=dataDaChave(f,t.fixaKey)||t.data;
+      if(t.valor!==f.valor||t.categoria!==f.categoria||t.descricao!==ds||t.tipo!==tp||t.data!==dt){Object.assign(t,{valor:f.valor,categoria:f.categoria||'Outros',descricao:ds,tipo:tp,data:dt});mudou=true;}
     }
+    if(t.fxAuto&&t.data<=hoje&&(!f||f.auto!==false)){t.status='pago';delete t.fxAuto;mudou=true;}
   });
   /* faturas: recalculadas a cada execução a partir das compras do ciclo.
      antes eram congeladas no dia do fechamento: compra lançada depois (retroativa), editada ou excluída
@@ -1204,7 +1258,7 @@ function geraRecorrentes(){
     const fe=Math.max(1,Math.min(31,c.fechamento||1));
     const somas={};
     S.tx.forEach(t=>{
-      if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data)return;
+      if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
       const f=fechamentoDe(c,t.data);
       if(f.fecha>hoje)return; // ciclo ainda aberto
       const key='fat|'+c.id+'|'+f.fecha.slice(0,7);
@@ -1231,10 +1285,20 @@ function alertasHTML(){return listaAlertas(false).map(a=>`<div class="card aviso
 /* completo=true também traz orçamentos e limite do cartão (vão no sino; no início já há o card de orçamentos) */
 function listaAlertas(completo){
   const h=new Date(),out=[],hj=new Date(h.getFullYear(),h.getMonth(),h.getDate());
+  const hjI=isoDe(hj),ate5=isoDe(new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()+5));
   (S.fixas||[]).forEach(f=>{
-    const dia=Math.min(Math.max(1,f.dia||1),ultimoDia(h.getFullYear(),h.getMonth()));
-    const diff=dia-h.getDate();
-    if(diff>=0&&diff<=5)out.push({k:'aviso',h:`${I('alert')} conta fixa <b>${esc(f.nome)}</b> ${diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(f.valor)}`});
+    if(f.tipo==='receita')return;
+    const oc=ocorrenciasFixa(Object.assign({},f,{criadoEm:''}),hjI,ate5)[0];if(!oc)return;
+    // já marcada como paga antes do dia: não avisa
+    const tx=S.tx.find(t=>t.fixaKey===oc.key);if(tx&&tx.status!=='previsto'&&!(tx.fxAuto))return;
+    const diff=Math.round((new Date(+oc.data.slice(0,4),+oc.data.slice(5,7)-1,+oc.data.slice(8,10))-hj)/864e5);
+    out.push({k:'aviso',h:`${I('alert')} conta fixa <b>${esc(f.nome)}</b> ${diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(f.valor)}`});
+  });
+  S.tx.forEach(t=>{
+    if(t.status!=='previsto'||t.tipo!=='despesa'||t.cartao||t.fxAuto)return;
+    const diff=Math.round((new Date(+t.data.slice(0,4),+t.data.slice(5,7)-1,+t.data.slice(8,10))-hj)/864e5);
+    if(diff>3)return;
+    out.push({k:diff<0?'venc':'aviso',h:`${I('alert')} <b>${esc(t.descricao||t.categoria)}</b> ${diff<0?'está atrasada há '+(-diff)+(diff===-1?' dia':' dias'):diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(t.valor)}`});
   });
   (S.cartoes||[]).forEach(c=>{
     const fe=Math.max(1,Math.min(31,c.fechamento||1)),ve=Math.max(1,Math.min(31,c.vencimento||1));
@@ -1319,32 +1383,51 @@ function abrirAlertas(){
 }
 function fixasCard(){
   const h=new Date(),fx=S.fixas||[];
-  const total=fx.reduce((a,f)=>a+(+f.valor||0),0);
+  const sai=fx.filter(f=>f.tipo!=='receita').reduce((a,f)=>a+cents(mensalEq(f)),0)/100,entra=fx.filter(f=>f.tipo==='receita').reduce((a,f)=>a+cents(mensalEq(f)),0)/100;
+  const total=sai;
+  const hjI=hojeISO(),hj0=new Date(h.getFullYear(),h.getMonth(),h.getDate());
   const lst=fx.map(f=>{
-    const dia=Math.min(Math.max(1,f.dia||1),ultimoDia(h.getFullYear(),h.getMonth()));
-    const diff=dia-h.getDate();
-    const due=diff>=0&&diff<=5;
-    const badge=diff===0?'<span class="fx-badge hoje">vence hoje</span>':(due?`<span class="fx-badge">vence em ${diff} ${diff===1?'dia':'dias'}</span>`:'');
-    return `<div class="tx hov fx-row${due?' due':''}"><span class="fx-ic sm">${I('receipt')}</span><div class="txt"><b>${esc(f.nome)}</b><small>todo dia ${f.dia} · ${esc(f.categoria||'Outros')}</small>${badge}</div><div class="val neg">${brl(f.valor)}</div><div class="acts"><button data-act="edit-fixa" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fixa" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;
+    const oc=ocorrenciasFixa(Object.assign({},f,{criadoEm:''}),hjI,isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+5)))[0];
+    const diff=oc?Math.round((new Date(+oc.data.slice(0,4),+oc.data.slice(5,7)-1,+oc.data.slice(8,10))-hj0)/864e5):-1;
+    const rec=f.tipo==='receita',due=diff>=0;
+    const badge=!due?'':diff===0?`<span class="fx-badge hoje">${rec?'entra hoje':'vence hoje'}</span>`:`<span class="fx-badge">${rec?'entra':'vence'} em ${diff} ${diff===1?'dia':'dias'}</span>`;
+    return `<div class="tx hov fx-row${due&&!rec?' due':''}"><span class="fx-ic sm">${I(rec?'up':'receipt')}</span><div class="txt"><b>${esc(f.nome)}</b><small>${descFreq(f)} · ${esc(f.categoria||'Outros')}${f.auto===false?' · confirmo manualmente':''}</small>${badge}</div><div class="val ${rec?'pos':'neg'}">${rec?'+':''}${brl(f.valor)}</div><div class="acts"><button data-act="edit-fixa" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fixa" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;
   }).join('');
-  return `<div class="card fixas-card"><div class="fx-head"><span class="fx-ic">${I('receipt')}</span><div><h4>Contas fixas mensais</h4><b class="fx-total">${brl(total)}<small> / mês</small></b></div></div>${lst||'<p class="vazio">nenhuma conta fixa. cadastre aluguel, luz, internet etc. elas viram despesa sozinhas todo mês.</p>'}<button class="btn full" data-act="nova-fixa">+ conta fixa</button></div>`;
+  return `<div class="card fixas-card"><div class="fx-head"><span class="fx-ic">${I('receipt')}</span><div><h4>Contas fixas</h4><b class="fx-total">${brl(total)}<small> / mês</small></b>${entra>0?`<small class="fx-entra">entram ${brl(entra)} / mês</small>`:''}</div></div>${lst||'<p class="vazio">nenhuma conta fixa. cadastre aluguel, luz, internet ou o salário. elas entram sozinhas no extrato.</p>'}<button class="btn full" data-act="nova-fixa">+ conta fixa</button></div>`;
 }
 function fixaForm(id){
   const f=id?(S.fixas||[]).find(x=>x.id===id):null;
+  const tp0=f&&f.tipo==='receita'?'receita':'despesa';
   form(f?'Editar conta fixa':'Nova conta fixa',[
-    {name:'nome',label:'Nome',value:f?f.nome:'',required:true,placeholder:'ex: aluguel'},
+    {name:'tipo',label:'Tipo',type:'select',value:tp0,options:[{v:'despesa',t:'Despesa (sai dinheiro)'},{v:'receita',t:'Receita (entra dinheiro)'}]},
+    {name:'nome',label:'Nome',value:f?f.nome:'',required:true,placeholder:'ex: aluguel, salário'},
     {name:'valor',label:'Valor (R$)',value:f?num(f.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
-    {name:'dia',label:'Dia do vencimento (1 a 31)',type:'number',min:1,max:31,required:true,value:f?f.dia:''},
-    {name:'categoria',label:'Categoria',type:'select',value:f?f.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))}
+    {name:'freq',label:'Repete',type:'select',value:f?(f.freq||'mensal'):'mensal',options:[{v:'mensal',t:'todo mês'},{v:'semanal',t:'toda semana'},{v:'anual',t:'todo ano'}]},
+    {name:'dia',label:'Dia (1 a 31)',type:'number',min:1,max:31,value:f?f.dia||'':''},
+    {name:'dow',label:'Dia da semana',type:'select',value:f?String(f.dow||1):'1',options:DOW_L.map((d,i)=>({v:String(i),t:d}))},
+    {name:'mes',label:'Mês',type:'select',value:f?String(f.mes||1):String(new Date().getMonth()+1),options:MESES_LONGO.map((m,i)=>({v:String(i+1),t:m}))},
+    {name:'categoria',label:'Categoria',type:'select',value:f?f.categoria:(tp0==='receita'?CATS_RECEITA[0]:S.cats[0]),options:(tp0==='receita'?CATS_RECEITA:S.cats).map(c=>({v:c,t:c}))},
+    {name:'manual',label:'confirmar manualmente (fica "previsto" até eu marcar como pago)',type:'checkbox',value:!!(f&&f.auto===false)}
   ],v=>{
-    const nome=String(v.nome).trim(),valor=parseBR(v.valor),dia=parseInt(v.dia,10);
+    const nome=String(v.nome).trim(),valor=parseBR(v.valor),dia=parseInt(v.dia,10),freq=FREQ_L[v.freq]?v.freq:'mensal';
     if(!nome)return 'Dê um nome à conta.';
     if(!(valor>0))return 'Informe o valor.';
-    if(!(dia>=1&&dia<=31))return 'Dia entre 1 e 31.';
-    const obj={nome,valor,dia,categoria:v.categoria||S.cats[0]};
-    if(f)Object.assign(f,obj);else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:hojeISO()},obj));}
+    if(freq!=='semanal'&&!(dia>=1&&dia<=31))return 'Dia entre 1 e 31.';
+    const obj={nome,valor,tipo:v.tipo==='receita'?'receita':'despesa',freq,categoria:v.categoria||S.cats[0],auto:!v.manual};
+    if(freq==='semanal'){obj.dow=parseInt(v.dow,10)||0;obj.dia=f&&f.dia||1;}else obj.dia=dia;
+    if(freq==='anual')obj.mes=parseInt(v.mes,10)||1;
+    if(f){
+      const mudouRegra=(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes);
+      Object.assign(f,obj);
+      // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
+      if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj;}
+    }else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:hojeISO()},obj));}
     geraRecorrentes();salvar();render();toast('Conta fixa salva');
   });
+  const mf=$('#mf'),q=n=>mf.querySelector('[name="'+n+'"]'),w=n=>q(n).closest('label');
+  const pinta=()=>{const fr=q('freq').value;w('dia').style.display=fr==='semanal'?'none':'';w('dow').style.display=fr==='semanal'?'':'none';w('mes').style.display=fr==='anual'?'':'none';};
+  q('freq').onchange=pinta;pinta();
+  q('tipo').onchange=()=>{const l=q('tipo').value==='receita'?CATS_RECEITA:S.cats;q('categoria').innerHTML=l.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');};
 }
 
 /* ---------- relatório mensal ---------- */
@@ -1359,7 +1442,7 @@ function relCats(a,b){
 }
 function mesCurto(m){return MESES[+m.slice(5,7)-1]+' '+m.slice(0,4);}
 // despesas (fora do cartão, igual ao resto do relatório) do mês m até o dia `dia`
-function despAte(m,dia){return somaC(S.tx.filter(t=>t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m)&&+t.data.slice(8,10)<=dia),t=>t.valor);}
+function despAte(m,dia){return somaC(S.tx.filter(t=>efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m)&&+t.data.slice(8,10)<=dia),t=>t.valor);}
 function relDestaques(a,b,ra,rb){
   const dif=(cents(ra.des)-cents(rb.des))/100,out=[];
   let head;
@@ -1732,7 +1815,7 @@ function sparkSVG(vals){
 }
 function sparkMes(m){
   const y=+m.slice(0,4),mo=+m.slice(5,7)-1,dias=new Date(y,mo+1,0).getDate(),arr=[];
-  for(let d=1;d<=dias;d++){const k=m+'-'+String(d).padStart(2,'0');arr.push(S.tx.filter(t=>t.tipo==='despesa'&&!t.cartao&&t.data===k).reduce((a,t)=>a+t.valor,0));}
+  for(let d=1;d<=dias;d++){const k=m+'-'+String(d).padStart(2,'0');arr.push(S.tx.filter(t=>efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data===k).reduce((a,t)=>a+t.valor,0));}
   let acc=0;return arr.map(v=>acc+=v);
 }
 const PC='rounded-pierre border border-[var(--line)] bg-[var(--card)] p-5 mb-3';
@@ -1752,6 +1835,29 @@ function drawSpark(){
   }]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
     plugins:{legend:{display:false},tooltip:{callbacks:{title:x=>'dia '+x[0].label,label:x=>brl(x.parsed.y)}}},
     scales:{x:{display:false},y:{display:false,beginAtZero:true}}}});
+}
+/* previsão do fim do mês: saldo de hoje + o que ainda está previsto até o fim do mês
+   (receitas − despesas previstas, inclusive atrasadas) − compras no cartão cujo ciclo fecha até o fim do mês.
+   faturas já fechadas já estão no saldo (entram como despesa no fechamento), então não são descontadas de novo. */
+function previsaoMes(){
+  const h=new Date(),hj=hojeISO(),fim=isoDe(new Date(h.getFullYear(),h.getMonth()+1,0));
+  let rec=0,des=0,cart=0;
+  S.tx.forEach(t=>{
+    if(t.status==='previsto'&&t.data<=fim){if(t.tipo==='receita')rec+=cents(t.valor);else if(t.tipo==='despesa'&&!t.cartao)des+=cents(t.valor);}
+  });
+  (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
+    if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
+    const f=fechamentoDe(c,t.data);if(f.fecha>hj&&f.fecha<=fim)cart+=cents(t.valor);
+  }));
+  const hoje=cents(saldoTotal());
+  return {hoje:hoje/100,rec:rec/100,des:des/100,cart:cart/100,fim:(hoje+rec-des-cart)/100,tem:!!(rec||des||cart)};
+}
+function previsaoHTML(){
+  const p=previsaoMes();if(!p.tem)return '';
+  const it=(l,v,c)=>v?`<div class="flex justify-between text-sm text-[var(--mut)]"><span>${l}</span><span class="${c}">${c==='pos'?'+':'−'} ${brl(v)}</span></div>`:'';
+  return `<div class="${PC} prevCard"><p class="${PL}">Previsão para o fim do mês</p><div class="pv ${p.fim<0?'neg':'pos'} mt-2">${brl(p.fim)}</div>
+    <div class="mt-3 grid gap-1.5">${it('a receber',p.rec,'pos')}${it('a pagar',p.des,'neg')}${it('cartão que fecha este mês',p.cart,'neg')}</div>
+    <p class="${PD}">saldo de hoje mais o que está previsto até o fim do mês. é uma estimativa, não garantia.</p></div>`;
 }
 function viewInicio(){
   const m=mesAtual();
@@ -1775,8 +1881,9 @@ function viewInicio(){
   <div class="${PC}">
     <p class="${PL}">Saldo total</p>
     <div class="pv-xl mt-2 ${saldo<0?'neg':'pos'}">${brl(saldo)}</div>
-    <p class="${PD}">receitas menos despesas, desde o começo</p>
+    <p class="${PD}">receitas menos despesas pagas, desde o começo</p>
   </div>
+  ${previsaoHTML()}
   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
     <div class="${PC} mb-0"><p class="${PL}">Receitas do mês</p><div class="pv pos">${brl(rec)}</div><p class="${PD}">entradas lançadas no mês</p></div>
     <div class="${PC} mb-0"><p class="${PL}">Despesas do mês</p><div class="pv neg">${brl(des)}</div><p class="${PD}">saídas lançadas no mês</p></div>
@@ -1832,16 +1939,20 @@ function catsFiltro(){
 }
 function viewLanc(){
   const lista=filtrados();
-  const tr=somaC(lista.filter(t=>t.tipo==='receita'),t=>t.valor);
+  const ef=lista.filter(efetivo);
+  const tr=somaC(ef.filter(t=>t.tipo==='receita'),t=>t.valor);
   // compras no cartão saem do caixa pela fatura: somar as duas contaria o mesmo gasto duas vezes
-  const td=somaC(lista.filter(t=>t.tipo==='despesa'&&!t.cartao),t=>t.valor);
-  const tdCartao=somaC(lista.filter(t=>t.tipo==='despesa'&&t.cartao),t=>t.valor);
-  const item=t=>`<div class="tx hov">
+  const td=somaC(ef.filter(t=>t.tipo==='despesa'&&!t.cartao),t=>t.valor);
+  const tdCartao=somaC(ef.filter(t=>t.tipo==='despesa'&&t.cartao),t=>t.valor);
+  const prv=lista.filter(t=>t.status==='previsto'),prvR=somaC(prv.filter(t=>t.tipo==='receita'),t=>t.valor),prvD=somaC(prv.filter(t=>t.tipo==='despesa'),t=>t.valor);
+  const stB=t=>{const s=statusTx(t);if(s==='pago')return '';const [l,k]=ST_TX[s];return ` <span class="badge ${k} stb">${l}</span>`;};
+  const item=t=>`<div class="tx hov${t.status==='cancelado'?' tx-cancel':''}${t.status==='previsto'?' tx-prev':''}">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
       <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${t.tipo==='transf'?esc(nomeLado(t.de)+' → '+nomeLado(t.para)):esc(t.categoria)+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk?' · '+esc(bk.nome):'');})()} · ${fmtData(t.data)}</small></div>
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
       <div class="acts">${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
+      ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
   return `
   <div class="head"><h2>Despesas</h2><div class="row" style="gap:8px"><button class="btn2 fx-top" data-act="importar" aria-label="importar extrato">importar</button><button class="btn2 fx-top" data-act="nova-fixa">${I('plus')} conta fixa</button><button class="btn" data-act="novo-tx">+ novo</button></div></div>
@@ -1853,8 +1964,8 @@ function viewLanc(){
     <label>Tipo<select data-filter="tipo"><option value="">Todos</option><option value="receita" ${F.tipo==='receita'?'selected':''}>Receitas</option><option value="despesa" ${F.tipo==='despesa'?'selected':''}>Despesas</option><option value="transf" ${F.tipo==='transf'?'selected':''}>Transferências</option></select></label>
   </div>
   <div class="grid2" style="margin-top:14px">
-    <div class="card mini sumcard"><small>RECEITAS (FILTRO)</small><b class="pos">${brl(tr)}</b></div>
-    <div class="card mini sumcard sum-neg"><small>DESPESAS (FILTRO)</small><b class="neg">${brl(td)}</b>${tdCartao?`<small style="margin:4px 0 0">+ ${brl(tdCartao)} em compras no cartão (entram pela fatura)</small>`:''}</div>
+    <div class="card mini sumcard"><small>RECEITAS (FILTRO)</small><b class="pos">${brl(tr)}</b>${prvR?`<small style="margin:4px 0 0">+ ${brl(prvR)} previstos</small>`:''}</div>
+    <div class="card mini sumcard sum-neg"><small>DESPESAS (FILTRO)</small><b class="neg">${brl(td)}</b>${tdCartao?`<small style="margin:4px 0 0">+ ${brl(tdCartao)} em compras no cartão (entram pela fatura)</small>`:''}${prvD?`<small style="margin:4px 0 0">+ ${brl(prvD)} previstos</small>`:''}</div>
   </div>
   <div class="card lista">${lista.length?lista.map(item).join(''):'<p class="vazio">nenhum lançamento com esses filtros.</p>'}</div>
   ${fixasCard()}`;
@@ -2097,7 +2208,7 @@ function cicloCartao(c){
 }
 function usoCartao(c){
   const ci=cicloCartao(c);
-  const l=S.tx.filter(t=>t.cartao===c.id&&(t.tipo==='despesa'||t.tipo==='transf')&&t.data>=ci.ini&&t.data<=ci.fim);
+  const l=S.tx.filter(t=>efetivo(t)&&t.cartao===c.id&&(t.tipo==='despesa'||t.tipo==='transf')&&t.data>=ci.ini&&t.data<=ci.fim);
   return {used:l.reduce((a,t)=>a+t.valor,0),n:l.length,ci,due:ci.due};
 }
 function faturasCartaoHTML(c){
@@ -2468,18 +2579,19 @@ function novoTx(id,tipoPre){
     {name:'parcelas',label:'Parcelas',type:'select',value:'1',options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
     {name:'descricao',label:'Descrição',value:t?String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true},
-    {name:'fixa',label:'conta fixa mensal (repete todo mês)',type:'checkbox',value:false}
+    {name:'status',label:'Situação',type:'select',value:t?(t.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
+    {name:'fixa',label:'repete todo mês (vira conta fixa)',type:'checkbox',value:false}
   ],v=>{
     const valor=parseBR(v.valor);
     if(!String(v.valor).trim())return 'Informe o valor';
     if(!(valor>0))return 'Informe um valor maior que zero.';
     if(!v.data)return 'Informe a data.';
     if(!t&&(parseInt(v.parcelas,10)||1)>1&&cents(valor)<(parseInt(v.parcelas,10)||1))return 'Valor pequeno demais para essas parcelas.';
-    if(v.fixa&&!t&&v.tipo==='despesa'){
+    if(v.fixa&&!t){
       if(!S.fixas)S.fixas=[];
       const dia=parseInt(v.data.slice(8,10),10)||1;
       const fxId=uid();
-      S.fixas.push({id:fxId,nome:String(v.descricao).trim()||'conta fixa',valor,dia,categoria:v.categoria,criadoEm:hojeISO()});
+      S.fixas.push({id:fxId,nome:String(v.descricao).trim()||'conta fixa',valor,dia,tipo:v.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:v.categoria,criadoEm:v.data<hojeISO()?v.data:hojeISO()});
       if(!S.gerados)S.gerados={};S.gerados['fx|'+fxId+'|'+v.data.slice(0,7)]=1;
     }
     const isDesp=v.tipo==='despesa';
@@ -2491,6 +2603,10 @@ function novoTx(id,tipoPre){
     const usaCartao=(isDesp&&forma==='cartao')||(bol&&pagoCom==='cartao');
     const usaConta=(forma==='pix')||(bol&&pagoCom==='conta');
     const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),data:v.data,cartao:usaCartao?(v.cartao||''):'',forma,conta:usaConta?(v.conta||''):'',pagoCom};
+    // compra no cartão é reconhecida na fatura: não fica "prevista" (só pode ser cancelada, ex. estorno)
+    let st=['pago','previsto','cancelado'].includes(v.status)?v.status:'pago';
+    if(usaCartao&&st==='previsto')st='pago';
+    obj.status=st;obj.fxAuto=undefined;
     const np=Math.max(1,Math.min(24,parseInt(v.parcelas,10)||1));
     if(t){
       if(t.parcelas>1)obj.descricao=(obj.descricao||t.categoria)+' ('+t.parcela+'/'+t.parcelas+')';
@@ -2522,6 +2638,12 @@ function novoTx(id,tipoPre){
   selP.onchange=pintaK;
   selF.onchange=pintaK;
   pintaK();
+  /* situação: data futura sugere "previsto" (até a pessoa escolher); no cartão não se aplica */
+  const selS=mf.querySelector('select[name="status"]'),wS=selS.closest('label'),inD=mf.querySelector('input[name="data"]');let stMexeu=!!t;
+  selS.addEventListener('change',()=>{stMexeu=true;});
+  const pintaS=()=>{const cart=selF.value==='cartao'||(selF.value==='boleto'&&selP.value==='cartao');wS.style.display=cart&&!(t&&t.status==='cancelado')?'none':'';
+    if(!stMexeu&&inD.value)selS.value=inD.value>hojeISO()&&!cart?'previsto':'pago';};
+  inD.addEventListener('change',pintaS);inD.addEventListener('input',pintaS);selF.addEventListener('change',pintaS);selP.addEventListener('change',pintaS);pintaS();
 }
 function pagarFatura(id){
   const t=S.tx.find(x=>x.id===id&&x.faturaKey);if(!t)return;
@@ -2818,7 +2940,8 @@ const ACT={
   'set-tipo':id=>{F.tipo=id;render();},
   'nova-fixa':()=>fixaForm(),
   'edit-fixa':id=>fixaForm(id),
-  'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já criados continuam no extrato.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);salvar();render();toast('Conta fixa removida');}),
+  'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
+  'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
   'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);},
   'ftab':id=>{FTAB=id;render();},
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
@@ -2893,7 +3016,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,somaC,cents,fechamentoDe,geraRecorrentes,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
