@@ -2059,12 +2059,22 @@ function campoHTML(c){
   return `<label>${esc(c.label)}<input name="${c.name}" type="${c.type||'text'}" value="${esc(c.value==null?'':c.value)}" ${attrs}></label>`;
 }
 /* máscara de moeda pt-BR: digitar 1500 -> 15,00 ; 150000 -> 1.500,00 */
+/* valor em reais como a pessoa digita: "300" = R$ 300,00 e "12,5" = R$ 12,50.
+   antes a máscara tratava os dígitos como centavos, então "300" virava R$ 3,00. */
 function maskMoney(el){
-  const d=String(el.value).replace(/\D/g,'').slice(0,12);
-  if(!d){el.value='';return;}
-  el.value=(parseInt(d,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  let v=String(el.value);
+  if(/\.$/.test(v)&&!v.includes(','))v=v.slice(0,-1)+','; // teclado com ponto decimal
+  v=v.replace(/[^\d,]/g,'');
+  const i=v.indexOf(',');
+  let int=i<0?v:v.slice(0,i),dec=i<0?null:v.slice(i+1).replace(/,/g,'').slice(0,2);
+  int=int.replace(/^0+(?=\d)/,'').slice(0,10);
+  if(int===''&&dec!==null)int='0';
+  int=int.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  el.value=int+(dec!==null?','+dec:'');
 }
+function fechaMoney(el){if(!el.value)return;const n=parseBR(el.value);el.value=n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 document.addEventListener('input',e=>{if(e.target&&e.target.matches&&e.target.matches('input.money'))maskMoney(e.target);});
+document.addEventListener('blur',e=>{if(e.target&&e.target.matches&&e.target.matches('input.money'))fechaMoney(e.target);},true);
 function form(titulo,campos,onSubmit){
   const box=$('#modal');
   box.innerHTML=`<div class="sheet">
