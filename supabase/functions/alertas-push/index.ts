@@ -88,7 +88,11 @@ function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
 
 // orçamento do mês: um aviso ao passar de 80% e outro ao estourar (chaves guardadas em push_log)
 function orcamentos(tx: any[], cfg: any, hoje: string): { chave: string; txt: string }[] {
-  const orc = cfg?.orc || {}, mes = hoje.slice(0, 7), out: { chave: string; txt: string }[] = [];
+  const mes = hoje.slice(0, 7), out: { chave: string; txt: string }[] = [];
+  // limites com histórico: o registro mensal mais recente até este mês; sem registro, o limite padrão
+  const om = cfg?.orcMes && typeof cfg.orcMes === "object" ? cfg.orcMes : {};
+  const k = Object.keys(om).filter((x) => /^\d{4}-\d{2}$/.test(x) && x <= mes).sort().pop();
+  const orc = (k ? om[k] : cfg?.orc) || {};
   for (const cat of Object.keys(orc)) {
     const lim = +orc[cat] || 0; if (lim <= 0) continue;
     let g = 0;
