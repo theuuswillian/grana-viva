@@ -538,7 +538,29 @@ body:has(#modal.on) #fab{display:none}
 #app{padding-top:calc(env(safe-area-inset-top,0px) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
 .side{padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
 #auth{padding-top:calc(env(safe-area-inset-top,0px) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
-.fab{bottom:calc(env(safe-area-inset-bottom,0px) + 78px)}
+.fab{bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:max(18px,env(safe-area-inset-right,0px));transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.fab.esc{transform:translateY(calc(100% + 40px)) scale(.7);opacity:0;pointer-events:none}
+#app{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)!important}
+/* campos com ícone: mais respiro e sem contorno duplo no input interno */
+.fld{gap:14px;padding:0 16px}
+.fld>span{display:flex;flex-shrink:0}
+.fld input{flex:1;min-width:0;background:transparent!important;padding-left:2px}
+.fld input:focus,.fld input:focus-visible{outline:none!important;box-shadow:none!important;border:0!important;background:transparent!important}
+/* topo no celular: mais limpo */
+.top .tl{flex:1;min-width:0}
+.top .tl>div{min-width:0}
+.top .logo{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .tr{flex-shrink:0;gap:10px;margin-left:10px}
+@media(max-width:560px){
+  .top{align-items:center;margin-bottom:18px}
+  .top .logo{font-size:25px!important;padding-bottom:2px}
+  .top small{font-size:12px;margin-top:0}
+  .ham{width:40px;height:40px;margin-right:12px}
+  .bell{width:40px;height:40px}
+  .syncPill{width:40px;height:40px;padding:0;justify-content:center;font-size:0;gap:0;border-radius:12px}
+  .syncPill i{width:9px;height:9px}
+}
+
 #toast{margin-bottom:env(safe-area-inset-bottom,0px)}
 /* menu fechado não deixa sombra vazando na borda esquerda */
 .side{box-shadow:none}.side.open{box-shadow:14px 0 40px rgba(0,0,0,.35)}
@@ -734,7 +756,7 @@ function setSync(t){
   else if(/pendente/.test(t)){k='offline';lab='pendente';}
   else if(/sincronizando|carregando/.test(t)){k='syncing';lab='sincronizando…';}
   else {k='synced';lab='sincronizado';}
-  el.className='syncPill '+k;el.innerHTML='<i></i>'+lab;
+  el.className='syncPill '+k;el.innerHTML='<i></i>'+lab;el.title=lab;el.setAttribute('aria-label',lab);
 }
 window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
@@ -2828,6 +2850,10 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostnam
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 $('#btnClose').innerHTML=I('close');
 $('#fab').innerHTML=I('plus');
+(function(){let y0=window.scrollY,tk=false;const f=$('#fab');
+  window.addEventListener('scroll',()=>{if(tk)return;tk=true;requestAnimationFrame(()=>{const y=window.scrollY,d=y-y0;
+    if(y<80||d<-6)f.classList.remove('esc');else if(d>6)f.classList.add('esc');
+    if(Math.abs(d)>6)y0=y;tk=false;});},{passive:true});})();
 // chart.js carrega com defer: redesenha a linha de gastos assim que ele estiver disponível
 document.addEventListener('DOMContentLoaded',()=>{if(TAB==='inicio')drawSpark();});
 restauraAba();
