@@ -697,6 +697,31 @@ html.claro .atalho{background:linear-gradient(160deg,color-mix(in srgb,var(--c) 
   .head:has(.fx-top)>.row>[data-act="novo-tx"]{order:-1}
   .head:has(.fx-top)>.row>[data-act="nova-fixa"]{order:-1}
 }
+/* ---------- v10.14: sugestão de categoria, vencimentos, metas ---------- */
+.avisoSel{display:flex;flex-direction:column;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.avisoSel>span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
+.avisoSel .i{width:15px;height:15px}
+.avisoSel select{width:100%;height:44px;border-radius:12px;padding:0 12px;font-size:16px}
+.catDica[hidden]{display:none!important}
+.catDica{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--mut)}
+.catDica .i{width:13px;height:13px;color:#fbbf24;flex:none}
+.catDica b{color:var(--txt)}
+.hvR{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.hvQ{font-size:11px;color:var(--mut);padding:2px 8px;border-radius:99px;background:var(--card2);white-space:nowrap}
+.hvQ.soon{color:#fbbf24;background:rgba(251,191,36,.12)}
+.hvQ.now{color:#fb923c;background:rgba(251,146,60,.14)}
+.hvQ.late{color:#f87171;background:rgba(248,113,113,.14)}
+html.claro .hvQ.soon{color:#b45309}html.claro .hvQ.now{color:#c2410c}html.claro .hvQ.late{color:#dc2626}
+.mtPlano{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--mut);margin:10px 0 2px;padding:9px 11px;border-radius:12px;background:var(--card2)}
+.mtPlano .i{flex:none;width:15px;height:15px;margin-top:1px;color:var(--a2)}
+.mtPlano b{color:var(--txt)}
+.mtPlano.ok .i{color:#4ade80}.mtPlano.warn .i{color:#fbbf24}.mtPlano.late .i{color:#f87171}
+.mtRV{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#4ade80;font-variant-numeric:tabular-nums;margin-top:4px}
+.mtRV.neg{color:#f87171}
+html.claro .mtRV{color:#16a34a}html.claro .mtRV.neg{color:#dc2626}
+.mtRV small{font-size:14px;font-weight:600;color:var(--mut);margin-left:2px}
+.meta .acts2 .btn{background:linear-gradient(135deg,var(--a1),var(--a2))!important;color:#fff!important;border:0!important;opacity:1!important}
+.mtRitmo .hmH>.i{width:18px;height:18px;color:#fbbf24}
 /* ---------- v10.13: página inicial reformulada ---------- */
 .hmHead{padding:4px 4px 14px}
 .hmHead small{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
@@ -1702,9 +1727,10 @@ function geraRecorrentes(){
 }
 function alertasHTML(){return listaAlertas(false).map(a=>`<div class="card aviso-card${a.k==='venc'?' venc':''}">${a.h}</div>`).join('');}
 /* completo=true também traz orçamentos e limite do cartão (vão no sino; no início já há o card de orçamentos) */
+function avisoDias(){const n=+(S.cfg&&S.cfg.avisoDias);return [0,1,2,3,5,7].includes(n)?n:3;}
 function listaAlertas(completo){
-  const h=new Date(),out=[],hj=new Date(h.getFullYear(),h.getMonth(),h.getDate());
-  const hjI=isoDe(hj),ate5=isoDe(new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()+5));
+  const h=new Date(),out=[],hj=new Date(h.getFullYear(),h.getMonth(),h.getDate()),AD=Math.max(1,avisoDias());
+  const hjI=isoDe(hj),ate5=isoDe(new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()+AD));
   (S.fixas||[]).forEach(f=>{
     if(f.tipo==='receita')return;
     const oc=ocorrenciasFixa(Object.assign({},f,{criadoEm:''}),hjI,ate5)[0];if(!oc)return;
@@ -1716,7 +1742,7 @@ function listaAlertas(completo){
   S.tx.forEach(t=>{
     if(t.status!=='previsto'||t.tipo!=='despesa'||t.cartao||t.fxAuto)return;
     const diff=Math.round((new Date(+t.data.slice(0,4),+t.data.slice(5,7)-1,+t.data.slice(8,10))-hj)/864e5);
-    if(diff>3)return;
+    if(diff>AD)return;
     out.push({k:diff<0?'venc':'aviso',h:`${I('alert')} <b>${esc(t.descricao||t.categoria)}</b> ${diff<0?'está atrasada há '+(-diff)+(diff===-1?' dia':' dias'):diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(t.valor)}`});
   });
   (S.cartoes||[]).forEach(c=>{
@@ -1726,7 +1752,7 @@ function listaAlertas(completo){
       const C=diaMes(B.getFullYear(),B.getMonth(),fe);
       const V=diaMes(C.getFullYear(),C.getMonth()+(ve>fe?0:1),ve);
       const diff=Math.round((V-hj)/864e5);
-      if(diff>=0&&diff<=7){
+      if(diff>=0&&diff<=Math.max(AD,3)){
         const fat=S.tx.find(t=>t.faturaKey==='fat|'+c.id+'|'+isoDe(C).slice(0,7));
         if(fat&&restanteFatura(fat)<=0)continue;
         out.push({k:diff<=3?'venc':'aviso',h:`${I('card')} fatura <b>${esc(c.nome)}</b> ${diff===0?'vence hoje':diff===1?'vence amanhã':'vence em '+diff+' dias'} (${fmtDate(V)}) · ${fat?brl(restanteFatura(fat)):'ainda sem valor fechado'}${fat?` <button class="btn2 sm" data-act="pagar-fat" data-id="${fat.id}">pagar</button>`:''}`});
@@ -2502,7 +2528,7 @@ function viewInicio(){
   </div>
   <div class="hmDuo">${prevHTML}
   <div class="card hmSpark"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div></div>
-  <div class="hmDuo">${catHTML}<div>${orcInicioHTML()}${ultHTML}</div></div>
+  <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${orcInicioHTML()}${ultHTML}</div></div>
   <div class="card">
     <h4>Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}</h4>
     <canvas id="cBar" class="cv"></canvas>
@@ -2510,6 +2536,28 @@ function viewInicio(){
   </div>
   ${cartHTML}
   ${dicaInstalarHTML(false)}`;
+}
+function proximosVenc(dias){
+  const h=new Date(),hj=hojeISO(),ate=isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),out=[],vistos=new Set();
+  S.tx.forEach(t=>{
+    if(t.status!=='previsto'||t.tipo!=='despesa'||t.cartao||!t.data||t.data>ate)return;
+    if(t.fixaKey)vistos.add(t.fixaKey);
+    out.push({data:t.data,nome:t.descricao||t.categoria||'conta',valor:+t.valor||0,cat:t.categoria,tipo:t.fixaKey?'fixa':'conta'});
+  });
+  (S.fixas||[]).forEach(f=>{if(f.tipo==='receita')return;
+    ocorrenciasFixa(f,hj,ate).forEach(o=>{if(vistos.has(o.key)||S.tx.some(t=>t.fixaKey===o.key))return;out.push({data:o.data,nome:f.nome,valor:+f.valor||0,cat:f.categoria,tipo:'fixa'});});});
+  S.tx.forEach(t=>{if(!t.faturaKey)return;const r=restanteFatura(t),v=venceFatura(t);if(r>0.009&&v<=ate)out.push({data:v,nome:t.descricao||'fatura',valor:r,cat:null,tipo:'fatura'});});
+  return out.sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
+}
+function proxVencHTML(){
+  const L=proximosVenc(30);if(!L.length)return '';
+  const hj=hojeISO(),tot=L.reduce((a,x)=>a+x.valor,0);
+  const quando=d=>{const n=Math.round((new Date(d+'T12:00')-new Date(hj+'T12:00'))/864e5);return n<0?{t:'atrasada',c:'late'}:n===0?{t:'hoje',c:'now'}:n===1?{t:'amanhã',c:'now'}:n<=avisoDias()?{t:'em '+n+' dias',c:'soon'}:{t:d.slice(8,10)+'/'+d.slice(5,7),c:''};};
+  return `<div class="card hmVenc"><div class="hmH"><h4>próximos vencimentos</h4><span class="hmSub">30 dias · ${brl(tot)}</span></div>
+    ${L.slice(0,6).map(x=>{const q=quando(x.data),ic=x.tipo==='fatura'?'card':x.cat?catIcon(x.cat):'receipt',cc=x.tipo==='fatura'?'#60a5fa':x.cat?corCat(x.cat):'#fbbf24';
+      return `<div class="rmRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(x.nome)}</b><small>${x.tipo==='fatura'?'fatura do cartão':x.tipo==='fixa'?'conta fixa':'conta prevista'}</small></div><div class="hvR"><span class="rmV nw">${brl(x.valor)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('')}
+    ${L.length>6?`<p class="hmNota">+${L.length-6} ${L.length-6>1?'vencimentos':'vencimento'} nos próximos 30 dias</p>`:''}
+  </div>`;
 }
 function orcInicioHTML(){
   const m=mesAtual();
@@ -2775,13 +2823,37 @@ function pasForm(id){
     if(id)Object.assign(p,d);else S.passivos.push(Object.assign({id:uid()},d));
     salvar();render();toast('Dívida salva');});
 }
+/* v10.14: ritmo de economia = média do que sobrou (receitas − despesas pagas) nos últimos 3 meses fechados com movimento */
+function ritmoEconomia(){
+  const ms=[1,2,3].map(k=>mesOff(k)).filter(m=>{const r=resumoMes(m);return r.rec||r.des;});
+  if(!ms.length)return null;
+  const tot=ms.reduce((a,m)=>a+cents(resumoMes(m).sal),0)/100;
+  return {media:tot/ms.length,n:ms.length,ult:resumoMes(mesOff(1)).sal,mesUlt:mesOff(1)};
+}
+function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())*12+(+ym.slice(5,7)-1-h.getMonth());}
 function viewMetas(){
+  const R=ritmoEconomia();
+  /* metas com prazo reservam o que precisam por mês; o resto do ritmo se divide entre as sem prazo */
+  const abertas=S.metas.filter(m=>m.atual<m.alvo);
+  const reserva=abertas.filter(m=>m.prazo&&mesesAte(m.prazo)>0).reduce((a,m)=>a+(m.alvo-m.atual)/mesesAte(m.prazo),0);
+  const semPrazo=abertas.filter(m=>!m.prazo).length;
+  const livre=R?Math.max(0,R.media-reserva):0,ativas=Math.max(1,semPrazo);
+  const porMeta=semPrazo?livre/semPrazo:0;
   const cards=S.metas.map(m=>{
     const pct=m.alvo?Math.min(100,m.atual/m.alvo*100):0,falta=Math.max(0,m.alvo-m.atual);
+    let plano='';
+    if(falta>0){
+      if(m.prazo){const n=mesesAte(m.prazo);
+        if(n<=0)plano=`<p class="mtPlano late">${I('alert')}<span>o prazo (${mesCurto(m.prazo)}) já chegou e faltam ${brl(falta)}.</span></p>`;
+        else{const pm=falta/n,ok=R&&R.media>=reserva;plano=`<p class="mtPlano ${ok?'ok':'warn'}">${I('flag')}<span>pra chegar em ${mesCurto(m.prazo)}, guarde <b>${brl(pm)}/mês</b> por ${n} ${n>1?'meses':'mês'}${R?(ok?'. no seu ritmo atual dá.':`. seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas.`):'.'}</span></p>`;}
+      }else if(porMeta>0){const n=Math.ceil(falta/porMeta),dt=mesAdd(mesOff(0),n);
+        plano=`<p class="mtPlano">${I('gauge')}<span>guardando ${brl(porMeta)}/mês${semPrazo>1?' (sua sobra dividida entre as metas sem prazo)':reserva>0?' (o que sobra depois das metas com prazo)':''}, chega em <b>${mesCurto(dt)}</b>, daqui a ${n} ${n>1?'meses':'mês'}.</span></p>`;}
+    }
     return `<div class="card meta hov">
       <div class="row"><b>${esc(m.nome)}</b><small class="small" style="margin:0">${Math.round(pct)}%</small></div>
       <div class="bar"><i data-w="${pct}"></i></div>
       <div class="row small"><span>${brl(m.atual)} de ${brl(m.alvo)}</span><span>faltam ${brl(falta)}</span></div>
+      ${plano}
       ${pct>=100?`<p class="aviso ok">${I('star')}meta batida</p>`:''}
       <div class="acts2">
         <button class="btn" data-act="aporte" data-id="${m.id}">+ aporte</button>
@@ -2791,12 +2863,16 @@ function viewMetas(){
     </div>`;
   }).join('');
   const tAlvo=S.metas.reduce((a,m)=>a+m.alvo,0),tAt=S.metas.reduce((a,m)=>a+m.atual,0);
+  const ritmo=R?`<div class="card mtRitmo"><div class="hmH"><h4>seu ritmo de economia</h4>${I('piggy')}</div>
+    <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
+    <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}.</p>
+    ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
   return `
   <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  ${ritmo}
   ${S.metas.length?`<div class="card"><div class="row"><span class="small" style="margin:0">guardado no total</span><b class="pos">${brl(tAt)}</b></div><div class="row" style="margin-top:6px"><span class="small" style="margin:0">alvo somado</span><b>${brl(tAlvo)}</b></div></div>`:''}
-  ${S.metas.length?cards:'<div class="card"><p class="vazio">crie sua primeira meta, tipo reserva de emergência.</p></div>'}`;
+  ${S.metas.length?cards:'<div class="card"><p class="vazio">crie sua primeira meta, tipo reserva de emergência. dá pra definir um prazo e eu calculo quanto guardar por mês.</p></div>'}`;
 }
-
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
@@ -2820,6 +2896,8 @@ function viewCfg(){
     <h4>Notificações no celular</h4>
     <p class="pushTxt" id="pushTxt">verificando…</p>
     <div class="pushBtns" id="pushBtns"></div>
+    <label class="avisoSel"><span>${I('bell')}avisar contas com antecedência de</span><select data-aviso="1">${[[0,'só no dia'],[1,'1 dia'],[2,'2 dias'],[3,'3 dias'],[5,'5 dias'],[7,'7 dias']].map(([v,l])=>`<option value="${v}" ${avisoDias()===v?'selected':''}>${l}</option>`).join('')}</select></label>
+    <p class="hmNota">vale para os avisos do app e para as notificações. no dia e na véspera você também é avisado.</p>
   </div>
   <div class="card">
     <h4>Integração de cotações</h4>
@@ -3170,14 +3248,29 @@ function lerCSV(txt){
   return {linhas:out,cartao};
 }
 const REGRAS_CAT=[
-  [/ifood|rappi|restaur|lanchon|padaria|mercado|supermerc|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|burger|mc ?donald|pizza|cafe/,'Alimentação'],
-  [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe/,'Transporte'],
+  [/ifood|rappi|restaur|lanchon|padaria|mercado|supermerc|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|burger|mc ?donald|pizza|cafe|almoco|jantar|lanche|sorvet|acai|bk\b|subway|outback|feira|big box|dia\b|extra\b|atacadao|comida|marmita/,'Alimentação'],
+  [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|gasolina|etanol|alcool|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe|passagem|mecanic|oficina|ipva|licenciament|seguro auto/,'Transporte'],
   [/farmac|drogar|academia|smart ?fit|bluefit|selfit|crossfit|droga ?raia|pague menos|hospital|clinica|laborat|odonto|unimed|amil|hapvida/,'Saúde'],
   [/netflix|spotify|disney|hbo|max\b|prime video|youtube|cinema|ingresso|steam|playstation|xbox|bar\b|show/,'Lazer'],
   [/aluguel|condomin|energia|neoenergia|enel|cemig|light\b|caesb|sabesp|saneamento|agua|internet|vivo|claro|tim\b|oi\b|net\b|gas\b/,'Moradia'],
   [/escola|faculdade|universid|curso|udemy|alura|livrar|mensalidade/,'Educação']
 ];
 function chaveRegra(desc){return norm(desc).replace(/\d+/g,'').replace(/[^a-z ]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60);}
+/* v10.14: sugestão para o formulário: só devolve quando há um motivo (regra aprendida, histórico ou palavra-chave) */
+function sugestaoCat(desc,tipo){
+  const n=norm(desc||'').trim();if(n.length<3)return null;
+  const lista=tipo==='receita'?CATS_RECEITA:S.cats;
+  const rg=(S.cfg.regras||{})[tipo[0]+':'+chaveRegra(desc)];
+  if(rg&&lista.includes(rg))return {c:rg,por:'regra'};
+  const hist=S.tx.filter(t=>t.tipo===tipo&&t.descricao&&!t.faturaKey&&lista.includes(t.categoria));
+  const conta=f=>{const mp={};hist.forEach(t=>{if(f(norm(t.descricao)))mp[t.categoria]=(mp[t.categoria]||0)+1;});const k=Object.keys(mp).sort((a,b)=>mp[b]-mp[a])[0];return k||null;};
+  let c=conta(x=>x===n);if(c)return {c,por:'hist'};
+  const p1=n.split(' ')[0];
+  if(p1.length>=3){c=conta(x=>x.split(' ')[0]===p1||x.startsWith(n));if(c)return {c,por:'hist'};}
+  if(tipo==='despesa')for(const [re,cc] of REGRAS_CAT){if(re.test(n)&&lista.includes(cc))return {c:cc,por:'palavra'};}
+  if(tipo==='receita'){const R=[[/salari|folha|holerite|pagamento empresa/,'Salário'],[/hora extra|horas extras/,'Horas extras'],[/dividend|jcp|juros sobre capital|provento/,'Dividendos'],[/bonus|bônus|plr|premio|comiss/,'Bônus/Promoções'],[/rendiment|cdb|tesouro|poupanca/,'Rendimentos'],[/inss|aposentad/,'Aposentadoria']];for(const [re,cc] of R)if(re.test(n)&&lista.includes(cc))return {c:cc,por:'palavra'};}
+  return null;
+}
 function catSugerida(desc,tipo){
   const n=norm(desc);const rg=(S.cfg.regras||{})[tipo[0]+':'+chaveRegra(desc)];
   if(rg&&(tipo==='receita'?CATS_RECEITA.concat(S.cats):S.cats).includes(rg))return rg;
@@ -3334,6 +3427,10 @@ function novoTx(id,tipoPre,base){
       S.fixas.push({id:fxId,nome:String(v.descricao).trim()||'conta fixa',valor,dia,tipo:v.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:v.categoria,criadoEm:v.data<hojeISO()?v.data:hojeISO()});
       if(!S.gerados)S.gerados={};S.gerados['fx|'+fxId+'|'+v.data.slice(0,7)]=1;
     }
+    { /* aprende: a pessoa trocou a categoria sugerida, então lembra para a próxima */
+      const d0=String(v.descricao||'').trim(),k=d0&&chaveRegra(d0);
+      if(k&&k.length>=3&&(v.tipo==='despesa'||v.tipo==='receita')){const sg=sugestaoCat(d0,v.tipo);if(!sg||sg.c!==v.categoria){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[v.tipo[0]+':'+k]=v.categoria;}}
+    }
     const isDesp=v.tipo==='despesa';
     const forma=v.forma||(isDesp?'pix':'dinheiro');
     const bol=isDesp&&forma==='boleto';
@@ -3378,7 +3475,19 @@ function novoTx(id,tipoPre,base){
   const pintaK=()=>{const rec=selT.value==='receita';const ops=rec?[['dinheiro','dinheiro'],['pix','pix']]:[['dinheiro','dinheiro'],['pix','pix'],['boleto','boleto'],['cartao','cartão']];const cur=ops.some(o=>o[0]===selF.value)?selF.value:'dinheiro';selF.innerHTML=ops.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('');selF.value=cur;wF.style.display='';const bol=selF.value==='boleto';const pc=mf.querySelector('select[name="pagoCom"]');if(pc){pc.closest('label').style.display=(!rec&&bol)?'':'none';}const pcv=pc?pc.value:'dinheiro';wK.style.display=(!rec&&(selF.value==='cartao'||(bol&&pcv==='cartao')))?'':'none';wB.style.display=(selF.value==='pix'||(!rec&&bol&&pcv==='conta'))?'':'none';const wPa=mf.querySelector('select[name="parcelas"]').closest('label');wPa.style.display=(!t&&!rec&&selF.value==='cartao')?'':'none';};
   const pintaE=()=>{['multa','juros','desconto'].forEach(n=>{const e=mf.querySelector('[name="'+n+'"]');if(e)e.closest('label').style.display=selT.value==='receita'?'none':'';});};
   pintaE();
-  selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();pintaE();};
+  selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();pintaE();sugere();};
+  /* v10.14: categoria sugerida pela descrição (até a pessoa escolher uma) */
+  const inDesc=mf.querySelector('input[name="descricao"]');let catMexeu=!!t;
+  const dica=document.createElement('div');dica.className='catDica';dica.hidden=true;inDesc.closest('label').appendChild(dica);
+  selC.addEventListener('change',()=>{catMexeu=true;dica.hidden=true;});
+  let catSug=false;
+  const sugere=()=>{const sg=sugestaoCat(inDesc.value,selT.value);
+    if(catMexeu){dica.hidden=true;return;}
+    if(!sg){dica.hidden=true;if(catSug){const l=listaDo(selT.value);selC.value=l[0];catSug=false;}return;}
+    catSug=true;
+    selC.value=sg.c;dica.hidden=false;dica.innerHTML=`${I('star')}<span>categoria sugerida: <b>${esc(sg.c)}</b>${sg.por==='hist'?' · pelo seu histórico':sg.por==='regra'?' · você já usou essa':''}</span>`;};
+  inDesc.addEventListener('input',sugere);
+  mf._sugCat=()=>{const sg=sugestaoCat(inDesc.value,selT.value);return sg&&sg.c;};
   const selP=mf.querySelector('select[name="pagoCom"]'),wP=selP.closest('label');
   selP.onchange=pintaK;
   selF.onchange=pintaK;
@@ -3551,13 +3660,15 @@ function metaForm(id){
   form(m?'Editar meta':'Nova meta',[
     {name:'nome',label:'Nome da meta',value:m?m.nome:'',required:true,placeholder:'ex: reserva de emergência'},
     {name:'alvo',label:'Valor alvo (R$)',value:m?num(m.alvo):'',required:true,inputmode:'decimal',placeholder:'0,00'},
-    {name:'atual',label:'Já guardado (R$)',value:m?num(m.atual):'0,00',inputmode:'decimal'}
+    {name:'atual',label:'Já guardado (R$)',value:m?num(m.atual):'0,00',inputmode:'decimal'},
+    {name:'prazo',label:'Quero chegar até (opcional)',type:'month',value:m&&m.prazo||''}
   ],v=>{
     const nome=String(v.nome).trim(),alvo=parseBR(v.alvo),atual=parseBR(v.atual);
     if(!nome)return 'Dê um nome à meta.';
     if(!(alvo>0))return 'Informe o valor alvo.';
     if(atual<0)return 'Valor guardado inválido.';
-    const obj={nome,alvo,atual};
+    const prazo=/^\d{4}-\d{2}$/.test(String(v.prazo||''))?String(v.prazo):'';
+    const obj={nome,alvo,atual,prazo};
     if(m)Object.assign(m,obj);else S.metas.push(Object.assign({id:uid()},obj));
     salvar();render();toast('Meta salva');
   });
@@ -3772,6 +3883,7 @@ document.addEventListener('input',e=>{
 
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset&&t.dataset.aviso){S.cfg.avisoDias=+t.value;salvar();toast('Antecedência dos avisos salva');render();return;}
   if(t.dataset&&(t.dataset.filter==='relA'||t.dataset.filter==='relB')){REL[t.dataset.filter==='relA'?'a':'b']=t.value;render();return;}
   if(t.dataset&&t.dataset.filter){F[t.dataset.filter]=t.value;render();return;}
   if(t.dataset&&t.dataset.per){const k=t.dataset.per;if(k==='k'){const atual=periodo();PER.k=t.value;if(t.value==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}}else if(DATA_OK.test(t.value))PER[k]=t.value;salvaPer();render();return;}
@@ -3803,7 +3915,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.16';
+const GV_BUILD='2026-10-28.17';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
