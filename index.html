@@ -562,6 +562,7 @@ textarea{width:100%;resize:vertical;background:var(--card2);color:var(--txt);bor
 .anxN{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.anxN small{display:block;color:var(--mut);font-size:11px}
 .anxAdd{display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .arqBox summary{cursor:pointer;color:var(--mut);font-size:13px}.arqRow{margin-top:8px;opacity:.85}.arqRow .acts2{display:flex;gap:6px}
+.encChip{font-size:11px;color:#f59e0b}.encAviso{border-left:2px solid #f59e0b;padding-left:8px}
 .maisLista{margin-top:12px;width:100%}
 .mesNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
 .mesNav b{font-size:15px}.mesNav .btn2{min-width:44px;font-size:18px;line-height:1}
@@ -607,9 +608,12 @@ body:has(#modal.on) #fab{display:none}
 .badge.ok{color:#34d399}
 .aviso-card.venc{box-shadow:0 0 0 1px #ef4444,var(--shadow)}
 /* iPhone: respeita a área da barra de status e do indicador inferior (app instalado em tela cheia) */
-#app{padding-top:calc(env(safe-area-inset-top,0px) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
-.side{padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
-#auth{padding-top:calc(env(safe-area-inset-top,0px) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+/* --sat: área da barra de status. alguns iOS (26+) informam env()=0 mesmo desenhando a página por baixo dela; o script abaixo mede e aplica um mínimo */
+:root{--sat:max(env(safe-area-inset-top,0px),var(--sat-fb,0px))}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--bg);z-index:65;pointer-events:none}
+#app{padding-top:calc(var(--sat) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+.side{padding-top:calc(var(--sat) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+#auth{padding-top:calc(var(--sat) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
 .fab{bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:max(18px,env(safe-area-inset-right,0px));transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s}
 .fab.esc{transform:translateY(calc(100% + 40px)) scale(.7);opacity:0;pointer-events:none}
 #app{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)!important}
@@ -679,6 +683,26 @@ html.claro .btn.gbtn{background:#fff!important;color:#0f172a!important;border-co
   </form>
 </div>
 
+<script>
+(function(){
+  function ajusta(){
+    var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
+    var root=document.documentElement;
+    if(!ios){root.style.removeProperty('--sat-fb');return;}
+    var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;height:0;visibility:hidden;padding-top:env(safe-area-inset-top,0px)';
+    document.documentElement.appendChild(pr);var env=parseFloat(getComputedStyle(pr).paddingTop)||0;pr.remove();
+    if(env>0){root.style.removeProperty('--sat-fb');return;}
+    var retrato=window.innerHeight>window.innerWidth,alto=Math.max(screen.height,screen.width);
+    var standalone=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+    /* a página vai até o topo da tela quando quase não sobra barra do Safari acima dela */
+    var porBaixo=standalone||(retrato&&(alto-window.innerHeight)<140);
+    if(!porBaixo||!retrato){root.style.removeProperty('--sat-fb');return;}
+    root.style.setProperty('--sat-fb',(alto>=852?59:alto>=812?47:20)+'px');
+  }
+  ajusta();addEventListener('resize',ajusta);addEventListener('orientationchange',function(){setTimeout(ajusta,300);});
+  window.__ajustaSat=ajusta;
+})();
+</script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
 <script>
 (function(){
@@ -777,6 +801,8 @@ const COR_OK=/^#[0-9a-fA-F]{3,8}$/;
 const DATA_OK=/^\d{4}-\d{2}-\d{2}$/;
 function n0(v){const x=Number(v);return isFinite(x)?x:0;}
 function c2(v){return Math.round(n0(v)*100)/100;}
+function enc(v){const x=c2(Math.abs(n0(v)));return x>0&&x<1e9?x:0;}
+function pct(v,max){const x=Math.round(Math.abs(n0(v))*100)/100;return x>0?Math.min(max,x):0;}
 function sid(v){const x=String(v==null?'':v);return ID_OK.test(x)?x:uidS();}
 function uidS(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function str(v,max){return String(v==null?'':v).slice(0,max||200);}
@@ -784,10 +810,10 @@ function dia31(v){const d=parseInt(v,10);return d>=1&&d<=31?d:0;}
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
-  o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
+  o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10)}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:''}));
   // patrimônio: bens, dívidas e fotografia mensal
@@ -1663,6 +1689,8 @@ function viewPlan(){
 let REL={a:'',b:''};
 function mesNome(m){return MESES_LONGO[+m.slice(5,7)-1]+' de '+m.slice(0,4);}
 function resumoMes(m){const r=somaMes(m,'receita'),d=somaMes(m,'despesa');return {rec:r,des:d,sal:(cents(r)-cents(d))/100};}
+/* juros + multas pagos e descontos obtidos num mês (lançamentos efetivos) */
+function encargosMes(m){let e=0,d=0;S.tx.forEach(t=>{if(t.tipo!=='despesa'||!efetivo(t)||!t.data||t.data.slice(0,7)!==m)return;e+=cents(t.multa||0)+cents(t.juros||0);d+=cents(t.desconto||0);});return {enc:e/100,desc:d/100};}
 function relCats(a,b){
   const A=despesasPorCat(a),B=despesasPorCat(b),mp={};
   A.forEach(s=>{mp[s.l]=mp[s.l]||{l:s.l,va:0,vb:0};mp[s.l].va=s.v;});
@@ -1739,6 +1767,7 @@ function viewRel(){
     ${linha('receitas',rb.rec,ra.rec,false,'pos')}
     ${linha('despesas',rb.des,ra.des,true,'neg')}
     ${linha('saldo',rb.sal,ra.sal,false,null)}
+    ${(()=>{const ea=encargosMes(a),eb=encargosMes(b);return (ea.enc||eb.enc?linha('juros e multas',eb.enc,ea.enc,true,'neg'):'')+(ea.desc||eb.desc?linha('descontos obtidos',eb.desc,ea.desc,false,'pos'):'');})()}
   </div>
   <div class="card relChart">
     <h4>Comparação por categoria de despesa</h4>
@@ -2202,6 +2231,7 @@ function viewLanc(){
   const item=t=>`<div class="tx hov${t.status==='cancelado'?' tx-cancel':''}${t.status==='previsto'?' tx-prev':''}">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
       <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${t.tipo==='transf'?esc(nomeLado(t.de)+' → '+nomeLado(t.para)):esc(t.categoria)+(t.sub?' › '+esc(t.sub):'')+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk?' · '+esc(bk.nome):'');})()} · ${fmtData(t.data)}</small></div>
+      ${t.multa||t.juros||t.desconto?`<div class="txMeta"><span class="encChip">${[t.multa?'multa '+brl(t.multa):'',t.juros?'juros '+brl(t.juros):'',t.desconto?'desconto '+brl(t.desconto):''].filter(Boolean).join(' · ')}</span></div>`:''}
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
@@ -2580,6 +2610,16 @@ function usoCartao(c){
   const l=S.tx.filter(t=>efetivo(t)&&t.cartao===c.id&&(t.tipo==='despesa'||t.tipo==='transf')&&t.data>=ci.ini&&t.data<=ci.fim);
   return {used:l.reduce((a,t)=>a+t.valor,0),n:l.length,ci,due:ci.due};
 }
+/* estimativa do custo de atrasar 30 dias o que está em aberto nas faturas */
+function custoAtraso(c,valor){const mu=c.multaPct||0,mo=c.moraPct||0,ro=c.rotativo||0;return Math.round(valor*(mu+mo+ro))/100;}
+function pctTxt(v){return String(Math.round(v*100)/100).replace('.',',');}
+function custoAtrasoHTML(c){
+  if(!c.rotativo)return '';
+  const aberto=S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&statusFatura(t)!=='paga').reduce((a,t)=>a+cents(restanteFatura(t)),0)/100;
+  const aa=Math.round((Math.pow(1+c.rotativo/100,12)-1)*1000)/10;
+  const txt=aberto>0?`atrasar ${brl(aberto)} por 30 dias custaria ≈ <b class="neg">${brl(custoAtraso(c,aberto))}</b> (multa ${pctTxt(c.multaPct||0)}% + mora ${pctTxt(c.moraPct||0)}% + rotativo ${pctTxt(c.rotativo)}%)`:`rotativo ${pctTxt(c.rotativo)}% ao mês ≈ ${String(aa).replace('.',',')}% ao ano`;
+  return `<p class="small encAviso">${txt}</p>`;
+}
 function faturasCartaoHTML(c){
   const fs=S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0).sort((a,b)=>b.data.localeCompare(a.data));
   const mostrar=fs.filter(t=>statusFatura(t)!=='paga').concat(fs.filter(t=>statusFatura(t)==='paga').slice(0,2)).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,4);
@@ -2605,6 +2645,7 @@ function viewCartoes(){
       <div class="row small"><span>disponível ${brl(disp)}</span><span>${Math.round(pct)}% do limite</span></div>
       <p class="small">ciclo ${fmtData(u.ci.ini)} a ${fmtData(u.ci.fim)} · ${u.n} lançamento${u.n===1?'':'s'}</p>
       ${faturasCartaoHTML(c)}
+      ${custoAtrasoHTML(c)}
       <p class="small">fecha dia ${c.fechamento} · vence dia ${c.vencimento} · próxima fatura ${fmtDate(u.due)}</p>
       <div class="acts2"><button class="btn2" data-act="edit-cartao" data-id="${c.id}">editar</button><button class="btn2 danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div>
     </div>`;
@@ -2652,14 +2693,20 @@ function cartaoForm(id){
     {name:'final',label:'Últimos 4 dígitos (opcional)',value:c?c.final:'',inputmode:'numeric',placeholder:'0000'},
     {name:'fechamento',label:'Dia de fechamento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.fechamento:''},
     {name:'vencimento',label:'Dia de vencimento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.vencimento:''},
-    {name:'cor',label:'Cor do cartão',type:'select',value:c?c.cor:S.cartoes.length%CARD_COR.length,options:CARD_COR.map((x,i)=>({v:i,t:x[2]}))}
+    {name:'cor',label:'Cor do cartão',type:'select',value:c?c.cor:S.cartoes.length%CARD_COR.length,options:CARD_COR.map((x,i)=>({v:i,t:x[2]}))},
+    {name:'rotativo',label:'Juros do rotativo (% ao mês, opcional)',value:c&&c.rotativo?num(c.rotativo):'',inputmode:'decimal',placeholder:'ex: 14,5'},
+    {name:'multaPct',label:'Multa por atraso (%)',value:c?num(c.multaPct||2):'2',inputmode:'decimal'},
+    {name:'moraPct',label:'Juros de mora (% ao mês)',value:c?num(c.moraPct||1):'1',inputmode:'decimal'}
   ],v=>{
     const nome=String(v.nome).trim(),limite=parseBR(v.limite),fech=parseInt(v.fechamento,10),venc=parseInt(v.vencimento,10);
     const fin=String(v.final||'').replace(/\D/g,'').slice(-4);
     if(!nome)return 'Dê um nome ao cartão.';
     if(!(limite>0))return 'Informe o limite.';
     if(!(fech>=1&&fech<=31)||!(venc>=1&&venc<=31))return 'Dias de fechamento e vencimento entre 1 e 31.';
-    const obj={nome,banco:String(v.banco).trim(),limite,final:fin,fechamento:fech,vencimento:venc,cor:parseInt(v.cor,10)||0};
+    const rot=parseBR(v.rotativo||''),mu=parseBR(v.multaPct||''),mo=parseBR(v.moraPct||'');
+    if(rot>30)return 'Rotativo acima de 30% ao mês? Confira a taxa.';
+    if(mu>10||mo>10)return 'Multa e mora costumam ser 2% e 1%. Confira.';
+    const obj={nome,banco:String(v.banco).trim(),limite,final:fin,fechamento:fech,vencimento:venc,cor:parseInt(v.cor,10)||0,rotativo:pct(rot,30),multaPct:pct(mu,10),moraPct:pct(mo,10)};
     if(c)Object.assign(c,obj);else S.cartoes.push(Object.assign({id:uid()},obj));
     geraRecorrentes();salvar();render();toast('Cartão salvo');
   });
@@ -2957,6 +3004,9 @@ function novoTx(id,tipoPre,base){
     {name:'data',label:'Data',type:'date',value:P?P.data:hojeISO(),required:true},
     {name:'status',label:'Situação',type:'select',value:P?(P.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
     {name:'obs',label:'Observação (opcional)',type:'textarea',value:P?(P.obs||''):'',placeholder:'detalhes, número do pedido…',maxlength:300},
+    {name:'multa',label:'Multa incluída no valor (R$, opcional)',value:t&&t.multa?num(t.multa):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'juros',label:'Juros incluídos no valor (R$, opcional)',value:t&&t.juros?num(t.juros):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'desconto',label:'Desconto obtido (R$, opcional)',value:t&&t.desconto?num(t.desconto):'',inputmode:'decimal',placeholder:'0,00'},
     {name:'fixa',label:'repete todo mês (vira conta fixa)',type:'checkbox',value:false}
   ],v=>{
     const valor=parseBR(v.valor);
@@ -2979,7 +3029,10 @@ function novoTx(id,tipoPre,base){
     if(bol&&pagoCom==='conta'&&!v.conta)return 'Escolha a conta que pagou o boleto.';
     const usaCartao=(isDesp&&forma==='cartao')||(bol&&pagoCom==='cartao');
     const usaConta=(forma==='pix')||(bol&&pagoCom==='conta');
-    const obj={tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),sub:String(v.sub||'').trim().slice(0,60),tags:limpaTags(v.tags),obs:String(v.obs||'').trim().slice(0,300),data:v.data,cartao:usaCartao?(v.cartao||''):'',forma,conta:usaConta?(v.conta||''):'',pagoCom};
+    const vM=isDesp?enc(parseBR(v.multa||'')):0,vJ=isDesp?enc(parseBR(v.juros||'')):0,vD=isDesp?enc(parseBR(v.desconto||'')):0;
+    if(cents(vM)+cents(vJ)>cents(valor))return 'Multa + juros não podem passar do valor pago.';
+    if((vM||vJ||vD)&&!t&&(parseInt(v.parcelas,10)||1)>1)return 'Juros e multa só em lançamento à vista.';
+    const obj={multa:vM,juros:vJ,desconto:vD,tipo:v.tipo,valor,categoria:v.categoria,descricao:String(v.descricao).trim(),sub:String(v.sub||'').trim().slice(0,60),tags:limpaTags(v.tags),obs:String(v.obs||'').trim().slice(0,300),data:v.data,cartao:usaCartao?(v.cartao||''):'',forma,conta:usaConta?(v.conta||''):'',pagoCom};
     // compra no cartão é reconhecida na fatura: não fica "prevista" (só pode ser cancelada, ex. estorno)
     let st=['pago','previsto','cancelado'].includes(v.status)?v.status:'pago';
     if(usaCartao&&st==='previsto')st='pago';
@@ -3010,7 +3063,9 @@ function novoTx(id,tipoPre,base){
   const selF=mf.querySelector('select[name="forma"]'),wF=selF.closest('label');
   const selB=mf.querySelector('select[name="conta"]'),wB=selB.closest('label');
   const pintaK=()=>{const rec=selT.value==='receita';const ops=rec?[['dinheiro','dinheiro'],['pix','pix']]:[['dinheiro','dinheiro'],['pix','pix'],['boleto','boleto'],['cartao','cartão']];const cur=ops.some(o=>o[0]===selF.value)?selF.value:'dinheiro';selF.innerHTML=ops.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('');selF.value=cur;wF.style.display='';const bol=selF.value==='boleto';const pc=mf.querySelector('select[name="pagoCom"]');if(pc){pc.closest('label').style.display=(!rec&&bol)?'':'none';}const pcv=pc?pc.value:'dinheiro';wK.style.display=(!rec&&(selF.value==='cartao'||(bol&&pcv==='cartao')))?'':'none';wB.style.display=(selF.value==='pix'||(!rec&&bol&&pcv==='conta'))?'':'none';const wPa=mf.querySelector('select[name="parcelas"]').closest('label');wPa.style.display=(!t&&!rec&&selF.value==='cartao')?'':'none';};
-  selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();};
+  const pintaE=()=>{['multa','juros','desconto'].forEach(n=>{const e=mf.querySelector('[name="'+n+'"]');if(e)e.closest('label').style.display=selT.value==='receita'?'none':'';});};
+  pintaE();
+  selT.onchange=()=>{const l=listaDo(selT.value);selC.innerHTML=mkOpts(l,l[0]);pintaK();pintaE();};
   const selP=mf.querySelector('select[name="pagoCom"]'),wP=selP.closest('label');
   selP.onchange=pintaK;
   selF.onchange=pintaK;
@@ -3418,7 +3473,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
@@ -3427,6 +3482,20 @@ $('#logo').innerHTML=LOGO;
 $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
+/* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
+const GV_BUILD='2026-10-28.1';
+let checouEm=0;
+async function confereVersao(){
+  if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
+  try{const r=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;const h=await r.text();
+    const m=h.match(/const GV_BUILD='([^']+)'/);if(!m||m[1]===GV_BUILD)return;
+    const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)reg.update().catch(()=>{});
+    const ocupado=$('#modal').classList.contains('on')||document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if(!ocupado)location.reload();else toast('Nova versão do GranaViva. Ela entra quando você fechar este formulário.');
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')confereVersao();});
+window.addEventListener('pageshow',e=>{if(e.persisted)confereVersao();});
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 $('#btnClose').innerHTML=I('close');

@@ -2,7 +2,7 @@
    - página: rede primeiro (3 s), cópia salva se estiver sem conexão
    - fontes, ícones e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v9';
+const V='gv-v10';
 const BASE=new URL('./',self.location).pathname;
 const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js'];
 self.addEventListener('install',e=>{
@@ -16,11 +16,17 @@ self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;
   const u=new URL(r.url);
   if(r.mode==='navigate'&&u.origin===location.origin){
-    e.respondWith((async()=>{const c=await caches.open(V);
-      try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),3000);
-        const res=await fetch(r,{signal:ctl.signal,cache:'no-store'});clearTimeout(t);
-        if(res.ok)c.put(BASE+'index.html',res.clone());return res;}
-      catch(err){return (await c.match(BASE+'index.html'))||(await c.match(BASE))||Response.error();}})());
+    /* rede primeiro; se passar de 4 s mostra a cópia salva, mas a busca continua e grava a versão nova para a próxima abertura */
+    const rede=fetch(r,{cache:'no-store'}).then(async res=>{if(res.ok){const c=await caches.open(V);await c.put(BASE+'index.html',res.clone());}return res;});
+    e.waitUntil(rede.catch(()=>{}));
+    e.respondWith((async()=>{
+      const espera=new Promise(ok=>setTimeout(()=>ok(null),4000));
+      const res=await Promise.race([rede.then(x=>x.clone()).catch(()=>null),espera]);
+      if(res&&res.ok)return res;
+      const c=await caches.open(V);const salva=(await c.match(BASE+'index.html'))||(await c.match(BASE));
+      if(salva)return salva;
+      try{return await rede;}catch(err){return Response.error();}
+    })());
     return;
   }
   const estatico=u.origin===location.origin&&/\/(fonts|icons|vendor)\//.test(u.pathname);
