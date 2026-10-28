@@ -554,6 +554,7 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--a1);outline-off
 .tagChip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--mut);cursor:pointer}
 .txObs{font-size:11px;color:var(--mut);font-style:italic;overflow:hidden;text-overflow:ellipsis}
 textarea{width:100%;resize:vertical;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:15px;margin-top:6px;outline:none}
+.maisLista{margin-top:12px;width:100%}
 .mesNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
 .mesNav b{font-size:15px}.mesNav .btn2{min-width:44px;font-size:18px;line-height:1}
 .ohRow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:6px 4px;border-radius:10px;cursor:pointer}
@@ -703,6 +704,7 @@ chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
 receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
+copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
 compass:'<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
 gauge:'<path d="M4 16.5a8 8 0 1 1 16 0"/><path d="M12 16.5 16 11"/><circle cx="12" cy="16.5" r="1.2"/>',
 chart:'<path d="M3.5 19.5h17"/><path d="M5.5 15.5l4-4.5 3.5 3 5.5-6.5"/><path d="M15.5 7.5h3.5V11"/>',
@@ -1143,7 +1145,9 @@ function proximoPag(){
   return best;
 }
 const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+let LIM_LISTA=50,FILT_SIG='';
 function filtrados(){
+  const sig=JSON.stringify(F);if(sig!==FILT_SIG){FILT_SIG=sig;LIM_LISTA=50;}
   const nq=norm(F.q);
   return S.tx.filter(t=>(!F.mes||t.data.startsWith(F.mes))&&(!F.cat||t.categoria===F.cat)&&(!F.tipo||t.tipo===F.tipo)&&(!F.tag||(t.tags||[]).includes(F.tag))&&(!nq||norm((t.descricao||'')+' '+t.categoria+' '+(t.sub||'')+' '+(t.tags||[]).join(' ')+' '+(t.obs||'')).includes(nq)))
     .sort((a,b)=>b.data.localeCompare(a.data));
@@ -2106,7 +2110,7 @@ function viewLanc(){
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
-      <div class="acts">${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
+      <div class="acts">${t.faturaKey||t.tipo==='transf'?'':`<button data-act="dup-tx" data-id="${t.id}" title="duplicar" aria-label="duplicar">${I('copy')}</button>`}${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
       ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
   return `
@@ -2123,7 +2127,7 @@ function viewLanc(){
     <div class="card mini sumcard"><small>RECEITAS (FILTRO)</small><b class="pos">${brl(tr)}</b>${prvR?`<small style="margin:4px 0 0">+ ${brl(prvR)} previstos</small>`:''}</div>
     <div class="card mini sumcard sum-neg"><small>DESPESAS (FILTRO)</small><b class="neg">${brl(td)}</b>${tdCartao?`<small style="margin:4px 0 0">+ ${brl(tdCartao)} em compras no cartão (entram pela fatura)</small>`:''}${prvD?`<small style="margin:4px 0 0">+ ${brl(prvD)} previstos</small>`:''}</div>
   </div>
-  <div class="card lista">${lista.length?lista.map(item).join(''):'<p class="vazio">nenhum lançamento com esses filtros.</p>'}</div>
+  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):'<p class="vazio">nenhum lançamento com esses filtros.</p>'}</div>
   ${fixasCard()}`;
 }
 
@@ -2838,23 +2842,24 @@ function novaTransf(id){
     geraRecorrentes();salvar();render();toast('Transferência salva');
   });
 }
-function novoTx(id,tipoPre){
+function novoTx(id,tipoPre,base){
   const t=id?S.tx.find(x=>x.id===id):null;
-  form(t?'Editar lançamento':'Novo lançamento',[
-    {name:'tipo',label:'Tipo',type:'select',value:t?t.tipo:(tipoPre||'despesa'),options:[{v:'despesa',t:'Despesa'},{v:'receita',t:'Receita'}]},
-    {name:'valor',label:'Valor (R$), total da compra se parcelada',value:t?num(t.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
-    {name:'categoria',label:'Categoria',type:'select',value:t?t.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
-    {name:'forma',label:'Forma de pagamento',type:'select',value:t?(t.forma||(t.cartao?'cartao':'dinheiro')):((tipoPre||'despesa')==='receita'?'dinheiro':'pix'),options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
-    {name:'pagoCom',label:'Boleto pago com',type:'select',value:t?(t.pagoCom||(t.cartao?'cartao':(t.conta&&t.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
-    {name:'cartao',label:'Qual cartão',type:'select',value:t&&t.cartao?t.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
-    {name:'conta',label:'Conta bancária',type:'select',value:t&&t.conta?t.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
+  const P=t||base||null; // base: cópia de outro lançamento (duplicar)
+  form(t?'Editar lançamento':base?'Duplicar lançamento':'Novo lançamento',[
+    {name:'tipo',label:'Tipo',type:'select',value:P?P.tipo:(tipoPre||'despesa'),options:[{v:'despesa',t:'Despesa'},{v:'receita',t:'Receita'}]},
+    {name:'valor',label:'Valor (R$), total da compra se parcelada',value:P?num(P.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'categoria',label:'Categoria',type:'select',value:P?P.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
+    {name:'forma',label:'Forma de pagamento',type:'select',value:P?(P.forma||(P.cartao?'cartao':'dinheiro')):((tipoPre||'despesa')==='receita'?'dinheiro':'pix'),options:[{v:'dinheiro',t:'dinheiro'},{v:'pix',t:'pix'},{v:'boleto',t:'boleto'},{v:'cartao',t:'cartão'}]},
+    {name:'pagoCom',label:'Boleto pago com',type:'select',value:P?(P.pagoCom||(P.cartao?'cartao':(P.conta&&P.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
+    {name:'cartao',label:'Qual cartão',type:'select',value:P&&P.cartao?P.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
+    {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(S.bancos.map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
     {name:'parcelas',label:'Parcelas',type:'select',value:'1',options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
-    {name:'descricao',label:'Descrição',value:t?String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
-    {name:'sub',label:'Subcategoria (opcional)',value:t?(t.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
-    {name:'tags',label:'Tags (opcional, separe por vírgula)',value:t?(t.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
-    {name:'data',label:'Data',type:'date',value:t?t.data:hojeISO(),required:true},
-    {name:'status',label:'Situação',type:'select',value:t?(t.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
-    {name:'obs',label:'Observação (opcional)',type:'textarea',value:t?(t.obs||''):'',placeholder:'detalhes, número do pedido…',maxlength:300},
+    {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
+    {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
+    {name:'tags',label:'Tags (opcional, separe por vírgula)',value:P?(P.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
+    {name:'data',label:'Data',type:'date',value:P?P.data:hojeISO(),required:true},
+    {name:'status',label:'Situação',type:'select',value:P?(P.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
+    {name:'obs',label:'Observação (opcional)',type:'textarea',value:P?(P.obs||''):'',placeholder:'detalhes, número do pedido…',maxlength:300},
     {name:'fixa',label:'repete todo mês (vira conta fixa)',type:'checkbox',value:false}
   ],v=>{
     const valor=parseBR(v.valor);
@@ -2902,7 +2907,7 @@ function novoTx(id,tipoPre){
   const listaDo=tp=>tp==='receita'?CATS_RECEITA:S.cats;
   const mkOpts=(list,sel)=>list.map(c=>`<option value="${esc(c)}" ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
   const l0=listaDo(selT.value);
-  const atual=t&&t.tipo===selT.value?t.categoria:'';
+  const atual=P&&P.tipo===selT.value?P.categoria:'';
   selC.innerHTML=mkOpts(atual&&!l0.includes(atual)?[atual].concat(l0):l0,atual||l0[0]);
   const selK=mf.querySelector('select[name="cartao"]'),wK=selK.closest('label');
   const selF=mf.querySelector('select[name="forma"]'),wF=selF.closest('label');
@@ -3179,10 +3184,13 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
+  'dup-tx':id=>{const t=S.tx.find(x=>x.id===id);if(!t||t.faturaKey||t.tipo==='transf')return;
+    novoTx(null,t.tipo,Object.assign({},t,{data:hojeISO(),status:'pago',parcelas:1,parcela:0,descricao:String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,'')}));},
   'edit-tx':id=>{const t=S.tx.find(x=>x.id===id);return t&&t.tipo==='transf'?novaTransf(id):novoTx(id);},
   'nova-transf':()=>novaTransf(),
   'del-tx':id=>{const tx=S.tx.find(x=>x.id===id);if(tx&&tx.grupo&&tx.parcelas>1){const rest=S.tx.filter(x=>x.grupo===tx.grupo);return confirma({titulo:'Excluir compra parcelada?',texto:'Isso exclui as '+rest.length+' parcelas restantes de "'+String(tx.descricao).replace(/ \(\d+\/\d+\)$/,'')+'". Faturas já fechadas serão recalculadas.',ok:'Excluir parcelas',perigo:true},()=>{S.tx=S.tx.filter(x=>x.grupo!==tx.grupo);geraRecorrentes();salvar();render();toast('Parcelas excluídas');});}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
+  'mais-lista':()=>{const y=scrollY;LIM_LISTA+=50;render();scrollTo(0,y);},
   'tag-filtro':g=>{F.tag=F.tag===g?'':g;render();},
   'orc-mes':m=>{if(/^\d{4}-\d{2}$/.test(m)){OMES=m;render();}},
   'orc-copia':()=>{const m=OMES||mesAtual(),ant=mesMais(m,-1),L=limOrc(ant);if(!Object.keys(L).length)return toast('Sem limites em '+nomeMes(ant));
