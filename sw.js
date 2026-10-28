@@ -2,7 +2,7 @@
    - página: rede primeiro (3 s), cópia salva se estiver sem conexão
    - fontes, ícones e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v8';
+const V='gv-v9';
 const BASE=new URL('./',self.location).pathname;
 const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js'];
 self.addEventListener('install',e=>{
@@ -28,4 +28,17 @@ self.addEventListener('fetch',e=>{
     e.respondWith((async()=>{const c=await caches.open(V);const hit=await c.match(r.url);if(hit)return hit;
       const res=await fetch(r);if(res.ok&&(res.type==='basic'||res.type==='cors'))c.put(r.url,res.clone());return res;})());
   }
+});
+
+/* notificações enviadas pela função alertas-push */
+self.addEventListener('push',e=>{
+  let d={};try{d=e.data?e.data.json():{};}catch(err){d={body:e.data&&e.data.text()};}
+  e.waitUntil(self.registration.showNotification(d.title||'GranaViva',{body:d.body||'',icon:BASE+'icons/icon-192.png',badge:BASE+'icons/icon-192.png',tag:d.tag||'gv',data:{url:d.url||'./'}}));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  const alvo=new URL((e.notification.data&&e.notification.data.url)||'./',self.registration.scope).href;
+  e.waitUntil((async()=>{const cs=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const c of cs){if(c.url.startsWith(self.registration.scope)){await c.focus();if('navigate' in c)return c.navigate(alvo);return;}}
+    return self.clients.openWindow(alvo);})());
 });

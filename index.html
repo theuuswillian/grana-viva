@@ -1204,6 +1204,41 @@ function listaAlertas(completo){
   }
   return out;
 }
+/* notificações push: o aparelho se inscreve aqui; a função alertas-push (Supabase) manda os avisos todo dia às 9h */
+const VAPID_PUB='BABTAFc-W1foM1xFylZj_HA06v-U6H5f-NsjVk_9-wuzRPHIIh6eavWXler-eTcGWD8xOsCagXVPzoGQfzeeZDo';
+function pushSuportado(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
+function b64uBytes(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+async function inscricaoAtual(){if(!pushSuportado())return null;const r=await navigator.serviceWorker.getRegistration();return r?r.pushManager.getSubscription():null;}
+async function atualizaPushUI(){
+  const t=document.getElementById('pushTxt'),b=document.getElementById('pushBtns');if(!t||!b)return;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(!pushSuportado()){t.textContent=ios&&!instalado()?'No iPhone, primeiro instale o app: no Safari, toque em Compartilhar e em Adicionar à Tela de Início. Depois abra pelo ícone e ative aqui.':'Este navegador não aceita notificações push.';b.innerHTML='';return;}
+  if(Notification.permission==='denied'){t.textContent='As notificações estão bloqueadas para o GranaViva. Libere nos ajustes do aparelho e volte aqui.';b.innerHTML='';return;}
+  let s=null;try{s=await inscricaoAtual();}catch(e){}
+  if(s){t.textContent='Ativadas neste aparelho. Todo dia às 9h aviso de faturas que vencem em 3 dias, amanhã ou hoje, faturas atrasadas e contas fixas do dia.';b.innerHTML='<button class="btn2 sm" data-act="push-teste">enviar teste</button><button class="btn2 sm danger" data-act="push-off">desativar</button>';}
+  else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
+}
+async function ativarPush(){
+  if(!USER){toast('entre na sua conta primeiro');return;}
+  try{
+    const p=await Notification.requestPermission();
+    if(p!=='granted'){toast('permissão não concedida');atualizaPushUI();return;}
+    const r=await navigator.serviceWorker.ready;
+    let s=await r.pushManager.getSubscription();
+    if(!s)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uBytes(VAPID_PUB)});
+    const j=s.toJSON();
+    const {error}=await sb.from('push_subs').upsert({endpoint:j.endpoint,user_id:USER.id,p256dh:j.keys.p256dh,auth:j.keys.auth,ua:navigator.userAgent.slice(0,200)});
+    if(error)throw error;
+    toast('notificações ativadas');
+    sb.functions.invoke('alertas-push',{body:{teste:true}}).catch(()=>{});
+  }catch(e){toast('não deu para ativar: '+(e&&e.message||e));}
+  atualizaPushUI();
+}
+async function desativarPush(){
+  try{const s=await inscricaoAtual();if(s){await sb.from('push_subs').delete().eq('endpoint',s.endpoint);await s.unsubscribe();}toast('notificações desativadas');}
+  catch(e){toast('erro ao desativar');}
+  atualizaPushUI();
+}
 let PROMPT_INST=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();PROMPT_INST=e;});
 window.addEventListener('appinstalled',()=>{PROMPT_INST=null;try{localStorage.setItem('gv-inst-ok','1');}catch(e){}});
@@ -1562,11 +1597,13 @@ function go(t){
 function render(){
   $('#sub').textContent=DATA_HOJE();
   try{atualizaSino();}catch(e){}
+  if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
   const v=$('#view');
   v.innerHTML=VIEWS[TAB]();
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
   requestAnimationFrame(()=>{
     if(AFTER[TAB])AFTER[TAB]();
+    if(TAB==='cfg')atualizaPushUI();
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
   });
@@ -1865,6 +1902,11 @@ function viewCfg(){
     <h4>Categorias</h4>
     <div class="catGrid">${S.cats.map(c=>`<div class="catCell hov" style="--cc:${corCat(c)}"><button data-act="del-cat" data-id="${esc(c)}" title="remover" aria-label="remover">${I('close')}</button><span class="cc-i">${I(catIcon(c))}</span><span class="cc-n" data-act="edit-cat" data-id="${esc(c)}" title="editar" aria-label="editar">${esc(c)}</span></div>`).join('')}</div>
     <button class="btn full" data-act="nova-cat">+ nova categoria</button>
+  </div>
+  <div class="card">
+    <h4>Notificações no celular</h4>
+    <p class="pushTxt" id="pushTxt">verificando…</p>
+    <div class="row" id="pushBtns" style="gap:8px;flex-wrap:wrap"></div>
   </div>
   <div class="card">
     <h4>Integração de cotações</h4>
@@ -2642,6 +2684,9 @@ function confirma(o,cb){
 const ACT={
   'fechar':closeModal,
   'novo-tx':()=>novoTx(),
+  'push-on':()=>ativarPush(),
+  'push-off':()=>desativarPush(),
+  'push-teste':async()=>{const {data,error}=await sb.functions.invoke('alertas-push',{body:{teste:true}});toast(error?'não consegui enviar o teste':'teste enviado, confira as notificações');},
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
