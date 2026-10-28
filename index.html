@@ -753,7 +753,7 @@ html.privado #app{filter:blur(18px)}
 <div id="toast"></div>
 <button class="fab" id="fab" aria-label="adicionar rápido"></button>
 <div id="lock" role="dialog" aria-modal="true" aria-label="app bloqueado"></div>
-<script>try{var lk=JSON.parse(localStorage.getItem('gv-lock')||'null');if(lk&&lk.hash){document.getElementById('lock').classList.add('on');document.documentElement.classList.add('travado');}}catch(e){}</script>
+<script>try{var lk=JSON.parse(localStorage.getItem('gv-lock')||'null'),lks=+localStorage.getItem('gv-lock-saiu')||0;if(lk&&lk.hash&&!(lk.atraso&&lks&&Date.now()-lks<lk.atraso*60000)){document.getElementById('lock').classList.add('on');document.documentElement.classList.add('travado');}}catch(e){}</script>
 
 <div id="auth">
   <form class="acard" id="authForm" novalidate>
@@ -3591,8 +3591,8 @@ document.addEventListener('change',e=>{
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(/[?&]gvtest\b/.test(location.search))window.__GV={txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
-let rsz;
-window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
+let rsz,rszW=innerWidth;
+window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
 $('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+n.l+'</span></button>').join('');
 $('#logo').innerHTML=LOGO;
@@ -3600,7 +3600,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.10';
+const GV_BUILD='2026-10-28.11';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -3678,7 +3678,12 @@ function lockTecla(k){
   LK.buf+=k;lockPinta();
   if(LK.buf.length===LOCK_LEN){const pin=LK.buf,cb=o.cb;setTimeout(()=>{if(LK.o===o)cb(pin);},120);}
 }
+/* guarda quando o app foi deixado de lado (sobrevive a fechar o app) */
+function lockMarcaSaida(){try{localStorage.setItem('gv-lock-saiu',String(Date.now()));}catch(e){}}
+function lockLimpaSaida(){try{localStorage.removeItem('gv-lock-saiu');}catch(e){}}
+function lockDentroDoPrazo(){const c=lockCfg();if(!c||!c.atraso)return false;const t=+localStorage.getItem('gv-lock-saiu')||0;return !!t&&Date.now()-t<c.atraso*60000;}
 function lockAbre(forca){
+  lockLimpaSaida();
   const c=lockCfg();if(!c){lockFecha();return;}
   if(!forca&&LK.o&&LK.o.modo==='abrir')return;
   lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:c.bio?'ou use o Face ID':'',bio:!!c.bio,cb:async pin=>{
@@ -3770,6 +3775,7 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'){
     if(LK.bioBusy)return;
     LK.saiu=Date.now();
+    if(!(LK.o&&LK.o.modo==='abrir'))lockMarcaSaida();
     if(LK.o&&LK.o.modo!=='abrir')lockFecha();
     if(!c.atraso)lockAbre();else document.documentElement.classList.add('privado');
   }else{
@@ -3778,8 +3784,9 @@ document.addEventListener('visibilitychange',()=>{
     LK.saiu=0;
   }
 });
-window.addEventListener('pageshow',e=>{if(e.persisted&&lockCfg())lockAbre();});
-lockAbre();
+window.addEventListener('pageshow',e=>{if(e.persisted&&lockCfg()&&!lockDentroDoPrazo())lockAbre();});
+window.addEventListener('pagehide',()=>{if(lockCfg()&&!(LK.o&&LK.o.modo==='abrir'))lockMarcaSaida();});
+if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');document.documentElement.classList.remove('travado');}
 /* ---------- arrastar da esquerda para a direita abre o menu lateral; da direita para a esquerda fecha (celular) ---------- */
 (function(){
   const W=()=>($('#side').offsetWidth||248);
