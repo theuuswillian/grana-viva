@@ -2,15 +2,22 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GranaViva">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>GranaViva · controle financeiro</title>
 <meta name="description" content="Controle de receitas, despesas, cartões, bancos, metas e investimentos, sincronizado na nuvem.">
 <link rel="preload" href="fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/inter-600.woff2" as="font" type="font/woff2" crossorigin>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous" defer></script>
+<script src="vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
 
 <style>
 .pv{font-size:24px;font-weight:700;color:#fff;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
@@ -216,6 +223,12 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .syncPill.synced i{background:#34d399;box-shadow:0 0 8px #34d399}
 .syncPill.syncing i{background:#f59e0b;animation:pls 1s infinite}
 .syncPill.offline i{background:#f87171}
+.top .tr{display:flex;align-items:center;gap:8px}
+.bell{position:relative;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--card2);border:1px solid var(--line);color:var(--txt);cursor:pointer}
+.bell .i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bell .bdg{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.instCard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-color:rgba(139,92,246,.4)}
+.instTxt{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 200px}.instTxt small{color:var(--mut);line-height:1.4}
 @keyframes pls{50%{opacity:.25}}
 .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
 .badge.warn{background:rgba(245,158,11,.18);color:#f59e0b}
@@ -535,7 +548,7 @@ body:has(#modal.on) #fab{display:none}
 <div id="app">
   <div class="top">
     <div class="tl"><button class="ham" id="btnMenu" aria-label="abrir menu"></button><div><span class="logo" id="logoHome" role="link" tabindex="0">GranaViva</span><small id="sub"></small></div></div>
-    <div class="syncPill" id="syncTxt"></div>
+    <div class="tr"><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><div class="syncPill" id="syncTxt"></div></div>
   </div>
   <main id="view"></main>
 </div>
@@ -560,7 +573,7 @@ body:has(#modal.on) #fab{display:none}
   </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous"></script>
+<script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
 <script>
 (function(){
 'use strict';
@@ -585,6 +598,7 @@ const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 const ICONS={
+bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   list:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
 report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"/><rect x="10.5" y="7" width="3" height="11.5" rx="1"/><rect x="15.5" y="4" width="3" height="14.5" rx="1"/>',
 chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
@@ -1155,12 +1169,14 @@ function geraRecorrentes(){
   });
   return mudou;
 }
-function alertasHTML(){
+function alertasHTML(){return listaAlertas(false).map(a=>`<div class="card aviso-card${a.k==='venc'?' venc':''}">${a.h}</div>`).join('');}
+/* completo=true também traz orçamentos e limite do cartão (vão no sino; no início já há o card de orçamentos) */
+function listaAlertas(completo){
   const h=new Date(),out=[],hj=new Date(h.getFullYear(),h.getMonth(),h.getDate());
   (S.fixas||[]).forEach(f=>{
     const dia=Math.min(Math.max(1,f.dia||1),ultimoDia(h.getFullYear(),h.getMonth()));
     const diff=dia-h.getDate();
-    if(diff>=0&&diff<=5)out.push(`<div class="card aviso-card">${I('alert')} conta fixa <b>${esc(f.nome)}</b> ${diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(f.valor)}</div>`);
+    if(diff>=0&&diff<=5)out.push({k:'aviso',h:`${I('alert')} conta fixa <b>${esc(f.nome)}</b> ${diff===0?'vence hoje':'vence em '+diff+(diff===1?' dia':' dias')} · ${brl(f.valor)}`});
   });
   (S.cartoes||[]).forEach(c=>{
     const fe=Math.max(1,Math.min(31,c.fechamento||1)),ve=Math.max(1,Math.min(31,c.vencimento||1));
@@ -1172,14 +1188,41 @@ function alertasHTML(){
       if(diff>=0&&diff<=7){
         const fat=S.tx.find(t=>t.faturaKey==='fat|'+c.id+'|'+isoDe(C).slice(0,7));
         if(fat&&restanteFatura(fat)<=0)continue;
-        out.push(`<div class="card aviso-card">${I('card')} fatura <b>${esc(c.nome)}</b> ${diff===0?'vence hoje':'vence em '+diff+' dias'} (${fmtDate(V)}) · ${fat?brl(restanteFatura(fat)):'ainda sem valor fechado'}${fat?` <button class="btn2 sm" data-act="pagar-fat" data-id="${fat.id}">pagar</button>`:''}</div>`);
+        out.push({k:diff<=3?'venc':'aviso',h:`${I('card')} fatura <b>${esc(c.nome)}</b> ${diff===0?'vence hoje':diff===1?'vence amanhã':'vence em '+diff+' dias'} (${fmtDate(V)}) · ${fat?brl(restanteFatura(fat)):'ainda sem valor fechado'}${fat?` <button class="btn2 sm" data-act="pagar-fat" data-id="${fat.id}">pagar</button>`:''}`});
       }
     }
   });
   S.tx.filter(t=>t.faturaKey&&statusFatura(t)==='vencida').forEach(t=>{
-    out.unshift(`<div class="card aviso-card venc">${I('alert')} <b>${esc(t.descricao)}</b> venceu em ${fmtData(venceFatura(t))} e não está marcada como paga · ${brl(restanteFatura(t))} <button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button></div>`);
+    out.unshift({k:'venc',h:`${I('alert')} <b>${esc(t.descricao)}</b> venceu em ${fmtData(venceFatura(t))} e não está marcada como paga · ${brl(restanteFatura(t))} <button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`});
   });
-  return out.join('');
+  if(completo){
+    const m=mesAtual();
+    S.cats.filter(c=>S.orc[c]>0).forEach(c=>{const g=somaMes(m,'despesa',c,true),p=g/S.orc[c]*100;
+      if(p>=80)out.push({k:p>=100?'venc':'aviso',h:`${I('alert')} orçamento de <b>${esc(c)}</b> ${p>=100?'estourou':'em '+Math.round(p)+'%'} · ${brl(g)} de ${brl(S.orc[c])}`});});
+    S.cartoes.forEach(c=>{if(!(c.limite>0))return;const u=usadoCartaoTotal(c),p=u/c.limite*100;
+      if(p>=90)out.push({k:p>=100?'venc':'aviso',h:`${I('card')} cartão <b>${esc(c.nome)}</b> com ${Math.round(p)}% do limite usado · livre ${brl(Math.max(0,c.limite-u))}`});});
+  }
+  return out;
+}
+let PROMPT_INST=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();PROMPT_INST=e;});
+window.addEventListener('appinstalled',()=>{PROMPT_INST=null;try{localStorage.setItem('gv-inst-ok','1');}catch(e){}});
+function instalado(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;}
+function dicaInstalarHTML(forcar){
+  if(instalado())return '';
+  if(!forcar){try{if(localStorage.getItem('gv-inst-ok'))return '';}catch(e){}}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(!ios&&!PROMPT_INST)return '';
+  return `<div class="card instCard"><div class="instTxt"><b>Instale o GranaViva</b><small>${ios?'No Safari, toque em Compartilhar e depois em <b>Adicionar à Tela de Início</b>. Ele abre em tela cheia e funciona sem internet.':'Fica com ícone na tela inicial, abre em tela cheia e funciona sem internet.'}</small></div><div class="row" style="gap:6px">${ios?'':'<button class="btn sm" data-act="instalar">instalar</button>'}${forcar?'':'<button class="btn2 sm" data-act="inst-ok">agora não</button>'}</div></div>`;
+}
+function atualizaSino(){const n=listaAlertas(true).filter(a=>a.k==='venc').length,b=$('#bellN');if(!b)return;b.hidden=!n;b.textContent=n>9?'9+':String(n);$('#btnBell').setAttribute('aria-label',n?'alertas, '+n+' urgentes':'alertas');}
+function abrirAlertas(){
+  const l=listaAlertas(true);
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Alertas"><div class="sh-head"><h3>Alertas</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    ${l.length?l.map(a=>`<div class="card aviso-card${a.k==='venc'?' venc':''}">${a.h}</div>`).join(''):'<p class="vazio">Tudo em dia: nenhuma fatura vencendo, nada atrasado e orçamentos sob controle.</p>'}
+    ${dicaInstalarHTML(true)}</div>`;
+  box.classList.add('on');
 }
 function fixasCard(){
   const h=new Date(),fx=S.fixas||[];
@@ -1518,6 +1561,7 @@ function go(t){
 }
 function render(){
   $('#sub').textContent=DATA_HOJE();
+  try{atualizaSino();}catch(e){}
   const v=$('#view');
   v.innerHTML=VIEWS[TAB]();
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
@@ -1616,6 +1660,7 @@ function viewInicio(){
     <div class="${PC} mb-0"><p class="${PL}">Gastos por categoria</p><div class="pv">${brl(tot)}</div>${segCat||'<p class="vazio">sem gastos neste mês.</p>'}</div>
   </div>
   <div class="mt-3">${fluxo}</div>
+  ${dicaInstalarHTML(false)}
   ${alertasHTML()}
   ${orcInicioHTML()}
   <div class="card">
@@ -2096,7 +2141,7 @@ function form(titulo,campos,onSubmit){
     }
     closeModal();
   };
-  const first=box.querySelector('input,select');if(first&&first.type!=='date')setTimeout(()=>first.focus(),60);
+  const first=box.querySelector('input,select');if(first&&first.type!=='date')setTimeout(()=>{const a=document.activeElement;if(!(a&&box.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))first.focus();},60);
 }
 let focoAntes=null;
 /* ---------- importar extrato (OFX / CSV) ---------- */
@@ -2597,6 +2642,8 @@ function confirma(o,cb){
 const ACT={
   'fechar':closeModal,
   'novo-tx':()=>novoTx(),
+  'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
+  'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
   'edit-tx':id=>{const t=S.tx.find(x=>x.id===id);return t&&t.tipo==='transf'?novaTransf(id):novoTx(id);},
   'nova-transf':()=>novaTransf(),
@@ -2670,6 +2717,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#fab')){abreRapido();return;}
   if(e.target.closest('#logoHome')){go('inicio');return;}
   if(e.target.closest('#btnMenu')){toggleSide(true);return;}
+  if(e.target.closest('#btnBell')){abrirAlertas();return;}
   if(e.target.id==='ov'||e.target.closest('#btnClose')){toggleSide(false);return;}
   const tb=e.target.closest('[data-tab]');
   if(tb){go(tb.dataset.tab);return;}
@@ -2717,6 +2765,10 @@ window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(T
 $('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+n.l+'</span></button>').join('');
 $('#logo').innerHTML=LOGO;
 $('#btnMenu').innerHTML=I('menu');
+$('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
+/* app instalável: service worker só em https (GitHub Pages) ou localhost */
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 $('#btnClose').innerHTML=I('close');
 $('#fab').innerHTML=I('plus');
 // chart.js carrega com defer: redesenha a linha de gastos assim que ele estiver disponível
