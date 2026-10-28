@@ -697,6 +697,56 @@ html.claro .atalho{background:linear-gradient(160deg,color-mix(in srgb,var(--c) 
   .head:has(.fx-top)>.row>[data-act="novo-tx"]{order:-1}
   .head:has(.fx-top)>.row>[data-act="nova-fixa"]{order:-1}
 }
+/* ---------- v10.13: página inicial reformulada ---------- */
+.hmHead{padding:4px 4px 14px}
+.hmHead small{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.hmHead h1{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--txt);margin-top:4px;line-height:1.15}
+.hmHead h1 span{background:linear-gradient(90deg,var(--a1),var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hmHero{position:relative;overflow:hidden;border-radius:26px;padding:20px 20px 20px;margin-bottom:14px;border:1px solid var(--line);
+  background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--a2) 28%,transparent) 0%,transparent 55%),radial-gradient(90% 80% at 0% 100%,color-mix(in srgb,var(--a1) 20%,transparent) 0%,transparent 60%),var(--card)}
+.hmHeroTop{display:flex;align-items:center;justify-content:space-between;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.hmSaldo{font-size:40px;font-weight:800;letter-spacing:-.035em;color:var(--txt);margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
+.hmHero.neg .hmSaldo{color:#f87171}
+html.claro .hmHero.neg .hmSaldo{color:#dc2626}
+.hmHeroSub{font-size:12.5px;color:var(--mut);margin-top:6px}
+.hmFlux{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.hmF{display:flex;align-items:center;gap:10px;min-width:0;background:color-mix(in srgb,var(--card2) 70%,transparent);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.hmF>div{min-width:0}
+.hmF small{display:block;font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmF b{display:block;font-size:15.5px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.hmFI{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center}
+.hmFI .i{width:16px;height:16px}
+.hmF.in .hmFI{color:#4ade80;background:rgba(74,222,128,.14)}
+.hmF.out .hmFI{color:#f87171;background:rgba(248,113,113,.14)}
+.hmFBar{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.hmFBar i{display:block;height:5px;border-radius:99px;min-width:4px}
+.hmFBar i.in{background:#4ade80}.hmFBar i.out{background:#f87171}
+.hmRes{margin-top:0;margin-bottom:12px}
+.hmH{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.hmH h4{margin:0!important}
+.hmH>.i{width:18px;height:18px;color:var(--a2)}
+.hmSub{font-size:12px;color:var(--mut);white-space:nowrap}
+.hmLink{display:inline-flex;align-items:center;gap:2px;min-height:36px;padding:0 4px 0 10px;border:0;background:none;color:var(--a2);font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hmLink .i{width:15px;height:15px}
+.hmMais{margin-top:6px;padding-left:0}
+.hmPrevV{font-size:28px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
+.hmPrev .hmPrevV.pos{color:#4ade80!important}.hmPrev .hmPrevV.neg{color:#f87171!important}
+html.claro .hmPrev .hmPrevV.pos{color:#16a34a!important}html.claro .hmPrev .hmPrevV.neg{color:#dc2626!important}
+.hmPrevL{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.hmPrevL span{background:var(--card2);border-radius:12px;padding:9px 11px;min-width:0}
+.hmPrevL small{display:block;font-size:10.5px;color:var(--mut)}
+.hmPrevL b{display:block;font-size:14px;font-weight:700;color:var(--txt);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+.hmPrevL b.pos{color:#4ade80}.hmPrevL b.neg{color:#f87171}
+html.claro .hmPrevL b.pos{color:#16a34a}html.claro .hmPrevL b.neg{color:#dc2626}
+.hmNota{font-size:11.5px;color:var(--mut);margin-top:10px}
+.hmSparkV{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--txt);font-variant-numeric:tabular-nums}
+.hmCat #cDonut{width:190px;height:190px}
+.topCats1{margin-top:6px}
+.hmDuo{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media(min-width:900px){.hmDuo{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}.hmDuo>.card{margin-bottom:12px}}
+.hmUlt .rmV.pos{color:#4ade80}
+html.claro .hmUlt .rmV.pos{color:#16a34a}
+@media(min-width:900px){.hmFlux{max-width:520px}}
 /* ---------- v10.12: maiores categorias do relatório ---------- */
 .topCats .card h4{line-height:1.45}
 .tcRow{padding:11px 0;border-bottom:1px solid var(--line,rgba(255,255,255,.07))}
@@ -1506,7 +1556,7 @@ function drawDonut(c,p){
   ctx.font='bold 17px system-ui';
   ctx.fillText(brl(total*p),cx,cy-7);
   ctx.fillStyle=cor('--mut');ctx.font='12px system-ui';
-  ctx.fillText(total>0?'despesas do mês':'sem despesas',cx,cy+12);
+  ctx.fillText(total>0?'em despesas':'sem despesas',cx,cy+12);
   ctx.textBaseline='alphabetic';
 }
 
@@ -2307,7 +2357,7 @@ const VIEWS={
 };
 const AFTER={
   inicio:()=>{
-    drawSpark();
+    drawSpark();setTimeout(()=>{const sc=$('#cSpark');if(sc&&sc._ch)sc._ch.resize();},80);
     const bc=$('#cBar'),dc=$('#cDonut');
     if(bc)drawBars(bc,1);if(dc)drawDonut(dc,1);
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
@@ -2404,65 +2454,63 @@ function previsaoHTML(){
 ICONS.eye='<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>';
 ICONS.eyeOff='<path d="M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.6 3.3M6.6 7.6C4 9.3 2.5 12 2.5 12S6 18 12 18c1.9 0 3.5-.6 4.9-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>';
 function viewInicio(){
-  const per=periodo(),pl=per.label;
-  const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa');
+  const per=periodo(),pl=per.label,ehMes=PER.k==='mes';
+  const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa'),sal=(cents(rec)-cents(des))/100;
   const sl=despesasPorCat(per),tot=sl.reduce((a,s)=>a+s.v,0);
-  const p=proximoPag();
-  const segCat=tot>0?'<div class="flex h-3 w-full overflow-hidden rounded-full bg-white/5 mt-4">'+sl.map((s,i)=>`<i class="h-full" style="width:${(s.v/tot*100).toFixed(2)}%;background:${s.color}" title="${esc(s.l)}"></i>`).join('')+'</div>'
-    +'<div class="mt-3 grid gap-1.5">'+sl.map((s,i)=>`<div class="flex justify-between text-sm text-[var(--mut)]"><span class="flex items-center gap-2"><i class="inline-block h-2 w-2 rounded-full" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${Math.round(s.v/tot*100)}%</span></div>`).join('')+'</div>':'';
-  const mx=Math.max(rec,des,1);
-  const fluxo=`<div class="${PC}">
-    <p class="${PL}">Fluxo de caixa · ${pl}</p>
-    <div class="mt-4 grid gap-5">
-      <div><div class="flex justify-between text-sm text-[var(--mut)]"><span>Entrada</span><b class="pv-sm">${brl(rec)}</b></div><div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full bg-[#a3e635]" style="width:${(rec/mx*100).toFixed(1)}%"></i></div></div>
-      <div><div class="flex justify-between text-sm text-[var(--mut)]"><span>Saída</span><b class="pv-sm">${brl(des)}</b></div><div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full bg-[#f87171]" style="width:${(des/mx*100).toFixed(1)}%"></i></div></div>
-    </div>
-    <div class="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-[var(--mut)]"><span>Total do período</span><b class="pv-sm ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</b></div>
+  const p=proximoPag(),pv=previsaoMes();
+  const hoje=new Date(),dia=hoje.getDate();
+  /* comparação justa no mês corrente: até o mesmo dia do mês anterior */
+  const desAnt=ehMes?despAte(mesOff(1),dia):0;
+  const dDes=ehMes&&desAnt?Math.round((des-desAnt)/desAnt*100):null;
+  const pou=rec>0?Math.round(sal/rec*100):null;
+  const mxF=Math.max(rec,des,1);
+  const tile=(cls,ic,lb,val,sub)=>`<div class="rsT ${cls}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b>${sub}</div>`;
+  const nome=nomeUsuario();
+  const dataLonga=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  /* últimos lançamentos */
+  const ult=S.tx.filter(t=>t.data&&t.data<=hojeISO()&&(t.tipo==='receita'||t.tipo==='despesa')).sort((a,b)=>b.data<a.data?-1:b.data>a.data?1:0).slice(0,5);
+  const ultHTML=ult.length?`<div class="card hmUlt"><div class="hmH"><h4>últimos lançamentos</h4><button class="hmLink" data-act="ir-lanc">ver todos${I('chevR')}</button></div>${ult.map(t=>{const r=t.tipo==='receita';const cc=r?'#4ade80':corCat(t.categoria);return `<div class="rmRow"><span class="rmI" style="--cc:${cc}">${I(catIcon(t.categoria))}</span><div class="rmT"><b>${esc(t.descricao||t.categoria||(r?'receita':'despesa'))}</b><small>${esc(t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status&&t.status!=='pago'?' · '+esc(t.status):''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':'−'} ${brl(t.valor)}</span></div>`;}).join('')}</div>`:'';
+  /* categorias */
+  const catHTML=`<div class="card hmCat"><div class="hmH"><h4>para onde foi o dinheiro</h4><span class="hmSub">${pl}</span></div>
+    ${sl.length?`<div class="donutWrap"><canvas id="cDonut"></canvas></div><div class="topCats1">${sl.slice(0,6).map(s=>`<div class="tcRow"><div class="tcTop"><span class="tcN"><i class="dot" style="background:${s.color}"></i><span>${esc(s.l)}</span></span><span class="tcV">${brl(s.v)}</span></div><div class="tcBar"><i style="width:${(s.v/(sl[0].v||1)*100).toFixed(1)}%;background:${s.color}"></i></div><span class="tcP">${tot?Math.round(s.v/tot*100):0}% das despesas</span></div>`).join('')}${sl.length>6?`<button class="hmLink hmMais" data-act="ir-rel">mais ${sl.length-6} ${sl.length-6>1?'categorias':'categoria'} no relatório${I('chevR')}</button>`:''}</div>`:'<p class="vazio">sem despesas neste período.</p>'}
   </div>`;
+  /* previsão */
+  const prevHTML=pv.tem?`<div class="card hmPrev"><div class="hmH"><h4>previsão para o fim do mês</h4>${I('gauge')}</div>
+    <div class="hmPrevV ${pv.fim<0?'neg':'pos'} nw">${brl(pv.fim)}</div>
+    <div class="hmPrevL"><span><small>hoje</small><b class="nw">${brl(pv.hoje)}</b></span>${pv.rec?`<span><small>a receber</small><b class="nw pos">+ ${brl(pv.rec)}</b></span>`:''}${pv.des?`<span><small>a pagar</small><b class="nw neg">− ${brl(pv.des)}</b></span>`:''}${pv.cart?`<span><small>cartão</small><b class="nw neg">− ${brl(pv.cart)}</b></span>`:''}</div>
+    <p class="hmNota">estimativa com o que já está lançado como previsto.</p></div>`:'';
+  /* carteira só aparece se houver investimentos */
+  const patr=patrimonio(),dm=divMensal();
+  const cartHTML=(patr||dm||p)?`<div class="card hmCart"><div class="hmH"><h4>carteira</h4><button class="hmLink" data-act="ir-pat">ver${I('chevR')}</button></div>
+    <div class="carteiraGrid"><div class="cw"><small>patrimônio investido</small><b>${brl(patr)}</b></div><div class="cw"><small>dividendo mensal estimado</small><b class="pos">${brl(dm)}</b></div><div class="cw cw-full"><small>próximo pagamento</small><b>${p?esc(p.f.ticker)+' em '+fmtDate(p.date):'sem data'}</b></div></div></div>`:'';
   return `
-  <div class="px-1 pt-2 pb-3"><h1 class="text-3xl font-bold tracking-tight text-[var(--txt)]">${saudHora()}${nomeUsuario()?', <span class="text-[#a3e635]">'+esc(nomeUsuario())+'</span>':''}</h1></div>
+  <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
+  <div class="hmHero ${saldo<0?'neg':''}">
+    <div class="hmHeroTop"><span>saldo total</span><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
+    <div class="hmSaldo nw">${brl(saldo)}</div>
+    <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
+  </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
+  ${alertasHTML()}
   <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
-  <div class="${PC}">
-    <div class="flex items-center justify-between"><p class="${PL}">Saldo total</p><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
-    <div class="pv-xl mt-2 ${saldo<0?'neg':'pos'}">${brl(saldo)}</div>
-    <p class="${PD}">receitas menos despesas pagas, desde o começo</p>
+  <div class="relRes hmRes">
+    ${tile('rec','arrowUp','receitas',brl(rec),'<span class="rsD">entradas pagas</span>')}
+    ${tile('des','arrowDown','despesas',brl(des),dDes===null?'<span class="rsD">saídas pagas</span>':`<span class="rsD ${dDes>0?'neg':'pos'}">${dDes>0?'▲':dDes<0?'▼':'='} ${Math.abs(dDes)}% vs ${MESES[+mesOff(1).slice(5,7)-1]} até dia ${dia}</span>`)}
+    ${tile('sal '+(sal<0?'neg':''),'wallet','saldo do período',brl(sal),`<span class="rsD">${sal<0?'gastou mais do que entrou':'sobrou no período'}</span>`)}
+    ${tile('pou','piggy','você guardou',pou===null?'—':(OCULTO?'••%':pou+'%'),`<span class="rsD">${pou===null?'sem receitas no período':'da renda do período'}</span>`)}
   </div>
-  ${previsaoHTML()}
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-    <div class="${PC} mb-0"><p class="${PL}">Receitas · ${pl}</p><div class="pv pos">${brl(rec)}</div><p class="${PD}">entradas pagas no período</p></div>
-    <div class="${PC} mb-0"><p class="${PL}">Despesas · ${pl}</p><div class="pv neg">${brl(des)}</div><p class="${PD}">saídas pagas no período</p></div>
-    <div class="${PC} mb-0"><p class="${PL}">Saldo · ${pl}</p><div class="pv ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</div><p class="${PD}">receitas menos despesas</p></div>
-  </div>
-  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <div class="${PC} mb-0"><p class="${PL}">Gastos acumulados · ${pl}</p><div class="pv">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div>
-    <div class="${PC} mb-0"><p class="${PL}">Gastos por categoria</p><div class="pv">${brl(tot)}</div>${segCat||'<p class="vazio">sem gastos neste período.</p>'}</div>
-  </div>
-  <div class="mt-3">${fluxo}</div>
-  ${dicaInstalarHTML(false)}
-  ${alertasHTML()}
-  ${orcInicioHTML()}
+  <div class="hmDuo">${prevHTML}
+  <div class="card hmSpark"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div></div>
+  <div class="hmDuo">${catHTML}<div>${orcInicioHTML()}${ultHTML}</div></div>
   <div class="card">
     <h4>Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}</h4>
     <canvas id="cBar" class="cv"></canvas>
     <div class="legend"><span><i class="dot" style="background:#34d399"></i>receitas</span><span><i class="dot" style="background:#a78bfa"></i>despesas</span></div>
   </div>
-  <div class="card">
-    <h4>Despesas por categoria · ${pl}</h4>
-    <div class="donutWrap"><canvas id="cDonut"></canvas></div>
-    ${sl.length?sl.map(s=>`<div class="legItem"><span><i class="dot" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${tot?Math.round(s.v/tot*100):0}%</span></div>`).join(''):'<p class="vazio">nenhuma despesa neste mês.</p>'}
-  </div>
-  <div class="card">
-    <h4>Resumo da carteira</h4>
-    <div class="carteiraGrid">
-      <div class="cw"><small>patrimônio investido</small><b>${brl(patrimonio())}</b></div>
-      <div class="cw"><small>dividendo mensal estimado</small><b class="pos">${brl(divMensal())}</b></div>
-      <div class="cw cw-full"><small>próximo pagamento</small><b>${p?esc(p.f.ticker)+' em '+fmtDate(p.date):'sem data'}</b></div>
-    </div>
-  </div>`;
+  ${cartHTML}
+  ${dicaInstalarHTML(false)}`;
 }
-
 function orcInicioHTML(){
   const m=mesAtual();
   const LO=limOrc(m),lst=S.cats.filter(c=>LO[c]>0).map(c=>{const lim=LO[c],gasto=somaMes(m,'despesa',c,true);return {c,lim,gasto,pct:gasto/lim*100};}).sort((a,b)=>b.pct-a.pct).slice(0,4);
@@ -3688,7 +3736,7 @@ const ACT={
   'principal':id=>{if((S.bancos.find(x=>x.id===id)||{}).arq)return;S.bancos.forEach(b=>{b.principal=b.id===id;});salvar();render();toast('Conta principal definida');}
 };
 
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip[data-act^="ir-"],.atalho[data-act^="ir-"]');if(!c)return;const t=c.dataset.act.replace('ir-','');go(t);});
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip[data-act^="ir-"],.atalho[data-act^="ir-"],.hmLink[data-act^="ir-"]');if(!c)return;const t=c.dataset.act.replace('ir-','');go(t);});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='logoHome')go('inicio');});
 // logo: checa pela posição do toque, então funciona com menu aberto (#ov/#side por cima) e com a tela de login (#auth)
 document.addEventListener('click',e=>{
@@ -3755,7 +3803,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.15';
+const GV_BUILD='2026-10-28.16';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
