@@ -681,10 +681,6 @@ html.privado #app{filter:blur(18px)}
 .lkPad .lkAlt{background:none;border-color:transparent;font-size:22px;color:var(--mut)}
 .lkPad .lkAlt .i{width:32px;height:32px;color:var(--a1)}
 .lkPad .lkAlt:disabled{visibility:hidden}
-.lkFace{width:110px;height:110px;margin:34px auto 14px;border-radius:30px;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .1s}
-.lkFace:active{transform:scale(.95)}
-.lkFace .i{width:58px;height:58px;color:var(--a1);stroke-width:1.3}
-.lkRosto{cursor:pointer}
 .lkFoot{margin-top:24px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
@@ -3551,7 +3547,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.5';
+const GV_BUILD='2026-10-28.4';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -3598,16 +3594,6 @@ async function bioDisponivel(){try{return !!(window.PublicKeyCredential&&await P
 function lockTela(o){
   LK.o=o;LK.buf='';
   const el=$('#lock');
-  if(o.rosto){
-    el.innerHTML=`<div class="lkBox lkRosto">
-      <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
-      <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
-      <button type="button" class="lkFace" data-k="bio" aria-label="entrar com Face ID">${I('faceid')}</button>
-      <p class="lkTit" style="font-size:15px">Entrar com Face ID</p>
-      <div class="lkFoot" id="lkFoot"><button type="button" class="alink" data-k="pin">usar PIN</button></div>
-    </div>`;
-    el.classList.add('on');document.documentElement.classList.add('travado');return;
-  }
   el.innerHTML=`<div class="lkBox">
     <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
     <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
@@ -3628,7 +3614,6 @@ function lockErro(t){LK.buf='';lockPinta();lockMsg(t,true);const d=$('#lkDots');
 function lockTecla(k){
   const o=LK.o;if(!o)return;
   if(k==='bio'){lockBio();return;}
-  if(k==='pin'){lockPin('');return;}
   if(k==='cancel'){lockFecha();return;}
   if(k==='esqueci'){lockEsqueci();return;}
   if(k==='volta'){lockAbre(true);return;}
@@ -3643,17 +3628,7 @@ function lockTecla(k){
 function lockAbre(forca){
   const c=lockCfg();if(!c){lockFecha();return;}
   if(!forca&&LK.o&&LK.o.modo==='abrir')return;
-  if(c.bio){
-    lockTela({modo:'abrir',rosto:true,titulo:'App bloqueado',sub:''});
-    setTimeout(()=>{if(LK.o&&LK.o.rosto)lockBio(true);},300);
-    return;
-  }
-  lockPin('');
-}
-/* teclado do PIN: direto quando não há Face ID, ou como reserva quando o Face ID não reconhece */
-function lockPin(msg){
-  const c=lockCfg();if(!c){lockFecha();return;}
-  lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:msg||'',bio:!!c.bio,cb:async pin=>{
+  lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:c.bio?'ou use o Face ID':'',bio:!!c.bio,cb:async pin=>{
     const ok=await lockConfere(pin),cc=lockCfg();
     if(ok){if(cc){cc.falhas=0;cc.ate=0;lockSalva(cc);}lockFecha();return;}
     if(!cc){lockFecha();return;}
@@ -3661,21 +3636,17 @@ function lockPin(msg){
     if(cc.falhas>=5){const seg=Math.min(300,30*Math.pow(2,cc.falhas-5));cc.ate=Date.now()+seg*1000;lockSalva(cc);lockErro('PIN incorreto. Tente de novo em '+seg+' s');}
     else{lockSalva(cc);lockErro('PIN incorreto');}
   }});
-  if(msg)lockMsg(msg,true);
+  if(c.bio)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
 }
 async function lockBio(auto){
   const c=lockCfg();if(!c||!c.bio||LK.bioBusy)return;
-  LK.bioBusy=true;LK.t0=performance.now();
+  LK.bioBusy=true;
   try{
     const r=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:lkDeB64(c.bio),transports:['internal']}],userVerification:'required',timeout:60000}});
     const fl=r&&r.response&&r.response.authenticatorData?new Uint8Array(r.response.authenticatorData)[32]:0;
     if(fl&4){c.falhas=0;c.ate=0;lockSalva(c);lockFecha();return;}
-    lockPin('Face ID não reconheceu, digite o PIN');
-  }catch(e){
-    /* sem gesto do usuário o iPhone pode recusar a chamada automática sem mostrar nada: aí fica na tela do Face ID esperando o toque */
-    if(auto&&e&&e.name==='NotAllowedError'&&LK.o&&LK.o.rosto&&(performance.now()-LK.t0)<700)return;
-    lockPin('Face ID não reconheceu, digite o PIN');
-  }
+    lockMsg('não deu certo, use o PIN',true);
+  }catch(e){if(!auto)lockMsg('Face ID cancelado, use o PIN ou toque no ícone',true);}
   finally{setTimeout(()=>{LK.bioBusy=false;},400);}
 }
 async function lockBioAtiva(){
@@ -3732,9 +3703,7 @@ async function atualizaLockUI(){const b=document.getElementById('lockBioBtn');if
 window.addEventListener('click',e=>{
   const lk=e.target.closest&&e.target.closest('#lock');if(!lk)return;
   e.stopPropagation();
-  const b=e.target.closest('[data-k]');
-  if(!b){if(LK.o&&LK.o.rosto){e.preventDefault();lockBio();}return;}
-  if(b.disabled)return;
+  const b=e.target.closest('[data-k]');if(!b||b.disabled)return;
   e.preventDefault();lockTecla(b.dataset.k);
 },true);
 document.addEventListener('keydown',e=>{
