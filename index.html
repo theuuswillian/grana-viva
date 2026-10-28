@@ -340,6 +340,30 @@ body:has(#auth.on) .fab{display:none!important}
 .relT .rrow .sb{font-style:normal;color:var(--mut);font-size:13px}
 .relT .rrow .vr{font-weight:600}
 .relT .nw{white-space:nowrap}
+.relDest{margin-top:14px}
+.relDest h4{margin:0 0 8px}
+.rd-head{font-size:16px;line-height:1.45;margin:0;color:var(--txt)}
+.rd-head b,.rd-ritmo b{font-weight:700}
+.rd-ritmo{display:block;font-size:13.5px;line-height:1.45;color:var(--mut);margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--card2)}
+.rd-ritmo svg{width:15px;height:15px;vertical-align:-3px;margin-right:6px;stroke:currentColor;fill:none;stroke-width:1.8}
+.rd-list{margin-top:14px;display:flex;flex-direction:column;gap:2px}
+.rd-sub{font-size:12px;color:var(--mut);margin-bottom:4px}
+.rd-it{display:grid;grid-template-columns:18px minmax(0,1fr) auto 52px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.rd-ar{font-size:11px}
+.rd-cat{display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.rd-v{font-weight:700;white-space:nowrap}
+.rd-p{font-size:12.5px;color:var(--mut);text-align:right;white-space:nowrap}
+.relDest .pos,.relCat .vr.pos{color:#34d399}.relDest .neg,.relCat .vr.neg{color:#f87171}
+.relCat h4{margin:0 0 10px}
+.rcRow{padding:12px 0;border-top:1px solid var(--line)}
+.rcTop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rcTop .rc{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.rcTop .vr{font-weight:700;font-size:13.5px;white-space:nowrap;color:var(--mut)}
+.rcBar{height:5px;border-radius:3px;background:var(--card2);margin:8px 0 7px;overflow:hidden}
+.rcBar i{display:block;height:100%;border-radius:3px;opacity:.85}
+.rcVals{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.rcVals b{color:var(--txt);font-weight:600;margin-left:4px}
+html.claro .relDest .pos,html.claro .relCat .vr.pos{color:#059669}html.claro .relDest .neg,html.claro .relCat .vr.neg{color:#dc2626}
 .relChart{padding-bottom:22px;overflow:hidden}
 .relWrap .card{margin-bottom:18px}
 .relWrap .card h4{font-size:13px}
@@ -1334,6 +1358,36 @@ function relCats(a,b){
   return Object.values(mp).sort((x,y)=>Math.max(y.va,y.vb)-Math.max(x.va,x.vb));
 }
 function mesCurto(m){return MESES[+m.slice(5,7)-1]+' '+m.slice(0,4);}
+// despesas (fora do cartão, igual ao resto do relatório) do mês m até o dia `dia`
+function despAte(m,dia){return somaC(S.tx.filter(t=>t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m)&&+t.data.slice(8,10)<=dia),t=>t.valor);}
+function relDestaques(a,b,ra,rb){
+  const dif=(cents(ra.des)-cents(rb.des))/100,out=[];
+  let head;
+  if(!rb.des&&!ra.des)head=`sem despesas em ${mesCurto(a)} nem em ${mesCurto(b)}`;
+  else if(dif===0)head=`você gastou o mesmo que em ${mesCurto(b)}`;
+  else head=`você gastou <b class="${dif>0?'neg':'pos'}">${brl(Math.abs(dif))} ${dif>0?'a mais':'a menos'}</b> que em ${mesCurto(b)}`;
+  let ritmo='';
+  if(a===mesOff(0)&&b<a){
+    const dia=new Date().getDate(),ja=despAte(a,dia),antes=despAte(b,dia),d2=(cents(ja)-cents(antes))/100;
+    if(ja||antes)ritmo=`<p class="rd-ritmo">${I("gauge")}até o dia ${dia}, ${mesCurto(b)} tinha ${brl(antes)} em despesas. ${d2===0?'você está no mesmo ritmo.':`você está <b class="${d2>0?'neg':'pos'}">${brl(Math.abs(d2))} ${d2>0?'acima':'abaixo'}</b> nesse ritmo.`}</p>`;
+  }
+  const vars=relCats(a,b).map(x=>Object.assign({},x,{d:(cents(x.va)-cents(x.vb))/100})).filter(x=>x.d!==0)
+    .sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,3);
+  const it=vars.map(x=>{const up=x.d>0,pc=x.vb?Math.round(x.d/x.vb*100):null;
+    return `<div class="rd-it"><span class="rd-ar ${up?'neg':'pos'}">${up?'▲':'▼'}</span><span class="rd-cat"><i class="dot" style="background:${corCat(x.l)}"></i>${esc(x.l)}</span><span class="rd-v ${up?'neg':'pos'}">${up?'+':'−'}${brl(Math.abs(x.d))}</span><span class="rd-p">${pc===null?'novo':(pc>0?'+':'')+pc+'%'}</span></div>`;}).join('');
+  return `<div class="card relDest"><h4>destaques</h4><p class="rd-head">${head}</p>${ritmo}${it?`<div class="rd-list"><span class="rd-sub">maiores variações por categoria</span>${it}</div>`:''}</div>`;
+}
+function relPorCat(a,b){
+  const cats=relCats(a,b);if(!cats.length)return '';
+  const mx=Math.max(1,...cats.flatMap(x=>[x.va,x.vb]));
+  const rows=cats.map(x=>{const d=(cents(x.va)-cents(x.vb))/100,pc=x.vb?Math.round(d/x.vb*100):null,c=d>0?'neg':d<0?'pos':'';
+    const vtxt=pc===null?(x.va?'novo':'—'):(d>0?'▲ ':d<0?'▼ ':'')+Math.abs(pc)+'%';
+    return `<div class="rcRow"><div class="rcTop"><span class="rc"><i class="dot" style="background:${corCat(x.l)}"></i>${esc(x.l)}</span><span class="vr ${c}">${vtxt}</span></div>
+      <div class="rcBar"><i style="width:${(x.va/mx*100).toFixed(1)}%;background:${corCat(x.l)}"></i></div>
+      <div class="rcVals"><span>${mesCurto(a)} <b>${brl(x.va)}</b></span><span>${mesCurto(b)} <b>${brl(x.vb)}</b></span></div></div>`;}).join('');
+  return `<div class="card relCat"><h4>todas as categorias</h4>${rows}</div>`;
+}
+
 function mesAdd(m,k){const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,1);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
 function relShift(k,n){const cur=REL[k]||(k==='a'?mesOff(0):mesOff(1));REL[k]=mesAdd(cur,n);render();}
 function calGrid(m){
@@ -1367,6 +1421,7 @@ function viewRel(){
       <div class="mcal-cmp"><span>comparar com</span><span class="mcal-ctl"><button class="mcal-nav sm" data-act="rel-b-prev" aria-label="mês de comparação anterior">${I('chevL')}</button><b>${mesCurto(b)}</b><button class="mcal-nav sm" data-act="rel-b-next" aria-label="próximo mês de comparação">${I('chevR')}</button></span></div>
     </div>
   </div>
+  ${relDestaques(a,b,ra,rb)}
   <div class="card relT" style="margin-top:14px">
     <div class="rh"><span></span><span>${mesCurto(a)}</span><span>${mesCurto(b)}</span><span>variação</span></div>
     ${linha('receitas',rb.rec,ra.rec,false,'pos')}
@@ -1378,6 +1433,7 @@ function viewRel(){
     <canvas id="cRel" class="cv"></canvas>
     <div class="legend"><span><i class="dot" style="background:#a78bfa"></i>${mesCurto(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesCurto(b)}</span></div>
   </div>
+  ${relPorCat(a,b)}
   <div class="grid2">
     <div class="card"><h4>maiores categorias · ${mesNome(a)}</h4>${top(a)}</div>
     <div class="card"><h4>maiores categorias · ${mesNome(b)}</h4>${top(b)}</div>
