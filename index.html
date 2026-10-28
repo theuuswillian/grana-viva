@@ -548,6 +548,10 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--a1);outline-off
 .badge.mut{background:rgba(148,163,184,.16);color:var(--mut)}
 .tx-cancel{opacity:.55}.tx-cancel .val{text-decoration:line-through}
 .tx-prev .val{opacity:.8}
+.perBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.perBar .perLbl{font-size:12px;color:var(--mut);font-weight:600}
+.perBar select,.perBar input{width:auto;min-width:0;flex:0 1 auto;padding:8px 12px;font-size:13px;border-radius:12px}
+.perBar input{flex:1 1 130px}
 .planHead,.planRow{display:grid;grid-template-columns:0.8fr 1fr 1fr 1.25fr;gap:6px;align-items:center;font-size:13px}
 .planHead{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .planRow{padding:10px 0;border-bottom:1px solid var(--line)}.planRow:last-child{border-bottom:0}
@@ -955,8 +959,9 @@ const somaC=(arr,f)=>arr.reduce((a,x)=>a+cents(f(x)),0)/100;
 const efetivo=t=>!t.status||t.status==='pago';
 function statusTx(t){if(t.status==='cancelado')return 'cancelado';if(t.status==='previsto')return t.data<hojeISO()?'atrasado':'previsto';return 'pago';}
 const ST_TX={previsto:['previsto','warn'],atrasado:['atrasado','over'],cancelado:['cancelado','mut']};
+const noPer=(d,m)=>typeof m==='string'?d.startsWith(m):(d>=m.ini&&d<=m.fim);
 function somaMes(m,tipo,cat,comCartao){
-  return somaC(S.tx.filter(t=>efetivo(t)&&t.data.startsWith(m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
+  return somaC(S.tx.filter(t=>efetivo(t)&&noPer(t.data,m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
 }
 // dinheiro em espécie só movimenta uma conta do tipo Dinheiro (antes caía na conta principal, misturando espécie com banco)
 function contaDinheiroId(){const d=S.bancos.find(b=>b.tipo==='Dinheiro');return d?d.id:null;}
@@ -999,16 +1004,16 @@ function saldoTotal(){
 }
 function despesasPorCat(m){
   const mp={};
-  S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data.startsWith(m))mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
+  S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&noPer(t.data,m))mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
   return Object.keys(mp).map(c=>({l:c,v:mp[c]/100})).sort((a,b)=>b.v-a.v).map(s=>Object.assign(s,{color:corCat(s.l)}));
 }
 function barData(){
   const d=new Date(),out=[];
   let first=null;S.tx.forEach(t=>{if(!first||t.data<first)first=t.data;});
   if(!first)return out;
-  const fm=first.slice(0,7);
-  for(let k=5;k>=0;k--){
-    const x=new Date(d.getFullYear(),d.getMonth()-k,1);
+  const fm=first.slice(0,7),per=periodo(),nM=per.meses>=3?per.meses:6,fimP=per.meses>=3?new Date(+per.fim.slice(0,4),+per.fim.slice(5,7)-1,1):d;
+  for(let k=nM-1;k>=0;k--){
+    const x=new Date(fimP.getFullYear(),fimP.getMonth()-k,1);
     const m=x.getFullYear()+'-'+pad(x.getMonth()+1);
     if(m<fm)continue;
     out.push({l:MESES[x.getMonth()],r:somaMes(m,'receita'),d:somaMes(m,'despesa')});
@@ -1154,7 +1159,7 @@ function drawBars(c,p){
 function drawDonut(c,p){
   const size=c.clientWidth;
   const {ctx,w,h}=fitCanvas(c,size);
-  const sl=despesasPorCat(mesAtual()),total=sl.reduce((a,s)=>a+s.v,0);
+  const sl=despesasPorCat(periodo()),total=sl.reduce((a,s)=>a+s.v,0);
   const cx=w/2,cy=h/2,lw=24,R=Math.min(w,h)/2-lw/2-2;
   ctx.clearRect(0,0,w,h);
   if(R<=0)return;
@@ -1904,6 +1909,28 @@ function sparkSVG(vals){
   const last=pts[n-1];
   return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="spG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3e635" stop-opacity=".35"/><stop offset="1" stop-color="#a3e635" stop-opacity="0"/></linearGradient></defs><path d="'+area+'" fill="url(#spG)"/><path d="'+d+'" fill="none" stroke="#a3e635" stroke-width="2.2" stroke-linecap="round"/><circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="4.5" fill="#a3e635" stroke="#0a0a0c" stroke-width="2"/></svg>';
 }
+/* filtro de período do painel: um único intervalo para todos os blocos dependentes do período */
+const PER_OPS=[['mes','este mês'],['ant','mês anterior'],['3m','3 meses'],['6m','6 meses'],['12m','12 meses'],['custom','personalizado']];
+let PER=(()=>{try{const p=JSON.parse(localStorage.getItem('gv-per')||'null');if(p&&PER_OPS.some(o=>o[0]===p.k))return p;}catch(e){}return {k:'mes',ini:'',fim:''};})();
+function periodo(p){
+  p=p||PER;const h=new Date(),y=h.getFullYear(),m=h.getMonth();
+  const fimMes=(yy,mm)=>isoDe(new Date(yy,mm+1,0)),iniMes=(yy,mm)=>isoDe(new Date(yy,mm,1));
+  if(p.k==='ant')return {ini:iniMes(y,m-1),fim:fimMes(y,m-1),label:'mês anterior',meses:1};
+  const n={'3m':3,'6m':6,'12m':12}[p.k];
+  if(n)return {ini:iniMes(y,m-n+1),fim:fimMes(y,m),label:'últimos '+n+' meses',meses:n};
+  if(p.k==='custom'&&DATA_OK.test(p.ini)&&DATA_OK.test(p.fim)){const a=p.ini<=p.fim?p.ini:p.fim,b=p.ini<=p.fim?p.fim:p.ini;
+    const meses=(+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7))+1;return {ini:a,fim:b,label:fmtData(a)+' a '+fmtData(b),meses};}
+  return {ini:iniMes(y,m),fim:fimMes(y,m),label:'este mês',meses:1};
+}
+function salvaPer(){try{localStorage.setItem('gv-per',JSON.stringify(PER));}catch(e){}}
+function sparkPer(per){
+  const out=[],lab=[];let acc=0;
+  const mp={};S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data>=per.ini&&t.data<=per.fim)mp[t.data]=(mp[t.data]||0)+cents(t.valor);});
+  const d=new Date(+per.ini.slice(0,4),+per.ini.slice(5,7)-1,+per.ini.slice(8,10)),hj=hojeISO();
+  const ate=per.fim>hj&&per.ini<=hj?hj:per.fim;
+  for(let i=0;i<800;i++){const k=isoDe(d);if(k>ate)break;acc+=mp[k]||0;out.push(acc/100);lab.push(fmtData(k));d.setDate(d.getDate()+1);}
+  return {vals:out,lab};
+}
 function sparkMes(m){
   const y=+m.slice(0,4),mo=+m.slice(5,7)-1,dias=new Date(y,mo+1,0).getDate(),arr=[];
   for(let d=1;d<=dias;d++){const k=m+'-'+String(d).padStart(2,'0');arr.push(S.tx.filter(t=>efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data===k).reduce((a,t)=>a+t.valor,0));}
@@ -1915,16 +1942,16 @@ const PD='mt-2 text-xs text-[var(--mut)]';
 const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
 function drawSpark(){
   const c=$('#cSpark');if(!c||typeof Chart==='undefined')return;
-  const vals=sparkMes(mesAtual());if(!vals.length)return;
+  const sp=sparkPer(periodo()),vals=sp.vals;if(!vals.length)return;
   if(c._ch)c._ch.destroy();
   const last=vals.length-1;
-  c._ch=new Chart(c,{type:'line',data:{labels:vals.map((_,i)=>String(i+1)),datasets:[{
+  c._ch=new Chart(c,{type:'line',data:{labels:sp.lab,datasets:[{
     data:vals,borderColor:'#a3e635',borderWidth:2,fill:true,tension:.35,
     backgroundColor:(ctx)=>{const ch=ctx.chart,ar=ch.chartArea;if(!ar)return 'rgba(163,230,53,.2)';const g=ch.ctx.createLinearGradient(0,ar.top,0,ar.bottom);g.addColorStop(0,'rgba(163,230,53,.35)');g.addColorStop(1,'rgba(163,230,53,0)');return g;},
     pointRadius:ctx=>ctx.dataIndex===last?5:0,pointHoverRadius:5,
     pointBackgroundColor:'#a3e635',pointBorderColor:'#0a0a0c',pointBorderWidth:2
   }]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-    plugins:{legend:{display:false},tooltip:{callbacks:{title:x=>'dia '+x[0].label,label:x=>brl(x.parsed.y)}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:x=>x[0].label,label:x=>brl(x.parsed.y)}}},
     scales:{x:{display:false},y:{display:false,beginAtZero:true}}}});
 }
 /* previsão do fim do mês: saldo de hoje + o que ainda está previsto até o fim do mês
@@ -1951,24 +1978,26 @@ function previsaoHTML(){
     <p class="${PD}">saldo de hoje mais o que está previsto até o fim do mês. é uma estimativa, não garantia.</p></div>`;
 }
 function viewInicio(){
-  const m=mesAtual();
-  const saldo=saldoTotal(),rec=somaMes(m,'receita'),des=somaMes(m,'despesa');
-  const sl=despesasPorCat(m),tot=sl.reduce((a,s)=>a+s.v,0);
+  const per=periodo(),pl=per.label;
+  const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa');
+  const sl=despesasPorCat(per),tot=sl.reduce((a,s)=>a+s.v,0);
   const p=proximoPag();
   const segCat=tot>0?'<div class="flex h-3 w-full overflow-hidden rounded-full bg-white/5 mt-4">'+sl.map((s,i)=>`<i class="h-full" style="width:${(s.v/tot*100).toFixed(2)}%;background:${s.color}" title="${esc(s.l)}"></i>`).join('')+'</div>'
     +'<div class="mt-3 grid gap-1.5">'+sl.map((s,i)=>`<div class="flex justify-between text-sm text-[var(--mut)]"><span class="flex items-center gap-2"><i class="inline-block h-2 w-2 rounded-full" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${Math.round(s.v/tot*100)}%</span></div>`).join('')+'</div>':'';
   const mx=Math.max(rec,des,1);
   const fluxo=`<div class="${PC}">
-    <p class="${PL}">Fluxo de caixa · mês</p>
+    <p class="${PL}">Fluxo de caixa · ${pl}</p>
     <div class="mt-4 grid gap-5">
       <div><div class="flex justify-between text-sm text-[var(--mut)]"><span>Entrada</span><b class="pv-sm">${brl(rec)}</b></div><div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full bg-[#a3e635]" style="width:${(rec/mx*100).toFixed(1)}%"></i></div></div>
       <div><div class="flex justify-between text-sm text-[var(--mut)]"><span>Saída</span><b class="pv-sm">${brl(des)}</b></div><div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full bg-[#f87171]" style="width:${(des/mx*100).toFixed(1)}%"></i></div></div>
     </div>
-    <div class="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-[var(--mut)]"><span>Total do mês</span><b class="pv-sm ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</b></div>
+    <div class="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-[var(--mut)]"><span>Total do período</span><b class="pv-sm ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</b></div>
   </div>`;
   return `
   <div class="px-1 pt-2 pb-3"><h1 class="text-3xl font-bold tracking-tight text-[var(--txt)]">${saudHora()}${nomeUsuario()?', <span class="text-[#a3e635]">'+esc(nomeUsuario())+'</span>':''}</h1></div>
   <div class="mb-3 flex flex-wrap gap-2"><button class="chip on" data-act="ir-inicio">visão geral</button><button class="chip" data-act="ir-lanc">despesas</button><button class="chip" data-act="ir-orc">orçamentos</button><button class="chip" data-act="ir-cartoes">cartões</button><button class="chip" data-act="ir-rel">relatório</button><button class="chip" data-act="ir-plan">planejamento</button></div>
+  <div class="perBar"><span class="perLbl">Período</span><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>
+    ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="${PC}">
     <p class="${PL}">Saldo total</p>
     <div class="pv-xl mt-2 ${saldo<0?'neg':'pos'}">${brl(saldo)}</div>
@@ -1976,25 +2005,25 @@ function viewInicio(){
   </div>
   ${previsaoHTML()}
   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-    <div class="${PC} mb-0"><p class="${PL}">Receitas do mês</p><div class="pv pos">${brl(rec)}</div><p class="${PD}">entradas lançadas no mês</p></div>
-    <div class="${PC} mb-0"><p class="${PL}">Despesas do mês</p><div class="pv neg">${brl(des)}</div><p class="${PD}">saídas lançadas no mês</p></div>
-    <div class="${PC} mb-0"><p class="${PL}">Saldo do mês</p><div class="pv ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</div><p class="${PD}">receitas menos despesas</p></div>
+    <div class="${PC} mb-0"><p class="${PL}">Receitas · ${pl}</p><div class="pv pos">${brl(rec)}</div><p class="${PD}">entradas pagas no período</p></div>
+    <div class="${PC} mb-0"><p class="${PL}">Despesas · ${pl}</p><div class="pv neg">${brl(des)}</div><p class="${PD}">saídas pagas no período</p></div>
+    <div class="${PC} mb-0"><p class="${PL}">Saldo · ${pl}</p><div class="pv ${rec-des<0?'neg':'pos'}">${brl(rec-des)}</div><p class="${PD}">receitas menos despesas</p></div>
   </div>
   <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <div class="${PC} mb-0"><p class="${PL}">Gastos do mês</p><div class="pv">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div>
-    <div class="${PC} mb-0"><p class="${PL}">Gastos por categoria</p><div class="pv">${brl(tot)}</div>${segCat||'<p class="vazio">sem gastos neste mês.</p>'}</div>
+    <div class="${PC} mb-0"><p class="${PL}">Gastos acumulados · ${pl}</p><div class="pv">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div>
+    <div class="${PC} mb-0"><p class="${PL}">Gastos por categoria</p><div class="pv">${brl(tot)}</div>${segCat||'<p class="vazio">sem gastos neste período.</p>'}</div>
   </div>
   <div class="mt-3">${fluxo}</div>
   ${dicaInstalarHTML(false)}
   ${alertasHTML()}
   ${orcInicioHTML()}
   <div class="card">
-    <h4>Receitas x despesas (desde o primeiro lançamento)</h4>
+    <h4>Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}</h4>
     <canvas id="cBar" class="cv"></canvas>
     <div class="legend"><span><i class="dot" style="background:#34d399"></i>receitas</span><span><i class="dot" style="background:#a78bfa"></i>despesas</span></div>
   </div>
   <div class="card">
-    <h4>Despesas por categoria (mês)</h4>
+    <h4>Despesas por categoria · ${pl}</h4>
     <div class="donutWrap"><canvas id="cDonut"></canvas></div>
     ${sl.length?sl.map(s=>`<div class="legItem"><span><i class="dot" style="background:${s.color}"></i>${esc(s.l)}</span><span>${brl(s.v)} · ${tot?Math.round(s.v/tot*100):0}%</span></div>`).join(''):'<p class="vazio">nenhuma despesa neste mês.</p>'}
   </div>
@@ -3092,6 +3121,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset&&(t.dataset.filter==='relA'||t.dataset.filter==='relB')){REL[t.dataset.filter==='relA'?'a':'b']=t.value;render();return;}
   if(t.dataset&&t.dataset.filter){F[t.dataset.filter]=t.value;render();return;}
+  if(t.dataset&&t.dataset.per){const k=t.dataset.per;if(k==='k'){const atual=periodo();PER.k=t.value;if(t.value==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}}else if(DATA_OK.test(t.value))PER[k]=t.value;salvaPer();render();return;}
   if(t.dataset&&t.dataset.plan){const k=t.dataset.plan;PLAN[k]=k==='n'?(+t.value||6):Math.max(k==='corte'?0:-1e9,Math.min(k==='corte'?100:1e9,parseBR(t.value)||0));render();return;}
   if(t.id==='imp'){
     const f=t.files[0];t.value='';if(!f)return;
@@ -3110,7 +3140,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
