@@ -696,6 +696,7 @@ chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
 chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
 receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
+scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
 compass:'<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
 gauge:'<path d="M4 16.5a8 8 0 1 1 16 0"/><path d="M12 16.5 16 11"/><circle cx="12" cy="16.5" r="1.2"/>',
 chart:'<path d="M3.5 19.5h17"/><path d="M5.5 15.5l4-4.5 3.5 3 5.5-6.5"/><path d="M15.5 7.5h3.5V11"/>',
@@ -749,8 +750,8 @@ function catIcon(c){return (S.catIcons&&S.catIcons[c])||CAT_ICON[c]||'outros';}
 function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
-const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
-function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
+const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},bens:[],passivos:[],patHist:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 /* saneamento: tudo que vem do aparelho, da nuvem ou de um backup passa por aqui.
    garante tipos (números, datas, ids seguros) e impede que um backup adulterado injete HTML pelos ids/cores. */
 const ID_OK=/^[A-Za-z0-9_|:.\-]{1,80}$/;
@@ -771,6 +772,11 @@ function sanea(d){
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0)}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:['mensal','semanal','anual'].includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false}));
+  // patrimônio: bens, dívidas e fotografia mensal
+  const BEM_T=['imovel','veiculo','outro'],PAS_T=['emprestimo','financiamento','divida','outro'];
+  o.bens=arr(o.bens).map(b=>({id:sid(b.id),nome:str(b.nome,80),tipo:BEM_T.includes(b.tipo)?b.tipo:'outro',valor:Math.max(0,c2(b.valor))})).filter(b=>b.nome);
+  o.passivos=arr(o.passivos).map(p=>({id:sid(p.id),nome:str(p.nome,80),tipo:PAS_T.includes(p.tipo)?p.tipo:'outro',saldo:Math.max(0,c2(p.saldo)),parcela:Math.max(0,c2(p.parcela)),juros:Math.max(0,Math.min(100,n0(p.juros))),restantes:Math.max(0,Math.min(600,Math.round(n0(p.restantes))))})).filter(p=>p.nome);
+  {const ph={};const src=o.patHist&&typeof o.patHist==='object'&&!Array.isArray(o.patHist)?o.patHist:{};Object.entries(src).forEach(([k,v])=>{if(/^\d{4}-\d{2}$/.test(k)&&v&&typeof v==='object')ph[k]={a:c2(v.a),p:Math.max(0,c2(v.p))};});o.patHist=ph;}
   // status do lançamento: só valores conhecidos (sem status = pago)
   o.tx.forEach(t=>{if(!['pago','previsto','cancelado'].includes(t.status))delete t.status;if(t.status!=='previsto')delete t.fxAuto;});
   o.cats=(Array.isArray(o.cats)?o.cats:CATS_PADRAO).map(c=>str(c,60).trim()).filter(Boolean);
@@ -823,6 +829,7 @@ function setSync(t){
 window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
 function salvar(){
+  try{fotoPat();}catch(e){}
   try{localStorage.setItem(KEY,JSON.stringify(S));if(USER)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true);}
   if(USER)agendaSync();
 }
@@ -838,7 +845,7 @@ let SNAP=null,syncFalhas=0;
 function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return t.length+':'+h;}
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
-function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
+function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
 async function upTabela(tab,arr){
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
@@ -942,6 +949,7 @@ function parseBR(s){
   if(typeof s==='number')return s;
   s=String(s==null?'':s).replace(/R\$|\s/g,'');
   if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,''); // "25.000" e "1.200" são milhares no padrão brasileiro
   const n=parseFloat(s);return isNaN(n)?0:n;
 }
 const pad=n=>String(n).padStart(2,'0');
@@ -1891,7 +1899,7 @@ function render(){
 }
 
 const VIEWS={
-  inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
+  inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
 };
 const AFTER={
   inicio:()=>{
@@ -2007,7 +2015,7 @@ function viewInicio(){
   </div>`;
   return `
   <div class="px-1 pt-2 pb-3"><h1 class="text-3xl font-bold tracking-tight text-[var(--txt)]">${saudHora()}${nomeUsuario()?', <span class="text-[#a3e635]">'+esc(nomeUsuario())+'</span>':''}</h1></div>
-  <div class="mb-3 flex flex-wrap gap-2"><button class="chip on" data-act="ir-inicio">visão geral</button><button class="chip" data-act="ir-lanc">despesas</button><button class="chip" data-act="ir-orc">orçamentos</button><button class="chip" data-act="ir-cartoes">cartões</button><button class="chip" data-act="ir-rel">relatório</button><button class="chip" data-act="ir-plan">planejamento</button></div>
+  <div class="mb-3 flex flex-wrap gap-2"><button class="chip on" data-act="ir-inicio">visão geral</button><button class="chip" data-act="ir-lanc">despesas</button><button class="chip" data-act="ir-orc">orçamentos</button><button class="chip" data-act="ir-cartoes">cartões</button><button class="chip" data-act="ir-rel">relatório</button><button class="chip" data-act="ir-plan">planejamento</button><button class="chip" data-act="ir-pat">patrimônio</button></div>
   <div class="perBar"><span class="perLbl">Período</span><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="${PC}">
@@ -2235,6 +2243,81 @@ function updCountdown(){
 }
 setInterval(()=>{if(TAB==='fii')updCountdown();},30000);
 
+/* patrimônio líquido = contas + investimentos + bens − (cartões em aberto + dívidas) */
+const BEM_L={imovel:'imóvel',veiculo:'veículo',outro:'outro bem'},PAS_L={emprestimo:'empréstimo',financiamento:'financiamento',divida:'dívida',outro:'outro'};
+function patLiquido(){
+  const contas=S.bancos.length?S.bancos.reduce((a,b)=>a+cents(saldoBanco(b)),0)/100:saldoTotal();
+  const inv=patrimonio(),bens=(S.bens||[]).reduce((a,b)=>a+cents(b.valor),0)/100;
+  const cartoes=S.cartoes.reduce((a,c)=>a+cents(usadoCartaoTotal(c)),0)/100;
+  const dividas=(S.passivos||[]).reduce((a,p)=>a+cents(p.saldo),0)/100;
+  const ativos=(cents(Math.max(0,contas))+cents(inv)+cents(bens))/100,passivos=(cents(cartoes)+cents(dividas)+cents(Math.max(0,-contas)))/100;
+  return {contas,inv,bens,cartoes,dividas,ativos,passivos,liq:(cents(ativos)-cents(passivos))/100};
+}
+function fotoPat(){
+  if(!S.patHist)S.patHist={};
+  const p=patLiquido(),m=mesAtual(),v={a:c2(p.ativos),p:c2(p.passivos)},o=S.patHist[m];
+  if(!o||o.a!==v.a||o.p!==v.p)S.patHist[m]=v;
+}
+function viewPat(){
+  const P=patLiquido();
+  const H=Object.keys(S.patHist||{}).sort().slice(-12).map(k=>({m:k,a:S.patHist[k].a,p:S.patHist[k].p,l:c2(S.patHist[k].a-S.patHist[k].p)}));
+  const ant=H.length>1?H[H.length-2]:null,dif=ant?c2(P.liq-ant.l):null;
+  const mx=Math.max(1,...H.map(h=>Math.abs(h.l)));
+  const evo=H.length?H.map(h=>`<div class="ohRow"><span class="ohM">${MESES[+h.m.slice(5,7)-1]}/${h.m.slice(2,4)}</span><span class="ohBars"><i class="g ${h.l<0?'over':''}" style="width:${Math.abs(h.l)/mx*100}%"></i></span><span class="ohV">${brl(h.l)}</span></div>`).join(''):'';
+  const linha=(l,v,cls)=>`<div class="row" style="margin-top:6px"><span class="small" style="margin:0">${l}</span><b class="${cls||''}">${brl(v)}</b></div>`;
+  const bens=(S.bens||[]).map(b=>`<div class="card hov"><div class="row"><span><b>${esc(b.nome)}</b><br><small class="small" style="margin:0">${BEM_L[b.tipo]}</small></span><b class="pos">${brl(b.valor)}</b></div>
+    <div class="acts2"><button class="btn2" data-act="edit-bem" data-id="${b.id}">editar</button><button class="btn2 danger" data-act="del-bem" data-id="${b.id}">excluir</button></div></div>`).join('');
+  const pas=(S.passivos||[]).map(p=>{const jm=p.juros?cents(p.saldo*p.juros/100)/100:0;
+    const info=[PAS_L[p.tipo],p.parcela?'parcela '+brl(p.parcela):'',p.restantes?p.restantes+' parcelas restantes':'',p.juros?num(p.juros)+'% a.m. ≈ '+brl(jm)+' de juros/mês':''].filter(Boolean).join(' · ');
+    return `<div class="card hov"><div class="row"><span><b>${esc(p.nome)}</b><br><small class="small" style="margin:0">${esc(info)}</small></span><b class="neg">${brl(p.saldo)}</b></div>
+    <div class="acts2"><button class="btn2" data-act="edit-pas" data-id="${p.id}">editar</button><button class="btn2 danger" data-act="del-pas" data-id="${p.id}">excluir</button></div></div>`;}).join('');
+  const parcelas=(S.passivos||[]).reduce((a,p)=>a+cents(p.parcela),0)/100;
+  return `
+  <div class="head"><h2>Patrimônio</h2></div>
+  <div class="card"><p class="small" style="margin:0">patrimônio líquido</p><div class="pv ${P.liq<0?'neg':'pos'}" style="font-size:30px;font-weight:700">${brl(P.liq)}</div>
+    ${dif!=null?`<p class="small" style="margin:4px 0 0">${dif>=0?'+':''}${brl(dif)} desde ${MESES[+ant.m.slice(5,7)-1]}</p>`:'<p class="small" style="margin:4px 0 0">a evolução é registrada mês a mês a partir de agora</p>'}
+  </div>
+  <div class="card"><h4 style="margin:0 0 4px">O que você tem</h4>
+    ${linha(S.bancos.length?'contas':'saldo (receitas − despesas)',Math.max(0,P.contas),'pos')}${linha('investimentos',P.inv,'pos')}${linha('bens',P.bens,'pos')}
+    <div class="row" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><b>total de ativos</b><b class="pos">${brl(P.ativos)}</b></div></div>
+  <div class="card"><h4 style="margin:0 0 4px">O que você deve</h4>
+    ${linha('cartões (faturas e parcelas a vencer)',P.cartoes,'neg')}${linha('dívidas e empréstimos',P.dividas,'neg')}${P.contas<0?linha('contas no negativo',-P.contas,'neg'):''}
+    <div class="row" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><b>total de passivos</b><b class="neg">${brl(P.passivos)}</b></div>
+    ${P.ativos>0?`<p class="small" style="margin:8px 0 0">dívidas = ${Math.round(P.passivos/P.ativos*100)}% dos ativos${parcelas?' · parcelas das dívidas: '+brl(parcelas)+'/mês':''}</p>`:''}</div>
+  ${evo?`<div class="card"><h4 style="margin:0 0 10px">Evolução do patrimônio líquido</h4>${evo}</div>`:''}
+  <div class="head" style="margin-top:8px"><h3 style="margin:0">Bens</h3><button class="btn2" data-act="novo-bem">+ bem</button></div>
+  ${bens||'<div class="card"><p class="vazio">imóvel, carro ou outro bem que entra no patrimônio.</p></div>'}
+  <div class="head" style="margin-top:8px"><h3 style="margin:0">Dívidas e empréstimos</h3><button class="btn2" data-act="novo-pas">+ dívida</button></div>
+  ${pas||'<div class="card"><p class="vazio">empréstimo, financiamento ou outra dívida (o cartão já entra automaticamente).</p></div>'}`;
+}
+function bemForm(id){
+  const b=(S.bens||[]).find(x=>x.id===id)||{};
+  form(id?'Editar bem':'Novo bem',[
+    {name:'nome',label:'Nome',value:b.nome||'',required:true,placeholder:'ex.: carro, apartamento'},
+    {name:'tipo',label:'Tipo',type:'select',value:b.tipo||'veiculo',options:Object.entries(BEM_L).map(([v,t])=>({v,t}))},
+    {name:'valor',label:'Valor atual estimado (R$)',value:b.valor?num(b.valor):'',inputmode:'decimal',required:true,placeholder:'0,00'}
+  ],v=>{const nome=String(v.nome).trim().slice(0,80),val=parseBR(v.valor);
+    if(!nome)return 'Dê um nome.';if(!(val>0))return 'Valor inválido.';
+    if(!S.bens)S.bens=[];
+    if(id){Object.assign(b,{nome,tipo:v.tipo,valor:c2(val)});}else S.bens.push({id:uid(),nome,tipo:v.tipo,valor:c2(val)});
+    salvar();render();toast('Bem salvo');});
+}
+function pasForm(id){
+  const p=(S.passivos||[]).find(x=>x.id===id)||{};
+  form(id?'Editar dívida':'Nova dívida',[
+    {name:'nome',label:'Nome',value:p.nome||'',required:true,placeholder:'ex.: empréstimo do banco'},
+    {name:'tipo',label:'Tipo',type:'select',value:p.tipo||'emprestimo',options:Object.entries(PAS_L).map(([v,t])=>({v,t}))},
+    {name:'saldo',label:'Quanto falta pagar hoje (R$)',value:p.saldo?num(p.saldo):'',inputmode:'decimal',required:true,placeholder:'0,00'},
+    {name:'parcela',label:'Parcela mensal (R$, opcional)',value:p.parcela?num(p.parcela):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'restantes',label:'Parcelas restantes (opcional)',value:p.restantes||'',inputmode:'numeric',placeholder:'0'},
+    {name:'juros',label:'Juros ao mês em % (opcional)',value:p.juros?num(p.juros):'',inputmode:'decimal',placeholder:'0,00'}
+  ],v=>{const nome=String(v.nome).trim().slice(0,80),saldo=parseBR(v.saldo),parc=v.parcela?parseBR(v.parcela):0,jr=v.juros?parseBR(v.juros):0,rest=v.restantes?parseInt(String(v.restantes).replace(/\D/g,''),10)||0:0;
+    if(!nome)return 'Dê um nome.';if(!(saldo>=0)||isNaN(saldo))return 'Valor inválido.';if(isNaN(parc)||parc<0||isNaN(jr)||jr<0||jr>100)return 'Confira parcela e juros.';
+    if(!S.passivos)S.passivos=[];
+    const d={nome,tipo:v.tipo,saldo:c2(saldo),parcela:c2(parc),juros:jr,restantes:Math.min(600,rest)};
+    if(id)Object.assign(p,d);else S.passivos.push(Object.assign({id:uid()},d));
+    salvar();render();toast('Dívida salva');});
+}
 function viewMetas(){
   const cards=S.metas.map(m=>{
     const pct=m.alvo?Math.min(100,m.atual/m.alvo*100):0,falta=Math.max(0,m.alvo-m.atual);
@@ -3098,6 +3181,10 @@ const ACT={
     S.metaFii=n;salvar();render();toast('Meta de cotas atualizada');
   }),
   'nova-meta':()=>metaForm(),
+  'novo-bem':()=>bemForm(),'edit-bem':id=>bemForm(id),
+  'del-bem':id=>confirma({titulo:'Excluir bem?',texto:'Ele sai do patrimônio.',ok:'Excluir',perigo:true},()=>{S.bens=(S.bens||[]).filter(x=>x.id!==id);salvar();render();toast('Bem excluído');}),
+  'novo-pas':()=>pasForm(),'edit-pas':id=>pasForm(id),
+  'del-pas':id=>confirma({titulo:'Excluir dívida?',texto:'Ela sai do patrimônio.',ok:'Excluir',perigo:true},()=>{S.passivos=(S.passivos||[]).filter(x=>x.id!==id);salvar();render();toast('Dívida excluída');}),
   'edit-meta':id=>metaForm(id),
   'aporte':id=>aporte(id),
   'del-meta':id=>confirma({titulo:'Excluir meta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.metas=S.metas.filter(x=>x.id!==id);salvar();render();toast('Meta excluída');}),
@@ -3196,7 +3283,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={parseBR,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(TAB==='inicio')AFTER.inicio();},150);});
 
