@@ -148,6 +148,11 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .sb-item.on::before{content:'';position:absolute;left:-14px;top:24%;bottom:24%;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(var(--a1),var(--a2));box-shadow:0 0 12px var(--a1)}
 .sb-item.on .i{color:var(--a1);filter:drop-shadow(0 0 5px var(--a1))}
 .sb-foot{position:relative;margin-top:auto;padding:14px 8px 0;border-top:1px solid var(--line);font-size:11px;color:var(--mut);line-height:1.45}
+.i.emo{display:inline-grid;place-items:center;font-size:16px;line-height:1;font-style:normal;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.icoPick button .i.emo{font-size:24px}
+.catCell .cc-i .i.emo{font-size:22px;filter:none;width:auto;height:auto}
+.rmI .i.emo{font-size:18px}
+.i.emo{filter:none!important;stroke:none}
 .i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;display:inline-block;vertical-align:middle}
 .sb-item .i{width:20px;height:20px;transition:filter .3s,color .3s}
 .ic .i{width:18px;height:18px}
@@ -981,8 +986,9 @@ html.privado #app{filter:blur(18px)}
 
 /* ---------- estado e persistência ---------- */
 const KEY='grana-viva-v1';
-const CATS_PADRAO=['Moradia','Alimentação','Transporte','Lazer','Saúde','Educação','Outros'];
-const CATS_RECEITA=['Salário','Horas extras','Aposentadoria','Dividendos','Bônus/Promoções','Rendimentos','Outros'];
+const CATS_NOVAS=['Mercado','Restaurantes','Delivery','Combustível','Uber e táxi','Transporte público','Manutenção do carro','Contas da casa','Internet e celular','Assinaturas','Compras','Roupas','Beleza','Farmácia','Academia','Pets','Viagem','Presentes','Doações','Impostos e taxas','Tarifas e juros','Filhos','Casa e reformas','Eletrônicos'];
+const CATS_PADRAO=['Moradia','Alimentação','Transporte','Lazer','Saúde','Educação'].concat(CATS_NOVAS,['Outros']);
+const CATS_RECEITA=['Salário','Horas extras','Freelance','Vendas','Reembolso','Aluguel recebido','Presentes recebidos','Aposentadoria','Dividendos','Bônus/Promoções','Rendimentos','Outros'];
 const ACCENTS={verde:['#22c55e','#8b5cf6'],violeta:['#a855f7','#6366f1'],azul:['#3b82f6','#06b6d4'],rosa:['#ec4899','#f97316']};
 const PAL=['#22c55e','#f472b6','#8b5cf6','#f97316','#06b6d4','#facc15','#38bdf8','#ef4444','#14b8a6','#d946ef','#6366f1','#f59e0b'];
 function hashCat(s){let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))>>>0;return h;}
@@ -1064,12 +1070,14 @@ mail:'<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8
 lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
 cloud:'<path d="M7 18.5h10a4.5 4.5 0 0 0 .5-9 6 6 0 0 0-11.5 1.5A3.8 3.8 0 0 0 7 18.5z"/>'
 };
-const CAT_ICON={'Salário':'salario','Horas extras':'horas','Aposentadoria':'aposentadoria','Dividendos':'dividendos','Bônus/Promoções':'bonus','Rendimentos':'rendimentos','Outros':'outros','Moradia':'moradia','Alimentação':'alimentacao','Transporte':'transporte','Lazer':'lazer','Saúde':'saude','Educação':'educacao','Cartão':'card'};
-const CAT_ICON_PICK=[['casa','casa','Casa'],['carro','carro','Carro'],['coracao','coracao','Saúde'],['mala','mala','Viagem'],['laptop','laptop','Trabalho'],['pet','pet','Pet'],['presente','presente','Presente'],['variedade','variedade','Variedades'],['compras','compras','Compras'],['academia','academia','Academia'],['musica','musica','Música'],['lazer','lazer','Lazer'],['alimentacao','alimentacao','Comida'],['educacao','educacao','Estudo'],['saude','saude','Cuidados'],['outros','outros','Outros']];
+const CAT_ICON={'Salário':'💰','Horas extras':'⏱️','Freelance':'💼','Vendas':'🏷️','Reembolso':'↩️','Aluguel recebido':'🏘️','Presentes recebidos':'🎁','Aposentadoria':'👴','Dividendos':'📈','Bônus/Promoções':'🎉','Rendimentos':'🪙','Outros':'📦','Moradia':'🏠','Alimentação':'🍔','Transporte':'🚗','Lazer':'🎬','Saúde':'🩺','Educação':'📚','Cartão':'card',
+  'Mercado':'🛒','Restaurantes':'🍽️','Delivery':'🛵','Combustível':'⛽','Uber e táxi':'🚕','Transporte público':'🚌','Manutenção do carro':'🔧','Contas da casa':'💡','Internet e celular':'📱','Assinaturas':'📺','Compras':'🛍️','Roupas':'👕','Beleza':'💇','Farmácia':'💊','Academia':'🏋️','Pets':'🐶','Viagem':'✈️','Presentes':'🎁','Doações':'🤝','Impostos e taxas':'🧾','Tarifas e juros':'🏦','Filhos':'🧸','Casa e reformas':'🛠️','Eletrônicos':'💻','Transferência':'🔁'};
+const CAT_ICON_PICK=[['🏠','🏠','Casa'],['🏘️','🏘️','Imóvel'],['💡','💡','Luz'],['🚿','🚿','Água'],['🔥','🔥','Gás'],['📱','📱','Celular'],['🌐','🌐','Internet'],['📺','📺','TV e streaming'],['🛒','🛒','Mercado'],['🍔','🍔','Lanche'],['🍽️','🍽️','Restaurante'],['🛵','🛵','Delivery'],['☕','☕','Café'],['🍺','🍺','Bar'],['🥖','🥖','Padaria'],['🍎','🍎','Feira'],['🚗','🚗','Carro'],['⛽','⛽','Combustível'],['🔧','🔧','Oficina'],['🅿️','🅿️','Estacionamento'],['🚕','🚕','Táxi e app'],['🚌','🚌','Ônibus'],['🚇','🚇','Metrô'],['🏍️','🏍️','Moto'],['✈️','✈️','Viagem'],['🏨','🏨','Hotel'],['🎬','🎬','Cinema'],['🎮','🎮','Games'],['🎵','🎵','Música'],['⚽','⚽','Esporte'],['🏋️','🏋️','Academia'],['🩺','🩺','Médico'],['💊','💊','Farmácia'],['🦷','🦷','Dentista'],['💇','💇','Beleza'],['🧴','🧴','Cuidados'],['👕','👕','Roupas'],['👟','👟','Calçados'],['🛍️','🛍️','Compras'],['💻','💻','Eletrônicos'],['🛠️','🛠️','Reformas'],['🛋️','🛋️','Móveis'],['🐶','🐶','Pet'],['🧸','🧸','Filhos'],['📚','📚','Estudo'],['🎓','🎓','Faculdade'],['🎁','🎁','Presente'],['🤝','🤝','Doação'],['⛪','⛪','Igreja'],['🧾','🧾','Impostos'],['🏦','🏦','Banco e tarifas'],['💳','💳','Cartão'],['💰','💰','Salário'],['💼','💼','Trabalho'],['📈','📈','Investimento'],['🪙','🪙','Rendimento'],['🏷️','🏷️','Vendas'],['↩️','↩️','Reembolso'],['🔁','🔁','Transferência'],['🎉','🎉','Festa'],['🚬','🚬','Vícios'],['📦','📦','Outros']];
 const CAT_COR_PICK=['#22c55e','#8b5cf6','#06b6d4','#f59e0b','#ec4899','#3b82f6','#84cc16','#f97316'];
+const EMO_RE=/\p{Extended_Pictographic}|\u21A9/u;
 function catIcon(c){return (S.catIcons&&S.catIcons[c])||CAT_ICON[c]||'outros';}
 function catCor(c){return (S.catCores&&S.catCores[c])||null;}
-function I(n,c){return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
+function I(n,c){if(n&&!ICONS[n]&&EMO_RE.test(n))return '<span class="i emo '+(c||'')+'" aria-hidden="true">'+n+'</span>';return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
 const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
 const FREQS=['diaria','semanal','quinzenal','mensal','anual','intervalo'],ISO_RE=/^\d{4}-\d{2}-\d{2}$/;
@@ -1110,10 +1118,11 @@ function sanea(d){
   // limites por mês (histórico): {'AAAA-MM':{categoria:limite}}; vale para o mês e os seguintes até o próximo registro
   o.orcMes={};Object.entries(obj(d&&d.orcMes)).forEach(([mk,mp])=>{if(!/^\d{4}-\d{2}$/.test(mk))return;const l={};Object.entries(obj(mp)).forEach(([k,v])=>{if(n0(v)>0)l[str(k,60)]=c2(v);});o.orcMes[mk]=l;});
   o.catCores={};Object.entries(obj(d&&d.catCores)).forEach(([k,v])=>{if(COR_OK.test(String(v)))o.catCores[str(k,60)]=v;});
-  o.catIcons={};Object.entries(obj(d&&d.catIcons)).forEach(([k,v])=>{if(ICONS[v])o.catIcons[str(k,60)]=v;});
+  o.catIcons={};Object.entries(obj(d&&d.catIcons)).forEach(([k,v])=>{if(ICONS[v]||(typeof v==='string'&&v.length<=8&&EMO_RE.test(v)))o.catIcons[str(k,60)]=v;});
   o.gerados=obj(o.gerados);
   o.metaFii=n0(o.metaFii)>0?n0(o.metaFii):100;
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
+  if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
   if(!ACCENTS[o.cfg.accent])o.cfg.accent='verde';
   if(o.cfg.pagDesde&&!DATA_OK.test(String(o.cfg.pagDesde)))o.cfg.pagDesde='';
   if(o.cfg.tema!=='claro')o.cfg.tema='escuro';
@@ -3259,6 +3268,28 @@ function lerCSV(txt){
   return {linhas:out,cartao};
 }
 const REGRAS_CAT=[
+  [/ifood|rappi|99 ?food|ze delivery|aiqfome|james delivery|delivery/,'Delivery'],
+  [/supermerc|mercado(?! ?(livre|pago))|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|sacolao|big box|\bdia\b|extra\b|oba\b|st marche|swift/,'Mercado'],
+  [/restaur|lanchon|burger|mc ?donald|pizza|outback|subway|habib|giraffas|spoleto|madero|churrasc|sushi|bk\b|coco bambu/,'Restaurantes'],
+  [/posto|combust|gasolina|etanol|ipiranga|shell|petrobras|br mania|ale combust/,'Combustível'],
+  [/uber(?! ?eats)|99 ?(app|pop|tecnologia|taxi)|cabify|indrive|taxi/,'Uber e táxi'],
+  [/metro|onibus|\bbus\b|bilhete unico|sptrans|cptm|brt|top transporte|riocard/,'Transporte público'],
+  [/oficina|mecanic|auto ?pecas|borracharia|lava ?jato|pneu|funilaria/,'Manutenção do carro'],
+  [/energia|neoenergia|enel|cemig|light\b|copel|celpe|coelba|sabesp|caesb|saneamento|copasa|comgas|naturgy|agua e esgoto/,'Contas da casa'],
+  [/vivo|claro|\btim\b|telefonica|\boi\b|net servicos|internet|fibra|starlink/,'Internet e celular'],
+  [/netflix|spotify|disney|hbo|\bmax\b|prime video|youtube|deezer|globoplay|apple\.com|icloud|google one|chatgpt|openai|paramount|crunchyroll/,'Assinaturas'],
+  [/farmac|drogar|droga ?raia|drogasil|pague menos|panvel|ultrafarma/,'Farmácia'],
+  [/academia|smart ?fit|bluefit|selfit|crossfit|bodytech|gympass|wellhub|totalpass/,'Academia'],
+  [/petz|cobasi|petlove|veterin|pet ?shop/,'Pets'],
+  [/latam|gol linhas|azul linhas|smart travel|decolar|booking|airbnb|hotel|pousada|123 ?milhas|maxmilhas|cvc|hurb/,'Viagem'],
+  [/renner|riachuelo|c ?& ?a\b|cea\b|zara|shein|hering|marisa|centauro|netshoes|nike|adidas/,'Roupas'],
+  [/salao|barbear|cabeleire|manicure|estetica|boticario|natura|sephora|avon/,'Beleza'],
+  [/kabum|fast shop|apple store|samsung|dell|pichau|terabyte/,'Eletrônicos'],
+  [/amazon|mercado ?livre|shopee|magalu|magazine luiza|americanas|casas bahia|aliexpress|temu/,'Compras'],
+  [/leroy|telhanorte|material de constru|madeireira|tok ?& ?stok|camicado|ikea/,'Casa e reformas'],
+  [/iof|tarifa|anuidade|juros|encargo|multa|mora\b/,'Tarifas e juros'],
+  [/darf|ipva|iptu|detran|licenciamento|receita federal|gru\b|das\b|simples nacional/,'Impostos e taxas'],
+  [/doacao|vakinha|unicef|dizimo|oferta/,'Doações'],
   [/ifood|rappi|restaur|lanchon|padaria|mercado|supermerc|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|burger|mc ?donald|pizza|cafe|almoco|jantar|lanche|sorvet|acai|bk\b|subway|outback|feira|big box|dia\b|extra\b|atacadao|comida|marmita/,'Alimentação'],
   [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|gasolina|etanol|alcool|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe|passagem|mecanic|oficina|ipva|licenciament|seguro auto/,'Transporte'],
   [/farmac|drogar|academia|smart ?fit|bluefit|selfit|crossfit|droga ?raia|pague menos|hospital|clinica|laborat|odonto|unimed|amil|hapvida/,'Saúde'],
@@ -3340,7 +3371,7 @@ function bancoConfig(){
     })();
   });
 }
-const CAT_PLUGGY=[[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
+const CAT_PLUGGY=[[/groceries|supermarket/i,'Mercado'],[/food delivery/i,'Delivery'],[/restaurant|eating out/i,'Restaurantes'],[/gas station|fuel/i,'Combustível'],[/taxi|ride/i,'Uber e táxi'],[/public transport/i,'Transporte público'],[/vehicle maintenance|car maintenance/i,'Manutenção do carro'],[/electricity|water|utilities/i,'Contas da casa'],[/telecom|internet|mobile/i,'Internet e celular'],[/streaming|digital services|subscription/i,'Assinaturas'],[/pharmac|drug/i,'Farmácia'],[/gym|fitness/i,'Academia'],[/pet/i,'Pets'],[/travel|airline|accommodation|hotel/i,'Viagem'],[/clothing/i,'Roupas'],[/electronics/i,'Eletrônicos'],[/online shopping|shopping/i,'Compras'],[/bank fees|interest charge|late payment/i,'Tarifas e juros'],[/taxes/i,'Impostos e taxas'],[/donation/i,'Doações'],[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
 function catDoBanco(l){
   const sg=sugestaoCat(l.desc,l.valor<0?'despesa':'receita');if(sg&&sg.por!=='palavra')return sg.c;
   const lista=l.valor<0?S.cats:CATS_RECEITA;
@@ -4096,7 +4127,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.26';
+const GV_BUILD='2026-10-28.27';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
