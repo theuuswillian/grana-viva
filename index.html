@@ -4689,7 +4689,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -4833,7 +4833,7 @@ async function lockBioAtiva(){
 function lockNovoPin(){
   lockTela({modo:'novo',titulo:'Crie um PIN de '+LOCK_LEN+' dígitos',sub:'ele vai ser pedido ao abrir o app neste aparelho',cancelar:true,cb:pin1=>{
     lockTela({modo:'confirma',titulo:'Confirme o PIN',sub:'digite o mesmo PIN de novo',cancelar:true,cb:async pin2=>{
-      if(pin2!==pin1){lockErro('os PINs não batem, comece de novo');setTimeout(()=>{if(LK.o&&LK.o.modo==='confirma')lockNovoPin();},1100);return;}
+      if(pin2!==pin1){lockNovoPin();lockErro('os PINs não batem, crie o PIN de novo');return;}
       const ant=lockCfg()||{},salt=lkB64(crypto.getRandomValues(new Uint8Array(16)));
       const bk=lkBioBk();lockSalva({hash:await lockHash(pin1,salt),salt:salt,bio:ant.bio||(bk&&bk.id)||null,uid:USER?USER.id:null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
       lockFecha();render();toast(ant.hash?'PIN trocado':'Bloqueio ativado');
