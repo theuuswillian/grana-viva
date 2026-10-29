@@ -2419,6 +2419,7 @@ function fixaForm(id){
     if(freq==='anual')obj.mes=parseInt(v.mes,10)||1;
     if(f){
       const mudouRegra=(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes)||(porIntervalo&&(f.inicio!==obj.inicio||(freq==='intervalo'&&(+f.n!==obj.n||f.un!==obj.un))))||(f.fim||'')!==fimR;
+      const valorAntigo=+f.valor||0;
       Object.assign(f,obj);
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
       if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj;}
@@ -2427,7 +2428,7 @@ function fixaForm(id){
       /* v10.52: conta fixa manual ("confirmar manualmente") com valor editado: o previsto futuro que ainda
          tem o valor antigo acompanha a edição, sem mexer no que o usuário já confirmou */
       S.tx.forEach(t=>{
-        if(t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hojeISO()&&t.valor===f.valor)t.valor=valor;
+        if(t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hojeISO()&&+t.valor===valorAntigo)t.valor=valor;
       });
     }
     geraRecorrentes();salvar();render();toast('Conta fixa salva');
