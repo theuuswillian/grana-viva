@@ -3291,6 +3291,15 @@ function catSugerida(desc,tipo){
 const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgat|rdb|cdb|poupanca|caixinha|guardad|renda variavel|renda fixa|de investimentos|saldo de investimentos/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
 function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
 let IMP=null;
+/* v10.17: dinheiro entre contas suas (seu nome, corretoras, câmbio) não é receita nem despesa */
+function nomeProprio(){const md=(USER&&USER.user_metadata)||{};const n=norm(String(md.full_name||md.name||S.cfg.nomeCompleto||''));return n.split(/\s+/).filter(Boolean).length>=2?n:'';}
+function ehPropria(desc){const n=norm(desc);if(!n)return false;
+  if(/mesma titularidade|conta propria|entre contas|renda variavel|renda fixa|de investimentos|saldo de investimentos|resgat|aplicacao|caixinha|\bwise\b|foxbit|binance|mercado bitcoin|nomad|avenue|inter&co|corretora de cambio|corretora de valores|xp investimentos|btg pactual|rico investimentos|clear corretora/.test(n))return true;
+  const nm=nomeProprio();if(!nm)return false;const p=nm.split(/\s+/);return n.includes(p[0]+' '+p[1])&&(p.length<3||n.includes(p[p.length-1]));}
+function migraPropria(){if(!USER||S.cfg.migPropria>=1)return false;let k=0;
+  S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
+    const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
+  S.cfg.migPropria=1;salvar();return k;}
 /* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
 async function pluggy(body){
   const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
@@ -3337,6 +3346,7 @@ function catDoBanco(l){
 }
 async function bancoSync(){
   if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
   toast('Buscando lançamentos no banco…');
   try{
     const r=await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
@@ -3393,6 +3403,8 @@ function montaImport(){
     l.tipo=l.valor<0?'despesa':'receita';
     l.transf=ehCartao&&l.valor<0&&/limite convertido|credito do limite|saldo .*limite/.test(norm(l.desc));
     if(l.transf){l.tipo='transf';if(!l.para||l._d!==d)l.para='b:'+bancoPadrao();}
+    l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
+    if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
     const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)));
     const n=norm(l.desc);let ign='';
@@ -3402,7 +3414,7 @@ function montaImport(){
     else if(dupT)ign='já lançado como transferência';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
-    if(l.cat==null||l._d!==d){l.cat=l.transf?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
+    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign;l._d=d;}
     l.ign=ign;l.dup=dup||dupT;
   });
@@ -3417,7 +3429,7 @@ function montaImport(){
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
-        ${l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
+        ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
     <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
   </div>`;
@@ -3438,9 +3450,10 @@ function confirmaImport(){
   IMP.linhas.forEach(l=>{if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:l.id,tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
-    if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
+    if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
+    else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
     else if(ehCartao){t.forma='cartao';t.cartao=alvo;}else{t.forma='pix';t.conta=alvo;}
-    if(!l.transf&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
+    if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     S.tx.push(t);n++;});
   if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
     if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
@@ -3464,7 +3477,7 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---------- ações ---------- */
-function nomeLado(k){if(!k)return '?';const id=k.slice(2);const x=k[0]==='c'?S.cartoes.find(c=>c.id===id):S.bancos.find(b=>b.id===id);return x?(k[0]==='c'?'cartão '+x.nome:x.nome):'(removido)';}
+function nomeLado(k){if(!k)return 'fora do app';const id=k.slice(2);const x=k[0]==='c'?S.cartoes.find(c=>c.id===id):S.bancos.find(b=>b.id===id);return x?(k[0]==='c'?'cartão '+x.nome:x.nome):'(removido)';}
 function bancoPadrao(){const A=bancosAtivos();const b=A.find(x=>x.principal&&x.tipo!=='Dinheiro')||A.find(x=>x.tipo!=='Dinheiro')||A[0];return b?b.id:'';}
 function novaTransf(id){
   const t=id?S.tx.find(x=>x.id===id&&x.tipo==='transf'):null;
@@ -3993,7 +4006,7 @@ document.addEventListener('change',e=>{
       try{d=JSON.parse(r.result);}catch(err){d=null;}
       if(!d||typeof d!=='object'||!Array.isArray(d.tx)||!Array.isArray(d.cats)){toast('Arquivo de backup inválido',true);return;}
       confirma({titulo:'Substituir dados?',texto:'Isso troca todos os dados atuais pelo backup. Exporte antes se quiser guardar.',ok:'Substituir',perigo:true},()=>{
-        S=sanea(d);geraRecorrentes();
+        S=sanea(d);geraRecorrentes();if(migraPropria())setTimeout(render,0);
         salvar();applyCfg();render();toast('Backup importado');
       });
     };
@@ -4012,7 +4025,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.19';
+const GV_BUILD='2026-10-28.20';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
