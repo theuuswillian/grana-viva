@@ -1482,7 +1482,7 @@ function carregar(){
 let S=carregar();
 const SB_URL='https://hydvhpfpvhopetqqjido.supabase.co';
 const SB_KEY='sb_publishable_hq7L3RL6Y-BE49SlgjqcTw_Sh-N9hJj';
-const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
 let USER=null,syncT=null,syncBusy=false,syncPend=false;
 const TABELAS=['tx','fiis','metas','cartoes','bancos'];
 function setSync(t){
@@ -5547,7 +5547,7 @@ async function entraComSessao(sess){
 // bootstrap explícito: após o redirect do Google a sessão vem no hash (#access_token)
 sb.auth.getSession().then(({data})=>{
   if(data&&data.session){
-    try{if(window.location.hash.includes('access_token'))history.replaceState(null,'',window.location.pathname+window.location.search);}catch(e){}
+    try{if(window.location.hash.includes('access_token')||/[?&]code=/.test(window.location.search))history.replaceState(null,'',window.location.pathname+window.location.search);}catch(e){}
     entraComSessao(data.session);
   }else{
     if(!sessaoGuardadaId()&&localStorage.getItem(OWNER_KEY))limpaCache();
