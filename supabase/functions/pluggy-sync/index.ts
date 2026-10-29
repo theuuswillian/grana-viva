@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
           for (let pg = 0; q && pg < 40; pg++) {
             const r = await get(key, "/v2/transactions" + q);
             for (const t of r.results || []) {
-              if (t.status === "PENDING") continue; // pendente muda de id quando compensa
+              if (t.status === "PENDING" && a.type !== "CREDIT") continue; // no cartão, a fatura aberta vem como pendente
               const v = Math.abs(+t.amount || 0);
               if (!v) continue;
               tx.push({ id: t.id, data: String(t.date).slice(0, 10), valor: t.type === "DEBIT" ? -v : v, desc: String(t.description || t.descriptionRaw || "").slice(0, 120), cat: t.category || "" });

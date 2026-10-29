@@ -1094,7 +1094,7 @@ function sanea(d){
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10)}));
-  o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
+  o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',saldoFecha:!!b.saldoFecha,principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:''}));
   // patrimônio: bens, dívidas e fotografia mensal
   const BEM_T=['imovel','veiculo','outro'],PAS_T=['emprestimo','financiamento','divida','outro'];
@@ -1379,11 +1379,13 @@ function contaDoLanc(t){
 }
 function saldoBanco(b){
   let s=cents(b.saldo);
-  S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!(b.saldoData&&o.data<b.saldoData))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
+  /* saldoFecha: o saldo informado já inclui os lançamentos do próprio dia (vem do banco) */
+  const antes=d=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData));
+  S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!antes(o.data))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
-    if(t.faturaKey&&t.pagoConta===b.id&&t.pagaEm&&!(b.saldoData&&t.pagaEm<b.saldoData))s-=cents(t.pagoValor);
+    if(t.faturaKey&&t.pagoConta===b.id&&t.pagaEm&&!antes(t.pagaEm))s-=cents(t.pagoValor);
     if(!efetivo(t))return;
-    if(!t.data||(b.saldoData&&t.data<b.saldoData))return;
+    if(!t.data||antes(t.data))return;
     if(t.tipo==='transf'){if(t.de==='b:'+b.id)s-=cents(t.valor);if(t.para==='b:'+b.id)s+=cents(t.valor);return;}
     if(contaDoLanc(t)!==b.id)return;
     s+=t.tipo==='receita'?cents(t.valor):-cents(t.valor);
@@ -3286,7 +3288,7 @@ function catSugerida(desc,tipo){
   if(tipo==='despesa')for(const [re,c] of REGRAS_CAT){if(re.test(n)&&S.cats.includes(c))return c;}
   return S.cats.includes('Outros')?'Outros':S.cats[0];
 }
-const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgate|rdb|cdb|poupanca|caixinha|guardad/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
+const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgat|rdb|cdb|poupanca|caixinha|guardad|renda variavel|renda fixa|de investimentos|saldo de investimentos/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
 function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
 let IMP=null;
 /* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
@@ -3339,10 +3341,11 @@ async function bancoSync(){
   try{
     const r=await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
     const mapa=S.cfg.pluggyMap||{};
+    r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
     const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
       const cartao=c.tipo==='CREDIT';
       const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
-      return {nome:c.nome,conta:c.id,cartao,linhas};
+      return {nome:c.nome,conta:c.id,cartao,linhas,saldo:c.saldo};
     }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
       .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
     S.cfg.pluggyDesde=hojeISO();salvar();
@@ -3351,10 +3354,12 @@ async function bancoSync(){
   }catch(e){toast(e.message,true);}
 }
 let IMP_FILA=[];
+/* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
+function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
 function proxImportBanco(){
   const c=IMP_FILA.shift();if(!c)return;
   const mapa=S.cfg.pluggyMap||{};
-  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true};
+  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true,saldo:c.saldo};
   const salvo=mapa[c.conta];
   if(salvo&&((salvo[0]==='c'&&S.cartoes.some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&S.bancos.some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
   else if(c.cartao&&S.cartoes.length)IMP.destino='c:'+S.cartoes[0].id;
@@ -3438,6 +3443,7 @@ function confirmaImport(){
     if(!l.transf&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     S.tx.push(t);n++;});
   if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
+    if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
     /* o que ficou desmarcado não volta a aparecer nas próximas buscas */
     const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
     S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
@@ -4006,7 +4012,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.18';
+const GV_BUILD='2026-10-28.19';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
