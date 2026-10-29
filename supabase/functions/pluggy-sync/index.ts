@@ -5,9 +5,41 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Max-Age": "86400" };
+// v10.55: só o próprio app (e testes locais) pode chamar pelo navegador
+const ORIGENS = ["https://theuuswillian.github.io"];
+const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
+let ORIG = ORIGENS[0];
+const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Max-Age": "86400" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 const API = "https://api.pluggy.ai";
+
+// v10.55: Client Secret e chave da API guardados criptografados (AES-GCM, chave só no ambiente da função)
+const EK = Deno.env.get("PLUGGY_ENC_KEY") || "";
+let CK: CryptoKey | null = null;
+const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+const unb64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function ck() { if (!CK && EK) CK = await crypto.subtle.importKey("raw", unb64(EK), "AES-GCM", false, ["encrypt", "decrypt"]); return CK; }
+async function enc(s: string): Promise<string> {
+  const k = await ck(); if (!k || !s) return s;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, new TextEncoder().encode(s)));
+  const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return "enc1:" + b64(o);
+}
+async function dec(s: string): Promise<string> {
+  if (!s || !String(s).startsWith("enc1:")) return s;
+  const k = await ck(); if (!k) throw new Error("chave de criptografia ausente");
+  const u = unb64(String(s).slice(5));
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(0, 12) }, k, u.slice(12)));
+}
+// abre a configuração: decifra em memória e, se ainda estava em texto puro, já grava cifrado
+async function abre(cfg: any) {
+  if (!cfg) return cfg;
+  const plano = cfg.client_secret && !String(cfg.client_secret).startsWith("enc1:");
+  cfg.client_secret = await dec(cfg.client_secret);
+  try { cfg.api_key = await dec(cfg.api_key); } catch (_) { cfg.api_key = null; }
+  if (plano && EK) await sb.from("pluggy_cfg").update({ client_secret: await enc(cfg.client_secret), api_key: cfg.api_key ? await enc(cfg.api_key) : null }).eq("user_id", cfg.user_id).then(() => {}, () => {});
+  return cfg;
+}
 
 async function apiKey(clientId: string, clientSecret: string): Promise<string> {
   const r = await fetch(API + "/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, clientSecret }) });
@@ -20,7 +52,7 @@ async function keyFor(cfg: any, force = false): Promise<string> {
   if (!force && cfg.api_key && cfg.api_key_exp && Date.parse(cfg.api_key_exp) - Date.now() > 5 * 60e3) return cfg.api_key;
   const key = await apiKey(cfg.client_id, cfg.client_secret);
   cfg.api_key = key;
-  const p = sb.from("pluggy_cfg").update({ api_key: key, api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString() }).eq("user_id", cfg.user_id).then(() => {}, () => {});
+  const p = sb.from("pluggy_cfg").update({ api_key: await enc(key), api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString() }).eq("user_id", cfg.user_id).then(() => {}, () => {});
   try { (globalThis as any).EdgeRuntime?.waitUntil(p); } catch (_) { /* */ }
   return key;
 }
@@ -101,7 +133,10 @@ const bg = (p: Promise<unknown>) => { const q = p.catch(e => console.error("plug
 const limpaIds = (a: unknown) => (Array.isArray(a) ? a : String(a || "").split(/[\s,;]+/)).map(x => String(x).trim()).filter(x => /^[0-9a-f-]{20,40}$/i.test(x)).slice(0, 5);
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  const og = req.headers.get("origin") || "";
+  ORIG = origemOk(og) ? og : ORIGENS[0];
+  if (og && !origemOk(og)) return new Response("origem não permitida", { status: 403 });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: { ...CORS } });
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   // v10.54: confere o login localmente (JWKS em cache) quando dá; senão pergunta ao Auth
   let uid = "";
@@ -110,13 +145,18 @@ Deno.serve(async (req) => {
   if (!uid) return json({ erro: "Entre na sua conta para conectar o banco." }, 401);
   let b: any = {};
   try { b = await req.json(); } catch { /* vazio */ }
+  // v10.55: limite por pessoa e por hora (protege a conta Pluggy e o Supabase grátis)
+  const LIM: Record<string, number> = { status: 240, sincronizar: 40, backfill: 6, webhook: 10, salvar: 10, remover: 10 };
+  const lim = LIM[String(b.acao)] || 20;
+  { const { data: ok } = await sb.rpc("rl_conta", { p_uid: uid, p_k: "pluggy:" + String(b.acao).slice(0, 20), p_lim: lim, p_seg: 3600 });
+    if (ok === false) return json({ erro: "Muitas tentativas seguidas. Espere alguns minutos e tente de novo." }, 429); }
   try {
     if (b.acao === "status") {
       const { data } = await sb.from("pluggy_cfg").select("item_ids,ultima_sync,client_id,webhook_id,item_status").eq("user_id", uid).maybeSingle();
       return json({ conectado: !!data, itens: data?.item_ids?.length || 0, ultima: data?.ultima_sync || null, clientFim: data ? String(data.client_id).slice(-4) : "", webhook: !!data?.webhook_id, itensStatus: data?.item_status || {} });
     }
     if (b.acao === "remover") {
-      const { data: cfg } = await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle();
+      const cfg = await abre((await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle()).data);
       if (cfg?.webhook_id) { try { await keyFor(cfg); await fetch(API + "/webhooks/" + cfg.webhook_id, { method: "DELETE", headers: { "X-API-KEY": cfg.api_key } }); } catch (_) { /* */ } }
       await Promise.all([sb.from("pluggy_tx").delete().eq("user_id", uid), sb.from("pluggy_acc").delete().eq("user_id", uid)]);
       await sb.from("pluggy_cfg").delete().eq("user_id", uid);
@@ -129,27 +169,27 @@ Deno.serve(async (req) => {
       const key = await apiKey(clientId, clientSecret);
       let contas = 0;
       for (const it of itens) contas += ((await get(key, "/accounts?itemId=" + it)).results || []).length;
-      const { error } = await sb.from("pluggy_cfg").upsert({ user_id: uid, client_id: clientId, client_secret: clientSecret, item_ids: itens, api_key: key, api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString(), updated_at: new Date().toISOString() });
+      const { error } = await sb.from("pluggy_cfg").upsert({ user_id: uid, client_id: clientId, client_secret: await enc(clientSecret), item_ids: itens, api_key: await enc(key), api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString(), updated_at: new Date().toISOString() });
       if (error) throw error;
       // P1: registra o webhook e enche as tabelas em segundo plano (não atrasa a resposta)
-      const { data: cfg } = await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle();
+      const cfg = await abre((await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle()).data);
       if (cfg) bg(registraWebhook(cfg).then(() => backfill(cfg, 90)));
       return json({ ok: true, contas });
     }
     if (b.acao === "webhook") {
-      const { data: cfg } = await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle();
+      const cfg = await abre((await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle()).data);
       if (!cfg) return json({ erro: "Banco ainda não conectado." }, 400);
       const id = await registraWebhook(cfg);
       return json({ ok: true, webhook: id });
     }
     if (b.acao === "backfill") {
-      const { data: cfg } = await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle();
+      const cfg = await abre((await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle()).data);
       if (!cfg) return json({ erro: "Banco ainda não conectado." }, 400);
       const r = await backfill(cfg, Math.max(7, Math.min(365, +b.dias || 90)));
       return json({ ok: true, ...r });
     }
     if (b.acao === "sincronizar") {
-      const { data: cfg } = await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle();
+      const cfg = await abre((await sb.from("pluggy_cfg").select("*").eq("user_id", uid).maybeSingle()).data);
       if (!cfg) return json({ erro: "Banco ainda não conectado." }, 400);
       await keyFor(cfg);
       const dias = Math.max(7, Math.min(365, +b.dias || 60));
@@ -200,6 +240,10 @@ Deno.serve(async (req) => {
     }
     return json({ erro: "ação desconhecida" }, 400);
   } catch (e) {
-    return json({ erro: String((e as Error).message || e) }, 502);
+    // v10.55: detalhes técnicos ficam no log; o app recebe uma mensagem amigável
+    const m = String((e as Error)?.message || e);
+    console.error("pluggy-sync", b.acao, m.slice(0, 300));
+    const amigavel = /\b401\b|\b403\b|auth/i.test(m) ? "O Pluggy recusou as credenciais. Confira o Client ID e o Client Secret." : /\b429\b/.test(m) ? "O Pluggy pediu uma pausa. Tente de novo em alguns minutos." : "Não consegui falar com o Pluggy agora. Tente de novo daqui a pouco.";
+    return json({ erro: amigavel }, 502);
   }
 });
