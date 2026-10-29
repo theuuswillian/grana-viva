@@ -1650,6 +1650,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* ocultar valores: guardado só neste aparelho; com ele ligado todo valor em R$ aparece como R$ ••••• */
 let OCULTO=(()=>{try{return localStorage.getItem('gv-oculto')==='1';}catch(e){return false;}})();
+let CATS_ABERTAS=false;
 const brl=v=>OCULTO?'R$ •••••':(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const num=v=>(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 /* tags: minúsculas, sem #, até 8 por lançamento */
