@@ -2,7 +2,7 @@
    - página: rede primeiro (3 s), cópia salva se estiver sem conexão
    - fontes, ícones e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-2026-10-28-29';
+const V='gv-2026-10-28-30';
 const BASE=new URL('./',self.location).pathname;
 const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js'];
 self.addEventListener('install',e=>{
