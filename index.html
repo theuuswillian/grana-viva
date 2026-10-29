@@ -5017,7 +5017,8 @@ const ACT={
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
-  'cats-toggle':()=>{CATS_ABERTAS=!CATS_ABERTAS;render();},
+  'cats-toggle':()=>{const y=window.scrollY;CATS_ABERTAS=!CATS_ABERTAS;render();window.scrollTo(0,y);
+    const g=document.querySelector('.catGrid');if(g&&!CATS_ABERTAS)g.scrollIntoView({block:'nearest'});},
   'edit-cat':c=>catForm(c),
   'del-cat':c=>confirma({titulo:'Remover categoria?',texto:'Remover a categoria "'+c+'"? Lançamentos antigos continuam com esse nome.',ok:'Remover',perigo:true},()=>{
     S.cats=S.cats.filter(x=>x!==c);delete S.orc[c];Object.values(S.orcMes||{}).forEach(mp=>delete mp[c]);delete S.catIcons[c];delete S.catCores[c];salvar();render();toast('Categoria removida');
