@@ -54,6 +54,13 @@ h4{font-size:12px;margin-bottom:12px;color:var(--mut);font-weight:500;text-trans
 
 .btn{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(139,92,246,.25);transition:transform .15s}
 .btn:active{transform:scale(.97)}
+.iaBtns{display:flex;gap:8px;margin-bottom:12px}.iaBtns .iaBtn{flex:1;margin:0;font-size:13.5px;padding:9px 8px}
+.iaDica{font-size:13.5px;color:var(--mut);margin:0 0 10px}.iaDica.sm{font-size:12px;margin:10px 0 0}
+.iaCampo{position:relative}.iaCampo textarea{width:100%;min-height:84px;resize:none;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px 52px 12px 12px;font-size:16px;font-family:inherit}
+.iaMic{position:absolute;right:8px;bottom:10px;width:38px;height:38px;border-radius:50%;border:0;background:var(--card);color:var(--a1);display:flex;align-items:center;justify-content:center;cursor:pointer}.iaMic.on{background:#ef4444;color:#fff;animation:iaPulse 1s infinite}.iaMic .i{width:20px;height:20px}
+@keyframes iaPulse{50%{box-shadow:0 0 0 8px rgba(239,68,68,.25)}}
+.iaEx{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}.chipEx{background:transparent;border:1px dashed var(--line);color:var(--mut);border-radius:999px;padding:6px 10px;font-size:12.5px;cursor:pointer}
+.btn .i{vertical-align:-3px}
 .iaBtn{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;border-color:color-mix(in srgb,var(--a1) 45%,var(--line));color:var(--a1);font-weight:600;min-height:44px}.iaBtn .i{width:18px;height:18px}.iaBtn:disabled{opacity:.7}.iaNota{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--a1);margin:0 0 10px}.iaNota .i{width:15px;height:15px}
 .btn2{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px;cursor:pointer;transition:transform .15s}
 .btn2:active{transform:scale(.97)}
@@ -1287,7 +1294,7 @@ report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"
 chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
 chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
-sparkle:'<path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
+mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',sparkle:'<path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
 clip:'<path d="M20 11.5 12.3 19.2a5 5 0 0 1-7.1-7.1l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"/>',
 copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
@@ -2650,6 +2657,8 @@ function abreRapido(){
   box.innerHTML=`<div class="sheet">
     <div class="sh-head"><h3>Adicionar</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="qk-list">
+      ${USER?`<button class="qk-op qk-ia" data-act="ia-frase"><span class="qk-ic">${I('sparkle')}</span><span><b>falar ou escrever</b><small>"gastei 45 no iFood ontem no cartão"</small></span></button>
+      <button class="qk-op qk-ia" data-act="ia-ler"><span class="qk-ic">${I('receipt')}</span><span><b>foto do comprovante</b><small>a IA lê valor, data e loja</small></span></button>`:''}
       <button class="qk-op" data-act="q-gasto"><span class="qk-ic">${I('down')}</span><span><b>gasto</b><small>despesa do dia a dia</small></span></button>
       <button class="qk-op" data-act="q-receita"><span class="qk-ic">${I('up')}</span><span><b>receita</b><small>salário, freela, dividendos…</small></span></button>
       <button class="qk-op" data-act="q-inv"><span class="qk-ic">${I('chart')}</span><span><b>investimentos</b><small>FII, ações, ETFs, BDRs e cripto</small></span></button>
@@ -4069,6 +4078,60 @@ function novaTransf(id){
 /* v10.43: lê foto/print/PDF de comprovante com IA (função ler-comprovante, Gemini) e abre o lançamento preenchido */
 function imgParaJpeg(f,max){return new Promise((ok,er)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1]);};im.onerror=()=>{URL.revokeObjectURL(u);er(new Error('img'));};im.src=u;});}
 function b64DeArquivo(f){return new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=er;r.readAsDataURL(f);});}
+function abreTxIA(o){
+  const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
+  let forma=o.forma,cartao='';
+  if(forma==='cartao'){const k=o.cartao&&S.cartoes.find(c=>c.nome===o.cartao);if(k)cartao=k.id;else if(S.cartoes.length===1)cartao=S.cartoes[0].id;else if(!S.cartoes.length)forma='pix';}
+  if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
+  novoTx(null,o.tipo,{ia:o.confianca||0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[]});
+}
+async function chamaIA(body){
+  const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body)});
+  if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui entender');}
+  return o;
+}
+/* lançar por frase: escreve ou dita (microfone do teclado do iPhone, ou reconhecimento de voz do navegador quando existe) */
+const SR_API=window.SpeechRecognition||window.webkitSpeechRecognition;
+function fraseIA(){
+  if(!USER){toast('Entre na sua conta para usar a IA.',true);return;}
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet">
+    <div class="sh-head"><h3>Falar ou escrever</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="iaDica">Diga do seu jeito: valor, onde, quando e como pagou.</p>
+    <div class="iaCampo"><textarea id="iaTxt" rows="3" maxlength="600" placeholder="ex: gastei 45 no iFood ontem no cartão"></textarea>${SR_API?`<button type="button" class="iaMic" data-act="ia-mic" aria-label="ditar">${I('mic')}</button>`:''}</div>
+    <div class="iaEx">${['almoço 32 reais hoje no pix','uber 18,50 ontem no cartão','recebi 1200 do freela sexta'].map(x=>`<button type="button" class="chipEx" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    <button type="button" class="btn full" data-act="ia-frase-ok">${I('sparkle')} Preencher lançamento</button>
+    <p class="iaDica sm">${SR_API?'':'Para ditar, toque no microfone do teclado. '}A frase é enviada para a IA do Google só para montar o lançamento.</p>
+  </div>`;
+  box.classList.add('on');
+  const ta=$('#iaTxt');setTimeout(()=>ta.focus(),60);
+  ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviaFraseIA();}});
+  box.querySelectorAll('.chipEx').forEach(b=>b.onclick=()=>{ta.value=b.dataset.ex;ta.focus();});
+}
+let REC=null;
+function micIA(){
+  const btn=document.querySelector('.iaMic'),ta=$('#iaTxt');if(!SR_API||!ta)return;
+  if(REC){try{REC.stop();}catch(e){}return;}
+  try{REC=new SR_API();}catch(e){toast('Ditado indisponível, use o microfone do teclado.',true);return;}
+  REC.lang='pt-BR';REC.interimResults=true;REC.continuous=false;
+  const base=ta.value?ta.value.trim()+' ':'';
+  REC.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;ta.value=base+t;};
+  REC.onend=()=>{REC=null;btn&&btn.classList.remove('on');};
+  REC.onerror=e=>{REC=null;btn&&btn.classList.remove('on');if(e.error==='not-allowed')toast('Permita o microfone para ditar.',true);};
+  btn&&btn.classList.add('on');REC.start();
+}
+async function enviaFraseIA(){
+  const ta=$('#iaTxt'),btn=document.querySelector('[data-act="ia-frase-ok"]');if(!ta)return;
+  const texto=ta.value.trim();
+  if(texto.length<3){toast('Escreva o que você gastou ou recebeu.',true);ta.focus();return;}
+  if(REC){try{REC.stop();}catch(e){}}
+  if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+' Entendendo…';}
+  try{
+    const o=await chamaIA({texto});
+    if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}return;}
+    abreTxIA(o);
+  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}}
+}
 function lerComprovanteIA(){
   if(!USER){toast('Entre na sua conta para usar a IA.',true);return;}
   const inp=document.createElement('input');inp.type='file';inp.accept='image/*,application/pdf';
@@ -4076,21 +4139,15 @@ function lerComprovanteIA(){
     const f=inp.files&&inp.files[0];if(!f)return;
     const pdf=f.type==='application/pdf';
     if(pdf&&f.size>4.5e6){toast('PDF grande demais (máx. 4,5 MB).',true);return;}
-    const btn=document.querySelector('[data-act="ia-ler"]');if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+'Lendo o comprovante…';}
+    const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.disabled=true;btn.innerHTML=I('receipt')+'Lendo…';}
     try{
       let imagem,mime;
       if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
       else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
-      const cats=[...new Set(S.cats.concat(CATS_RECEITA))];
-      const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:{imagem,mime,categorias:cats,hoje:hojeISO()}});
-      if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui ler');}
-      if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+'Ler comprovante com IA';}return;}
-      const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
-      let forma=o.forma,cartao='';
-      if(forma==='cartao'){if(S.cartoes.length===1)cartao=S.cartoes[0].id;else if(!S.cartoes.length)forma='pix';}
-      if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
-      novoTx(null,o.tipo,{ia:o.confianca||0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[]});
-    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+'Ler comprovante com IA';}}
+      const o=await chamaIA({imagem,mime});
+      if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);if(btn){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}return;}
+      abreTxIA(o);
+    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);if(btn){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}}
   };
   inp.click();
 }
@@ -4168,7 +4225,7 @@ function novoTx(id,tipoPre,base){
     geraRecorrentes();salvar();render();toast(!t&&np>1&&usaCartao?np+' parcelas lançadas':'Lançamento salvo');
   });
   const mf=$('#mf');
-  if(!t&&!base&&USER)mf.insertAdjacentHTML('afterbegin',`<button type="button" class="btn2 full iaBtn" data-act="ia-ler">${I('sparkle')}Ler comprovante com IA</button>`);
+  if(!t&&!base&&USER)mf.insertAdjacentHTML('afterbegin',`<div class="iaBtns"><button type="button" class="btn2 iaBtn" data-act="ia-frase">${I('sparkle')}Falar ou escrever</button><button type="button" class="btn2 iaBtn" data-act="ia-ler">${I('receipt')}Ler comprovante</button></div>`);
   if(base&&base.ia)mf.insertAdjacentHTML('afterbegin',`<p class="iaNota">${I('sparkle')}Preenchido pela IA${base.ia<0.6?', confira bem o valor':''}. Revise antes de salvar.</p>`);
   const selT=mf.querySelector('select[name="tipo"]'),selC=mf.querySelector('select[name="categoria"]');
   const listaDo=tp=>tp==='receita'?CATS_RECEITA:S.cats;
@@ -4576,6 +4633,9 @@ const ACT={
   'push-on':()=>ativarPush(),
   'push-off':()=>desativarPush(),
   'ia-ler':()=>lerComprovanteIA(),
+  'ia-frase':()=>fraseIA(),
+  'ia-frase-ok':()=>enviaFraseIA(),
+  'ia-mic':()=>micIA(),
   'push-teste':async()=>{const {data,error}=await sb.functions.invoke('alertas-push',{body:{teste:true}});toast(error?'não consegui enviar o teste':'teste enviado, confira as notificações');},
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
