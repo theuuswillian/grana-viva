@@ -8,7 +8,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT") || "mailto:contato@granaviva.app", Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
-const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const ORIGENS = ["https://theuuswillian.github.io"];
+const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
+let ORIG = ORIGENS[0];
+const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 
 // ---------- datas (fuso de Brasília)
@@ -122,7 +125,10 @@ async function enviar(subs: any[], payload: object) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  const og = req.headers.get("origin") || "";
+  ORIG = origemOk(og) ? og : ORIGENS[0];
+  if (og && !origemOk(og)) return new Response("origem não permitida", { status: 403 });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: { ...CORS } });
   const hoje = hojeBR();
   // teste pedido pelo app
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
@@ -130,6 +136,8 @@ Deno.serve(async (req) => {
   if (!cron) {
     const { data: u } = await sb.auth.getUser(tok);
     if (!u?.user) return json({ erro: "não autorizado" }, 401);
+    { const { data: ok } = await sb.rpc("rl_conta", { p_uid: u.user.id, p_k: "push:teste", p_lim: 10, p_seg: 3600 });
+      if (ok === false) return json({ erro: "Muitos testes seguidos. Tente de novo mais tarde." }, 429); }
     const { data: subs } = await sb.from("push_subs").select("*").eq("user_id", u.user.id);
     if (!subs?.length) return json({ erro: "nenhum aparelho inscrito" }, 404);
     const n = await enviar(subs, { title: "GranaViva", body: "Notificações ativadas. Vou te avisar de faturas e contas perto do vencimento.", url: "./", tag: "gv-teste" });
