@@ -4982,7 +4982,7 @@ const ACT={
   'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
   'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
   'notif-tog':id=>{if(!S.cfg.notif)S.cfg.notif={};const on=!notifOn(id);S.cfg.notif[id]=on;salvar();const b=document.querySelector('.ntRow[data-id="'+id+'"]');if(b){b.setAttribute('aria-checked',on);b.querySelector('.ntSw').classList.toggle('on',on);}toast(on?'Aviso ligado':'Aviso desligado');},
-  'notif-disc':()=>{const on=!(S.cfg.pushDiscreto!==false);S.cfg.pushDiscreto=!on&&true||on;S.cfg.pushDiscreto=!on?false:true;salvar();const b=document.querySelector('[data-act="notif-disc"]');if(b){b.setAttribute('aria-checked',S.cfg.pushDiscreto);b.querySelector('.ntSw').classList.toggle('on',S.cfg.pushDiscreto);}toast(S.cfg.pushDiscreto?'Discretas: sem valores':'Discretas: com valores');},
+  'notif-disc':()=>{const on=!(S.cfg.pushDiscreto!==false);S.cfg.pushDiscreto=!on;salvar();const b=document.querySelector('[data-act="notif-disc"]');if(b){b.setAttribute('aria-checked',S.cfg.pushDiscreto);b.querySelector('.ntSw').classList.toggle('on',S.cfg.pushDiscreto);}toast(S.cfg.pushDiscreto?'Discretas: sem valores':'Discretas: com valores');},
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
