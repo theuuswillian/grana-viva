@@ -1688,7 +1688,22 @@ function usadoCartaoTotal(c){
   S.tx.forEach(t=>{if(t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&t.pagoValor>0)tot+=cents(restanteFatura(t));});
   return tot/100;
 }
+/* v10.42: com contas cadastradas, o saldo total é o dinheiro nas contas (igual à aba Bancos e ao Patrimônio),
+   mais lançamentos pagos que não caem em nenhuma conta. Fatura só sai do saldo quando é paga. */
 function saldoTotal(){
+  if(S.bancos&&S.bancos.length){
+    let s=S.bancos.reduce((a,b)=>a+cents(saldoBanco(b)),0);
+    S.tx.forEach(t=>{
+      if(t.faturaKey){if(t.pagoValor>0&&!(t.pagoConta&&S.bancos.some(b=>b.id===t.pagoConta)))s-=cents(t.pagoValor);return;}
+      if(!efetivo(t)||t.tipo==='transf'||t.cartao)return;
+      const c=contaDoLanc(t);if(c&&S.bancos.some(b=>b.id===c))return;
+      s+=t.tipo==='receita'?cents(t.valor):-cents(t.valor);
+    });
+    return s/100;
+  }
+  return saldoTotalLanc();
+}
+function saldoTotalLanc(){
   return S.tx.reduce((a,t)=>a+(!efetivo(t)||t.tipo==='transf'?0:t.tipo==='receita'?cents(t.valor):(t.cartao?0:-cents(t.valor))),0)/100;
 }
 function despesasPorCat(m){
@@ -2808,6 +2823,7 @@ function serieSaldo(dias){
   S.tx.forEach(t=>{if(!efetivo(t)||!t.data||t.tipo==='transf')return;const v=t.tipo==='receita'?cents(t.valor):(t.cartao?0:-cents(t.valor));if(!v)return;
     if(t.data<iniISO)base+=v;else delta[t.data]=(delta[t.data]||0)+v;});
   const out=[];for(let i=0;i<dias;i++){const d=isoDe(new Date(ini.getFullYear(),ini.getMonth(),ini.getDate()+i));if(d>hojeISO())break;base+=delta[d]||0;out.push(base/100);}
+  if(out.length){const off=saldoTotal()-out[out.length-1];if(Math.abs(off)>=0.01)return out.map(v=>Math.round((v+off)*100)/100);}
   return out;
 }
 function sparkSVG(vals,w,h,id){
@@ -3158,7 +3174,7 @@ setInterval(()=>{if(TAB==='fii')updCountdown();},30000);
 /* patrimônio líquido = contas + investimentos + bens − (cartões em aberto + dívidas) */
 const BEM_L={imovel:'imóvel',veiculo:'veículo',outro:'outro bem'},PAS_L={emprestimo:'empréstimo',financiamento:'financiamento',divida:'dívida',outro:'outro'};
 function patLiquido(){
-  const contas=S.bancos.length?S.bancos.reduce((a,b)=>a+cents(saldoBanco(b)),0)/100:saldoTotal();
+  const contas=saldoTotal();
   const inv=patrimonio(),bens=(S.bens||[]).reduce((a,b)=>a+cents(b.valor),0)/100;
   const cartoes=S.cartoes.reduce((a,c)=>a+cents(usadoCartaoTotal(c)),0)/100;
   const dividas=(S.passivos||[]).reduce((a,p)=>a+cents(p.saldo),0)/100;
