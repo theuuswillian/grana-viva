@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2474,7 +2474,7 @@ function restauraAba(){
 function go(t){
   TAB=t;NAV_EXPLICITA=true;
   gravaAba(t);
-  if(t==='fii'){atualizaCotacoes();atualizaCripto();}
+  if(t==='fii'){atualizaCotacoes();atualizaCripto();atualizaCDI();}
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   toggleSide(false);
   render();window.scrollTo(0,0);
@@ -2826,9 +2826,18 @@ function viewFii(){
     const sub=rf?'':esc(f.nome||'');
     let meta=[],info='';
     if(rf){
-      if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
-      if(f.venc)meta.push(['vence',fmtData(f.venc)]);
-      info=f.manual?'valor ajustado por você'+(f.bancoValor!=null?' · banco: '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente';
+      if(f.pago>0)meta.push(['guardado',brl(f.pago)]);
+      if(f.idx==='cdi'){
+        const k=(f.pctCdi||100)/100,dia=CDI.taxa?posi*CDI.taxa/100*k:0;
+        meta.push(['rende',num(f.pctCdi||100).replace(/,00$/,'')+'% do CDI']);
+        if(dia)meta.push(['por dia útil','≈ '+brl(dia)],['por mês','≈ '+brl(posi*(Math.pow(1+CDI.taxa/100*k,21)-1))]);
+        const L=liquidoRF(f);if(L&&f.pago)meta.push(['se resgatar hoje',brl(L.liq)]);
+        meta.push(['resgate',f.semVenc||!f.venc?'diário':'vence '+fmtData(f.venc)]);
+        info=CDI.ult?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a. · atualizado até '+fmtData(CDI.ult)+(L?' · IR '+num(L.aliq).replace(/,0$/,'')+'%':''):CDI.st==='erro'?'sem conexão com o Banco Central, tentando de novo':'buscando o CDI no Banco Central…';
+      }else{
+        if(f.venc&&!f.semVenc)meta.push(['vence',fmtData(f.venc)]);else if(f.semVenc)meta.push(['resgate','diário']);
+        info=(f.manual?'valor ajustado por você'+(f.bancoValor!=null?' · banco: '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para render pelo CDI';
+      }
     }else if(cri){
       meta.push(['quantidade',Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8})+' '+esc(f.ticker)],['preço',brl(f.preco)]);
       if(f.pago>0)meta.push(['pago',brl(f.pago)]);
@@ -3546,8 +3555,8 @@ function investDoBanco(L0){let n=0;const hj=hojeISO();
     if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
     if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
     if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
-    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
-    if(f.manual){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
+    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento&&!f.semVenc)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
+    if(f.manual||f.idx==='cdi'){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
     if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
     else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
     n++;});
@@ -3855,17 +3864,90 @@ function assetIco(t,tipo){
   return '<span class="tkb tk-'+esc(tipo||'fii')+'">'+esc(String(t).slice(0,4))+'</span>';
 }
 function rfForm(f){
+  const cdi=f?f.idx==='cdi':true;
   form(f?'Editar renda fixa':'Nova renda fixa',[
     {name:'nome',label:'Nome (ex: Caixinha Carro)',value:f?f.nome:'',required:true},
-    {name:'valor',label:'Valor atual (R$)',value:f?num(f.preco*f.cotas):'',inputmode:'decimal',required:true,placeholder:'0,00'},
-    {name:'pago',label:'Valor aplicado (R$)',value:f&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'}
+    {name:'valor',label:'Saldo hoje (R$)',value:f?num(f.preco*f.cotas):'',inputmode:'decimal',required:true,placeholder:'0,00'},
+    {name:'pago',label:'Total que você guardou (R$)',value:f&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'idx',label:'Como rende',type:'select',value:cdi?'cdi':'fixo',options:[{v:'cdi',t:'% do CDI (atualiza sozinho todo dia útil)'},{v:'fixo',t:'valor fixo (eu atualizo)'}]},
+    {name:'pct',label:'Percentual do CDI (%)',value:f&&f.pctCdi?num(f.pctCdi).replace(/,00$/,''):'100',inputmode:'decimal'},
+    {name:'liq',label:'Resgate',type:'select',value:f&&f.venc&&!f.semVenc?'venc':'diaria',options:[{v:'diaria',t:'liquidez diária, sem vencimento'},{v:'venc',t:'tem data de vencimento'}]},
+    {name:'venc',label:'Vencimento (se tiver)',type:'date',value:f&&f.venc&&!f.semVenc?f.venc:''},
+    {name:'aplic',label:'Data do 1º depósito (para o imposto)',type:'date',value:f&&f.aplicEm||''}
   ],v=>{
-    const nome=String(v.nome||'').trim(),valor=parseBR(v.valor),pago=parseBR(v.pago);
-    if(!nome)return 'Informe o nome.';if(!(valor>=0))return 'Informe o valor atual.';
-    const obj={tipo:'rf',nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',cotas:1,preco:c2(valor),pago:pago>0?c2(pago):0,dpc:0,diaPag:0};
-    if(f){Object.assign(f,obj);if(f.pluggyInv){f.manual=true;f.manualEm=hojeISO();}}else S.fiis.push(Object.assign({id:uid(),ops:[],realizado:0,proventos:0},obj));
-    salvar();render();toast('Renda fixa salva');
+    const nome=String(v.nome||'').trim(),valor=parseBR(v.valor),pago=parseBR(v.pago),pct=parseBR(v.pct);
+    if(!nome)return 'Informe o nome.';if(!(valor>=0))return 'Informe o saldo de hoje.';
+    if(v.idx==='cdi'&&!(pct>0&&pct<=300))return 'Informe o percentual do CDI (ex: 100).';
+    if(v.liq==='venc'&&!ISO_RE.test(v.venc))return 'Informe a data de vencimento.';
+    const obj={tipo:'rf',nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',cotas:1,preco:c2(valor),pago:pago>0?c2(pago):0,dpc:0,diaPag:0,
+      idx:v.idx==='cdi'?'cdi':'',pctCdi:v.idx==='cdi'?pct:0,semVenc:v.liq!=='venc',venc:v.liq==='venc'?v.venc:'',aplicEm:ISO_RE.test(v.aplic)?v.aplic:''};
+    if(obj.idx==='cdi')obj.cdiBase={v:c2(valor),d:hojeISO()};else obj.cdiBase=null;
+    if(f){Object.assign(f,obj);if(f.pluggyInv||obj.idx){f.manual=true;f.manualEm=hojeISO();}}else S.fiis.push(Object.assign({id:uid(),ops:[],realizado:0,proventos:0},obj));
+    salvar();render();toast(obj.idx?'Salvo. O saldo passa a render '+num(obj.pctCdi).replace(/,00$/,'')+'% do CDI todo dia útil.':'Renda fixa salva');
+    if(obj.idx)atualizaCDI(true);
   });
+}
+/* v10.29: renda fixa atrelada ao CDI (ex: Caixinha Nubank 100% CDI).
+   Fonte: Banco Central, série SGS 12 (CDI diário, % ao dia). O saldo base digitado rende
+   (1 + CDI do dia × %CDI) em cada dia útil publicado depois da data base. Recalcula ao abrir o app. */
+const CDI_KEY='gv-cdi';let CDI={st:'',ult:'',taxa:0};
+function cdiCache(){try{return JSON.parse(localStorage.getItem(CDI_KEY)||'null')||{s:{},em:''};}catch(e){return {s:{},em:''};}}
+function cdiAnual(d){return (Math.pow(1+d/100,252)-1)*100;}
+function migraCaixinhas(){ // pedido do Matheus (28/10/2026): Caixinha Nubank rende 100% do CDI, sem vencimento
+  if(S.cfg.migCdi1)return false;let n=0;
+  S.fiis.forEach(f=>{if(tipoOf(f)==='rf'&&!f.idx&&/caixinha/i.test((f.nome||'')+' '+(f.ticker||''))){
+    f.idx='cdi';f.pctCdi=100;f.semVenc=true;f.venc='';f.cdiBase={v:c2(f.preco*f.cotas),d:hojeISO()};f.cotas=1;f.manual=true;f.manualEm=hojeISO();n++;}});
+  if(n)S.cfg.migCdi1=1;return n>0;
+}
+function aplicaCDI(){
+  if(S.fiis&&S.fiis.length&&migraCaixinhas())salvar();
+  const c=cdiCache(),dias=Object.keys(c.s).sort();let mud=false;
+  if(dias.length){CDI.ult=dias[dias.length-1];CDI.taxa=c.s[CDI.ult];}
+  S.fiis.forEach(f=>{
+    if(tipoOf(f)!=='rf'||f.idx!=='cdi'||!f.cdiBase)return;
+    const k=(f.pctCdi||100)/100;let v=+f.cdiBase.v||0,n=0;
+    dias.forEach(d=>{if(d>f.cdiBase.d){v*=1+c.s[d]/100*k;n++;}});
+    const nv=Math.round(v*100)/100;
+    if(f.cotas!==1){f.cotas=1;mud=true;}
+    if(nv!==f.preco){f.preco=nv;mud=true;}
+    f.cdiAte=CDI.ult;
+  });
+  return mud;
+}
+async function atualizaCDI(forca){
+  if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&f.idx==='cdi'&&f.cdiBase);if(!rfs.length)return;
+  const c=cdiCache(),hj=hojeISO();
+  const ini=rfs.map(f=>f.cdiBase.d).sort()[0];
+  const precisa=forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini);
+  if(precisa&&navigator.onLine){
+    const di=new Date(ini+'T12:00:00');di.setDate(di.getDate()-7);
+    const br=x=>pad(x.getDate())+'/'+pad(x.getMonth()+1)+'/'+x.getFullYear();
+    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),10000);
+    try{
+      const r=await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial='+br(di)+'&dataFinal='+br(new Date()),{signal:ctl.signal});
+      if(!r.ok)throw new Error('http '+r.status);
+      const j=await r.json();
+      j.forEach(x=>{const [d,m,y]=String(x.data).split('/');const t=parseFloat(x.valor);if(y&&t>=0&&t<1)c.s[y+'-'+m+'-'+d]=t;});
+      c.em=hj;
+      // guarda só ~2 anos de histórico
+      const lim=new Date();lim.setFullYear(lim.getFullYear()-2);const li=lim.toISOString().slice(0,10);
+      Object.keys(c.s).forEach(d=>{if(d<li&&d<ini)delete c.s[d];});
+      localStorage.setItem(CDI_KEY,JSON.stringify(c));CDI.st='ok';
+    }catch(e){CDI.st='erro';if(TAB==='fii')setTimeout(render,0);}finally{clearTimeout(to);}
+  }
+  const ant=CDI.ult;
+  if(aplicaCDI()){salvar();if(TAB==='fii'||TAB==='dash'||TAB==='pat')render();}
+  else if(TAB==='fii'&&(forca||precisa||ant!==CDI.ult))render();
+}
+const IR_RF=d=>d<=180?22.5:d<=360?20:d<=720?17.5:15;
+const IOF_T=[96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3,0];
+function liquidoRF(f){
+  const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
+  if(!f.aplicEm||!f.pago)return null;
+  const dias=Math.max(1,Math.round((new Date(hojeISO()+'T12:00:00')-new Date(f.aplicEm+'T12:00:00'))/864e5));
+  const iof=dias<30?ganho*IOF_T[dias-1]/100:0,ir=(ganho-iof)*IR_RF(dias)/100;
+  return {dias,aliq:IR_RF(dias),iof:c2(iof),ir:c2(ir),liq:c2(posi-iof-ir)};
 }
 function fiiForm(id,tipoPre){
   const f=id?S.fiis.find(x=>x.id===id):null;
@@ -4173,7 +4255,7 @@ const ACT={
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;render();},
   'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
   'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
-  'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);},
+  'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);atualizaCDI(true);},
   'ftab':id=>{FTAB=id;render();},
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
   'rel-print':()=>window.print(),
@@ -4272,7 +4354,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.32';
+const GV_BUILD='2026-10-28.33';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -4303,6 +4385,9 @@ document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.datas
 render();
 
 atualizaCotacoes();
+if(aplicaCDI())salvar();atualizaCDI();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')atualizaCDI();});
+setInterval(()=>atualizaCDI(),3*3600e3);
 /* ---------- bloqueio do app: PIN e Face ID / Touch ID, guardado só neste aparelho (não vai para a nuvem) ---------- */
 var LOCK_KEY='gv-lock',LOCK_LEN=4,LK={o:null,buf:'',saiu:0,bioBusy:false};
 ICONS.faceid='<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>';
