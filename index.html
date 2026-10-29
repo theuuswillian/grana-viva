@@ -2423,6 +2423,13 @@ function fixaForm(id){
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
       if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj;}
     }else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:hojeISO()},obj));}
+    if(f){
+      /* v10.52: conta fixa manual ("confirmar manualmente") com valor editado: o previsto futuro que ainda
+         tem o valor antigo acompanha a edição, sem mexer no que o usuário já confirmou */
+      S.tx.forEach(t=>{
+        if(t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hojeISO()&&t.valor===f.valor)t.valor=valor;
+      });
+    }
     geraRecorrentes();salvar();render();toast('Conta fixa salva');
   });
   const mf=$('#mf'),q=n=>mf.querySelector('[name="'+n+'"]'),w=n=>q(n).closest('label');
