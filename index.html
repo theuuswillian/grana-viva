@@ -1306,7 +1306,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.57'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.58'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3290,7 +3290,7 @@ function homeTopo(v,o){
     </div>
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  ${revisarHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3341,7 +3341,7 @@ function viewInicio(){
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${revisarHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
@@ -4456,7 +4456,7 @@ function montaImport(){
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
@@ -4556,6 +4556,57 @@ function revCat(id,cat){
   }
   salvar();render();abreRevisar();
   toast(parecidos?'Categoria salva e aplicada a mais '+parecidos+' parecido'+(parecidos>1?'s':''):'Categoria salva. Próximos parecidos já vêm assim.');
+}
+
+/* ---------- v10.58: conciliação de transferências ----------
+   saída numa conta sua + entrada noutra conta sua, mesmo valor, até 2 dias de diferença = provável transferência.
+   juntar transforma o par num só lançamento tipo transf (não conta como receita nem despesa). */
+function ladoConc(t){
+  if(t.faturaKey||t.cartao||!efetivo(t)||!t.data)return null;
+  if(t.tipo==='despesa'&&t.conta)return {s:'out',b:t.conta};
+  if(t.tipo==='receita'&&t.conta)return {s:'in',b:t.conta};
+  if(t.tipo==='transf'&&t.de&&!t.para&&t.de.indexOf('b:')===0)return {s:'out',b:t.de.slice(2)};
+  if(t.tipo==='transf'&&t.para&&!t.de&&t.para.indexOf('b:')===0)return {s:'in',b:t.para.slice(2)};
+  return null;
+}
+function paresConc(){
+  const ign=new Set(S.cfg.concIgn||[]),dd=(a,b)=>Math.abs((new Date(a+'T12:00')-new Date(b+'T12:00'))/864e5);
+  const outs=[],ins={};
+  S.tx.forEach(t=>{const l=ladoConc(t);if(!l)return;const v=cents(t.valor);if(!v)return;
+    if(l.s==='out')outs.push({t,b:l.b,v});else (ins[v]=ins[v]||[]).push({t,b:l.b});});
+  const usados=new Set(),pares=[];
+  outs.sort((a,b)=>a.t.data<b.t.data?1:-1).forEach(o=>{
+    const c=(ins[o.v]||[]).filter(i=>!usados.has(i.t.id)&&i.b!==o.b&&dd(i.t.data,o.t.data)<=2&&!ign.has(o.t.id+'|'+i.t.id));
+    if(!c.length)return;
+    c.sort((x,y)=>dd(x.t.data,o.t.data)-dd(y.t.data,o.t.data));
+    const i=c[0];usados.add(i.t.id);pares.push({o:o.t,i:i.t,de:o.b,para:i.b});
+  });
+  return pares.filter(p=>!usados.has(p.o.id));
+}
+let CONC_C=null;
+function concCache(){const k=S.tx.length+'|'+(S.cfg.concIgn||[]).length+'|'+S.tx.reduce((a,t)=>a+(t.tipo==='transf'?1:0),0);if(!CONC_C||CONC_C.k!==k)CONC_C={k,p:paresConc()};return CONC_C.p;}
+function juntaPar(p){
+  const o=S.tx.find(x=>x.id===p.o.id),i=S.tx.find(x=>x.id===p.i.id);if(!o||!i)return false;
+  Object.assign(o,{tipo:'transf',de:'b:'+p.de,para:'b:'+p.para,categoria:'Transferência',conta:'',forma:'',cartao:''});
+  delete o.rev;o.par={id:i.id,pluggyId:i.pluggyId||'',desc:i.descricao||'',data:i.data};
+  if(i.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(i.pluggyId).slice(-3000);
+  if(i.anexos&&i.anexos.length)o.anexos=(o.anexos||[]).concat(i.anexos);
+  S.tx=S.tx.filter(x=>x!==i);return true;
+}
+function concHTML(){const n=concCache().length;if(!n)return '';
+  return `<button type="button" class="card revCard concCard" data-act="conc-abre"><span class="revIc">${I('swap')}</span><span class="revTx"><b>${n} transferência${n>1?'s':''} entre suas contas</b><small>junte para não contar como receita e despesa</small></span>${I('chevR')}</button>`;}
+function abreConc(){
+  const P=concCache(),box=$('#modal');
+  if(!P.length){closeModal();return;}
+  const nb=id=>{const b=S.bancos.find(x=>x.id===id);return b?esc(b.nome):'conta';};
+  box.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Transferências"><div class="sh-head"><h3>Transferências entre contas</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">Saiu de uma conta sua e entrou noutra, mesmo valor. Juntando, vira uma transferência e deixa de contar como gasto e como receita.</p>
+    <div class="lista">${P.slice(0,100).map((p,k)=>`<div class="tx concRow"><span class="ic transf">${I('swap')}</span>
+      <div class="txt"><b>${nb(p.de)} → ${nb(p.para)}</b><small>${fmtDataCurta(p.o.data)}${p.i.data!==p.o.data?' e '+fmtDataCurta(p.i.data):''} · ${esc(String(p.o.descricao||'').slice(0,40))}</small></div>
+      <div class="revR"><div class="val">${brl(p.o.valor)}</div><div class="revBt"><button class="btn2 sm" data-act="conc-nao" data-id="${k}">não é</button><button class="btn2 sm revOk" data-act="conc-sim" data-id="${k}">juntar</button></div></div></div>`).join('')}</div>
+    ${P.length>1?`<button class="btn full" data-act="conc-todos">juntar ${P.length>100?'as 100 primeiras':'todas as '+P.length}</button>`:''}
+  </div>`;
+  box.classList.add('on');
 }
 function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;}
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
@@ -5273,6 +5324,10 @@ const ACT={
   'cal-m':id=>{CAL_M=Math.max(0,Math.min(3,CAL_M+(+id||0)));render();},
   'cal-dia':id=>abreDiaSaldo(id),
   'rev-abre':()=>abreRevisar(),
+  'conc-abre':()=>abreConc(),
+  'conc-sim':k=>{const p=concCache()[+k];if(p&&juntaPar(p)){salvar();render();toast('Virou transferência');}abreConc();},
+  'conc-nao':k=>{const p=concCache()[+k];if(p){S.cfg.concIgn=(S.cfg.concIgn||[]).concat(p.o.id+'|'+p.i.id).slice(-2000);salvar();render();}abreConc();},
+  'conc-todos':()=>{let n=0;concCache().slice(0,100).forEach(p=>{if(juntaPar(p))n++;});salvar();render();closeModal();toast(n+' transferência'+(n>1?'s':'')+' juntada'+(n>1?'s':''));},
   'rev-ok':id=>{const t=S.tx.find(x=>x.id===id);if(t){delete t.rev;salvar();render();}abreRevisar();},
   'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
   'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
@@ -5384,7 +5439,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
