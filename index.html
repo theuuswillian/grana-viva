@@ -859,6 +859,11 @@ html.claro .rsD.pos{color:#16a34a}html.claro .rsD.neg{color:#dc2626}
 .rmT{flex:1;min-width:0}
 .rmT b{display:block;font-size:14px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rmT small{display:block;font-size:11.5px;color:var(--mut);margin-top:1px}
+.hmAssin .asAno{font-size:12px;color:var(--mut);margin:-2px 0 4px}
+.asRow{gap:10px}.asRow .rmT small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.asMais{flex:none;width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:9px;background:transparent;color:var(--mut);cursor:pointer;padding:0}
+.asMais:hover,.asMais:focus-visible{background:var(--card2);color:var(--txt)}.asMais .i{width:16px;height:16px}
+.aviso-card .btn2.sm{margin-left:4px}
 .rmV{flex:none;font-weight:700;font-size:14px;color:var(--txt);font-variant-numeric:tabular-nums}
 /* ---------- v10.8: tela sempre encaixada, sem zoom nem rolagem lateral ---------- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden;overflow-x:clip}
@@ -1415,6 +1420,8 @@ function sanea(d){
   if(!ACCENTS[o.cfg.accent])o.cfg.accent='verde';
   if(o.cfg.pagDesde&&!DATA_OK.test(String(o.cfg.pagDesde)))o.cfg.pagDesde='';
   if(o.cfg.tema!=='claro')o.cfg.tema='escuro';
+  o.cfg.assinIgnora=[...new Set((Array.isArray(o.cfg.assinIgnora)?o.cfg.assinIgnora:[]).filter(x=>typeof x==='string').map(x=>str(x,40).trim()).filter(Boolean))].slice(-300);
+  {const av={};Object.entries(obj(o.cfg.assinVisto)).slice(-300).forEach(([k,v])=>{if(/^\d{4}-\d{2}$/.test(String(v)))av[str(k,40)]=v;});o.cfg.assinVisto=av;}
   {const rg={};Object.entries(obj(o.cfg.regras)).slice(0,500).forEach(([k,v])=>{const kk=str(k,80).trim();if(kk&&typeof v==='string')rg[kk]=str(v,60);});o.cfg.regras=rg;}
   return o;
 }
@@ -2058,6 +2065,7 @@ function geraRecorrentes(){
     }
     if(t.fxAuto&&t.data<=hoje&&(!f||f.auto!==false)){t.status='pago';delete t.fxAuto;mudou=true;}
   });
+  if(conciliaAssin())mudou=true;
   /* faturas: recalculadas a cada execução a partir das compras do ciclo.
      antes eram congeladas no dia do fechamento: compra lançada depois (retroativa), editada ou excluída
      nunca chegava à fatura. a fatura excluída pelo usuário fica marcada e não volta. */
@@ -2132,6 +2140,7 @@ function listaAlertas(completo){
     S.cartoes.forEach(c=>{if(!(c.limite>0))return;const u=usadoCartaoTotal(c),p=u/c.limite*100;
       if(p>=90)out.push({k:p>=100?'venc':'aviso',h:`${I('card')} cartão <b>${esc(c.nome)}</b> com ${Math.round(p)}% do limite usado · livre ${brl(Math.max(0,c.limite-u))}`});});
   }
+  try{out.push(...assinAvisos());}catch(e){}
   return out;
 }
 /* notificações push: o aparelho se inscreve aqui; a função alertas-push (Supabase) manda os avisos todo dia às 9h */
@@ -2205,6 +2214,116 @@ function fixasCard(){
     return `<div class="tx hov fx-row${due&&!rec?' due':''}"><span class="fx-ic sm">${I(rec?'up':'receipt')}</span><div class="txt"><b>${esc(f.nome)}</b><small>${descFreq(f)} · ${esc(f.categoria||'Outros')}${f.auto===false?' · confirmo manualmente':''}</small>${badge}</div><div class="val ${rec?'pos':'neg'}">${rec?'+':''}${brl(f.valor)}</div><div class="acts"><button data-act="edit-fixa" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fixa" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;
   }).join('');
   return `<div class="card fixas-card"><div class="fx-head"><span class="fx-ic">${I('receipt')}</span><div><h4>Contas fixas</h4><b class="fx-total">${brl(total)}<small> / mês</small></b>${entra>0?`<small class="fx-entra">entram ${brl(entra)} / mês</small>`:''}</div></div>${lst||'<p class="vazio">nenhuma conta fixa. cadastre aluguel, luz, internet ou o salário. elas entram sozinhas no extrato.</p>'}<button class="btn full" data-act="nova-fixa">+ conta fixa</button></div>`;
+}
+/* v10.46: assinaturas detectadas. olha as despesas dos últimos ~6 meses (banco, cartão e manuais), agrupa pelo estabelecimento
+   e acha cobranças mensais de valor parecido. as que você vira conta fixa ficam marcadas (assinatura:true) e entram no mesmo card. */
+const ASSIN_KW=/netflix|spotify|disney|hbo|\bmax\b|prime ?video|amazon ?prime|youtube|apple ?com|icloud|google ?one|google ?storage|deezer|globoplay|paramount|crunchyroll|chatgpt|openai|microsoft|office ?365|adobe|canva|smart ?fit|academia|gympass|wellhub|\bvivo\b|\bclaro\b|\btim\b|\boi\b|internet|assinatura|streaming/;
+const ASSIN_RUIDO=/\b(pg|pag|pagseguro|pagamento|pagto|mp|mercadopago|ifd|ifood|ec|dl|ebn|htm|www|com|br|net|ltda|me|sa|eireli|bill|compra|compras|debito|credito|pix|enviado|enviada|transferencia|no|na|via|nupay|int|internacional|digital|servicos|entretenimento|brasil|do|da|de)\b/g;
+function assinChave(desc){
+  const n=(typeof nomeTx==='function'?nomeTx({descricao:desc}).n:String(desc||''))||String(desc||'');
+  const base=chaveRegra(n.replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g,' '));
+  const k=base.replace(ASSIN_RUIDO,' ').replace(/\s+/g,' ').trim();
+  return (k.length>=3?k:base).slice(0,40);
+}
+function assinParecidas(a,b){if(!a||!b)return false;if(a===b)return true;const [c,l]=a.length<b.length?[a,b]:[b,a];return c.length>=4&&(l.startsWith(c+' ')||l.endsWith(' '+c)||l.includes(' '+c+' '));}
+/* função pura: (tx, fixas, cfg, hoje) -> candidatas. sem efeitos colaterais. */
+function detectaAssinaturas(tx,fixas,cfg,hoje){
+  tx=tx||S.tx;fixas=fixas||S.fixas||[];cfg=cfg||S.cfg||{};hoje=hoje||hojeISO();
+  const dt=s=>new Date(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)),dH=dt(hoje);
+  const lim=isoDe(new Date(dH.getFullYear(),dH.getMonth()-6,dH.getDate())),rec=isoDe(new Date(dH.getFullYear(),dH.getMonth(),dH.getDate()-45));
+  const ign=new Set(Array.isArray(cfg.assinIgnora)?cfg.assinIgnora:[]);
+  const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const G={};
+  tx.forEach(t=>{
+    if(t.tipo!=='despesa'||t.faturaKey||t.fixaKey||t.status==='cancelado'||t.status==='previsto'||!(+t.valor>0))return;
+    if(!t.data||t.data<lim||t.data>hoje||(t.parcela&&t.parcelas)||/parc(ela)?\.?\s*\d+\s*(\/|de)\s*\d+/i.test(t.descricao||''))return;
+    const k=assinChave(t.descricao||'');if(k.length<3||ign.has(k))return;
+    (G[k]=G[k]||[]).push(t);
+  });
+  const out=[];
+  Object.entries(G).forEach(([k,L])=>{
+    L.sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
+    const porMes={};L.forEach(t=>{(porMes[t.data.slice(0,7)]=porMes[t.data.slice(0,7)]||[]).push(t);});
+    const meses=Object.keys(porMes).sort();
+    if(meses.length<2||L.length>meses.length+1||meses.some(m=>porMes[m].length>2))return; // várias por mês (Uber, mercado): não é assinatura
+    const seq=meses.map(m=>porMes[m][porMes[m].length-1]);
+    const vals=seq.map(t=>+t.valor),mv=med(vals);
+    if(vals.some(v=>Math.abs(v-mv)>mv*0.25))return;
+    const gaps=seq.slice(1).map((t,i)=>Math.round((dt(t.data)-dt(seq[i].data))/864e5)),mg=med(gaps);
+    if(mg<25||mg>35)return;
+    const ult=seq[seq.length-1];if(ult.data<rec)return; // parou de cobrar
+    const nomeU=typeof nomeTx==='function'?nomeTx(ult).n:ult.descricao;
+    const kw=ASSIN_KW.test(k)||ASSIN_KW.test(norm(nomeU))||ASSIN_KW.test(norm(ult.sub||''));
+    const consec=meses.slice(1).some((m,i)=>{const [y0,m0]=meses[i].split('-').map(Number),[y1,m1]=m.split('-').map(Number);return (y1*12+m1)-(y0*12+m0)===1;});
+    if(!(meses.length>=3||(kw&&consec)))return;
+    const dias=seq.map(t=>+t.data.slice(8,10)),dia=Math.round(med(dias));
+    const coberta=fixas.some(f=>{if(f.tipo==='receita')return false;const fk=f.assinKey||assinChave(f.nome);if(assinParecidas(fk,k))return true;
+      const dd=Math.abs((+f.dia||1)-dia),dc=Math.min(dd,31-dd);return Math.abs((+f.valor||0)-ult.valor)<=(+f.valor||0)*0.05&&dc<=3;});
+    if(coberta)return;
+    const vA=+ult.valor,prev=seq.length>1?+seq[seq.length-2].valor:null;
+    let vAnt=null;for(let i=seq.length-2;i>=0;i--){if(Math.round(seq[i].valor*100)!==Math.round(vA*100)){vAnt=+seq[i].valor;break;}}
+    const aumento=prev&&vA>prev*1.03&&vA-prev>=0.5?Math.floor((vA/prev-1)*100):0;
+    out.push({key:k,nome:String(nomeU||k).replace(/\.com(\.br)?\b/i,"").trim().slice(0,60)||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento});
+  });
+  return out.sort((a,b)=>b.valorAtual-a.valorAtual);
+}
+/* fixas marcadas como assinatura + a última cobrança real do mês (para avisar quando sobe) */
+function assinRastreadas(){
+  const m=hojeISO().slice(0,7);
+  return (S.fixas||[]).filter(f=>f.assinatura&&f.tipo!=='receita').map(f=>{
+    const k=f.assinKey||assinChave(f.nome);
+    const t=S.tx.filter(x=>x.tipo==='despesa'&&!x.fixaKey&&!x.faturaKey&&x.status!=='cancelado'&&x.status!=='previsto'&&x.data&&x.data.slice(0,7)===m&&assinParecidas(assinChave(x.descricao||''),k)).sort((a,b)=>a.data<b.data?1:-1)[0];
+    const subiu=t&&t.valor>f.valor*1.03&&t.valor-f.valor>=0.5?Math.floor((t.valor/f.valor-1)*100):0;
+    return {f,k,t,subiu};
+  });
+}
+/* assinatura virou conta fixa: o lançamento previsto da fixa sai quando a cobrança real do mês já entrou (não conta duas vezes) */
+function conciliaAssin(){
+  const fx=(S.fixas||[]).filter(f=>f.assinatura&&f.tipo!=='receita');if(!fx.length)return false;
+  const reais=S.tx.filter(t=>t.tipo==='despesa'&&!t.fixaKey&&!t.faturaKey&&t.status!=='cancelado'&&t.data);
+  const fora=new Set();
+  fx.forEach(f=>{const k=f.assinKey||assinChave(f.nome);const ms=new Set(reais.filter(t=>assinParecidas(assinChave(t.descricao||''),k)).map(t=>t.data.slice(0,7)));
+    if(!ms.size)return;S.tx.forEach(t=>{if(t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&ms.has(t.data.slice(0,7)))fora.add(t.id);});});
+  if(!fora.size)return false;S.tx=S.tx.filter(t=>!fora.has(t.id));return true;
+}
+function assinAvisos(){
+  const out=[],vis=(S.cfg&&S.cfg.assinVisto)||{},d=new Date(),rec=isoDe(new Date(d.getFullYear(),d.getMonth(),d.getDate()-35));
+  assinRastreadas().forEach(({f,k,t,subiu})=>{if(!subiu||vis[k]===t.data.slice(0,7))return;
+    out.push({k:'aviso',h:`${I('lu_trending_up')} <b>${esc(f.nome)}</b> subiu de ${brl(f.valor)} para ${brl(t.valor)} (+${subiu}%) <button class="btn2 sm" data-act="assin-atualiza" data-id="${esc(f.id)}">atualizar valor</button> <button class="btn2 sm" data-act="assin-visto" data-id="${esc(k+'|'+t.data.slice(0,7))}">ok</button>`});});
+  detectaAssinaturas().forEach(c=>{if(!c.aumento||c.ultimo<rec||vis[c.key]===c.ultimo.slice(0,7))return;
+    const ant=c.valorAtual/(1+c.aumento/100);const prev=c.valorAnterior||ant;
+    out.push({k:'aviso',h:`${I('lu_trending_up')} <b>${esc(c.nome)}</b> subiu de ${brl(prev)} para ${brl(c.valorAtual)} (+${c.aumento}%) <button class="btn2 sm" data-act="assin-visto" data-id="${esc(c.key+'|'+c.ultimo.slice(0,7))}">ok</button>`});});
+  return out;
+}
+let ASSIN_C=[];
+function assinHTML(){
+  const C=detectaAssinaturas(),R=assinRastreadas();ASSIN_C=C;
+  if(!C.length&&!R.length)return '';
+  const mes=R.reduce((a,x)=>a+cents(mensalEq(x.f)),0)/100+C.reduce((a,c)=>a+cents(c.valorAtual),0)/100,n=C.length+R.length;
+  const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções de ${esc(nome)}">${I('menu')}</button></div>`;
+  const bdg=p=>p?`<span class="hvQ ${p>=10?'late':'soon'}">subiu ${p}%</span>`:'';
+  const lin=R.map(x=>row(catIcon(x.f.categoria),corCat(x.f.categoria),x.f.nome,`dia ${x.f.dia} · conta fixa`,x.f.valor,bdg(x.subiu),'f:'+x.f.id))
+    .concat(C.map(c=>row(catIcon(c.categoria),corCat(c.categoria),c.nome,`dia ${c.dia} · detectada em ${c.mesesVistos} meses`,c.valorAtual,bdg(c.aumento),'c:'+c.key)));
+  return `<div class="card hmAssin"><div class="hmH"><h4>assinaturas</h4><span class="hmSub">${n} · ${brl(mes)}/mês</span></div>
+    <p class="asAno">${brl(Math.round(mes*1200)/100)} por ano</p>
+    ${lin.slice(0,8).join('')}
+    ${lin.length>8?`<p class="hmNota">+${lin.length-8} ${lin.length-8>1?'assinaturas':'assinatura'}</p>`:''}
+    ${C.length?'<p class="hmNota">detectadas pelas cobranças mensais. use o menu para virar conta fixa ou dispensar.</p>':''}
+  </div>`;
+}
+function assinMenu(id){
+  id=String(id||'');const ehF=id.startsWith('f:'),v=id.slice(2);
+  const f=ehF?(S.fixas||[]).find(x=>x.id===v):null,c=ehF?null:(ASSIN_C.find(x=>x.key===v)||detectaAssinaturas().find(x=>x.key===v));
+  if(!f&&!c)return;
+  const ops=ehF?[['edit','Editar conta fixa',()=>fixaForm(f.id)],['close','Não é assinatura',()=>{delete f.assinatura;salvar();render();toast('Desmarcada como assinatura');}]]
+    :[['receipt','Virar conta fixa',()=>ACT['assin-fixa'](c.key)],['close','Não é assinatura',()=>ACT['assin-ignora'](c.key)]];
+  const nome=f?f.nome:c.nome,cat=f?f.categoria:c.categoria,val=f?f.valor:c.valorAtual;
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet txSheet"><div class="txsHead"><span class="ic" style="color:${corCat(cat)}">${I(catIcon(cat))}</span><div><b>${esc(nome)}</b><small>${esc(cat)} · todo dia ${f?f.dia:c.dia}${c&&c.valorAnterior?' · antes '+brl(c.valorAnterior):''}</small></div><strong class="neg nw">${brl(val)}</strong></div>
+    ${ops.map(([ic,l],i)=>`<button class="txsOp${i===1?' perigo':''}" data-tm="${i}">${I(ic)}<span>${esc(l)}</span></button>`).join('')}
+    <button class="btn2 full" data-tm="">Fechar</button></div>`;
+  box.classList.add('on');
+  box.querySelector('.txSheet').addEventListener('click',e=>{const b=e.target.closest('[data-tm]');if(!b)return;e.stopPropagation();const a=b.dataset.tm;closeModal();if(a!=='')setTimeout(ops[+a][2],30);});
 }
 function fixaForm(id){
   const f=id?(S.fixas||[]).find(x=>x.id===id):null;
@@ -3007,7 +3126,7 @@ function viewInicio(){
   </div>${TOPO!==null?'-->':''}
   <div class="hmDuo">${prevHTML}
   <div class="card hmSpark"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div></div>
-  <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${orcInicioHTML()}${ultHTML}</div></div>
+  <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${assinHTML()}${orcInicioHTML()}${ultHTML}</div></div>
   <div class="card">
     <h4>Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}</h4>
     <canvas id="cBar" class="cv"></canvas>
@@ -4796,6 +4915,13 @@ const ACT={
   'tx-menu':id=>txMenu(id),
   'nova-fixa':()=>fixaForm(),
   'edit-fixa':id=>fixaForm(id),
+  'assin-menu':id=>assinMenu(id),
+  'assin-fixa':key=>{const c=detectaAssinaturas().find(x=>x.key===key);if(!c)return;if(!S.fixas)S.fixas=[];
+    S.fixas.push({id:uid(),criadoEm:hojeISO(),nome:c.nome,valor:c2(c.valorAtual),dia:Math.max(1,Math.min(31,c.dia||1)),categoria:c.categoria||'Outros',tipo:'despesa',freq:'mensal',auto:false,fim:'',assinatura:true,assinKey:c.key});
+    geraRecorrentes();salvar();render();toast(c.nome+' agora é conta fixa');},
+  'assin-ignora':key=>{if(!key)return;S.cfg.assinIgnora=(S.cfg.assinIgnora||[]).filter(x=>x!==key).concat(key).slice(-300);salvar();render();toast('Não vai mais aparecer como assinatura');},
+  'assin-atualiza':id=>{const r=assinRastreadas().find(x=>x.f.id===id);if(!r||!r.t)return;r.f.valor=c2(r.t.valor);if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[r.k]=r.t.data.slice(0,7);geraRecorrentes();salvar();render();toast('Valor de '+r.f.nome+' atualizado para '+brl(r.f.valor));},
+  'assin-visto':v=>{v=String(v||'');const i=v.lastIndexOf('|');if(i<1)return;if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[v.slice(0,i)]=v.slice(i+1);salvar();render();},
   'plan-n':id=>{PLAN.n=+id||6;render();},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;render();},
   'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
@@ -4900,7 +5026,7 @@ $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
 /* a cada publicação: troque GV_BUILD aqui e V no sw.js juntos (./bump.sh faz os dois) */
-const GV_BUILD='2026-10-29.49';
+const GV_BUILD='2026-10-29.50';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
