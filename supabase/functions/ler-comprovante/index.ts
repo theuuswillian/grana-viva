@@ -2,13 +2,19 @@
 // Chamada pelo app com o login do usuário. A chave do Gemini fica só aqui (secret GEMINI_API_KEY).
 import { createClient } from "npm:@supabase/supabase-js@2";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const ORIGENS = ["https://theuuswillian.github.io"];
+const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
+let ORIG = ORIGENS[0];
+const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 const LIMITE_DIA = 40;
 const MIMES = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  const og = req.headers.get("origin") || "";
+  ORIG = origemOk(og) ? og : ORIGENS[0];
+  if (og && !origemOk(og)) return new Response("origem não permitida", { status: 403 });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: { ...CORS } });
   if (req.method !== "POST") return json({ erro: "método" }, 405);
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await sb.auth.getUser(tok);
