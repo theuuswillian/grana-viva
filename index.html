@@ -15,6 +15,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>GranaViva · controle financeiro</title>
 <meta name="description" content="Controle de receitas, despesas, cartões, bancos, metas e investimentos, sincronizado na nuvem.">
+<script>/* v10.52: o app não roda dentro de iframe de outro site (clickjacking) */
+(function(){try{if(window.top!==window.self){if(window.top.location!==window.location)window.top.location.replace(window.location.href);}}catch(e){document.documentElement.style.display='none';}})();</script>
 <link rel="preload" href="fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/inter-600.woff2" as="font" type="font/woff2" crossorigin>
 <script src="vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
@@ -2725,7 +2727,8 @@ function relCSV(){
   [a,b].forEach(m=>{const r=resumoMes(m);L.push([m,dec(r.rec),dec(r.des),dec(r.sal)]);});
   L.push([]);L.push(['categoria',a,b]);
   relCats(a,b).forEach(x=>L.push([x.l,dec(x.va),dec(x.vb)]));
-  const csv='\ufeff'+L.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const escF=v=>{let x=String(v);if(/^[=+\-@]/.test(x)&&!/^-?\d/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+  const csv='\ufeff'+L.map(r=>r.map(escF).join(';')).join('\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   const aa=document.createElement('a');aa.href=url;aa.download='relatorio-'+a+'-vs-'+b+'.csv';
   document.body.appendChild(aa);aa.click();
@@ -4554,6 +4557,7 @@ function pagarFatura(id){
     const val=parseBR(v.valor);
     if(!(val>0))return 'Informe o valor pago.';
     if(!DATA_OK.test(String(v.data)))return 'Informe a data.';
+    if(String(v.data)>hojeISO())return 'A data do pagamento não pode ser no futuro.';
     if(cents(val)>cents(resta)+1)return 'O valor passa do que falta pagar ('+brl(resta)+').';
     if(!Array.isArray(t.pagamentos))t.pagamentos=[];
     t.pagamentos.push({valor:c2(val),data:v.data,conta:v.conta||''});fechaPagamentos(t);
