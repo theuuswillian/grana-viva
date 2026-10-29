@@ -4017,7 +4017,8 @@ function lerCSV(txt){
   const out=[];
   ls.slice(1).forEach(l=>{const c=splitCSV(l,sep);const data=dataExt(c[iD]);let valor=numExt(c[iV]);
     if(!data||isNaN(valor))return;if(cartao)valor=-valor;
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?c[iId]:''});});
+    /* v10.52: fitid vem do arquivo: só caracteres seguros (senão vira id novo na importação) */
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):''});});
   return {linhas:out,cartao};
 }
 const REGRAS_CAT=[
@@ -4300,7 +4301,7 @@ function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
   let n=0;
   IMP.linhas.forEach(l=>{if(!l.on||S.tx.some(t=>t.id===l.id))return;
-    const t={id:l.id,tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
+    const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
     else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
