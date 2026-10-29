@@ -5097,8 +5097,11 @@ document.addEventListener('change',e=>{
       let d=null;
       try{d=JSON.parse(r.result);}catch(err){d=null;}
       if(!d||typeof d!=='object'||!Array.isArray(d.tx)||!Array.isArray(d.cats)){toast('Arquivo de backup inválido',true);return;}
+      /* v10.52: um backup malformado não trava mais o app — o saneamento roda antes de confirmar e falha com mensagem */
+      const novo=(()=>{try{return sanea(d);}catch(e){return null;}})();
+      if(!novo){toast('Esse backup tem dados inválidos e não pôde ser restaurado.',true);return;}
       confirma({titulo:'Substituir dados?',texto:'Isso troca todos os dados atuais pelo backup. Exporte antes se quiser guardar.',ok:'Substituir',perigo:true},()=>{
-        S=sanea(d);geraRecorrentes();{const a=migraPropria(),b=recatBanco();if(a||b)setTimeout(()=>{render();if(b)toast(b+' lançamentos foram para categorias mais específicas');},0);}
+        S=novo;geraRecorrentes();{const a=migraPropria(),b=recatBanco();if(a||b)setTimeout(()=>{render();if(b)toast(b+' lançamentos foram para categorias mais específicas');},0);}
         salvar();applyCfg();render();toast('Backup importado');
       });
     };
