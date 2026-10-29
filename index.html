@@ -5152,7 +5152,7 @@ $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
 /* a cada publicação: troque GV_BUILD aqui e V no sw.js juntos (./bump.sh faz os dois) */
-const GV_BUILD='2026-10-29.59';
+const GV_BUILD='2026-10-29.60';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
