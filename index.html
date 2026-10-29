@@ -4236,16 +4236,19 @@ function montaImport(){
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)));
+    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||(IMP.banco&&S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2))));
+    /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
+    const dupLinha=!IMP.banco&&out.some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
     const dupT=!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
-    if(dup||dupT)l.dup=true;
+    if(dup||dupT||dupLinha)l.dup=true;
     if(dup)ign='já está no app';
     else if(dupT)ign='já lançado como transferência';
+    else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
-    if(l._d!==d){l.on=!ign;l._d=d;}
+    if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
     l.ign=ign;l.dup=dup||dupT;
   });
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
