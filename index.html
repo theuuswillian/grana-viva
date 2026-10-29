@@ -326,6 +326,9 @@ body:has(#auth.on) .fab{display:none!important}
 .qk-op.hov:hover{border-color:var(--a2);box-shadow:0 0 22px -6px var(--a2)}
 .ic .i{stroke-width:1.4}
 .catGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-bottom:12px}
+/* v10.53: categorias recolhidas por padrão, com degradê no fim */
+.catGrid.catFechado{max-height:170px;overflow:hidden;position:relative}
+.catGrid.catFechado::after{content:'';position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(transparent,var(--card,rgba(20,20,24,.95)))}
 .catCell{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px 12px;border-radius:16px;background:var(--card2);border:1px solid var(--line);font-size:13px;color:var(--txt);text-align:center;overflow:hidden}
 .catCell .cc-i{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--cc,#8b5cf6) 16%,transparent);color:var(--cc,#8b5cf6);box-shadow:0 0 18px -6px var(--cc,#8b5cf6)}
 .catCell .cc-i .i{width:22px;height:22px;stroke-width:1.3;filter:drop-shadow(0 0 4px var(--cc,#8b5cf6))}
@@ -1335,7 +1338,7 @@ bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 
   list:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
 report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"/><rect x="10.5" y="7" width="3" height="11.5" rx="1"/><rect x="15.5" y="4" width="3" height="14.5" rx="1"/>',
 chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
-chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
+chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',chevU:'<path d="m18 15-6-6-6 6"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
 mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',sparkle:'<path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
@@ -3605,7 +3608,8 @@ function viewCfg(){
   </div>
   <div class="card">
     <h4>Categorias</h4>
-    <div class="catGrid">${S.cats.map(c=>`<div class="catCell hov" style="--cc:${corCat(c)}"><button data-act="del-cat" data-id="${esc(c)}" title="remover" aria-label="remover">${I('close')}</button><span class="cc-i">${I(catIcon(c))}</span><span class="cc-n" data-act="edit-cat" data-id="${esc(c)}" title="editar" aria-label="editar">${esc(c)}</span></div>`).join('')}</div>
+    <div class="catGrid${CATS_ABERTAS?'':' catFechado'}">${S.cats.map(c=>`<div class="catCell hov" style="--cc:${corCat(c)}"><button data-act="del-cat" data-id="${esc(c)}" title="remover" aria-label="remover">${I('close')}</button><span class="cc-i">${I(catIcon(c))}</span><span class="cc-n" data-act="edit-cat" data-id="${esc(c)}" title="editar" aria-label="editar">${esc(c)}</span></div>`).join('')}</div>
+    <button class="btn2 sm" data-act="cats-toggle">${I(CATS_ABERTAS?'chevU':'chevD')} ${CATS_ABERTAS?'mostrar menos':'ver todas ('+S.cats.length+')'}</button>
     <button class="btn full" data-act="nova-cat">+ nova categoria</button>
   </div>
   ${lockCardHTML()}
@@ -5012,6 +5016,7 @@ const ACT={
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
+  'cats-toggle':()=>{CATS_ABERTAS=!CATS_ABERTAS;render();},
   'edit-cat':c=>catForm(c),
   'del-cat':c=>confirma({titulo:'Remover categoria?',texto:'Remover a categoria "'+c+'"? Lançamentos antigos continuam com esse nome.',ok:'Remover',perigo:true},()=>{
     S.cats=S.cats.filter(x=>x!==c);delete S.orc[c];Object.values(S.orcMes||{}).forEach(mp=>delete mp[c]);delete S.catIcons[c];delete S.catCores[c];salvar();render();toast('Categoria removida');
