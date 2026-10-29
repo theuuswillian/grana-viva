@@ -4550,7 +4550,7 @@ const ACT={
   'del-meta':id=>confirma({titulo:'Excluir meta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.metas=S.metas.filter(x=>x.id!==id);salvar();render();toast('Meta excluída');}),
   'lock-pin':()=>lockCfg()?lockPedeAtual('Digite o PIN atual',lockNovoPin):lockNovoPin(),
   'lock-off':()=>lockPedeAtual('Digite o PIN para desativar',()=>{lockSalva(null);lockFecha();render();toast('Bloqueio desativado');}),
-  'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);render();toast('Face ID desativado');}else lockBioAtiva();},
+  'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);lkBioGuarda(null);render();toast('Face ID desativado');}else lockBioAtiva();},
   'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
   'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
@@ -4712,6 +4712,8 @@ var LOCK_KEY='gv-lock',LOCK_LEN=4,LK={o:null,buf:'',saiu:0,bioBusy:false};
 ICONS.faceid='<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>';
 function lockCfg(){try{const c=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return c&&c.hash&&c.salt?c:null;}catch(e){return null;}}
 function lockSalva(c){try{if(c)localStorage.setItem(LOCK_KEY,JSON.stringify(c));else localStorage.removeItem(LOCK_KEY);}catch(e){}}
+function lkBioBk(){try{const b=JSON.parse(localStorage.getItem('gv-lock-bio')||'null');return b&&b.id&&(!b.uid||!USER||b.uid===USER.id)?b:null;}catch(e){return null;}}
+function lkBioGuarda(id){try{if(id)localStorage.setItem('gv-lock-bio',JSON.stringify({id,uid:USER?USER.id:null}));else localStorage.removeItem('gv-lock-bio');}catch(e){}}
 function lkB64(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));}
 function lkDeB64(t){return Uint8Array.from(atob(t),ch=>ch.charCodeAt(0));}
 async function lockHash(pin,salt){
@@ -4790,13 +4792,14 @@ async function lockBioAtiva(){
   try{
     const cred=await navigator.credentials.create({publicKey:{
       challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'GranaViva'},
-      user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'GranaViva · bloqueio do app',displayName:'GranaViva'},
+      user:{id:new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gv-lock:'+(USER?USER.id:'local')))).slice(0,16),name:(USER&&USER.email)||'GranaViva',displayName:'GranaViva · desbloqueio'},
+      excludeCredentials:(lkBioBk()?[{type:'public-key',id:lkDeB64(lkBioBk().id),transports:['internal']}]:[]),
       pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
       timeout:60000,attestation:'none'}});
     if(!cred)throw new Error('sem credencial');
-    const cc=lockCfg();if(!cc)return;cc.bio=lkB64(cred.rawId);lockSalva(cc);render();toast('Face ID ativado');
-  }catch(e){toast('Face ID não foi ativado',true);}
+    const cc=lockCfg();if(!cc)return;cc.bio=lkB64(cred.rawId);lockSalva(cc);lkBioGuarda(cc.bio);render();toast('Face ID ativado');
+  }catch(e){const bk=lkBioBk(),cc=lockCfg();if(e&&e.name==='InvalidStateError'&&bk&&cc){cc.bio=bk.id;lockSalva(cc);render();toast('Face ID ativado');}else toast('Face ID não foi ativado',true);}
   finally{setTimeout(()=>{LK.bioBusy=false;},400);}
 }
 function lockNovoPin(){
@@ -4804,9 +4807,9 @@ function lockNovoPin(){
     lockTela({modo:'confirma',titulo:'Confirme o PIN',sub:'digite o mesmo PIN de novo',cancelar:true,cb:async pin2=>{
       if(pin2!==pin1){lockErro('os PINs não batem, comece de novo');setTimeout(()=>{if(LK.o&&LK.o.modo==='confirma')lockNovoPin();},1100);return;}
       const ant=lockCfg()||{},salt=lkB64(crypto.getRandomValues(new Uint8Array(16)));
-      lockSalva({hash:await lockHash(pin1,salt),salt:salt,bio:ant.bio||null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
+      const bk=lkBioBk();lockSalva({hash:await lockHash(pin1,salt),salt:salt,bio:ant.bio||(bk&&bk.id)||null,uid:USER?USER.id:null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
       lockFecha();render();toast(ant.hash?'PIN trocado':'Bloqueio ativado');
-      if(!ant.hash&&await bioDisponivel())setTimeout(()=>confirma({titulo:'Usar Face ID também?',texto:'Você abre o app com o rosto (ou a digital) e o PIN fica de reserva.',ok:'Ativar'},lockBioAtiva),400);
+      if(!ant.hash&&!(lockCfg()||{}).bio&&await bioDisponivel())setTimeout(()=>confirma({titulo:'Usar Face ID também?',texto:'Você abre o app com o rosto (ou a digital) e o PIN fica de reserva.',ok:'Ativar'},lockBioAtiva),400);
     }});
   }});
 }
@@ -4820,7 +4823,7 @@ function lockEsqueci(){
 async function lockSair(){
   lockMsg('saindo…',false);
   try{if(typeof temPendencia==='function'&&temPendencia()&&navigator.onLine)await enviar();}catch(e){}
-  lockSalva(null);lockFecha();
+  LK.manual=true;lockSalva(null);lockFecha();
   try{await sb.auth.signOut({scope:'local'});}catch(e){}
 }
 function lockCardHTML(){
@@ -5016,10 +5019,11 @@ function pintaUsuario(){
 }
 $('#uchip').addEventListener('click',async e=>{
   if(!e.target.closest('#btnOut'))return;
-  confirma({titulo:'Sair da conta?',texto:temPendencia()?'Atenção: há alterações deste aparelho que ainda não chegaram à nuvem. Se sair agora, elas serão perdidas. Conecte-se à internet e aguarde "sincronizado" antes de sair.':'Você sai desta conta neste aparelho. Seus dados continuam salvos na nuvem.',ok:'Sair',perigo:temPendencia()},async()=>{const r=await sb.auth.signOut().catch(e=>({error:e}));if(r&&r.error)await sb.auth.signOut({scope:'local'}).catch(()=>{});});
+  confirma({titulo:'Sair da conta?',texto:temPendencia()?'Atenção: há alterações deste aparelho que ainda não chegaram à nuvem. Se sair agora, elas serão perdidas. Conecte-se à internet e aguarde "sincronizado" antes de sair.':'Você sai desta conta neste aparelho. Seus dados continuam salvos na nuvem.',ok:'Sair',perigo:temPendencia()},async()=>{LK.manual=true;const r=await sb.auth.signOut().catch(e=>({error:e}));if(r&&r.error)await sb.auth.signOut({scope:'local'}).catch(()=>{});});
 });
 async function entraComSessao(sess){
   if(!sess||!sess.user)return;
+  {const lc=lockCfg();if(lc&&lc.uid&&lc.uid!==sess.user.id){lockSalva(null);lockFecha();}}
   if(!USER||USER.id!==sess.user.id){
     if(localStorage.getItem(OWNER_KEY)!==sess.user.id){
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
@@ -5054,7 +5058,8 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
   if(ev==='PASSWORD_RECOVERY'&&sess)setTimeout(pedeNovaSenha,300);
   if(!sess){
     if(ev==='SIGNED_OUT'){
-      lockSalva(null);lockFecha();
+      /* só apaga o PIN quando a pessoa saiu de propósito; sessão expirada mantém PIN e Face ID */
+      if(LK.manual)lockSalva(null);LK.manual=false;lockFecha();
       USER=null;pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
