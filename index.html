@@ -309,6 +309,16 @@ body:has(#auth.on) .fab{display:none!important}
 .uchip button .i{width:17px;height:17px}
 .sync{font-size:10.5px;color:var(--mut);margin-top:8px;display:flex;align-items:center;gap:5px}
 .sync .i{width:13px;height:13px}
+.calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.calNav{display:flex;align-items:center;gap:8px}.calNav b{min-width:84px;text-align:center;text-transform:capitalize;font-size:14px}.calNav .btn2{padding:4px 10px}
+.calRes{margin:0 0 10px;font-size:13px;color:var(--mut)}.calRes b{color:var(--tx,inherit)}
+.calDow,.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calDow span{text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
+.cd{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:46px;border-radius:10px;border:1px solid transparent;background:rgba(255,255,255,.03);color:inherit;font:inherit;padding:3px 1px;cursor:pointer}
+.cd i{font-style:normal;font-size:12px;font-weight:700;line-height:1}.cd b{font-size:9.5px;font-weight:600;color:var(--mut);letter-spacing:-.02em;line-height:1.1;white-space:nowrap}
+.cd.past{opacity:.28;cursor:default}.cd.hoje{border-color:var(--a2)}.cd.neg{background:rgba(248,113,113,.14)}.cd.neg b{color:#f87171}.cd.min:not(.neg){background:rgba(251,191,36,.12)}
+.cd em{position:absolute;top:4px;right:5px;width:5px;height:5px;border-radius:50%}.cd em.n{background:#f87171}.cd em.p{background:#4ade80}
+html.claro .cd{background:rgba(15,23,42,.04)}
+.calDia .row{display:flex;justify-content:space-between;align-items:center;padding:6px 2px}.calFim{border-top:1px solid var(--bd,rgba(255,255,255,.08));margin-top:6px;padding-top:10px!important}
 .txD{font-variant-numeric:tabular-nums;color:var(--tx2,inherit);font-weight:600}
 .fab{position:fixed;right:18px;bottom:78px;width:60px;height:60px;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 12px 28px -6px var(--a2),inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;z-index:2147483647;transition:transform .2s}
 .fab:active{transform:scale(.94)}
@@ -1291,7 +1301,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.55'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.56'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2526,7 +2536,7 @@ function projetaMeses(n,sim){
     (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
       if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
       /* v10.52: entra no mês do VENCIMENTO da fatura, não do fechamento */
-      const f=fechamentoDe(c,t.data);if(f.vence>hj&&f.vence>=ym+'-01'&&f.vence<=fim)cart+=cents(t.valor);
+      const f=fechamentoDe(c,t.data);if(f.fecha>hj&&f.vence>hj&&f.vence>=ym+'-01'&&f.vence<=fim)cart+=cents(t.valor); // v10.56: sem contar duas vezes o ciclo já fechado
     }));
     /* v10.45: fatura já fechada e não paga sai no mês do vencimento (vencida = mês atual).
        as compras dela não entram acima (o ciclo já fechou), então não há dupla contagem. */
@@ -2539,6 +2549,85 @@ function projetaMeses(n,sim){
     out.push({ym,entra:entra/100,sai:sai/100,cart:cart/100,saldo:saldo/100});
   }
   return out;
+}
+
+/* ---------- v10.56: saldo projetado dia a dia ----------
+   parte do saldo de hoje e soma, no dia em que acontecem: previstos (atrasados contam hoje), próximas
+   ocorrências das contas fixas (as no cartão caem no vencimento da fatura), compras no cartão de ciclos
+   ainda abertos (no vencimento da fatura) e o que falta pagar de faturas fechadas. tudo em centavos. */
+function projecaoDiaria(N){
+  N=Math.max(7,Math.min(400,N||60));
+  const h=new Date(),hj=hojeISO(),fimP=isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+N));
+  const ev={},add=(d,o)=>{if(d<hj)d=hj;if(d>fimP)return;(ev[d]=ev[d]||[]).push(o);};
+  const fat={},addFat=(c,vence,v)=>{if(!v)return;const k=c.id+'|'+vence;if(!fat[k])fat[k]={c,vence,v:0};fat[k].v+=v;};
+  S.tx.forEach(t=>{
+    if(t.status!=='previsto'||!t.data||t.cartao||t.tipo==='transf')return;
+    const v=cents(t.valor);if(!v)return;
+    add(t.data,{n:t.descricao||t.categoria,v:t.tipo==='receita'?v:-v,cat:t.categoria,tipo:t.tipo,atras:t.data<hj,id:t.id});
+  });
+  (S.fixas||[]).forEach(f=>ocorrenciasFixa(f,isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+1)),fimP).forEach(o=>{
+    if(o.data<=hj||S.gerados[o.key])return;
+    const v=cents(f.valor);if(!v)return;
+    const c=f.cartao&&f.tipo!=='receita'&&S.cartoes.find(x=>x.id===f.cartao);
+    if(c){addFat(c,fechamentoDe(c,o.data).vence,v);return;}
+    add(o.data,{n:f.nome,v:f.tipo==='receita'?v:-v,cat:f.categoria,tipo:f.tipo,fixa:true});
+  }));
+  (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
+    if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
+    const f=fechamentoDe(c,t.data);if(f.vence>hj&&f.fecha>hj)addFat(c,f.vence,cents(t.valor)); // ciclo ainda aberto
+  }));
+  S.tx.forEach(t=>{if(!t.faturaKey)return;const rs=cents(restanteFatura(t));if(rs<=0)return;const c=S.cartoes.find(x=>t.faturaKey.indexOf('fat|'+x.id+'|')===0);if(c)addFat(c,venceFatura(t),rs);});
+  Object.values(fat).forEach(F=>add(F.vence,{n:'fatura '+F.c.nome,v:-F.v,cat:'Cartão',tipo:'despesa',fatura:true,atras:F.vence<hj}));
+  let saldo=cents(saldoTotal());const dias=[];
+  for(let i=0;i<=N;i++){
+    const d=isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+i)),L=(ev[d]||[]).sort((a,b)=>a.v-b.v);
+    const mov=L.reduce((a,o)=>a+o.v,0);saldo+=mov;
+    dias.push({d,saldo:saldo/100,mov:mov/100,itens:L.map(o=>Object.assign({},o,{v:o.v/100}))});
+  }
+  return dias;
+}
+
+let CAL_M=0,PROJ_C=null;
+function projCache(){const k=S.tx.length+'|'+(S.fixas||[]).length+'|'+hojeISO()+'|'+saldoTotal();if(!PROJ_C||PROJ_C.k!==k)PROJ_C={k,d:projecaoDiaria(100)};return PROJ_C.d;}
+function calSaldoHTML(){
+  const D=projCache(),hj=hojeISO(),h=new Date();
+  const M=new Date(h.getFullYear(),h.getMonth()+CAL_M,1),ym=isoDe(M).slice(0,7);
+  const nd=new Date(M.getFullYear(),M.getMonth()+1,0).getDate(),off=M.getDay();
+  const map={};D.forEach(x=>map[x.d]=x);
+  const prox=D.slice(0,61),min=prox.reduce((a,x)=>x.saldo<a.saldo?x:a,prox[0]),neg=prox.find(x=>x.saldo<0);
+  const ultimo=D[D.length-1];
+  let cells='';for(let i=0;i<off;i++)cells+='<span class="cdE"></span>';
+  for(let d=1;d<=nd;d++){
+    const iso=ym+'-'+(d<10?'0':'')+d,x=map[iso];
+    if(!x){cells+=`<span class="cd past"><i>${d}</i></span>`;continue;}
+    const tem=x.itens.length,cls=(x.saldo<0?' neg':'')+(iso===hj?' hoje':'')+(x===min?' min':'')+(tem?' mov':'');
+    cells+=`<button type="button" class="cd${cls}" data-act="cal-dia" data-id="${iso}" aria-label="${d}: saldo ${brl(x.saldo)}${tem?', '+tem+' movimentos':''}"><i>${d}</i><b>${brlK(x.saldo).replace('R$ ','')}</b>${tem?`<em class="${x.mov>=0?'p':'n'}"></em>`:''}</button>`;
+  }
+  const mesN=MESES_LONGO[M.getMonth()]+(M.getFullYear()!==h.getFullYear()?' '+M.getFullYear():'');
+  return `<div class="card calCard">
+    <div class="calTop"><h4>Saldo dia a dia</h4><div class="calNav"><button class="btn2" data-act="cal-m" data-id="-1" ${CAL_M<=0?'disabled':''} aria-label="mês anterior">‹</button><b>${mesN}</b><button class="btn2" data-act="cal-m" data-id="1" ${CAL_M>=3?'disabled':''} aria-label="próximo mês">›</button></div></div>
+    ${neg?`<p class="aviso">${I('alert')}Fica no vermelho em ${fmtDataCurta(neg.d)} (${brl(neg.saldo)}). Toque no dia para ver o que pesa.</p>`
+      :`<p class="calRes">menor saldo nos próximos 60 dias: <b>${brl(min.saldo)}</b> em ${min.d===hj?'hoje':fmtDataCurta(min.d)}</p>`}
+    <div class="calDow">${['D','S','T','Q','Q','S','S'].map(x=>`<span>${x}</span>`).join('')}</div>
+    <div class="calGrid">${cells}</div>
+    <p class="small" style="margin:10px 0 0">saldo de hoje mais previstos, contas fixas e faturas no dia do vencimento. ${ultimo?'até '+fmtDataCurta(ultimo.d)+'.':''}</p>
+  </div>`;
+}
+function abreDiaSaldo(iso){
+  const x=projCache().find(y=>y.d===iso);if(!x)return;
+  const P=projCache(),ant=P[P.indexOf(x)-1];
+  const ini=ant?ant.saldo:(x.saldo-x.mov);
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Saldo do dia"><div class="sh-head"><h3>${iso===hojeISO()?'Hoje':fmtData(iso)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <div class="calDia"><div class="row"><span class="small">começa com</span><b>${brl(ini)}</b></div>
+    ${x.itens.length?x.itens.map(o=>`<div class="tx"><span class="ic ${o.v<0?'despesa':'receita'}" style="color:${o.fatura?'#60a5fa':corCat(o.cat)}">${I(o.fatura?'card':catIcon(o.cat))}</span><div class="txt"><b>${esc(o.n)}</b><small>${o.fatura?'fatura do cartão':o.fixa?'conta fixa':o.atras?'previsto atrasado':'previsto'}</small></div><div class="val ${o.v<0?'neg':'pos'}">${o.v<0?'−':'+'} ${brl(Math.abs(o.v))}</div></div>`).join(''):'<p class="vazio">Nada previsto para este dia.</p>'}
+    <div class="row calFim"><span>termina com</span><b class="${x.saldo<0?'neg':'pos'}">${brl(x.saldo)}</b></div></div></div>`;
+  box.classList.add('on');
+}
+function alertaVermelhoHTML(){
+  if(!S.bancos||!S.bancos.length)return '';
+  const D=projCache().slice(0,31),neg=D.find(x=>x.saldo<0);if(!neg)return '';
+  return `<div class="card aviso-card"><p class="aviso">${I('alert')}Pela projeção, o saldo fica negativo em ${neg.d===hojeISO()?'hoje':fmtDataCurta(neg.d)} (${brl(neg.saldo)}).</p><button class="btn2" data-act="ir-cal">ver dia a dia</button></div>`;
 }
 function viewPlan(){
   const n=PLAN.n,base=projetaMeses(n),sim=projetaMeses(n,PLAN),temSim=!!(PLAN.renda||PLAN.extra||PLAN.corte);
@@ -2558,6 +2647,7 @@ function viewPlan(){
     <div class="card mini sumcard"><small>SALDO HOJE</small><b class="${hoje<0?'neg':'pos'}">${brl(hoje)}</b></div>
     <div class="card mini sumcard${fim.saldo<0?' sum-neg':''}"><small>EM ${nomeM(fim.ym).toUpperCase()}${temSim?' (SIMULADO)':''}</small><b class="${fim.saldo<0?'neg':'pos'}">${brl(fim.saldo)}</b>${temSim?`<small style="margin:4px 0 0">sem simulação: ${brl(base[base.length-1].saldo)}</small>`:''}</div>
   </div>
+  ${calSaldoHTML()}
   ${!temDados?`<div class="card aviso-card"><p class="aviso">${I('alert')}Ainda não há contas fixas, salário nem lançamentos previstos, então a projeção fica parada no saldo de hoje. Cadastre o salário e as contas fixas em Despesas → conta fixa.</p></div>`:''}
   ${neg?`<div class="card aviso-card"><p class="aviso">${I('alert')}Pela projeção, o saldo fica negativo em ${nomeM(neg.ym)} (${brl(neg.saldo)}).</p></div>`:''}
   <div class="card planCard">
@@ -3129,7 +3219,7 @@ function previsaoMes(){
   (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
     if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
     /* v10.52: compra entra na previsão no mês em que a fatura VENCE, não em que fecha */
-    const f=fechamentoDe(c,t.data);if(f.vence>hj&&f.vence<=fim)cart+=cents(t.valor);
+    const f=fechamentoDe(c,t.data);if(f.fecha>hj&&f.vence>hj&&f.vence<=fim)cart+=cents(t.valor); // v10.56: ciclo já fechado entra só pela fatura (antes contava duas vezes)
   }));
   cart+=faturasAPagar('0000-01-01',fim); // v10.45: fatura fechada a pagar (inclusive vencida)
   const hoje=cents(saldoTotal());
@@ -3193,7 +3283,7 @@ function homeTopo(v,o){
     </div>
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  ${alertasHTML()}
+  ${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3244,7 +3334,7 @@ function viewInicio(){
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${alertasHTML()}
+  ${alertasHTML()}${alertaVermelhoHTML()}
   <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
@@ -5131,6 +5221,9 @@ const ACT={
   'assin-atualiza':id=>{const r=assinRastreadas().find(x=>x.f.id===id);if(!r||!r.t)return;r.f.valor=c2(r.t.valor);if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[r.k]=r.t.data.slice(0,7);geraRecorrentes();salvar();render();toast('Valor de '+r.f.nome+' atualizado para '+brl(r.f.valor));},
   'assin-visto':v=>{v=String(v||'');const i=v.lastIndexOf('|');if(i<1)return;if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[v.slice(0,i)]=v.slice(i+1);salvar();render();},
   'plan-n':id=>{PLAN.n=+id||6;render();},
+  'cal-m':id=>{CAL_M=Math.max(0,Math.min(3,CAL_M+(+id||0)));render();},
+  'cal-dia':id=>abreDiaSaldo(id),
+  'ir-cal':()=>{CAL_M=0;go('plan');},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;render();},
   'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
   'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
@@ -5238,7 +5331,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
