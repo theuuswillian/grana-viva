@@ -1066,7 +1066,7 @@ html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
 .mtAp{flex:1;justify-content:center;display:inline-flex;align-items:center;gap:6px}.mtAp .i{width:16px;height:16px}
 .mtB{width:44px;height:44px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--line);color:var(--txt);cursor:pointer}
 .mtB .i{width:18px;height:18px}.mtB.del{color:#f87171}
-.mtSum{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.mtSum small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt);opacity:.65}.mtSum b{font-size:17px;color:var(--hd)}.mtSum b.pos{color:#4ade80}
+.mtSum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}.mtSum small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt);opacity:.65}.mtSum b{font-size:17px;color:var(--hd)}.mtSum b.pos{color:#4ade80}
 .mtSumBar{grid-column:1/-1}.mtSumBar .bar{margin:2px 0 6px}.mtSumBar small{text-transform:none;letter-spacing:0}
 .bcHd{display:flex;align-items:center;gap:12px;margin-bottom:14px}.bcHd h4{margin:0!important;font-size:16px!important;text-transform:none!important;letter-spacing:0!important;color:var(--hd)!important}.bcHd small{font-size:12px;color:var(--txt);opacity:.7}.bcHd>div{flex:1;min-width:0}
 .bcIc{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;flex:none}.bcIc .i{width:22px;height:22px}
@@ -1081,6 +1081,13 @@ html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
 .bcSync{width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;min-height:48px}
 .bcSec{display:flex;gap:10px}.bcSec .btn2{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px}.bcSec .i{width:15px;height:15px}
 .bcDel{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:1px solid rgba(248,113,113,.35);color:#f87171;border-radius:14px;font:inherit;font-size:14px;cursor:pointer;min-height:44px}
+
+/* v10.34: números nunca quebram no meio */
+.nw{white-space:nowrap}
+.hmSaldo,.mini b,.bk-val{white-space:nowrap;overflow:hidden;text-overflow:clip;word-break:normal;overflow-wrap:normal;max-width:100%}
+.grid2:has(> .card.bk){grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+.card.bk{min-width:0}
+.mtSum>div{min-width:0}.mtSum b.fit{display:block;overflow:hidden}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -2317,14 +2324,15 @@ const NOME_CACHE=new Map();
 function nomeTx(t){
   const d=String((t&&t.descricao)||'').trim();if(!d)return {n:(t&&t.categoria)||'',k:''};
   if(NOME_CACHE.has(d))return NOME_CACHE.get(d);
-  let pre='',rest=d;const m=d.match(TX_PREF);
-  if(m){pre=m[1];rest=d.slice(m[0].length);}else if(d.includes('|')){pre=d.split('|')[0];rest=d.split('|').slice(1).join(' ');}
+  let est='';let d2=d;const me=d.match(/^estorno\s*(de\s+)?[-–:|]?\s*/i);if(me&&d.length>me[0].length){est='Estorno';d2=d.slice(me[0].length);}
+  let pre='',rest=d2;const m=d2.match(TX_PREF);
+  if(m){pre=m[1];rest=d2.slice(m[0].length);}else if(d2.includes('|')){pre=d2.split('|')[0];rest=d2.split('|').slice(1).join(' ');}
   rest=rest.replace(/\|/g,' - ');
   const lixo=x=>!/[A-Za-zÀ-ÿ]{2}/.test(x)||/^(ag[eê]ncia|ag\.?|conta|cc|cpf|cnpj)\b/i.test(x)||/^[\s•*.\d\-\/]+$/.test(x);
   const partes=rest.split(/\s+[-–]\s+/).map(x=>x.trim()).filter(x=>x&&!lixo(x));
-  let n=(partes[0]||'').replace(/\s*[•*]{2,}[\d.•*\-]*\s*/g,' ').replace(/\s{2,}/g,' ').trim();
-  const kind=(TX_KIND.find(([re])=>re.test(pre))||[])[1]||'';
-  const res=n&&n.length>1?{n:titCase(n).slice(0,80),k:kind}:{n:d,k:''};
+  let n=(partes[0]||'').replace(/\s*[•*]{2,}[\d.•*\-]*\s*/g,' ').replace(/\s*\*\s*/g,' ').replace(/\s{2,}/g,' ').trim();
+  const kind=est||(TX_KIND.find(([re])=>re.test(pre))||[])[1]||'';
+  const res=n&&n.length>1?{n:titCase(n).slice(0,80),k:kind}:pre?{n:titCase(pre.trim()).slice(0,80),k:kind}:{n:d,k:''};
   if(NOME_CACHE.size>3000)NOME_CACHE.clear();NOME_CACHE.set(d,res);return res;
 }
 function fmtDataCurta(iso){return String(iso).slice(0,4)===String(new Date().getFullYear())?fmtData(iso).slice(0,5):fmtData(iso);}
@@ -2581,8 +2589,18 @@ function render(){
     if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
+    try{cabeNum(v);}catch(e){}
   });
 }
+/* v10.34: valores grandes encolhem a fonte para caber, sem quebrar o número no meio */
+function cabeNum(root){
+  root.querySelectorAll('.hmSaldo,.mini b,.bk-val,.fit').forEach(el=>{
+    el.style.fontSize='';if(!el.clientWidth)return;
+    let fs=parseFloat(getComputedStyle(el).fontSize),min=Math.max(11,fs*.45),i=0;
+    while(el.scrollWidth>el.clientWidth+1&&fs>min&&i++<30){fs-=1;el.style.fontSize=fs+'px';}
+  });
+}
+let CABE_T;addEventListener('resize',()=>{clearTimeout(CABE_T);CABE_T=setTimeout(()=>{const v=$('#view');if(v)cabeNum(v);},150);});
 
 const VIEWS={
   inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
@@ -3064,7 +3082,7 @@ function ritmoEconomia(){
 }
 function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())*12+(+ym.slice(5,7)-1-h.getMonth());}
 const META_COR=[['#22c55e','#0ea5e9'],['#8b5cf6','#ec4899'],['#f59e0b','#ef4444'],['#06b6d4','#6366f1'],['#10b981','#84cc16']];
-function brlK(v){v=+v||0;if(Math.abs(v)<1000)return brl(v);const k=v/1000;return 'R$ '+(Math.abs(k)>=1000?String(Math.round(k/100)/10).replace('.',',')+' mi':String(Math.round(k*10)/10).replace('.',',')+' mil');}
+function brlK(v){v=+v||0;const a=Math.abs(v),sg=v<0?'-':'';if(a<1000)return brl(v);const f=(x,u)=>sg+'R$ '+String(x>=100?Math.round(x):Math.round(x*10)/10).replace('.',',')+' '+u;if(a<999500)return f(a/1e3,'mil');if(a<999500000)return f(a/1e6,'mi');return f(a/1e9,'bi');}
 function metaIcone(n){const x=norm(n||'');const L=[[/aposent|previd|velhice|futuro/,'aposentadoria'],[/carro|moto|veic|automo/,'carro'],[/casa|apart|imovel|terreno|entrada|reforma/,'casa'],[/viag|ferias|mala|intercambio/,'mala'],[/estud|faculd|curso|educa|pos/,'educacao'],[/reserva|emergenc|seguran/,'piggy'],[/casament|presente|aniver|natal/,'presente'],[/celular|iphone|notebook|computador|pc|laptop|tv/,'laptop'],[/saude|cirurg|dente|tratament/,'saude'],[/pet|cachorro|gato/,'pet'],[/divida|quitar|emprest/,'receipt'],[/invest|acoes|fii|cripto/,'chart']];const h=L.find(([re])=>re.test(x));return h?h[1]:'flag';}
 function viewMetas(){
   const R=ritmoEconomia();
@@ -3086,7 +3104,7 @@ function viewMetas(){
         chips=[['faltam',brlK(falta)],['guardar/mês',brl(pm)],['prazo',mesCurto(m.prazo),n+(n>1?' meses':' mês')]];
         if(R&&!ok)nota=`seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas.`;}
     }else if(porMeta>0){const n=Math.ceil(falta/porMeta),dt=mesAdd(mesOff(0),n);
-      chips=[['faltam',brlK(falta)],['ritmo/mês',brl(porMeta)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];
+      chips=[['faltam',brlK(falta)],['ritmo/mês',brlK(porMeta)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];
       nota=semPrazo>1?`ritmo = sua sobra média dividida entre ${semPrazo} metas sem prazo.`:reserva>0?'ritmo = o que sobra depois das metas com prazo.':'ritmo = sua sobra média por mês.';
     }else chips=[['faltam',brlK(falta)]];
     return `<div class="card meta mtx hov" style="--m1:${pal[0]};--m2:${pal[1]}">
@@ -3097,7 +3115,7 @@ function viewMetas(){
       </div>
       <div class="mtVal"><b class="nw">${brl(m.atual)}</b><span>de ${brl(m.alvo)}</span>${st}</div>
       <div class="bar mtBar"><i data-w="${pct}"></i></div>
-      ${chips.length?`<div class="mtChips">${chips.map(([k,v,e])=>`<span><small>${k}</small><b class="nw">${v}</b>${e?`<em>${e}</em>`:''}</span>`).join('')}</div>`:''}
+      ${chips.length?`<div class="mtChips">${chips.map(([k,v,e])=>`<span><small>${k}</small><b class="nw fit">${v}</b>${e?`<em>${e}</em>`:''}</span>`).join('')}</div>`:''}
       ${nota?`<p class="mtNota">${I('gauge')}${nota}</p>`:''}
       <div class="mtActs">
         <button class="btn mtAp" data-act="aporte" data-id="${m.id}">${I('plus')}aporte</button>
@@ -3114,7 +3132,7 @@ function viewMetas(){
   return `
   <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
   ${ritmo}
-  ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
+  ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
   ${S.metas.length?cards:'<div class="card"><p class="vazio">crie sua primeira meta, tipo reserva de emergência. dá pra definir um prazo e eu calculo quanto guardar por mês.</p></div>'}`;
 }
 function viewCfg(){
@@ -3566,7 +3584,7 @@ const REGRAS_CAT=[
   [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|gasolina|etanol|alcool|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe|passagem|mecanic|oficina|ipva|licenciament|seguro auto/,'Transporte'],
   [/farmac|drogar|academia|smart ?fit|bluefit|selfit|crossfit|droga ?raia|pague menos|hospital|clinica|laborat|odonto|unimed|amil|hapvida/,'Saúde'],
   [/netflix|spotify|disney|hbo|max\b|prime video|youtube|cinema|ingresso|steam|playstation|xbox|bar\b|show/,'Lazer'],
-  [/aluguel|condomin|energia|neoenergia|enel|cemig|light\b|caesb|sabesp|saneamento|agua|internet|vivo|claro|tim\b|oi\b|net\b|gas\b/,'Moradia'],
+  [/aluguel|imobiliar|condomin|energia|neoenergia|enel|cemig|light\b|caesb|sabesp|saneamento|agua|internet|vivo|claro|tim\b|oi\b|net\b|gas\b/,'Moradia'],
   [/escola|faculdade|universid|curso|udemy|alura|livrar|mensalidade/,'Educação']
 ];
 function chaveRegra(desc){return norm(desc).replace(/\d+/g,'').replace(/[^a-z ]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60);}
@@ -4494,7 +4512,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
