@@ -3330,6 +3330,13 @@ function ehPropria(desc){const n=norm(desc);if(!n)return false;
   const cp=norm(String(desc).split('|').slice(1).join('|'));if(cp&&(S.cfg.proprias||[]).includes(cp))return true;
   if(/mesma titularidade|conta propria|entre contas|renda variavel|renda fixa|de investimentos|saldo de investimentos|resgat|aplicacao|caixinha|\bwise\b|foxbit|binance|mercado bitcoin|nomad|avenue|inter&co|corretora de cambio|ativos virtuais|tokenizadora|avenia|corretora|corretora de valores|xp investimentos|btg pactual|rico investimentos|clear corretora/.test(n))return true;
   const nm=nomeProprio();if(!nm)return false;const p=nm.split(/\s+/);return n.includes(p[0]+' '+p[1])&&(p.length<3||n.includes(p[p.length-1]));}
+/* v10.24: reclassifica uma vez o que veio do banco nas categorias novas e mais específicas */
+function recatBanco(){if(S.cfg.recatV>=1)return 0;let k=0;const amplas=['Alimentação','Transporte','Saúde','Lazer','Moradia','Educação','Outros'];
+  S.tx.forEach(t=>{if(t.origem!=='banco'||t.faturaKey||!t.descricao)return;const n=norm(t.descricao);
+    if((S.cfg.regras||{})[t.tipo[0]+':'+chaveRegra(t.descricao)])return; // você já escolheu
+    if(t.tipo==='despesa'&&amplas.includes(t.categoria)){for(const [re,c] of REGRAS_CAT){if(re.test(n)){if(CATS_NOVAS.includes(c)&&S.cats.includes(c)&&c!==t.categoria){t.categoria=c;t.sub='';k++;}break;}}}
+    else if(t.tipo==='receita'&&(t.categoria==='Outros'||!t.categoria)&&/reembolso|estorno|devolu|cashback/.test(n)){t.categoria='Reembolso';k++;}});
+  S.cfg.recatV=1;salvar();return k;}
 function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
   S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
@@ -3618,7 +3625,10 @@ function novoTx(id,tipoPre,base){
     }
     { /* aprende: a pessoa trocou a categoria sugerida, então lembra para a próxima */
       const d0=String(v.descricao||'').trim(),k=d0&&chaveRegra(d0);
-      if(k&&k.length>=3&&(v.tipo==='despesa'||v.tipo==='receita')){const sg=sugestaoCat(d0,v.tipo);if(!sg||sg.c!==v.categoria){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[v.tipo[0]+':'+k]=v.categoria;}}
+      if(k&&k.length>=3&&(v.tipo==='despesa'||v.tipo==='receita')){const sg=sugestaoCat(d0,v.tipo);if(!sg||sg.c!==v.categoria){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[v.tipo[0]+':'+k]=v.categoria;}
+        /* e aplica nos outros lançamentos iguais, para não precisar corrigir um por um */
+        let nI=0;if(t&&t.categoria!==v.categoria)S.tx.forEach(x=>{if(x===t||x.faturaKey||x.tipo!==v.tipo||x.categoria===v.categoria||!x.descricao)return;if(chaveRegra(x.descricao)===k){x.categoria=v.categoria;x.sub='';nI++;}});
+        if(nI)setTimeout(()=>toast('Aprendi: mais '+nI+' lançamento'+(nI>1?'s':'')+' de '+d0.split('|').pop().trim().slice(0,30)+' foram para '+v.categoria),900);}
     }
     const isDesp=v.tipo==='despesa';
     const forma=v.forma||(isDesp?'pix':'dinheiro');
@@ -4108,7 +4118,7 @@ document.addEventListener('change',e=>{
       try{d=JSON.parse(r.result);}catch(err){d=null;}
       if(!d||typeof d!=='object'||!Array.isArray(d.tx)||!Array.isArray(d.cats)){toast('Arquivo de backup inválido',true);return;}
       confirma({titulo:'Substituir dados?',texto:'Isso troca todos os dados atuais pelo backup. Exporte antes se quiser guardar.',ok:'Substituir',perigo:true},()=>{
-        S=sanea(d);geraRecorrentes();if(migraPropria())setTimeout(render,0);
+        S=sanea(d);geraRecorrentes();{const a=migraPropria(),b=recatBanco();if(a||b)setTimeout(()=>{render();if(b)toast(b+' lançamentos foram para categorias mais específicas');},0);}
         salvar();applyCfg();render();toast('Backup importado');
       });
     };
@@ -4127,7 +4137,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.27';
+const GV_BUILD='2026-10-28.28';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
