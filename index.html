@@ -2227,6 +2227,15 @@ function assinChave(desc){
 }
 function assinParecidas(a,b){if(!a||!b)return false;if(a===b)return true;const [c,l]=a.length<b.length?[a,b]:[b,a];return c.length>=4&&(l.startsWith(c+' ')||l.endsWith(' '+c)||l.includes(' '+c+' '));}
 /* função pura: (tx, fixas, cfg, hoje) -> candidatas. sem efeitos colaterais. */
+const ASSIN_MARCAS={tim:'TIM',vivo:'Vivo',claro:'Claro',oi:'Oi',netflix:'Netflix',spotify:'Spotify',disney:'Disney+',hbo:'HBO Max',globoplay:'Globoplay',deezer:'Deezer',youtube:'YouTube Premium',icloud:'iCloud',apple:'Apple',googleone:'Google One',amazon:'Amazon Prime',prime:'Amazon Prime',paramount:'Paramount+',crunchyroll:'Crunchyroll',openai:'ChatGPT',chatgpt:'ChatGPT',microsoft:'Microsoft 365',adobe:'Adobe',canva:'Canva',smartfit:'Smart Fit',wellhub:'Wellhub',gympass:'Wellhub'};
+function assinNome(n){
+  let s=n.replace(/\.com(\.br)?\b/ig,'').replace(/\b(s\.?\s?\/?a\.?|ltda|me|eireli|epp|s\/s|cia)\b\.?/ig,' ').replace(/[*_]+/g,' ').replace(/\s{2,}/g,' ').trim();
+  const p=s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[^a-z0-9]+/).filter(Boolean);
+  if(p.length&&ASSIN_MARCAS[p[0]])return ASSIN_MARCAS[p[0]];
+  if(p.length>1&&ASSIN_MARCAS[p[0]+p[1]])return ASSIN_MARCAS[p[0]+p[1]];
+  if(s===s.toUpperCase()||s===s.toLowerCase())s=s.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());
+  return s.slice(0,60);
+}
 function detectaAssinaturas(tx,fixas,cfg,hoje){
   tx=tx||S.tx;fixas=fixas||S.fixas||[];cfg=cfg||S.cfg||{};hoje=hoje||hojeISO();
   const dt=s=>new Date(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)),dH=dt(hoje);
@@ -2263,7 +2272,7 @@ function detectaAssinaturas(tx,fixas,cfg,hoje){
     const vA=+ult.valor,prev=seq.length>1?+seq[seq.length-2].valor:null;
     let vAnt=null;for(let i=seq.length-2;i>=0;i--){if(Math.round(seq[i].valor*100)!==Math.round(vA*100)){vAnt=+seq[i].valor;break;}}
     const aumento=prev&&vA>prev*1.03&&vA-prev>=0.5?Math.floor((vA/prev-1)*100):0;
-    out.push({key:k,nome:String(nomeU||k).replace(/\.com(\.br)?\b/i,"").trim().slice(0,60)||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento});
+    out.push({key:k,nome:assinNome(String(nomeU||k))||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento});
   });
   return out.sort((a,b)=>b.valorAtual-a.valorAtual);
 }
@@ -2300,7 +2309,7 @@ function assinHTML(){
   const C=detectaAssinaturas(),R=assinRastreadas();ASSIN_C=C;
   if(!C.length&&!R.length)return '';
   const mes=R.reduce((a,x)=>a+cents(mensalEq(x.f)),0)/100+C.reduce((a,c)=>a+cents(c.valorAtual),0)/100,n=C.length+R.length;
-  const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções de ${esc(nome)}">${I('menu')}</button></div>`;
+  const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções de ${esc(nome)}">${I('more')}</button></div>`;
   const bdg=p=>p?`<span class="hvQ ${p>=10?'late':'soon'}">subiu ${p}%</span>`:'';
   const lin=R.map(x=>row(catIcon(x.f.categoria),corCat(x.f.categoria),x.f.nome,`dia ${x.f.dia} · conta fixa`,x.f.valor,bdg(x.subiu),'f:'+x.f.id))
     .concat(C.map(c=>row(catIcon(c.categoria),corCat(c.categoria),c.nome,`dia ${c.dia} · detectada em ${c.mesesVistos} meses`,c.valorAtual,bdg(c.aumento),'c:'+c.key)));
@@ -5026,7 +5035,7 @@ $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
 /* a cada publicação: troque GV_BUILD aqui e V no sw.js juntos (./bump.sh faz os dois) */
-const GV_BUILD='2026-10-29.50';
+const GV_BUILD='2026-10-29.51';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
