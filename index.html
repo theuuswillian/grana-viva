@@ -1499,6 +1499,7 @@ window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
 let MUDANCAS=0; // v10.45: conta salvamentos locais; download que atravessou uma edição é descartado
 function salvar(){
+  try{localStorage.setItem('gv-last-act',String(Date.now()));}catch(e){}
   MUDANCAS++;
   try{fotoPat();}catch(e){}
   try{localStorage.setItem(KEY,JSON.stringify(S));if(USER)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true);}
@@ -5579,6 +5580,13 @@ async function entraComSessao(sess){
 sb.auth.getSession().then(({data})=>{
   if(data&&data.session){
     try{if(window.location.hash.includes('access_token')||/[?&]code=/.test(window.location.search))history.replaceState(null,'',window.location.pathname+window.location.search);}catch(e){}
+    /* v10.52: limite de sessão por inatividade (o Supabase só permite isso no plano pago, então o app mesmo desloga):
+       7 dias sem abrir o app pede login de novo. os dados continuam salvos na nuvem. */
+    try{
+      const ult=+(localStorage.getItem('gv-last-act')||0);
+      if(ult&&Date.now()-ult>7*864e5&&data.session)sb.auth.signOut().catch(()=>{});
+      else localStorage.setItem('gv-last-act',String(Date.now()));
+    }catch(e){}
     entraComSessao(data.session);
   }else{
     if(!sessaoGuardadaId()&&localStorage.getItem(OWNER_KEY))limpaCache();
