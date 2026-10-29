@@ -1100,6 +1100,8 @@ html.claro .hPerC.on{background:#0f172a;color:#fff}
 .spkDot{fill:var(--sk2);stroke:var(--bg);stroke-width:2.5;filter:drop-shadow(0 0 6px var(--sk2))}
 /* --- B: cartão vibrante --- */
 /* v10.36: Patrimônio — cartão vibrante */
+.lkBioBig{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px auto 6px;padding:13px 22px;border:0;border-radius:999px;font-family:inherit;font-size:15px;font-weight:600;color:#fff;background:linear-gradient(135deg,#059669,#4f46e5);box-shadow:0 12px 28px -12px rgba(79,70,229,.8);cursor:pointer}
+.lkBioBig .i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9}
 .ptHero{position:relative;overflow:hidden;border-radius:28px;padding:22px;margin-bottom:16px;color:#fff;background:linear-gradient(135deg,#059669 0%,#0d9488 35%,#4f46e5 75%,#7c3aed 100%);box-shadow:0 24px 50px -22px rgba(79,70,229,.7)}
 .ptHero.ptNeg{background:linear-gradient(135deg,#be123c 0%,#e11d48 40%,#7c3aed 100%)}
 .ptHero,.ptHero *{color:#fff!important}
@@ -4708,6 +4710,7 @@ if(aplicaCDI())salvar();atualizaCDI();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')atualizaCDI();});
 setInterval(()=>atualizaCDI(),3*3600e3);
 /* ---------- bloqueio do app: PIN e Face ID / Touch ID, guardado só neste aparelho (não vai para a nuvem) ---------- */
+var LK_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 var LOCK_KEY='gv-lock',LOCK_LEN=4,LK={o:null,buf:'',saiu:0,bioBusy:false};
 ICONS.faceid='<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>';
 function lockCfg(){try{const c=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return c&&c.hash&&c.salt?c:null;}catch(e){return null;}}
@@ -4728,6 +4731,7 @@ function lockTela(o){
   el.innerHTML=`<div class="lkBox">
     <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
     <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
+    ${o.bio?`<button type="button" class="lkBioBig" data-k="bio">${I('faceid')}<span>Desbloquear com Face ID</span></button>`:''}
     <div class="lkDots" id="lkDots">${'<i></i>'.repeat(LOCK_LEN)}</div>
     <div class="lkPad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" data-k="${n}">${n}</button>`).join('')}
       <button type="button" class="lkAlt" data-k="bio" ${o.bio?'':'disabled'} aria-label="usar Face ID">${o.bio?I('faceid'):''}</button>
@@ -4764,7 +4768,7 @@ function lockAbre(forca){
   lockLimpaSaida();
   const c=lockCfg();if(!c){lockFecha();return;}
   if(!forca&&LK.o&&LK.o.modo==='abrir')return;
-  lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:c.bio?'ou use o Face ID':'',bio:!!c.bio,cb:async pin=>{
+  lockTela({modo:'abrir',titulo:c.bio?'Toque para usar o Face ID':'Digite seu PIN',sub:c.bio?'ou digite seu PIN':'',bio:!!c.bio,cb:async pin=>{
     const ok=await lockConfere(pin),cc=lockCfg();
     if(ok){if(cc){cc.falhas=0;cc.ate=0;lockSalva(cc);}lockFecha();return;}
     if(!cc){lockFecha();return;}
@@ -4772,7 +4776,7 @@ function lockAbre(forca){
     if(cc.falhas>=5){const seg=Math.min(300,30*Math.pow(2,cc.falhas-5));cc.ate=Date.now()+seg*1000;lockSalva(cc);lockErro('PIN incorreto. Tente de novo em '+seg+' s');}
     else{lockSalva(cc);lockErro('PIN incorreto');}
   }});
-  if(c.bio)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
+  if(c.bio&&!LK_IOS)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
 }
 async function lockBio(auto){
   const c=lockCfg();if(!c||!c.bio||LK.bioBusy)return;
@@ -4782,7 +4786,7 @@ async function lockBio(auto){
     const fl=r&&r.response&&r.response.authenticatorData?new Uint8Array(r.response.authenticatorData)[32]:0;
     if(fl&4){c.falhas=0;c.ate=0;lockSalva(c);lockFecha();return;}
     lockMsg('não deu certo, use o PIN',true);
-  }catch(e){if(!auto)lockMsg('Face ID cancelado, use o PIN ou toque no ícone',true);}
+  }catch(e){if(!auto)lockMsg('Face ID cancelado, toque no botão de novo ou use o PIN',true);}
   finally{setTimeout(()=>{LK.bioBusy=false;},400);}
 }
 async function lockBioAtiva(){
