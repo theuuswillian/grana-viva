@@ -132,7 +132,9 @@ Deno.serve(async (req) => {
     const n = await enviar(subs, { title: "GranaViva", body: "Notificações ativadas. Vou te avisar de faturas e contas perto do vencimento.", url: "./", tag: "gv-teste" });
     return json({ enviados: n });
   }
-  if (cron !== Deno.env.get("CRON_SECRET")) return json({ erro: "não autorizado" }, 401);
+  // sem CRON_SECRET configurado, nenhum cabeçalho é aceito (antes, ausente vs. ausente podia passar)
+  const segredo = Deno.env.get("CRON_SECRET");
+  if (!segredo || cron !== segredo) return json({ erro: "não autorizado" }, 401);
   const { data: subs } = await sb.from("push_subs").select("*");
   const porUser: Record<string, any[]> = {};
   for (const s of subs || []) (porUser[s.user_id] = porUser[s.user_id] || []).push(s);

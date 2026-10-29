@@ -915,7 +915,7 @@ html.claro .btn.gbtn{background:#fff!important;color:#0f172a!important;border-co
 #lock.on{display:flex}
 html.travado body{overflow:hidden}
 html.travado .fab{display:none!important}
-html.privado #app{filter:blur(18px)}
+html.privado #app,html.privado #modal{filter:blur(18px)}
 .lkBox{width:100%;max-width:330px;text-align:center;animation:up .35s ease both}
 .lkBox .ahead{margin-bottom:6px}
 .lkTit{font-size:17px;font-weight:600;color:var(--txt);margin-top:4px}
@@ -4152,17 +4152,28 @@ function novaTransf(id){
 /* v10.43: lê foto/print/PDF de comprovante com IA (função ler-comprovante, Gemini) e abre o lançamento preenchido */
 function imgParaJpeg(f,max){return new Promise((ok,er)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1]);};im.onerror=()=>{URL.revokeObjectURL(u);er(new Error('img'));};im.src=u;});}
 function b64DeArquivo(f){return new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=er;r.readAsDataURL(f);});}
-function abreTxIA(o){
+function abreTxIA(o,arq){
   const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
   let forma=o.forma,cartao='';
   if(forma==='cartao'){const k=o.cartao&&S.cartoes.find(c=>c.nome===o.cartao);if(k)cartao=k.id;else if(S.cartoes.length===1)cartao=S.cartoes[0].id;else if(!S.cartoes.length)forma='pix';}
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
-  novoTx(null,o.tipo,{ia:o.confianca||0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[]});
+  novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null});
 }
 async function chamaIA(body){
   const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body)});
   if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui entender');}
-  return o;
+  return limpaIA(o);
+}
+/* v10.45: a resposta da IA é tratada como dado não confiável: tipos, faixas e datas conferidos antes de abrir o formulário */
+function limpaIA(o){
+  o=o&&typeof o==='object'?o:{};
+  const tipo=o.tipo==='receita'?'receita':'despesa';
+  const valor=enc(typeof o.valor==='number'?o.valor:parseBR(String(o.valor==null?'':o.valor)));
+  const data=DATA_OK.test(String(o.data))&&!isNaN(new Date(o.data+'T12:00:00'))?o.data:hojeISO();
+  const forma=['dinheiro','pix','boleto','cartao'].includes(o.forma)?o.forma:'pix';
+  const conf=Number(o.confianca);
+  return {tipo,valor,data,forma,descricao:str(o.descricao,140).trim(),categoria:str(o.categoria,60),cartao:str(o.cartao,60),
+    parcelas:Math.max(1,Math.min(24,parseInt(o.parcelas,10)||1)),confianca:isFinite(conf)?Math.max(0,Math.min(1,conf)):undefined};
 }
 /* lançar por frase: escreve ou dita (microfone do teclado do iPhone, ou reconhecimento de voz do navegador quando existe) */
 const SR_API=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -4202,9 +4213,10 @@ async function enviaFraseIA(){
   if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+' Entendendo…';}
   try{
     const o=await chamaIA({texto});
-    if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}return;}
+    if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     abreTxIA(o);
-  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}}
+  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);}
+  finally{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}}
 }
 function lerComprovanteIA(){
   if(!USER){toast('Entre na sua conta para usar a IA.',true);return;}
@@ -4214,14 +4226,16 @@ function lerComprovanteIA(){
     const pdf=f.type==='application/pdf';
     if(pdf&&f.size>4.5e6){toast('PDF grande demais (máx. 4,5 MB).',true);return;}
     const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.disabled=true;btn.innerHTML=I('receipt')+'Lendo…';}
+    const solta=()=>{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}};
     try{
       let imagem,mime;
       if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
       else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
       const o=await chamaIA({imagem,mime});
-      if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);if(btn){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}return;}
-      abreTxIA(o);
-    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);if(btn){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}}
+      if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
+      abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null); // a foto/PDF vira comprovante do lançamento quando ele for salvo
+    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);}
+    finally{solta();}
   };
   inp.click();
 }
@@ -4299,6 +4313,7 @@ function novoTx(id,tipoPre,base){
       }
     }else{novoId=uid();S.tx.push(Object.assign({id:novoId},obj));}
     geraRecorrentes();salvar();render();toast(!t&&np>1&&usaCartao?np+' parcelas lançadas':'Lançamento salvo');
+    if(!t&&novoId&&base&&base.arq)anexar(novoId,base.arq).then(e=>{if(e)toast(e,true);else render();}).catch(()=>{});
   });
   const mf=$('#mf');
   if(!t&&!base&&USER)mf.insertAdjacentHTML('afterbegin',`<div class="iaBtns"><button type="button" class="btn2 iaBtn" data-act="ia-frase">${I('sparkle')}Falar ou escrever</button><button type="button" class="btn2 iaBtn" data-act="ia-ler">${I('receipt')}Ler comprovante</button></div>`);
@@ -4935,24 +4950,28 @@ async function lockHash(pin,salt){
 }
 async function lockConfere(pin){const c=lockCfg();if(!c)return true;return (await lockHash(pin,c.salt))===c.hash;}
 async function bioDisponivel(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+/* v10.45: enquanto travado, o app por trás não recebe foco, toque nem leitor de tela */
+function lockInerte(on){['#app','#modal','#toast'].forEach(sel=>{const e=document.querySelector(sel);if(!e)return;if(on){e.setAttribute('inert','');e.setAttribute('aria-hidden','true');}else{e.removeAttribute('inert');e.removeAttribute('aria-hidden');}});}
+function lockLen(c){return c&&c.len===6?6:LOCK_LEN;} // PIN antigo (sem len) = 4 dígitos
 function lockTela(o){
+  o.len=o.len||lockLen(lockCfg());
   LK.o=o;LK.buf='';
   const el=$('#lock');
   el.innerHTML=`<div class="lkBox">
     <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
     <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
     ${o.bio?`<button type="button" class="lkBioBig" data-k="bio">${I('faceid')}<span>Desbloquear com Face ID</span></button>`:''}
-    <div class="lkDots" id="lkDots">${'<i></i>'.repeat(LOCK_LEN)}</div>
+    <div class="lkDots" id="lkDots">${'<i></i>'.repeat(o.len)}</div>
     <div class="lkPad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" data-k="${n}">${n}</button>`).join('')}
       <button type="button" class="lkAlt" data-k="bio" ${o.bio?'':'disabled'} aria-label="usar Face ID">${o.bio?I('faceid'):''}</button>
       <button type="button" data-k="0">0</button>
       <button type="button" class="lkAlt" data-k="del" aria-label="apagar">&#9003;</button>
     </div>
-    <div class="lkFoot" id="lkFoot">${o.cancelar?'<button type="button" class="alink" data-k="cancel">cancelar</button>':'<button type="button" class="alink" data-k="esqueci">esqueci o PIN</button>'}</div>
+    <div class="lkFoot" id="lkFoot">${o.modo==='novo'?`<button type="button" class="alink" data-k="len">usar PIN de ${o.len===6?4:6} dígitos</button>`:''}${o.cancelar?'<button type="button" class="alink" data-k="cancel">cancelar</button>':'<button type="button" class="alink" data-k="esqueci">esqueci o PIN</button>'}</div>
   </div>`;
-  el.classList.add('on');document.documentElement.classList.add('travado');
+  el.classList.add('on');document.documentElement.classList.add('travado');lockInerte(true);
 }
-function lockFecha(){const el=$('#lock');if(el){el.classList.remove('on');el.innerHTML='';}LK.o=null;LK.buf='';document.documentElement.classList.remove('travado');}
+function lockFecha(){const el=$('#lock');if(el){el.classList.remove('on');el.innerHTML='';}LK.o=null;LK.buf='';document.documentElement.classList.remove('travado');lockInerte(false);}
 function lockPinta(){document.querySelectorAll('#lkDots i').forEach((x,i)=>x.classList.toggle('on',i<LK.buf.length));}
 function lockMsg(t,erro){const e=$('#lkSub');if(e){e.textContent=t;e.classList.toggle('err',!!erro);}}
 function lockErro(t){LK.buf='';lockPinta();lockMsg(t,true);const d=$('#lkDots');if(d){d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');}try{if(navigator.vibrate)navigator.vibrate(80);}catch(e){}}
@@ -4963,12 +4982,14 @@ function lockTecla(k){
   if(k==='esqueci'){lockEsqueci();return;}
   if(k==='volta'){lockAbre(true);return;}
   if(k==='sair'){lockSair();return;}
+  if(k==='sairJa'){lockSair(true);return;}
+  if(k==='len'){if(o.modo==='novo')lockNovoPin(o.len===6?4:6);return;}
   const c=lockCfg();
   if(o.modo==='abrir'&&c&&c.ate&&Date.now()<c.ate){lockMsg('muitas tentativas, aguarde '+Math.ceil((c.ate-Date.now())/1000)+' s',true);return;}
   if(k==='del'){LK.buf=LK.buf.slice(0,-1);lockPinta();return;}
-  if(!/^\d$/.test(k)||LK.buf.length>=LOCK_LEN)return;
+  if(!/^\d$/.test(k)||LK.buf.length>=o.len)return;
   LK.buf+=k;lockPinta();
-  if(LK.buf.length===LOCK_LEN){const pin=LK.buf,cb=o.cb;setTimeout(()=>{if(LK.o===o)cb(pin);},120);}
+  if(LK.buf.length===o.len){const pin=LK.buf,cb=o.cb;setTimeout(()=>{if(LK.o===o)cb(pin);},120);}
 }
 /* guarda quando o app foi deixado de lado (sobrevive a fechar o app) */
 function lockMarcaSaida(){try{localStorage.setItem('gv-lock-saiu',String(Date.now()));}catch(e){}}
@@ -4983,10 +5004,11 @@ function lockAbre(forca){
     if(ok){if(cc){cc.falhas=0;cc.ate=0;lockSalva(cc);}lockFecha();return;}
     if(!cc){lockFecha();return;}
     cc.falhas=(cc.falhas||0)+1;
+    if(cc.falhas>=10){lockMsg('muitas tentativas erradas. Entre de novo com sua conta.',true);lockDesconecta();return;}
     if(cc.falhas>=5){const seg=Math.min(300,30*Math.pow(2,cc.falhas-5));cc.ate=Date.now()+seg*1000;lockSalva(cc);lockErro('PIN incorreto. Tente de novo em '+seg+' s');}
     else{lockSalva(cc);lockErro('PIN incorreto');}
   }});
-  if(c.bio)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
+  if(c.bio&&document.visibilityState!=='hidden')setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
 }
 async function lockBio(auto){
   const c=lockCfg();if(!c||!c.bio||LK.bioBusy)return;
@@ -5016,12 +5038,13 @@ async function lockBioAtiva(){
   }catch(e){const bk=lkBioBk(),cc=lockCfg();if(e&&e.name==='InvalidStateError'&&bk&&cc){cc.bio=bk.id;lockSalva(cc);render();toast('Face ID ativado');}else toast('Face ID não foi ativado',true);}
   finally{setTimeout(()=>{LK.bioBusy=false;},400);}
 }
-function lockNovoPin(){
-  lockTela({modo:'novo',titulo:'Crie um PIN de '+LOCK_LEN+' dígitos',sub:'ele vai ser pedido ao abrir o app neste aparelho',cancelar:true,cb:pin1=>{
-    lockTela({modo:'confirma',titulo:'Confirme o PIN',sub:'digite o mesmo PIN de novo',cancelar:true,cb:async pin2=>{
-      if(pin2!==pin1){lockNovoPin();lockErro('os PINs não batem, crie o PIN de novo');return;}
+function lockNovoPin(len){
+  len=len===6||len===4?len:lockLen(lockCfg());
+  lockTela({modo:'novo',len,titulo:'Crie um PIN de '+len+' dígitos',sub:'ele vai ser pedido ao abrir o app neste aparelho',cancelar:true,cb:pin1=>{
+    lockTela({modo:'confirma',len,titulo:'Confirme o PIN',sub:'digite o mesmo PIN de novo',cancelar:true,cb:async pin2=>{
+      if(pin2!==pin1){lockNovoPin(len);lockErro('os PINs não batem, crie o PIN de novo');return;}
       const ant=lockCfg()||{},salt=lkB64(crypto.getRandomValues(new Uint8Array(16)));
-      const bk=lkBioBk();lockSalva({hash:await lockHash(pin1,salt),salt:salt,bio:ant.bio||(bk&&bk.id)||null,uid:USER?USER.id:null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
+      const bk=lkBioBk();lockSalva({hash:await lockHash(pin1,salt),salt:salt,len,bio:ant.bio||(bk&&bk.id)||null,uid:USER?USER.id:null,atraso:ant.hash?ant.atraso:1,falhas:0,ate:0});
       lockFecha();render();toast(ant.hash?'PIN trocado':'Bloqueio ativado');
       if(!ant.hash&&!(lockCfg()||{}).bio&&await bioDisponivel())setTimeout(()=>confirma({titulo:'Usar Face ID também?',texto:'Você abre o app com o rosto (ou a digital) e o PIN fica de reserva.',ok:'Ativar'},lockBioAtiva),400);
     }});
@@ -5034,9 +5057,20 @@ function lockEsqueci(){
   lockMsg('Para criar outro PIN, saia da conta e entre de novo com seu e-mail e senha. Seus dados continuam salvos na nuvem.',false);
   const f=$('#lkFoot');if(f)f.innerHTML='<button type="button" class="btn2" data-k="volta">voltar</button><button type="button" class="btn2 danger" data-k="sair">sair da conta</button>';
 }
-async function lockSair(){
+async function lockSair(mesmoAssim){
   lockMsg('saindo…',false);
   try{if(typeof temPendencia==='function'&&temPendencia()&&navigator.onLine)await enviar();}catch(e){}
+  /* v10.45: igual ao "sair" normal, avisa se há alterações que ainda não chegaram à nuvem (ex.: offline) */
+  if(!mesmoAssim&&typeof temPendencia==='function'&&temPendencia()){
+    lockMsg('Atenção: há alterações deste aparelho que ainda não chegaram à nuvem. Se sair agora, elas serão perdidas. Conecte-se à internet e aguarde antes de sair.',true);
+    const f=$('#lkFoot');if(f)f.innerHTML='<button type="button" class="btn2" data-k="volta">voltar</button><button type="button" class="btn2 danger" data-k="sairJa">sair mesmo assim</button>';
+    return;
+  }
+  lockDesconecta();
+}
+/* sai da conta neste aparelho e exige login de verdade na volta (o Google não entra direto pela sessão já aberta) */
+async function lockDesconecta(){
+  try{localStorage.setItem('gv-reauth','1');}catch(e){}
   LK.manual=true;lockSalva(null);lockFecha();
   try{await sb.auth.signOut({scope:'local'});}catch(e){}
 }
@@ -5075,11 +5109,13 @@ document.addEventListener('visibilitychange',()=>{
     document.documentElement.classList.remove('privado');
     if(LK.saiu&&Date.now()-LK.saiu>=(c.atraso||0)*60000)lockAbre();
     LK.saiu=0;
+    /* "na hora": a tela travou com o app em segundo plano, quando o Face ID não pode abrir. pede agora */
+    if(!c.atraso&&c.bio&&LK.o&&LK.o.modo==='abrir')setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir'&&document.visibilityState==='visible')lockBio(true);},350);
   }
 });
 window.addEventListener('pageshow',e=>{if(e.persisted&&lockCfg()&&!lockDentroDoPrazo())lockAbre();});
 window.addEventListener('pagehide',()=>{if(lockCfg()&&!(LK.o&&LK.o.modo==='abrir'))lockMarcaSaida();});
-if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');document.documentElement.classList.remove('travado');}
+if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');document.documentElement.classList.remove('travado');lockInerte(false);}
 /* ---------- arrastar da esquerda para a direita abre o menu lateral; da direita para a esquerda fecha (celular) ---------- */
 (function(){
   const W=()=>($('#side').offsetWidth||248);
@@ -5149,7 +5185,9 @@ document.querySelectorAll('.aTabs button').forEach(b=>b.addEventListener('click'
 $('#aGoogle').addEventListener('click',async ()=>{
   const btn=$('#aGoogle');btn.disabled=true;$('#aErr').textContent='';$('#aErr').className='aerr';
   try{
-    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
+    /* depois de sair pela tela de bloqueio (esqueci o PIN / muitas tentativas), o Google pede a conta e a senha de novo */
+    let reauth=false;try{reauth=localStorage.getItem('gv-reauth')==='1';}catch(e){}
+    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:Object.assign({redirectTo:window.location.origin+window.location.pathname},reauth?{queryParams:{prompt:'select_account',max_age:'0'}}:{})});
     if(error)throw error;
   }catch(err){
     $('#aErr').textContent=erroTraduzido(err&&err.message)||'não deu pra entrar com o google agora';
@@ -5209,7 +5247,8 @@ $('#aTermos').addEventListener('click',()=>{
     <div class="cfTxt">
       <p>Seus lançamentos, cartões, contas, fundos e metas ficam guardados na sua conta, num banco de dados do Supabase (serviço de nuvem) e também numa cópia local neste aparelho.</p>
       <p>Cada conta só acessa os próprios dados, por regras de segurança do banco de dados (RLS).</p>
-      <p>Não vendemos nem alugamos seus dados. O app não se conecta ao seu banco.</p>
+      <p>Não vendemos nem alugamos seus dados. O app só se conecta ao seu banco se você ativar a conexão bancária (opcional, feita pela Pluggy), e você pode desligá-la quando quiser.</p>
+      <p>Quando você usa a leitura de comprovante ou o lançamento por frase, a foto, o PDF ou o texto são enviados à IA do Google (Gemini) apenas para montar o lançamento.</p>
       <p>Você pode exportar um backup (JSON) e apagar tudo a qualquer momento em Ajustes.</p>
       <p>Ao criar uma conta, você concorda com este texto.</p>
     </div></div>`;
@@ -5237,6 +5276,7 @@ $('#uchip').addEventListener('click',async e=>{
 });
 async function entraComSessao(sess){
   if(!sess||!sess.user)return;
+  try{localStorage.removeItem('gv-reauth');}catch(e){}
   {const lc=lockCfg();if(lc&&lc.uid&&lc.uid!==sess.user.id){lockSalva(null);lockFecha();}}
   if(!USER||USER.id!==sess.user.id){
     if(localStorage.getItem(OWNER_KEY)!==sess.user.id){
@@ -5282,6 +5322,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     mostraAuth();
     return;
   }
+  if(ev==='SIGNED_IN'){try{localStorage.removeItem('gv-reauth');}catch(e){}}
   if(!USER||USER.id!==sess.user.id){
     if(localStorage.getItem(OWNER_KEY)!==sess.user.id){
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
