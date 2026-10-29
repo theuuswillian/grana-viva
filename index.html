@@ -1431,8 +1431,8 @@ function barData(){
   return out;
 }
 /* ---------- ativos: tipos, listas, cotação cripto ---------- */
-const TIPOS=[{k:'todos',l:'Todos'},{k:'fii',l:'FIIs'},{k:'acao',l:'Ações'},{k:'etf',l:'ETFs'},{k:'bdr',l:'BDRs'},{k:'cripto',l:'Cripto'}];
-const TIPO_L={fii:'FII',acao:'Ação',etf:'ETF',bdr:'BDR',cripto:'Cripto'};
+const TIPOS=[{k:'todos',l:'Todos'},{k:'fii',l:'FIIs'},{k:'acao',l:'Ações'},{k:'etf',l:'ETFs'},{k:'bdr',l:'BDRs'},{k:'rf',l:'Renda fixa'},{k:'cripto',l:'Cripto'}];
+const TIPO_L={fii:'FII',acao:'Ação',etf:'ETF',bdr:'BDR',rf:'Renda fixa',cripto:'Cripto'};
 let FTAB='todos';
 const tipoOf=f=>f.tipo||'fii';
 const B3_LIST=[
@@ -2165,7 +2165,7 @@ async function atualizaCotacoes(forca){
   const ultimo=Number(localStorage.getItem('gv-cot-ts')||0);
   if(!forca&&Date.now()-ultimo<30*60e3)return;
   if(!navigator.onLine){COT={st:'manual',msg:'sem conexão, usando valores manuais'};return;}
-  const tks=[...new Set(S.fiis.filter(f=>tipoOf(f)!=='cripto').map(f=>f.ticker).filter(Boolean))];if(!tks.length)return;
+  const tks=[...new Set(S.fiis.filter(f=>tipoOf(f)!=='cripto'&&tipoOf(f)!=='rf').map(f=>f.ticker).filter(Boolean))];if(!tks.length)return;
   const tok=S.cfg.brapi?'&token='+encodeURIComponent(S.cfg.brapi):'';
   /* sem token, a brapi recusa (401) qualquer pedido com vários tickers; então pede um a um.
      com token, um pedido só. */
@@ -2696,6 +2696,7 @@ function viewFii(){
   const custoC=cris.reduce((a,f)=>a+(f.pago||0),0),valC=cris.reduce((a,f)=>a+f.cotas*f.preco,0),plC=valC-custoC;
   const lista=filtrados.map(f=>{
     const cri=tipoOf(f)==='cripto';
+    if(tipoOf(f)==='rf'){const posi=f.preco*f.cotas,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;return `<div class="tx hov">${assetIco(f.ticker,'rf')}<div class="txt"><b>${esc(f.nome||f.ticker)}</b><small class="tipoTag">Renda fixa</small><small>saldo ${brl(posi)}${f.pago>0?` · aplicado ${brl(f.pago)} · <b class="${pl>=0?'pos':'neg'}">${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b>`:''}${f.venc?' · vence '+fmtData(f.venc):''}</small><small class="cotInfo">${f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente'}</small></div><div class="acts"><button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;}
     const posi=f.cotas*f.preco,dv=f.cotas*f.dpc,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;
     const linha2=cri?`<small>${num(f.cotas)} ${esc(f.ticker)} · preço ${brl(f.preco)} · valor pago ${brl(f.pago)}</small>`
       :`<small>${num(f.cotas).replace(/,00$/,'')} cotas · cota ${brl(f.preco)}${f.pago>0&&f.cotas>0?' · preço médio '+brl(f.pago/f.cotas):''} · DPC ${brl(f.dpc)}</small>`;
@@ -3354,6 +3355,7 @@ async function bancoSync(){
     if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
     r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
     let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
+    const ni=investDoBanco(r.investimentos||[]);if(ni)toast(ni+' investimento'+(ni>1?'s':'')+' atualizado'+(ni>1?'s':'')+' pelo banco');
     geraRecorrentes();render();
     if(novos)toast(novos===1?'Cartão do banco adicionado em Cartões':novos+' cartões do banco adicionados');
     const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
@@ -3368,6 +3370,22 @@ async function bancoSync(){
   }catch(e){toast(e.message,true);}
 }
 let IMP_FILA=[];
+/* v10.20: posições de investimento do banco (Pluggy /investments) entram em Investimentos */
+function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
+  if(t==='EQUITY'){if(st==='REAL_ESTATE_FUND')return 'fii';if(st==='BDR')return 'bdr';if(st==='ETF')return 'etf';return 'acao';}
+  if(t==='ETF')return 'etf';if(st==='REAL_ESTATE_FUND')return 'fii';return 'rf';}
+function investDoBanco(L){let n=0;const hj=hojeISO();
+  L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
+    let f=S.fiis.find(x=>x.pluggyInv===v.id);
+    const tk=String(tp==='rf'?(v.codigo||v.nome):(v.codigo||v.nome)).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV';
+    if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
+    if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
+    if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
+    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
+    if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
+    else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
+    n++;});
+  if(n)salvar();return n;}
 /* v10.18: o cartão do banco aparece em Cartões com limite, usado, fechamento e vencimento informados pelo banco */
 function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
   if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
@@ -4048,7 +4066,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.22';
+const GV_BUILD='2026-10-28.23';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();

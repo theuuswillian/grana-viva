@@ -78,8 +78,21 @@ Deno.serve(async (req) => {
           contas.push({ id: a.id, nome: [a.name, a.number ? "··" + String(a.number).slice(-4) : ""].filter(Boolean).join(" "), tipo: a.type, saldo: a.balance, credito, tx });
         }
       }
-      await sb.from("pluggy_cfg").update({ ultima_sync: new Date().toISOString() }).eq("user_id", uid);
-      return json({ ok: true, desde, contas });
+      const investimentos: any[] = [];
+      for (const it of cfg.item_ids || []) {
+        try {
+          let pg = 1, tot = 1;
+          while (pg <= tot && pg <= 10) {
+            const r = await get(key, `/investments?itemId=${it}&pageSize=200&page=${pg}`);
+            tot = r.totalPages || 1; pg++;
+            for (const v of r.results || []) {
+              investimentos.push({ id: v.id, nome: String(v.name || "").slice(0, 80), codigo: String(v.code || "").slice(0, 20), tipo: v.type || "", subtipo: v.subtype || "", qtd: v.quantity ?? null, preco: v.value ?? null, saldo: v.balance ?? null, original: v.amountOriginal ?? null, status: v.status || "", vencimento: v.dueDate ? String(v.dueDate).slice(0, 10) : "", instituicao: v.institution?.name || "" });
+            }
+          }
+        } catch (_) { /* item sem permissão de investimentos */ }
+      }
+: new Date().toISOString() }).eq("user_id", uid);
+      return json({ ok: true, desde, contas, investimentos });
     }
     return json({ erro: "ação desconhecida" }, 400);
   } catch (e) {
