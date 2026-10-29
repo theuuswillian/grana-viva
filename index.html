@@ -309,6 +309,11 @@ body:has(#auth.on) .fab{display:none!important}
 .uchip button .i{width:17px;height:17px}
 .sync{font-size:10.5px;color:var(--mut);margin-top:8px;display:flex;align-items:center;gap:5px}
 .sync .i{width:13px;height:13px}
+.revCard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;border:1px solid rgba(96,165,250,.35)!important;background:linear-gradient(135deg,rgba(96,165,250,.12),rgba(167,139,250,.08))!important}
+.revIc{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(96,165,250,.18);color:#60a5fa;flex:none}.revIc svg{width:20px;height:20px}
+.revTx{flex:1;display:flex;flex-direction:column;gap:2px}.revTx small{color:var(--mut);font-size:12px}.revCard>svg{width:18px;height:18px;opacity:.6}
+.revRow{align-items:flex-start}.revRow .txt select{margin-top:6px;padding:5px 8px;font-size:13px;max-width:100%}
+.revR{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.revBt{display:flex;gap:6px}.revBt .btn2{padding:6px 9px}.revBt svg{width:16px;height:16px}.revOk{color:#4ade80}
 .calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .calNav{display:flex;align-items:center;gap:8px}.calNav b{min-width:84px;text-align:center;text-transform:capitalize;font-size:14px}.calNav .btn2{padding:4px 10px}
 .calRes{margin:0 0 10px;font-size:13px;color:var(--mut)}.calRes b{color:var(--tx,inherit)}
@@ -1301,7 +1306,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.56'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.57'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3232,6 +3237,8 @@ function previsaoHTML(){
     <div class="mt-3 grid gap-1.5">${it('a receber',p.rec,'pos')}${it('a pagar',p.des,'neg')}${it('cartão a pagar este mês',p.cart,'neg')}</div>
     <p class="${PD}">saldo de hoje mais o que está previsto até o fim do mês. é uma estimativa, não garantia.</p></div>`;
 }
+ICONS.inbox='<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Z"/>';
+if(!ICONS.check)ICONS.check='<path d="m5 12.5 4.5 4.5L19 7.5"/>';
 ICONS.eye='<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>';
 ICONS.eyeOff='<path d="M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.6 3.3M6.6 7.6C4 9.3 2.5 12 2.5 12S6 18 12 18c1.9 0 3.5-.6 4.9-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>';
 
@@ -3283,7 +3290,7 @@ function homeTopo(v,o){
     </div>
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  ${alertasHTML()}${alertaVermelhoHTML()}
+  ${revisarHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3334,7 +3341,7 @@ function viewInicio(){
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${alertasHTML()}${alertaVermelhoHTML()}
+  ${revisarHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
@@ -4415,6 +4422,8 @@ function proxImportBanco(){
   if(salvo&&((salvo[0]==='c'&&S.cartoes.some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&S.bancos.some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
   else if(c.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
   else if(!c.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
+  /* v10.56: conta que você já importou antes entra sozinha; os lançamentos ficam na caixa Revisar */
+  if(salvo&&IMP.destino===salvo&&S.cfg.autoImp!==false){IMP.silent=true;montaImport();confirmaImport();return;}
   montaImport();
 }
 function importarExtrato(){
@@ -4462,6 +4471,7 @@ function montaImport(){
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
     l.ign=ign;l.dup=dup||dupT;
   });
+  if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
   const catOpts=(c,tp)=>(tp==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===c?'selected':''}>${esc(x)}</option>`).join('');
   const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;
@@ -4494,6 +4504,7 @@ function confirmaImport(){
   IMP.linhas.forEach(l=>{if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
+    if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
     else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
     else if(ehCartao){t.forma='cartao';t.cartao=alvo;}else{t.forma='pix';t.conta=alvo;}
@@ -4504,9 +4515,47 @@ function confirmaImport(){
     /* o que ficou desmarcado não volta a aparecer nas próximas buscas */
     const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
     S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
-  const eraBanco=IMP.banco;
-  IMP=null;geraRecorrentes();salvar();closeModal();render();toast(n+' lançamentos importados');
+  const eraBanco=IMP.banco,mudo=IMP.silent;
+  IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
+  if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
+  else toast(n+' lançamentos importados');
   if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
+}
+
+/* ---------- v10.56: caixa Revisar ----------
+   lançamentos que vieram do banco sozinhos ficam marcados (t.rev). confirmar tira a marca; trocar a categoria
+   ensina a regra (S.cfg.regras) e aplica aos parecidos que ainda estão na caixa. */
+let REV_NOVOS=0;
+function revPend(){return S.tx.filter(t=>t.rev&&t.status!=='cancelado').sort((a,b)=>a.data<b.data?1:a.data>b.data?-1:0);}
+function revisarHTML(){const n=revPend().length;if(!n)return '';
+  return `<button type="button" class="card revCard" data-act="rev-abre"><span class="revIc">${I('inbox')}</span><span class="revTx"><b>Revisar ${n} lançamento${n>1?'s':''} do banco</b><small>confira as categorias em poucos toques</small></span>${I('chevR')}</button>`;}
+function abreRevisar(){
+  const L=revPend(),box=$('#modal');
+  if(!L.length){closeModal();toast('Tudo revisado.');return;}
+  const catOpts=(t)=>(t.tipo==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===t.categoria?'selected':''}>${esc(x)}</option>`).join('');
+  box.innerHTML=`<div class="sheet revSheet" role="dialog" aria-modal="true" aria-label="Revisar"><div class="sh-head"><h3>Revisar</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">${L.length} lançamento${L.length>1?'s':''} que chegaram do banco. Troque a categoria se precisar e confirme. O app aprende com cada troca.</p>
+    <div class="lista">${L.slice(0,150).map(t=>{const ct=t.cartao&&S.cartoes.find(c=>c.id===t.cartao),bc=!ct&&t.conta&&S.bancos.find(b=>b.id===t.conta);
+      return `<div class="tx revRow" data-rid="${esc(t.id)}"><span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
+      <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${fmtDataCurta(t.data)}${ct?' · '+esc(ct.nome):bc?' · '+esc(bc.nome):''}</small>
+      <select data-revcat="${esc(t.id)}" aria-label="categoria de ${esc(t.descricao||'')}">${catOpts(t)}</select></div>
+      <div class="revR"><div class="val ${t.tipo==='receita'?'pos':'neg'}">${t.tipo==='receita'?'+':'−'} ${brl(t.valor)}</div>
+      <div class="revBt"><button class="btn2 sm" data-act="rev-del" data-id="${esc(t.id)}" aria-label="descartar">${I('trash')}</button><button class="btn2 sm revOk" data-act="rev-ok" data-id="${esc(t.id)}" aria-label="confirmar">${I('check')}</button></div></div></div>`;}).join('')}</div>
+    <button class="btn full" data-act="rev-todos">confirmar ${L.length>150?'os 150 primeiros':L.length>1?'todos os '+L.length:'este'}</button>
+  </div>`;
+  box.classList.add('on');
+  box.querySelectorAll('select[data-revcat]').forEach(sl=>sl.onchange=()=>revCat(sl.dataset.revcat,sl.value));
+}
+function revCat(id,cat){
+  const t=S.tx.find(x=>x.id===id);if(!t||!cat||t.categoria===cat)return;
+  t.categoria=cat;delete t.rev;let parecidos=0;
+  const k=chaveRegra(t.descricao||'');
+  if(k&&k.length>=3&&(t.tipo==='despesa'||t.tipo==='receita')){
+    if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[t.tipo[0]+':'+k]=cat;
+    S.tx.forEach(x=>{if(x!==t&&x.rev&&x.tipo===t.tipo&&chaveRegra(x.descricao||'')===k&&x.categoria!==cat){x.categoria=cat;delete x.rev;parecidos++;}});
+  }
+  salvar();render();abreRevisar();
+  toast(parecidos?'Categoria salva e aplicada a mais '+parecidos+' parecido'+(parecidos>1?'s':''):'Categoria salva. Próximos parecidos já vêm assim.');
 }
 function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;}
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
@@ -5223,6 +5272,10 @@ const ACT={
   'plan-n':id=>{PLAN.n=+id||6;render();},
   'cal-m':id=>{CAL_M=Math.max(0,Math.min(3,CAL_M+(+id||0)));render();},
   'cal-dia':id=>abreDiaSaldo(id),
+  'rev-abre':()=>abreRevisar(),
+  'rev-ok':id=>{const t=S.tx.find(x=>x.id===id);if(t){delete t.rev;salvar();render();}abreRevisar();},
+  'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
+  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
   'ir-cal':()=>{CAL_M=0;go('plan');},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;render();},
   'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
@@ -5331,7 +5384,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
