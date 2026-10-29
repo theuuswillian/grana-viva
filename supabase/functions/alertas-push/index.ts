@@ -157,8 +157,11 @@ Deno.serve(async (req) => {
     }
     if (!lista.length) continue;
     usuarios++;
-    const title = lista.length === 1 ? "GranaViva" : `GranaViva · ${lista.length} alertas`;
-    const n = await enviar(porUser[uid], { title, body: lista.slice(0, 4).join("\n") + (lista.length > 4 ? `\n+${lista.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje });
+    /* v10.52: notificações discretas (padrão): sem valores na tela bloqueada */
+    const discreto = cfg.pushDiscreto !== false;
+    const corpo = discreto ? lista.map((t) => t.replace(/ · R\$\s?\d[\d.,]*/g, "").replace(/\s·\s*$/, "")) : lista;
+    const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
+    const n = await enviar(porUser[uid], { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje });
     enviados += n;
     if (n && novos.length) await sb.from("push_log").upsert(novos.map((o) => ({ user_id: uid, chave: o.chave })));
   }
