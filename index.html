@@ -1450,7 +1450,9 @@ function setSync(t){
 }
 window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
+let MUDANCAS=0; // v10.45: conta salvamentos locais; download que atravessou uma edição é descartado
 function salvar(){
+  MUDANCAS++;
   try{fotoPat();}catch(e){}
   try{localStorage.setItem(KEY,JSON.stringify(S));if(USER)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true);}
   if(USER)agendaSync();
@@ -1468,6 +1470,28 @@ function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
 function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
+/* hash por chave dos ajustes (cfg entra campo a campo) para saber o que este aparelho mudou */
+const hashV=v=>v===undefined?'u':hashObj(v);
+function cfgHashes(c){const h={};Object.keys(c).forEach(k=>{if(k==='cfg')Object.keys(c.cfg||{}).forEach(j=>{h['cfg.'+j]=hashV(c.cfg[j]);});else h[k]=hashV(c[k]);});return h;}
+async function juntaCfgRemoto(){
+  const {data:r,error}=await sb.from('settings').select('data,updated_at').eq('user_id',USER.id).maybeSingle();
+  if(error)throw error;
+  if(!r||!r.data||!r.updated_at||r.updated_at===SNAP.__cfgAt)return false; // ninguém gravou desde a nossa leitura
+  const base=SNAP.__cfgK;if(!base)return false; // sem referência (cópia antiga): mantém o comportamento anterior
+  const rem=r.data,loc=cfgNuvem(),toma={},tomaCfg={};
+  Object.keys(rem).forEach(k=>{
+    if(k==='cfg'){Object.keys(rem.cfg||{}).forEach(j=>{if(hashV(loc.cfg[j])===(base['cfg.'+j]||'u'))tomaCfg[j]=rem.cfg[j];});return;}
+    if(k==='gerados'){toma.gerados=Object.assign({},rem.gerados||{},loc.gerados||{});return;} // marcas: união
+    if(k in loc&&hashV(loc[k])===base[k])toma[k]=rem[k];
+  });
+  if(!Object.keys(toma).length&&!Object.keys(tomaCfg).length)return false;
+  const z=sanea(Object.assign({},loc,toma,{cfg:Object.assign({},loc.cfg,tomaCfg)}));
+  Object.keys(toma).forEach(k=>{S[k]=z[k];});
+  Object.keys(tomaCfg).forEach(j=>{S.cfg[j]=z.cfg[j];});
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  setTimeout(()=>{if(!document.querySelector('#modal.on')){try{applyCfg();render();}catch(e){}}},0);
+  return true;
+}
 async function upTabela(tab,arr){
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
@@ -1493,11 +1517,15 @@ async function enviar(){
   syncBusy=true;setSync('sincronizando…');
   try{
     for(const t of TABELAS)await upTabela(t,S[t]);
-    const cfg=cfgNuvem(),hc=hashObj(cfg);
+    let cfg=cfgNuvem(),hc=hashObj(cfg);
     if(SNAP.__cfg!==hc){
-      const {error}=await sb.from('settings').upsert({user_id:USER.id,data:cfg,updated_at:new Date().toISOString()});
+      /* v10.45: outro aparelho gravou os ajustes depois da nossa última leitura? junta antes de gravar:
+         chaves que este aparelho não mexeu desde então ficam com a versão da nuvem (antes o último a gravar apagava o outro) */
+      if(await juntaCfgRemoto()){cfg=cfgNuvem();hc=hashObj(cfg);}
+      const at=new Date().toISOString();
+      const {error}=await sb.from('settings').upsert({user_id:USER.id,data:cfg,updated_at:at});
       if(error)throw error;
-      SNAP.__cfg=hc;gravaSnap();
+      SNAP.__cfg=hc;SNAP.__cfgAt=at;SNAP.__cfgK=cfgHashes(cfg);gravaSnap();
     }
     syncFalhas=0;setSync('sincronizado');
   }catch(e){
@@ -1515,8 +1543,11 @@ function temPendencia(){
 }
 async function baixar(){
   const q=t=>sb.from(t).select('id,data').eq('user_id',USER.id);
-  const [a,b,c,d,e,s]=await Promise.all([q('tx'),q('fiis'),q('metas'),q('cartoes'),q('bancos'),sb.from('settings').select('data').eq('user_id',USER.id).maybeSingle()]);
+  const m0=MUDANCAS;
+  const [a,b,c,d,e,s]=await Promise.all([q('tx'),q('fiis'),q('metas'),q('cartoes'),q('bancos'),sb.from('settings').select('data,updated_at').eq('user_id',USER.id).maybeSingle()]);
   for(const r of [a,b,c,d,e,s])if(r.error)throw r.error;
+  /* houve edição neste aparelho durante o download: a cópia baixada está velha. descarta e envia o que mudou aqui */
+  if(MUDANCAS!==m0){agendaSync(0);return;}
   const res={tx:a,fiis:b,metas:c,cartoes:d,bancos:e};
   const nuvem={};TABELAS.forEach(t=>{nuvem[t]=res[t].data.map(r=>r.data).filter(Boolean);});
   const vazioNuvem=!s.data&&TABELAS.every(t=>!nuvem[t].length);
@@ -1536,6 +1567,7 @@ async function baixar(){
   const cfgRem=(s.data&&s.data.data)||{};
   S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));
   SNAP={__cfg:s.data?hashObj(cfgNuvem()):''};
+  if(s.data){SNAP.__cfgAt=s.data.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());}
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
   /* registros que o saneamento corrigiu ficam com hash diferente do que veio da nuvem e são reenviados */
   TABELAS.forEach(t=>{const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});Object.keys(SNAP[t]).forEach(id=>{if(orig[id]!==SNAP[t][id])SNAP[t][id]='x';});});
@@ -4852,7 +4884,8 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.37';
+/* a cada publicação: troque GV_BUILD aqui e V no sw.js juntos (./bump.sh faz os dois) */
+const GV_BUILD='2026-10-29.49';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();

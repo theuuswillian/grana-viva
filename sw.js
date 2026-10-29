@@ -1,8 +1,8 @@
 /* GranaViva service worker: abre offline e busca a versão nova sempre que há internet.
    - página: rede primeiro (3 s), cópia salva se estiver sem conexão
-   - fontes, ícones e bibliotecas (vendor/): cópia salva primeiro
+   - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-2026-10-29-48';
+const V='gv-2026-10-29-49'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
 const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js'];
 self.addEventListener('install',e=>{
@@ -29,7 +29,7 @@ self.addEventListener('fetch',e=>{
     })());
     return;
   }
-  const estatico=u.origin===location.origin&&/\/(fonts|icons|vendor)\//.test(u.pathname);
+  const estatico=u.origin===location.origin&&/\/(fonts|icons|vendor|logos)\//.test(u.pathname);
   if(estatico){
     e.respondWith((async()=>{const c=await caches.open(V);const hit=await c.match(r.url);if(hit)return hit;
       const res=await fetch(r);if(res.ok&&(res.type==='basic'||res.type==='cors'))c.put(r.url,res.clone());return res;})());
