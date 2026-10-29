@@ -164,8 +164,8 @@ Deno.serve(async (req) => {
     if (!lista.length) lista.push("Nada vence hoje 👍");
     usuarios++;
     /* v10.52: notificações discretas (padrão): sem valores na tela bloqueada */
-    const discreto = cfg.pushDiscreto !== false;
-    const corpo = discreto ? lista.map((t) => t.replace(/ · R\$\s?\d[\d.,]*/g, "").replace(/\s·\s*$/, "")) : lista;
+    const discreto = (cfg?.cfg?.pushDiscreto ?? cfg?.pushDiscreto) !== false; // v10.54: o app guarda em cfg.cfg
+    const corpo = discreto ? lista.map((t) => t.replace(/\s*·\s*R\$\s?-?\d[\d.,]*/g, "").replace(/\s*(de|em)?\s*R\$\s?-?\d[\d.,]*/g, "").replace(/\s·\s*$/, "").trim()) : lista;
     const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
     const n = await enviar(porUser[uid], { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje });
     enviados += n;
