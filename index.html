@@ -2461,7 +2461,8 @@ function projetaMeses(n,sim){
     const fx=fixasFut(ym+'-01',fim);rec+=fx.r;des+=fx.d;desFixa+=fx.dF;
     (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
       if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
-      const f=fechamentoDe(c,t.data);if(f.fecha>hj&&f.fecha>=ym+'-01'&&f.fecha<=fim)cart+=cents(t.valor);
+      /* v10.52: entra no mês do VENCIMENTO da fatura, não do fechamento */
+      const f=fechamentoDe(c,t.data);if(f.vence>hj&&f.vence>=ym+'-01'&&f.vence<=fim)cart+=cents(t.valor);
     }));
     /* v10.45: fatura já fechada e não paga sai no mês do vencimento (vencida = mês atual).
        as compras dela não entram acima (o ciclo já fechou), então não há dupla contagem. */
@@ -3062,7 +3063,8 @@ function previsaoMes(){
   });
   (S.cartoes||[]).forEach(c=>S.tx.forEach(t=>{
     if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
-    const f=fechamentoDe(c,t.data);if(f.fecha>hj&&f.fecha<=fim)cart+=cents(t.valor);
+    /* v10.52: compra entra na previsão no mês em que a fatura VENCE, não em que fecha */
+    const f=fechamentoDe(c,t.data);if(f.vence>hj&&f.vence<=fim)cart+=cents(t.valor);
   }));
   cart+=faturasAPagar('0000-01-01',fim); // v10.45: fatura fechada a pagar (inclusive vencida)
   const hoje=cents(saldoTotal());
