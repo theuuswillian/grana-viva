@@ -4361,6 +4361,17 @@ function abreTxIA(o,arq){
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
   novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null});
 }
+const LIMITE_LEITURAS=30;
+async function usoIA(){
+  const mes=hojeISO().slice(0,7);
+  try{
+    const {data}=await sb.from('ia_uso').select('leituras').eq('mes',mes).maybeSingle();
+    return {mes,n:(data&&data.leituras)||0};
+  }catch(e){return {mes,n:0};}
+}
+async function contaLeitura(u){
+  try{await sb.from('ia_uso').upsert({user_id:USER.id,mes:u.mes,leituras:u.n+1,updated_at:new Date().toISOString()},{onConflict:'user_id,mes'});}catch(e){}
+}
 async function chamaIA(body){
   const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body)});
   if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui entender');}
@@ -4430,11 +4441,14 @@ function lerComprovanteIA(){
     const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.disabled=true;btn.innerHTML=I('receipt')+'Lendo…';}
     const solta=()=>{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}};
     try{
+      const uso=await usoIA();
+      if(uso.n>=LIMITE_LEITURAS){toast('Você chegou ao limite de '+LIMITE_LEITURAS+' leituras de comprovante neste mês. Lançar por frase continua liberado.',true);return;}
       let imagem,mime;
       if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
       else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
       const o=await chamaIA({imagem,mime});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
+      await contaLeitura(uso);
       abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null); // a foto/PDF vira comprovante do lançamento quando ele for salvo
     }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);}
     finally{solta();}
