@@ -1013,6 +1013,33 @@ html.claro .txTap:active{background:rgba(0,0,0,.03)}
 .ast .tkb{min-width:40px;height:40px;border-radius:12px;font-size:10px}
 html.claro .plPill.pos{color:#15803d;background:rgba(22,163,74,.1)}html.claro .plPill.neg{color:#b91c1c}html.claro .astTag{filter:brightness(.75)}
 html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
+/* cartões v10.30 */
+.ccx{padding-top:16px}
+.ccTop{display:flex;gap:14px;align-items:center}
+.ccMini{position:relative;flex-shrink:0;width:138px;aspect-ratio:1.586/1;border-radius:12px;padding:9px 10px;color:var(--cf);background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 10px 22px -10px var(--c1),inset 0 1px 0 rgba(255,255,255,.25);overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
+.ccMini:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(255,255,255,.28),transparent 55%);pointer-events:none}
+.ccm-h{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.02em;min-width:0;position:relative}
+.ccm-h span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ccm-h .cc-lg{width:18px;height:18px;border-radius:5px;background:#fff;flex-shrink:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center}
+.ccm-h .cc-lg img{width:100%;height:100%;object-fit:cover}.ccm-h .cc-lg .bl-ini{font-size:8px;color:#333}
+.ccm-chip{width:20px;height:15px;border-radius:4px;background:linear-gradient(135deg,#fef3c7,#d6b15c 55%,#f5e6a8);position:relative}
+.ccm-f{display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;font-weight:600;letter-spacing:.08em;position:relative}
+.cc-mk{width:26px;height:16px}.cc-mkt{font-weight:900;font-style:italic;font-size:11px;letter-spacing:.02em}
+.ccHd{min-width:0;flex:1}.ccHd>b{display:block;font-size:18px;color:var(--hd)}
+.ccHd small{display:block;color:var(--txt);opacity:.8;font-size:13px;text-transform:capitalize;margin-top:1px}
+.ccLim{display:inline-block;margin-top:8px;font-size:12px;color:var(--txt);opacity:.85;background:var(--card2);border:1px solid var(--line);padding:4px 9px;border-radius:99px}.ccLim b{color:var(--hd);margin-left:3px}
+.ccUso{margin-top:16px}.ccUso .row{font-size:13.5px;color:var(--txt)}.ccUso .row>span{opacity:.9}.ccUso>.row:first-child b{font-size:17px;color:var(--hd)}
+.ccUso .bar{margin:8px 0}
+.ccUso .bar i{background:linear-gradient(90deg,var(--c1),var(--c2))}
+.ccDias{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px;margin-top:14px;padding:10px 12px;background:var(--card2);border:1px solid var(--line);border-radius:14px}
+.ccDias span{display:flex;flex-direction:column}.ccDias small{font-size:11px;color:var(--txt);opacity:.7;text-transform:uppercase;letter-spacing:.06em}
+.ccDias b{font-size:15px;color:var(--hd);margin-top:2px}
+.ccCiclo{font-size:12.5px;color:var(--txt);opacity:.75;margin:10px 2px 0}
+.ccx .fatList{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.fatTit{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt);opacity:.7;margin-bottom:4px}
+.ccx .fatRow{padding:7px 0;font-size:14px;color:var(--txt)}.ccx .fatRow+.fatRow{border-top:1px dashed var(--line)}
+.fatNm{display:flex;flex-direction:column}.fatNm b{text-transform:capitalize;color:var(--hd)}.fatNm small{font-size:12px;opacity:.75}
+.ccx .acts2{margin-top:12px}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -3059,6 +3086,30 @@ function viewCfg(){
   <p class="rod">GranaViva · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
 }
 
+/* v10.30: cartão com a cara do banco emissor (cores oficiais aproximadas) */
+const CARD_MARCA={'Nubank':['#9b2fe0','#5f0a9e','#fff'],'Banco Inter':['#ff8a00','#ff5a00','#fff'],'Itaú Unibanco':['#ff7a00','#ec5b00','#fff'],'Banco do Brasil':['#0a4fc4','#062f7a','#fcfc30'],
+ 'Caixa Econômica Federal':['#0a6cc2','#003e7e','#f39200'],'Bradesco':['#e1173f','#8a0620','#fff'],'Santander':['#f21d1d','#a30000','#fff'],'Banco C6':['#2b2b2b','#050505','#d9d9d9'],
+ 'BTG Pactual':['#163a6b','#0b2240','#fff'],'BTG Pactual Digital':['#163a6b','#0b2240','#fff'],'Mercado Pago':['#14b8f0','#0089d0','#fff'],'PicPay':['#2fd36b','#0f9e48','#fff'],'PagBank':['#2ccfae','#119178','#fff'],
+ 'Neon':['#16d4f5','#0067e0','#fff'],'Will Bank':['#ffe14d','#f5c400','#1d1d1b'],'Sicredi':['#4cb52a','#2b7a14','#fff'],'Sicoob':['#00ae9d','#003641','#c9d200'],'Banrisul':['#1866b4','#003b73','#fff'],
+ 'BRB Banco de Brasília':['#1a5aa6','#002f6c','#fff'],'XP Investimentos':['#2a2a2a','#000','#fff'],'Banco Pan':['#1ec0f5','#0077b6','#fff'],'Banco Digio':['#1b3a66','#0a2342','#fff'],'Banco Original':['#1fc46a','#00843d','#fff'],
+ 'Agibank':['#1d63e0','#0039a6','#fff'],'Banco Safra':['#1d3f66','#0f2c4c','#d6b25e'],'Banco BMG':['#ff7a1a','#e05400','#fff'],'Banco Votorantim':['#2e5bff','#0028a8','#fff'],'Cora':['#ff4f6e','#e0284a','#fff'],'Banco Next':['#00e17c','#00a85a','#fff']};
+const BANDEIRAS=[{v:'',t:'não sei'},{v:'mastercard',t:'Mastercard'},{v:'visa',t:'Visa'},{v:'elo',t:'Elo'},{v:'amex',t:'American Express'},{v:'hipercard',t:'Hipercard'}];
+function bancoDoCartao(c){
+  const tx=String(c.banco||'')+' '+String(c.nome||'');
+  let b=BANCOS_BR.find(x=>x.c&&x.n===c.banco)||BANCOS_BR.find(x=>x.c&&x.n.length>3&&new RegExp('\\b'+x.n.split(' ')[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(tx)&&!/^banco$/i.test(x.n.split(' ')[0]));
+  if(!b&&/\bnu\b|nubank|roxinho|ultravioleta/i.test(tx))b=BANCOS_BR.find(x=>x.n==='Nubank');
+  if(!b&&c.bancoAuto)b=BANCOS_BR.find(x=>x.n===c.bancoAuto);
+  return b||null;
+}
+const NOME_CURTO={'Itaú Unibanco':'Itaú','Caixa Econômica Federal':'Caixa','Banco Inter':'Inter','Banco C6':'C6 Bank','BRB Banco de Brasília':'BRB','XP Investimentos':'XP'};
+function marcaSVG(m){
+  if(m==='mastercard')return '<svg viewBox="0 0 40 24" class="cc-mk" aria-label="Mastercard"><circle cx="14" cy="12" r="10" fill="#eb001b"/><circle cx="26" cy="12" r="10" fill="#f79e1b"/><path d="M20 4a10 10 0 0 1 0 16a10 10 0 0 1 0-16z" fill="#ff5f00"/></svg>';
+  if(m==='visa')return '<span class="cc-mkt visa">VISA</span>';
+  if(m==='elo')return '<span class="cc-mkt">elo</span>';
+  if(m==='amex')return '<span class="cc-mkt amex">AMEX</span>';
+  if(m==='hipercard')return '<span class="cc-mkt">Hipercard</span>';
+  return '';
+}
 const CARD_COR=[['#22c55e','#0f766e','Verde'],['#8b5cf6','#312e81','Violeta'],['#06b6d4','#1e3a8a','Azul'],['#ec4899','#7e1d6b','Rosa'],['#f59e0b','#9a3412','Âmbar']];
 const BANCO_TIPOS=['Conta corrente','Poupança','Carteira digital','Investimentos','Dinheiro','Outros'];
 /* bancos e instituições brasileiros: c = código de compensação (compe), d = domínio para a logo, t = tipo sugerido */
@@ -3158,33 +3209,51 @@ function custoAtrasoHTML(c){
   const txt=aberto>0?`atrasar ${brl(aberto)} por 30 dias custaria ≈ <b class="neg">${brl(custoAtraso(c,aberto))}</b> (multa ${pctTxt(c.multaPct||0)}% + mora ${pctTxt(c.moraPct||0)}% + rotativo ${pctTxt(c.rotativo)}%)`:`rotativo ${pctTxt(c.rotativo)}% ao mês ≈ ${String(aa).replace('.',',')}% ao ano`;
   return `<p class="small encAviso">${txt}</p>`;
 }
+function nomeMesFat(d){const m=+String(d).slice(5,7),y=String(d).slice(0,4);return (MESES[m-1]||'')+'/'+y.slice(2);}
 function faturasCartaoHTML(c){
   const fs=S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0).sort((a,b)=>b.data.localeCompare(a.data));
   const mostrar=fs.filter(t=>statusFatura(t)!=='paga').concat(fs.filter(t=>statusFatura(t)==='paga').slice(0,2)).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,4);
   if(!mostrar.length)return '';
-  return '<div class="fatList">'+mostrar.map(t=>`<div class="row small fatRow"><span>fatura ${fmtData(t.data).slice(3)} · vence ${fmtData(venceFatura(t))}</span><span class="row" style="gap:6px"><b>${brl(t.valor)}</b>${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:''}</span></div>`).join('')+'</div>';
+  return '<div class="fatList"><small class="fatTit">faturas</small>'+mostrar.map(t=>`<div class="row fatRow"><span class="fatNm"><b>${nomeMesFat(t.data)}</b><small>vence ${fmtData(venceFatura(t)).slice(0,5)}</small></span><span class="row" style="gap:6px"><b>${brl(t.valor)}</b>${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:''}</span></div>`).join('')+'</div>';
 }
 function viewCartoes(){
   const tL=S.cartoes.reduce((a,c)=>a+c.limite,0);
   const us=S.cartoes.map(c=>usoCartao(c));
   const tU=S.cartoes.reduce((a,c)=>a+usadoCartaoTotal(c),0);
   const lst=S.cartoes.map((c,i)=>{
-    const u=us[i],pal=CARD_COR[c.cor%CARD_COR.length]||CARD_COR[0];
+    const u=us[i],bk=bancoDoCartao(c),mc=bk&&!c.corPropria?CARD_MARCA[bk.n]:null;
+    const pal=mc||CARD_COR[c.cor%CARD_COR.length]||CARD_COR[0];
     const usedT=usadoCartaoTotal(c);
     const pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite,disp=c.limite-usedT;
-    return `<div class="card hov fat-card"><span class="fat-band" style="background:${pal[0]}"></span>
-      <div class="ccard" style="--c1:${pal[0]};--c2:${pal[1]}">
-        <div class="cc-top"><span class="cc-bank">${esc(c.banco||'Cartão')}</span><span class="cc-chip"></span></div>
-        <div class="cc-num">•••• •••• •••• ${esc(c.final||'••••')}</div>
-        <div class="cc-bot"><div>${esc(c.nome)}</div><div style="text-align:right">limite<b>${brl(c.limite)}</b></div></div>
+    const nomeBk=bk?(NOME_CURTO[bk.n]||bk.n):(c.banco||'');
+    const nivel=String(c.nome||'').toLowerCase().replace(String(nomeBk).toLowerCase(),'').trim()||'crédito';
+    const lg=bk&&bk.d?bancoLogoHTML(bancoLogo(bk.d),bk.n,'cc-lg',bancoLogo2(bk.d)):'';
+    return `<div class="card hov fat-card ccx" style="--c1:${pal[0]};--c2:${pal[1]};--cf:${mc?pal[2]:'#fff'}">
+      <div class="ccTop">
+        <div class="ccMini" aria-hidden="true">
+          <div class="ccm-h">${lg}<span>${esc(nomeBk||'Cartão')}</span></div>
+          <span class="ccm-chip"></span>
+          <div class="ccm-f"><span>•• ${esc(c.final||'••••')}</span>${marcaSVG(c.bandeira)}</div>
+        </div>
+        <div class="ccHd">
+          <b>${esc(nomeBk||c.nome)}</b>
+          <small>${esc(nivel)}${c.final?' · final '+esc(c.final):''}</small>
+          <span class="ccLim">limite <b>${brl(c.limite)}</b></span>
+        </div>
       </div>
-      <div class="row"><span class="small" style="margin:0">${c.bancoData?'limite usado, segundo o banco em '+fmtData(c.bancoData):'limite usado (faturas não pagas e parcelas futuras)'}</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
-      <div class="bar ${over?'over':''}"><i data-w="${pct}"></i></div>
-      <div class="row small"><span>disponível ${brl(disp)}</span><span>${Math.round(pct)}% do limite</span></div>
-      <p class="small">ciclo ${fmtData(u.ci.ini)} a ${fmtData(u.ci.fim)} · ${u.n} lançamento${u.n===1?'':'s'}</p>
+      <div class="ccUso">
+        <div class="row"><span>${c.bancoData?'usado (banco, '+fmtData(c.bancoData).slice(0,5)+')':'usado'}</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
+        <div class="bar ${over?'over':''}"><i data-w="${pct}"></i></div>
+        <div class="row"><span>disponível <b class="${disp<0?'neg':'pos'}">${brl(disp)}</b></span><span>${Math.round(pct)}% do limite</span></div>
+      </div>
+      <div class="ccDias">
+        <span><small>fecha</small><b>dia ${c.fechamento}</b></span>
+        <span><small>vence</small><b>dia ${c.vencimento}</b></span>
+        <span><small>próxima fatura</small><b>${fmtDate(u.due)}</b></span>
+      </div>
+      <p class="ccCiclo">ciclo ${fmtData(u.ci.ini).slice(0,5)} a ${fmtData(u.ci.fim).slice(0,5)} · ${u.n} lançamento${u.n===1?'':'s'}</p>
       ${faturasCartaoHTML(c)}
       ${custoAtrasoHTML(c)}
-      <p class="small">fecha dia ${c.fechamento} · vence dia ${c.vencimento} · próxima fatura ${fmtDate(u.due)}</p>
       <div class="acts2"><button class="btn2" data-act="edit-cartao" data-id="${c.id}">editar</button><button class="btn2 danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div>
     </div>`;
   }).join('');
@@ -3226,12 +3295,13 @@ function cartaoForm(id){
   const c=id?S.cartoes.find(x=>x.id===id):null;
   form(c?'Editar cartão':'Novo cartão',[
     {name:'nome',label:'Nome do cartão',value:c?c.nome:'',required:true,placeholder:'ex: Platinum'},
-    {name:'banco',label:'Banco',value:c?c.banco:'',placeholder:'ex: Nubank'},
+    {name:'banco',type:'bancoPick',value:(c&&bancoDoCartao(c))?bancoDoCartao(c).n:'',outro:(c&&!bancoDoCartao(c))?c.banco:''},
+    {name:'bandeira',label:'Bandeira',type:'select',value:c?c.bandeira||'':'',options:BANDEIRAS},
     {name:'limite',label:'Limite (R$)',value:c?num(c.limite):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'final',label:'Últimos 4 dígitos (opcional)',value:c?c.final:'',inputmode:'numeric',placeholder:'0000'},
     {name:'fechamento',label:'Dia de fechamento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.fechamento:''},
     {name:'vencimento',label:'Dia de vencimento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.vencimento:''},
-    {name:'cor',label:'Cor do cartão',type:'select',value:c?c.cor:S.cartoes.length%CARD_COR.length,options:CARD_COR.map((x,i)=>({v:i,t:x[2]}))},
+    {name:'cor',label:'Cor do cartão',type:'select',value:c&&c.corPropria?c.cor:'m',options:[{v:'m',t:'cor do banco'}].concat(CARD_COR.map((x,i)=>({v:i,t:x[2]})))},
     {name:'rotativo',label:'Juros do rotativo (% ao mês, opcional)',value:c&&c.rotativo?num(c.rotativo):'',inputmode:'decimal',placeholder:'ex: 14,5'},
     {name:'multaPct',label:'Multa por atraso (%)',value:c?num(c.multaPct||2):'2',inputmode:'decimal'},
     {name:'moraPct',label:'Juros de mora (% ao mês)',value:c?num(c.moraPct||1):'1',inputmode:'decimal'}
@@ -3244,7 +3314,7 @@ function cartaoForm(id){
     const rot=parseBR(v.rotativo||''),mu=parseBR(v.multaPct||''),mo=parseBR(v.moraPct||'');
     if(rot>30)return 'Rotativo acima de 30% ao mês? Confira a taxa.';
     if(mu>10||mo>10)return 'Multa e mora costumam ser 2% e 1%. Confira.';
-    const obj={nome,banco:String(v.banco).trim(),limite,final:fin,fechamento:fech,vencimento:venc,cor:parseInt(v.cor,10)||0,rotativo:pct(rot,30),multaPct:pct(mu,10),moraPct:pct(mo,10)};
+    const obj={nome,banco:String(v.banco).trim(),bandeira:String(v.bandeira||''),corPropria:v.cor!=='m',limite,final:fin,fechamento:fech,vencimento:venc,cor:v.cor==='m'?0:(parseInt(v.cor,10)||0),rotativo:pct(rot,30),multaPct:pct(mu,10),moraPct:pct(mo,10)};
     if(c)Object.assign(c,obj);else S.cartoes.push(Object.assign({id:uid()},obj));
     geraRecorrentes();salvar();render();toast('Cartão salvo');
   });
@@ -3579,6 +3649,8 @@ function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
   const dia=x=>{const d=String(x||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?parseInt(d.slice(8),10):0;};
   if(dia(k.fecha))cc.fechamento=dia(k.fecha);if(dia(k.vence))cc.vencimento=dia(k.vence);
   if(k.final&&!cc.final)cc.final=k.final;
+  if(k.bandeira&&!cc.bandeira){const bd=String(k.bandeira).toLowerCase();cc.bandeira=/master/.test(bd)?'mastercard':/visa/.test(bd)?'visa':/elo/.test(bd)?'elo':/amex|american/.test(bd)?'amex':/hiper/.test(bd)?'hipercard':'';}
+  if(!bancoDoCartao(cc)){const bs=[...new Set(S.bancos.map(b=>b.nome).filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n)))];if(bs.length===1&&!cc.bancoAuto){cc.bancoAuto=bs[0];}}
   salvar();return criou;}
 /* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
 function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
@@ -4354,7 +4426,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.33';
+const GV_BUILD='2026-10-28.34';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
