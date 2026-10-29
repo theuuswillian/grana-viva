@@ -7,6 +7,34 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const API = "https://api.pluggy.ai";
+
+// v10.55: Client Secret e chave da API guardados criptografados (AES-GCM, chave só no ambiente da função)
+const EK = Deno.env.get("PLUGGY_ENC_KEY") || "";
+let CK: CryptoKey | null = null;
+const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+const unb64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function ck() { if (!CK && EK) CK = await crypto.subtle.importKey("raw", unb64(EK), "AES-GCM", false, ["encrypt", "decrypt"]); return CK; }
+async function enc(s: string): Promise<string> {
+  const k = await ck(); if (!k || !s) return s;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, new TextEncoder().encode(s)));
+  const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return "enc1:" + b64(o);
+}
+async function dec(s: string): Promise<string> {
+  if (!s || !String(s).startsWith("enc1:")) return s;
+  const k = await ck(); if (!k) throw new Error("chave de criptografia ausente");
+  const u = unb64(String(s).slice(5));
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(0, 12) }, k, u.slice(12)));
+}
+// abre a configuração: decifra em memória e, se ainda estava em texto puro, já grava cifrado
+async function abre(cfg: any) {
+  if (!cfg) return cfg;
+  const plano = cfg.client_secret && !String(cfg.client_secret).startsWith("enc1:");
+  cfg.client_secret = await dec(cfg.client_secret);
+  try { cfg.api_key = await dec(cfg.api_key); } catch (_) { cfg.api_key = null; }
+  if (plano && EK) await sb.from("pluggy_cfg").update({ client_secret: await enc(cfg.client_secret), api_key: cfg.api_key ? await enc(cfg.api_key) : null }).eq("user_id", cfg.user_id).then(() => {}, () => {});
+  return cfg;
+}
 const txt = (s: string, status = 200) => new Response(s, { status, headers: { "content-type": "text/plain" } });
 
 // ---------- mesmas regras de pluggy-sync ----------
@@ -19,7 +47,7 @@ async function keyFor(cfg: any, force = false): Promise<string> {
   if (!force && cfg.api_key && cfg.api_key_exp && Date.parse(cfg.api_key_exp) - Date.now() > 5 * 60e3) return cfg.api_key;
   const key = await apiKey(cfg.client_id, cfg.client_secret);
   cfg.api_key = key;
-  await sb.from("pluggy_cfg").update({ api_key: key, api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString() }).eq("user_id", cfg.user_id).then(() => {}, () => {});
+  await sb.from("pluggy_cfg").update({ api_key: await enc(key), api_key_exp: new Date(Date.now() + 110 * 60e3).toISOString() }).eq("user_id", cfg.user_id).then(() => {}, () => {});
   return key;
 }
 async function getC(cfg: any, path: string, tries = 2): Promise<any> {
@@ -156,7 +184,7 @@ Deno.serve(async (req) => {
   if (!cfg) return txt("no", 401); // 401 não é reenviado pelo Pluggy
   if (!ev?.event || !ev.itemId) return txt("ok"); // eventos sem item (connector/status_updated etc.) são ignorados
   if (!(cfg.item_ids || []).includes(String(ev.itemId))) return txt("ignored"); // item de outra pessoa / removido
-  const p = processa(cfg, ev).catch(e => console.error("pluggy-webhook", ev.event, String((e as Error)?.message || e)));
+  const p = abre(cfg).then(c => processa(c, ev)).catch(e => console.error("pluggy-webhook", ev.event, String((e as Error)?.message || e)));
   try { (globalThis as any).EdgeRuntime.waitUntil(p); } catch (_) { await p; }
   return txt("ok");
 });
