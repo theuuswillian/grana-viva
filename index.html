@@ -925,26 +925,29 @@ html.privado #app{filter:blur(18px)}
 .ltool .i{width:20px;height:20px;stroke:var(--txt);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .ltool:active span{transform:scale(.94)}
 .lseg{margin-bottom:12px}.lseg button{padding:9px 4px;font-size:13px}
-.lfil{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.lsrch{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:42px}
+.lfil{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.lfil label{margin:0!important}
+.lsrch{box-sizing:border-box;margin:0;flex:none;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:42px}
 .lsrch .i{width:17px;height:17px;stroke:var(--mut);fill:none;stroke-width:2;stroke-linecap:round;flex:none}
-.lsrch input{flex:1;min-width:0;border:0!important;background:none!important;color:var(--txt);font-size:15px;padding:0!important;height:100%;outline:0;box-shadow:none!important}
-.lrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.lrow::-webkit-scrollbar{display:none}
-.lmes{display:flex;align-items:center;background:var(--card2);border:1px solid var(--line);border-radius:12px;height:38px;flex:none}
+.lsrch input{flex:1;min-width:0;margin:0!important;border-radius:0;border:0!important;background:none!important;color:var(--txt);font-size:15px;padding:0!important;height:100%;outline:0;box-shadow:none!important}
+.lrow{display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:0}.lrow::-webkit-scrollbar{display:none}
+.lmes{box-sizing:border-box;margin:0;display:flex;align-items:center;background:var(--card2);border:1px solid var(--line);border-radius:12px;height:38px;flex:none}
 .lmes button{background:none;border:0;color:var(--mut);width:32px;height:100%;display:grid;place-items:center;cursor:pointer}
 .lmes .i,.lcat .i{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .lmes label{position:relative;padding:0 4px;font-size:13px;white-space:nowrap}
 .lmes label b{font-weight:600;text-transform:capitalize}
-.lmes input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
-.lcat{position:relative;display:flex;align-items:center;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:12px;height:38px;padding:0 10px 0 0;color:var(--mut);flex:none;max-width:60%}
-.lcat select{appearance:none;-webkit-appearance:none;border:0!important;background:none!important;color:var(--txt);font-size:13px;padding:0 0 0 12px!important;height:100%;min-width:0;max-width:100%;outline:0;box-shadow:none!important}
+.lmes input{margin:0!important;padding:0!important;border:0!important;position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.lcat{box-sizing:border-box;margin:0;position:relative;display:flex;align-items:center;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:12px;height:38px;padding:0 10px 0 0;color:var(--mut);flex:none;max-width:60%}
+.lcat select{width:auto;appearance:none;-webkit-appearance:none;border:0!important;background:none!important;color:var(--txt);font-size:13px;padding:0 0 0 12px!important;height:100%;min-height:0!important;line-height:36px;margin:0!important;min-width:0;max-width:100%;outline:0;box-shadow:none!important}
 .lcat.on{border-color:var(--a2);color:var(--a2)}
 .lsum{padding:16px 18px;margin-bottom:12px}
 .lsum small{display:block;color:var(--mut);font-size:12px;font-weight:600;margin-bottom:4px}
 .lsum b{font-size:28px;font-weight:700;letter-spacing:-.5px}
 .lsum p{margin:6px 0 0;color:var(--mut);font-size:12.5px}
-.lsum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.lsum3 b{font-size:17px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.lsum3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px}
+.lsum3 .ls3top{grid-column:1/-1;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.lsum3 .ls3top b{font-size:28px}
+.lsum3 b{font-size:19px;letter-spacing:-.3px;white-space:nowrap;display:block}
 .lsum3 p{grid-column:1/-1}
 .txTap{cursor:pointer}.txTap:active{background:rgba(255,255,255,.03)}
 .tx .txt{min-width:0;flex:1}
@@ -2679,7 +2682,7 @@ function viewLanc(){
     if(F.tipo==='despesa'){const ex=[tdCartao?`+ ${brl(tdCartao)} no cartão`:'',prvD?`+ ${brl(prvD)} previsto`:''].filter(Boolean).join(' · ');return `<div class="card lsum"><small>Gasto ${F.mes?'no mês':'no período'}</small><b class="neg">${brl(td)}</b><p>${ex||cnt}</p></div>`;}
     if(F.tipo==='receita')return `<div class="card lsum"><small>Recebido ${F.mes?'no mês':'no período'}</small><b class="pos">${brl(tr)}</b><p>${prvR?`+ ${brl(prvR)} previsto`:cnt}</p></div>`;
     if(F.tipo==='transf')return `<div class="card lsum"><small>Movimentado entre suas contas</small><b>${brl(somaC(ef.filter(t=>t.tipo==='transf'),t=>t.valor))}</b><p>${cnt} · não contam como gasto</p></div>`;
-    return `<div class="card lsum lsum3"><div><small>Entrou</small><b class="pos">${brl(tr)}</b></div><div><small>Saiu</small><b class="neg">${brl(td)}</b></div><div><small>Saldo</small><b class="${tr-td>=0?'pos':'neg'}">${brl(tr-td)}</b></div>${tdCartao?`<p>+ ${brl(tdCartao)} em compras no cartão, que saem pela fatura</p>`:''}</div>`;})()}
+    return `<div class="card lsum lsum3"><div class="ls3top"><small>Saldo ${F.mes?'do mês':'do período'}</small><b class="${tr-td>=0?'pos':'neg'}">${brl(tr-td)}</b></div><div><small>Entrou</small><b class="pos">${brl(tr)}</b></div><div><small>Saiu</small><b class="neg">${brl(td)}</b></div>${tdCartao?`<p>+ ${brl(tdCartao)} em compras no cartão, que saem pela fatura</p>`:''}</div>`;})()}
   <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):'<p class="vazio">nenhum lançamento com esses filtros.</p>'}</div>
   ${fixasCard()}`;
 }
@@ -4208,7 +4211,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.30';
+const GV_BUILD='2026-10-28.31';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
