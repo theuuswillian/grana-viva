@@ -5512,6 +5512,13 @@ async function entraComSessao(sess){
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
+    try{
+      const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
+      if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
+        S=sanea(pend.S);SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
+      }
+    }catch(e){}
     setSync('carregando seus dados…');
     /* alterações feitas offline (ou logo antes de fechar a página) ainda não enviadas: envia antes de baixar,
        senão a cópia da nuvem sobrescreveria o que foi feito neste aparelho */
@@ -5541,7 +5548,11 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
   if(!sess){
     if(ev==='SIGNED_OUT'){
       /* só apaga o PIN quando a pessoa saiu de propósito; sessão expirada mantém PIN e Face ID */
-      if(LK.manual)lockSalva(null);LK.manual=false;lockFecha();
+      const saiuDeProposito=LK.manual;
+      if(saiuDeProposito)lockSalva(null);LK.manual=false;lockFecha();
+      /* v10.52: sessão expirada (não foi um sair de propósito) com edições ainda não enviadas:
+         guarda uma cópia local e devolve no próximo login da mesma conta, em vez de apagar sem aviso */
+      if(!saiuDeProposito&&USER&&temPendencia()){try{localStorage.setItem('gv-pend',JSON.stringify({dono:USER.id,S:sanea(S)}));}catch(e){}}
       USER=null;pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
@@ -5557,6 +5568,13 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
+    try{
+      const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
+      if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
+        S=sanea(pend.S);SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
+      }
+    }catch(e){}
     setSync('carregando seus dados…');
     /* alterações feitas offline (ou logo antes de fechar a página) ainda não enviadas: envia antes de baixar,
        senão a cópia da nuvem sobrescreveria o que foi feito neste aparelho */
