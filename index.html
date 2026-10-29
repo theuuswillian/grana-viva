@@ -309,6 +309,7 @@ body:has(#auth.on) .fab{display:none!important}
 .uchip button .i{width:17px;height:17px}
 .sync{font-size:10.5px;color:var(--mut);margin-top:8px;display:flex;align-items:center;gap:5px}
 .sync .i{width:13px;height:13px}
+.txD{font-variant-numeric:tabular-nums;color:var(--tx2,inherit);font-weight:600}
 .fab{position:fixed;right:18px;bottom:78px;width:60px;height:60px;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 12px 28px -6px var(--a2),inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;z-index:2147483647;transition:transform .2s}
 .fab:active{transform:scale(.94)}
 .fab .i{width:26px;height:26px;stroke:#fff;stroke-width:2}
@@ -1290,7 +1291,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.54'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.55'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1807,14 +1808,17 @@ function saldoBanco(b){
 function usadoCartaoTotal(c){
   if(c.bancoData&&c.bancoUsado!=null&&isFinite(c.bancoUsado))return c.bancoUsado; // o banco informa o usado de verdade
   const hj=hojeISO();let tot=0;
+  /* v10.55: faturas indexadas uma vez (antes: uma busca na lista inteira para cada compra) */
+  const FAT={},RF={};S.tx.forEach(x=>{if(x.faturaKey&&!FAT[x.faturaKey])FAT[x.faturaKey]=x;});
   S.tx.forEach(t=>{
     if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
     const f=fechamentoDe(c,t.data);
     if(f.fecha>hj){tot+=cents(t.valor);return;} // ciclo aberto ou parcela futura: limite reservado
-    const fat=S.tx.find(x=>x.faturaKey==='fat|'+c.id+'|'+f.fecha.slice(0,7));
+    const fat=FAT['fat|'+c.id+'|'+f.fecha.slice(0,7)];
     if(!fat){if(S.gerados&&S.gerados['fat|'+c.id+'|'+f.fecha.slice(0,7)]==='del')return; // fatura excluída: não prende o limite para sempre
       if(!S.cfg.pagDesde||f.vence>=S.cfg.pagDesde)tot+=cents(t.valor);return;}
-    if(restanteFatura(fat)>0&&!(fat.pagoValor>0))tot+=cents(t.valor);
+    const rk=fat.faturaKey;if(!(rk in RF))RF[rk]=restanteFatura(fat);
+    if(RF[rk]>0&&!(fat.pagoValor>0))tot+=cents(t.valor);
   });
   // pagamento parcial: conta só o que falta
   S.tx.forEach(t=>{if(t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&t.pagoValor>0)tot+=cents(restanteFatura(t));});
@@ -2038,7 +2042,14 @@ function diaMes(y,m,d){const x=new Date(y,m,1);return new Date(x.getFullYear(),x
 function mesOff(k){const d=new Date(),x=new Date(d.getFullYear(),d.getMonth()-k,1);return x.getFullYear()+'-'+pad(x.getMonth()+1);}
 /* ciclo de um cartão: para uma data de compra, devolve o fechamento (primeiro dia de fechamento >= compra)
    e o vencimento dessa fatura. compra no próprio dia do fechamento entra na fatura que fecha nesse dia. */
+/* v10.55: resultado guardado por (fechamento, vencimento, data): é chamado milhares de vezes por tela */
+const FECH_MEMO=new Map();
 function fechamentoDe(c,iso){
+  const mk=(c.fechamento||1)+'|'+(c.vencimento||1)+'|'+iso,mv=FECH_MEMO.get(mk);if(mv)return {fecha:mv.fecha,vence:mv.vence};
+  if(FECH_MEMO.size>20000)FECH_MEMO.clear();
+  const r=fechamentoCalc(c,iso);FECH_MEMO.set(mk,r);return {fecha:r.fecha,vence:r.vence};
+}
+function fechamentoCalc(c,iso){
   const fe=Math.max(1,Math.min(31,c.fechamento||1)),ve=Math.max(1,Math.min(31,c.vencimento||1));
   const y=+iso.slice(0,4),m=+iso.slice(5,7)-1;
   let C=diaMes(y,m,fe);
@@ -3306,7 +3317,7 @@ function viewLanc(){
   const stB=t=>{const s=statusTx(t);if(s==='pago')return '';const [l,k]=ST_TX[s];return ` <span class="badge ${k} stb">${l}</span>`;};
   const item=t=>`<div class="tx hov txTap" data-act="tx-menu" data-id="${t.id}"${t.status==='cancelado'?' tx-cancel':''}${t.status==='previsto'?' tx-prev':''}">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
-      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}`;})()}${t.tipo==='transf'?esc(nomeLado(t.de)+' → '+nomeLado(t.para)):esc(t.categoria)+(t.sub?' › '+esc(t.sub):'')+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()} · ${fmtDataCurta(t.data)}</small></div>
+      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}<span class="txD">${fmtDataCurta(t.data)}</span> · `;})()}${t.tipo==='transf'?esc(nomeLado(t.de)+' → '+nomeLado(t.para)):esc(t.categoria)+(t.sub?' › '+esc(t.sub):'')+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()}</small></div>
       ${t.multa||t.juros||t.desconto?`<div class="txMeta"><span class="encChip">${[t.multa?'multa '+brl(t.multa):'',t.juros?'juros '+brl(t.juros):'',t.desconto?'desconto '+brl(t.desconto):''].filter(Boolean).join(' · ')}</span></div>`:''}
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
