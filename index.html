@@ -2292,6 +2292,10 @@ function detectaAssinaturas(tx,fixas,cfg,hoje){
     if(t.tipo!=='despesa'||t.faturaKey||t.fixaKey||t.status==='cancelado'||t.status==='previsto'||!(+t.valor>0))return;
     if(!t.data||t.data<lim||t.data>hoje||(t.parcela&&t.parcelas)||/parc(ela)?\.?\s*\d+\s*(\/|de)\s*\d+/i.test(t.descricao||''))return;
     const k=assinChave(t.descricao||'');if(k.length<3||ign.has(k))return;
+    /* v10.52: pix para pessoa (chave aleatória, cpf/cnpj, "pix enviado para") e posto de combustível não são assinatura */
+    const nTx=norm(t.descricao||'')+' '+norm(t.sub||'');
+    if(/pix (enviado|para|tef)|chave aleat|\bcpf\b|\bcnpj\b|[0-9a-f]{16,}/.test(nTx))return;
+    if(/posto|combust|gasolina|etanol|\balcool\b|ipiranga|shell|petrobras|br mania|ale combust/.test(nTx))return;
     (G[k]=G[k]||[]).push(t);
   });
   const out=[];
