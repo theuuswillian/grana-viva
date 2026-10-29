@@ -1756,13 +1756,14 @@ function contaDoLanc(t){
 }
 function saldoBanco(b){
   let s=cents(b.saldo);
-  /* saldoFecha: o saldo informado já inclui os lançamentos do próprio dia (vem do banco) */
-  const antes=d=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData));
+  /* saldoFecha: o saldo informado pelo banco já inclui os lançamentos do próprio dia QUE VIERAM DO BANCO.
+     v10.52: lançamento manual feito hoje (sem origem no banco) também entra no saldo do dia. */
+  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.pluggyId))));
   S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!antes(o.data))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
-    if(t.faturaKey)pagsFatura(t).forEach(p=>{if(p.conta===b.id&&p.data&&!antes(p.data))s-=cents(p.valor);}); // cada pagamento na sua data e conta
+    if(t.faturaKey)pagsFatura(t).forEach(p=>{if(p.conta===b.id&&p.data&&!antes(p.data,p))s-=cents(p.valor);}); // cada pagamento na sua data e conta
     if(!efetivo(t))return;
-    if(!t.data||antes(t.data))return;
+    if(!t.data||antes(t.data,t))return;
     if(t.tipo==='transf'){if(t.de==='b:'+b.id)s-=cents(t.valor);if(t.para==='b:'+b.id)s+=cents(t.valor);return;}
     if(contaDoLanc(t)!==b.id)return;
     s+=t.tipo==='receita'?cents(t.valor):-cents(t.valor);
