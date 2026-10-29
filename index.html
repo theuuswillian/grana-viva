@@ -965,6 +965,54 @@ html.privado #app{filter:blur(18px)}
 .txsOp.perigo,.txsOp.perigo .i{color:#ef4444;stroke:#ef4444}
 .txSheet .btn2.full{margin-top:12px}
 html.claro .txTap:active{background:rgba(0,0,0,.03)}
+/* carteira v2 */
+.wHero{position:relative;overflow:hidden;padding:20px 20px 18px;background:radial-gradient(130% 90% at 100% 0%,color-mix(in srgb,var(--a1) 16%,transparent),transparent 60%),var(--card)}
+.wTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wTop>small{color:var(--mut);font-size:13px;font-weight:600;letter-spacing:.02em}
+.wSt{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card2);color:var(--mut);font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;cursor:pointer}
+.wSt>i{width:7px;height:7px;border-radius:50%;background:#f59e0b}.wSt.on>i{background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.18)}
+.wRf{display:inline-flex;opacity:.8}.wRf svg{width:14px;height:14px}
+.wTot{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;color:var(--hd);font-variant-numeric:tabular-nums}
+.wPl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}.wPl small{color:var(--mut);font-size:12px}
+.plPill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.plPill.pos{color:#4ade80;background:rgba(74,222,128,.12)}.plPill.neg{color:#f87171;background:rgba(248,113,113,.12)}
+.plPill em{font-style:normal;opacity:.75;font-weight:600}
+.wAloc{display:flex;height:8px;border-radius:99px;overflow:hidden;gap:2px;margin:16px 0 10px;background:var(--card2)}
+.wAloc i{display:block;height:100%;border-radius:99px;min-width:4px}
+.wLeg{display:flex;flex-wrap:wrap;gap:6px 14px}.wLeg span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.wLeg span i{width:8px;height:8px;border-radius:3px}.wLeg b{color:var(--txt);font-weight:700}
+.wKpi{margin-top:12px}.wKpi .card.mini{display:flex;flex-direction:column}
+.wKpi .wHint{color:var(--mut);font-size:12px;margin:4px 0 0}
+.wMeta b em{font-style:normal;font-size:15px;color:var(--mut);font-weight:600}
+.wBar{height:6px;border-radius:99px;background:var(--card2);overflow:hidden;margin:8px 0 6px}.wBar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a1),var(--a2));min-width:4px}
+.wLink{align-self:flex-start;border:0;background:none;color:var(--a1);font-size:12px;font-weight:700;padding:2px 0;cursor:pointer}
+.wNext{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.wNext small{display:block;color:var(--mut);font-size:12px}.wNext b{font-size:15px}.wNext .countdown{margin:0;font-size:20px}
+.wTip{color:var(--mut);font-size:13px;margin:12px 4px 0;padding-left:12px;border-left:2px solid var(--line)}
+.wSec{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
+.wSec h3{margin:0;font-size:17px}.wSec h3 span{font-size:12px;color:var(--mut);background:var(--card2);border:1px solid var(--line);padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:middle}
+.astList{display:flex;flex-direction:column;gap:10px;padding-bottom:84px}
+.ast{position:relative;background:var(--card);border-radius:18px;padding:14px 14px 10px 16px;box-shadow:var(--shadow);overflow:hidden}
+.ast:before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--tc)}
+.astTop{display:flex;align-items:center;gap:12px}
+.astIc{width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent)}
+.astIc svg{width:20px;height:20px}
+.astNm{flex:1;min-width:0}.astNm b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:15px;line-height:1.25;overflow:hidden;color:var(--hd);word-break:break-word}
+.astNm small{display:block;color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.astTag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tc);margin-top:2px}
+.astVal{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.astVal b{font-size:16px;font-variant-numeric:tabular-nums;color:var(--hd)}
+.astMeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin:12px 0 0;padding:10px 12px;background:var(--card2);border-radius:12px}
+.astMeta span{display:flex;flex-direction:column;min-width:0}.astMeta small{font-size:11px;color:var(--mut)}
+.astMeta b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.astFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.astFoot small{color:var(--mut);font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.astFoot .acts{display:flex;gap:2px;flex-shrink:0}
+.astFoot .acts button{width:36px;height:36px;border:0;background:none;color:var(--mut);border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
+.astFoot .acts button:active{background:var(--card2)}.astFoot .acts svg{width:17px;height:17px}
+.ast .tkb{min-width:40px;height:40px;border-radius:12px;font-size:10px}
+html.claro .plPill.pos{color:#15803d;background:rgba(22,163,74,.1)}html.claro .plPill.neg{color:#b91c1c}html.claro .astTag{filter:brightness(.75)}
+html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -2752,63 +2800,76 @@ function viewOrc(){
   ${cards}`;
 }
 
+const TCOR={fii:'#a3e635',acao:'#60a5fa',etf:'#f59e0b',bdr:'#f472b6',rf:'#34d399',cripto:'#fb923c'};
 function viewFii(){
   const pat=patrimonio(),dm=divMensal(),ct=cotasTotal(),meta=S.metaFii||100;
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
   const pct=Math.min(100,meta?ct/meta*100:0),yld=patFii?dm/patFii*100:0;
   const p=proximoPag();
   const filtrados=S.fiis.filter(f=>FTAB==='todos'||tipoOf(f)===FTAB);
-  const cris=S.fiis.filter(f=>tipoOf(f)==='cripto');
-  const custoC=cris.reduce((a,f)=>a+(f.pago||0),0),valC=cris.reduce((a,f)=>a+f.cotas*f.preco,0),plC=valC-custoC;
+  const comCusto=S.fiis.filter(f=>f.pago>0);
+  const aplic=comCusto.reduce((a,f)=>a+cents(f.pago),0)/100,valCusto=comCusto.reduce((a,f)=>a+cents(f.cotas*f.preco),0)/100;
+  const plT=c2(valCusto-aplic),plTp=aplic?plT/aplic*100:0;
+  const temRV=S.fiis.some(f=>['fii','acao','etf','bdr'].includes(tipoOf(f)));
+  const temFii=S.fiis.some(f=>tipoOf(f)==='fii');
+  // alocação por tipo
+  const aloc={};S.fiis.forEach(f=>{const t=tipoOf(f);aloc[t]=(aloc[t]||0)+f.cotas*f.preco;});
+  const al=Object.keys(aloc).filter(t=>aloc[t]>0).sort((x,y)=>aloc[y]-aloc[x]);
+  const barra=pat>0?`<div class="wAloc" role="img" aria-label="distribuição da carteira">${al.map(t=>`<i style="width:${aloc[t]/pat*100}%;background:${TCOR[t]||'var(--a1)'}"></i>`).join('')}</div>
+    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${Math.round(aloc[t]/pat*100)}%</b></span>`).join('')}</div>`:'';
+  const plPill=(v,pc)=>`<span class="plPill ${v>=0?'pos':'neg'}">${v>=0?'▲ +':'▼ '}${brl(v)} <em>${num(pc)}%</em></span>`;
   const lista=filtrados.map(f=>{
-    const cri=tipoOf(f)==='cripto';
-    if(tipoOf(f)==='rf'){const posi=f.preco*f.cotas,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;return `<div class="tx hov">${assetIco(f.ticker,'rf')}<div class="txt"><b>${esc(f.nome||f.ticker)}</b><small class="tipoTag">Renda fixa</small><small>saldo ${brl(posi)}${f.pago>0?` · aplicado ${brl(f.pago)} · <b class="${pl>=0?'pos':'neg'}">${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b>`:''}${f.venc?' · vence '+fmtData(f.venc):''}</small><small class="cotInfo">${f.manual?'valor seu'+(f.bancoValor!=null?' · o banco informou '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente'}</small></div><div class="acts"><button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;}
+    const t=tipoOf(f),cri=t==='cripto',rf=t==='rf';
     const posi=f.cotas*f.preco,dv=f.cotas*f.dpc,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;
-    const linha2=cri?`<small>${num(f.cotas)} ${esc(f.ticker)} · preço ${brl(f.preco)} · valor pago ${brl(f.pago)}</small>`
-      :`<small>${num(f.cotas).replace(/,00$/,'')} cotas · cota ${brl(f.preco)}${f.pago>0&&f.cotas>0?' · preço médio '+brl(f.pago/f.cotas):''} · DPC ${brl(f.dpc)}</small>`;
-    const linha3=cri?`<small>valor atual ${brl(posi)} · <b class="${pl>=0?'pos':'neg'}">P/L ${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b></small>`
-      :`<small>posição ${brl(posi)}${f.pago>0?` · <b class="${pl>=0?'pos':'neg'}">${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b>`:''} · ${tipoOf(f)==='fii'?'div/mês '+brl(dv):'último provento/cota '+brl(f.dpc)} · pag. dia ${f.diaPag||'-'}</small><small class="cotInfo">${f.cotFonte==='brapi'&&f.cotEm?'cotação de '+fmtHora(f.cotEm):'preço digitado manualmente'}</small>`;
-    return `<div class="tx hov">
-      ${assetIco(f.ticker,tipoOf(f))}
-      <div class="txt"><b>${esc(f.ticker)}</b><small class="tipoTag">${TIPO_L[tipoOf(f)]||'FII'}</small> <small>${esc(f.nome||'')}</small>
-        ${linha2}
-        ${linha3}${(f.ops&&f.ops.length)?`<small class="cotInfo">${f.ops.length} operações${f.realizado?' · realizado '+brl(f.realizado):''}${f.proventos?' · proventos '+brl(f.proventos):''}</small>`:''}</div>
-      <div class="acts"><button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button><button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
+    const ico=rf?`<span class="astIc" style="--tc:${TCOR.rf}">${I('bank')}</span>`:assetIco(f.ticker,t);
+    const titulo=rf?esc(f.nome||f.ticker):esc(f.ticker);
+    const sub=rf?'':esc(f.nome||'');
+    let meta=[],info='';
+    if(rf){
+      if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
+      if(f.venc)meta.push(['vence',fmtData(f.venc)]);
+      info=f.manual?'valor ajustado por você'+(f.bancoValor!=null?' · banco: '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente';
+    }else if(cri){
+      meta.push(['quantidade',Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8})+' '+esc(f.ticker)],['preço',brl(f.preco)]);
+      if(f.pago>0)meta.push(['pago',brl(f.pago)]);
+      info='cripto · '+esc(CG_ST.msg||'');
+    }else{
+      meta.push(['cotas',num(f.cotas).replace(/,00$/,'')],['cota',brl(f.preco)]);
+      if(f.pago>0&&f.cotas>0)meta.push(['preço médio',brl(f.pago/f.cotas)]);
+      if(t==='fii')meta.push(['renda/mês',brl(dv)]);else if(f.dpc)meta.push(['provento/cota',brl(f.dpc)]);
+      if(f.diaPag)meta.push(['paga dia',String(f.diaPag)]);
+      info=f.cotFonte==='brapi'&&f.cotEm?'cotação de '+fmtHora(f.cotEm):'preço digitado manualmente';
+      if(f.ops&&f.ops.length)info+=' · '+f.ops.length+' operações'+(f.realizado?' · realizado '+brl(f.realizado):'')+(f.proventos?' · proventos '+brl(f.proventos):'');
+    }
+    return `<div class="ast hov" style="--tc:${TCOR[t]||'var(--a1)'}">
+      <div class="astTop">${ico}
+        <div class="astNm"><b>${titulo}</b><span class="astTag">${TIPO_L[t]||'FII'}</span>${sub?`<small>${sub}</small>`:''}</div>
+        <div class="astVal"><b>${brl(posi)}</b>${f.pago>0?plPill(pl,plp):''}</div>
+      </div>
+      ${meta.length?`<div class="astMeta">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
+      <div class="astFoot"><small>${info}</small><div class="acts">${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
-  const tabs=`<div class="seg ftabs">${TIPOS.map(t=>`<button data-act="ftab" data-id="${t.k}" class="${FTAB===t.k?'on':''}">${t.l}</button>`).join('')}</div>`;
+  const usados=new Set(S.fiis.map(tipoOf));
+  const tabs=`<div class="seg ftabs">${TIPOS.filter(t=>t.k==='todos'||usados.has(t.k)||FTAB===t.k).map(t=>`<button data-act="ftab" data-id="${t.k}" class="${FTAB===t.k?'on':''}">${t.l}</button>`).join('')}</div>`;
+  const cotAuto=COT.st==='auto';
   return `
-  <div class="head"><h2>Carteira</h2><button class="btn" data-act="novo-fii">+ fundo</button></div>
-  ${tabs}
-  <div class="row small" style="margin:-4px 0 12px"><span>${COT.st==='auto'?'cotação automática':'cotação manual'} · ${esc(COT.msg||'')}${cris.length?' · cripto: '+esc(CG_ST.msg):''}</span><button class="btn2" data-act="cot-now">atualizar</button></div>
-  <div class="card ringCard">
-    <div class="ringWrap">
-      <svg viewBox="0 0 120 120" class="ring">
-        <defs><linearGradient id="gR" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--a1)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient></defs>
-        <g transform="rotate(-90 60 60)">
-          <circle class="rt" cx="60" cy="60" r="50"/>
-          <circle class="rf" cx="60" cy="60" r="50" stroke="url(#gR)" data-off="${(314.16*(1-pct/100)).toFixed(2)}"/>
-        </g>
-      </svg>
-      <div class="ringTxt"><b>${Math.round(pct)}%</b><small>${num(ct).replace(',00','')} de ${meta}</small></div>
-    </div>
-    <div class="ringInfo">
-      <small>progresso até sua meta de cotas</small>
-      <b>${num(ct).replace(/,00$/,'')} cotas</b>
-      <button class="btn2" data-act="meta-fii">editar meta de cotas</button>
-    </div>
+  <div class="head"><h2>Carteira</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
+  <div class="card wHero">
+    <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
+    <div class="wTot">${brl(pat)}</div>
+    ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados</small></div>`:''}
+    ${barra}
   </div>
-  <div class="grid2">
-    <div class="card mini"><small>patrimônio</small><b>${brl(pat)}</b></div>
-    <div class="card mini"><small>dividendo mensal estimado (FIIs)</small><b class="pos">${brl(dm)}</b><small style="margin:4px 0 0">yield ${num(yld)}% ao mês sobre o valor de mercado</small></div>
-  </div>
-  ${cris.length?`<div class="card mini" style="margin-top:12px"><small>cripto · lucro/prejuízo</small><b class="${plC>=0?'pos':'neg'}">${plC>=0?'+':''}${brl(plC)}</b><small style="margin:4px 0 0">custo ${brl(custoC)} · valor atual ${brl(valC)}</small></div>`:''}
-  <div class="card cd" style="margin-top:14px">
-    <small>próximo pagamento</small>
-    ${p?`<div><b>${esc(p.f.ticker)} · ${fmtDate(p.date)}</b></div><div id="cd" class="countdown" data-date="${p.date.getTime()}"></div>`
-       :'<p class="vazio">cadastre os fundos com o dia de pagamento pra ver a contagem.</p>'}
-  </div>
-  <div class="card lista">${filtrados.length?lista:'<p class="vazio">nenhum ativo nesta aba.</p>'}</div>`;
+  ${temRV?`<div class="grid2 wKpi">
+    <div class="card mini"><small>renda mensal estimada</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>
+    <div class="card mini wMeta"><small>meta de cotas</small><b>${num(ct).replace(/,00$/,'')}<em> / ${meta}</em></b><div class="wBar"><i style="width:${pct}%"></i></div><button class="wLink" data-act="meta-fii">editar meta</button></div>
+  </div>`:''}
+  ${p?`<div class="card cd wNext"><div><small>próximo pagamento</small><b>${esc(p.f.ticker)} · ${fmtDate(p.date)}</b></div><div id="cd" class="countdown" data-date="${p.date.getTime()}"></div></div>`
+     :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
+  <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
+  ${al.length>1||FTAB!=='todos'?tabs:''}
+  <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>`;
 }
 
 function updCountdown(){
@@ -4211,7 +4272,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.31';
+const GV_BUILD='2026-10-28.32';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
