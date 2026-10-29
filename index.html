@@ -5458,6 +5458,12 @@ $('#authForm').addEventListener('submit',async ev=>{
   }catch(err){
     const msg=erroTraduzido(err&&err.message);
     $('#aErr').textContent=msg;
+    /* v10.52: cadastro fechado no Supabase → some com a aba "Criar conta" (antes ficava visível e falhava) */
+    if(/sign ?ups? (not|are)|signup.*(disabled|not allowed)|cadastro.*(fechado|desativ)/i.test(err&&err.message||'')){
+      document.querySelectorAll('.aTabs button[data-m=up]').forEach(b=>{b.style.display='none';});
+      document.querySelector('.aTabs button[data-m=in]').click();
+      $('#aErr').textContent='Novas contas estão fechadas neste momento. Use Entrar.';
+    }
     if(/incorretos/.test(msg)){marcaCampo('#aEmail',true);marcaCampo('#aPass',true);}
     if(/confira o e-mail/.test(msg))marcaCampo('#aEmail',true);
   }finally{btn.disabled=false;}
