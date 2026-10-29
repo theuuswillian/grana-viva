@@ -326,9 +326,19 @@ body:has(#auth.on) .fab{display:none!important}
 .qk-op.hov:hover{border-color:var(--a2);box-shadow:0 0 22px -6px var(--a2)}
 .ic .i{stroke-width:1.4}
 .catGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-bottom:12px}
-/* v10.53: categorias recolhidas por padrão, com degradê no fim */
-.catGrid.catFechado{max-height:170px;overflow:hidden;position:relative}
-.catGrid.catFechado::after{content:'';position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(transparent,var(--card,rgba(20,20,24,.95)))}
+/* v10.54: categorias em lista compacta — todas visíveis, toque para editar ou remover */
+.catHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.catHead h4{margin:0}
+.catQt{font-size:11px;font-weight:600;color:var(--mut);background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px;letter-spacing:0}
+.catBusca{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:0 12px;margin-bottom:10px;color:var(--mut)}.catBusca .i{width:16px;height:16px}.catBusca input{flex:1;background:none!important;border:0!important;box-shadow:none!important;color:var(--txt);font-size:16px;padding:10px 0!important;outline:none;min-width:0;height:auto!important}
+.catList{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:340px){.catList{grid-template-columns:1fr}}
+.catRow{display:flex;align-items:center;gap:10px;min-height:46px;padding:7px 10px 7px 8px;border-radius:12px;background:var(--card2);border:1px solid var(--line);color:var(--txt);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;min-width:0;transition:border-color .15s}
+.catRow:active{transform:scale(.98)}.catRow:hover{border-color:color-mix(in srgb,var(--cc) 45%,transparent)}
+.catRow .cr-i{width:30px;height:30px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--cc,#8b5cf6) 16%,transparent);color:var(--cc,#8b5cf6)}.catRow .cr-i .i{width:17px;height:17px;stroke-width:1.6}
+.catRow .cr-n{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2;font-weight:500;font-size:13px;word-break:break-word}
+.catRow .cr-q .i{width:14px;height:14px;opacity:.6}.catRow .cr-q{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+.catRow[hidden]{display:none}.catVazio{font-size:13px;color:var(--mut);text-align:center;margin:8px 0 0}
+.btn2.perigo{color:#f87171;border-color:rgba(248,113,113,.35)}
 .catCell{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px 12px;border-radius:16px;background:var(--card2);border:1px solid var(--line);font-size:13px;color:var(--txt);text-align:center;overflow:hidden}
 .catCell .cc-i{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--cc,#8b5cf6) 16%,transparent);color:var(--cc,#8b5cf6);box-shadow:0 0 18px -6px var(--cc,#8b5cf6)}
 .catCell .cc-i .i{width:22px;height:22px;stroke-width:1.3;filter:drop-shadow(0 0 4px var(--cc,#8b5cf6))}
@@ -1280,6 +1290,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
+const GV_BUILD='10.54'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1359,7 +1370,7 @@ close:'<path d="M6 6l12 12M18 6 6 18"/>',
 alert:'<path d="M12 3.8 2.6 20h18.8z"/><path d="M12 10v4.2"/><path d="M12 17.3v.2"/>',
 menu:'<path d="M4 7h16M4 12h16M4 17h10"/>',
 star:'<path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.5l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
-plus:'<path d="M12 5v14M5 12h14"/>',
+plus:'<path d="M12 5v14M5 12h14"/>',search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
 salario:'<rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>',
 horas:'<path d="M6.5 3.5h11M6.5 20.5h11"/><path d="M7.5 3.5c0 4.5 4.5 5 4.5 8.5s-4.5 4-4.5 8.5M16.5 3.5c0 4.5-4.5 5-4.5 8.5s4.5 4 4.5 8.5"/>',
 aposentadoria:'<path d="M3 16.5h18"/><path d="M6.5 16.5a5.5 5.5 0 0 1 11 0"/><path d="M12 5v2.5M5.2 9.2l1.6 1.6M18.8 9.2l-1.6 1.6"/>',
@@ -1424,7 +1435,7 @@ function dia31(v){const d=parseInt(v,10);return d>=1&&d<=31?d:0;}
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:''}));
@@ -1458,6 +1469,7 @@ function sanea(d){
   o.catIcons={};Object.entries(obj(d&&d.catIcons)).forEach(([k,v])=>{if(ICONS[v]||(typeof v==='string'&&v.length<=8&&EMO_RE.test(v)))o.catIcons[str(k,60)]=v;});
   o.gerados=obj(o.gerados);
   o.metaFii=n0(o.metaFii)>0?n0(o.metaFii):100;
+  o.cfgTs={};Object.entries(obj(d&&d.cfgTs)).forEach(([k,v])=>{if(n0(v)>0&&k.length<=60)o.cfgTs[k]=n0(v);});
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
   if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
   if(!ACCENTS[o.cfg.accent])o.cfg.accent='verde';
@@ -1482,7 +1494,7 @@ function carregar(){
   }catch(e){}
   return vazio();
 }
-let S=carregar();
+let S=carregar();zeraCfgH();
 const SB_URL='https://hydvhpfpvhopetqqjido.supabase.co';
 const SB_KEY='sb_publishable_hq7L3RL6Y-BE49SlgjqcTw_Sh-N9hJj';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
@@ -1505,6 +1517,7 @@ function salvar(){
   try{localStorage.setItem('gv-last-act',String(Date.now()));}catch(e){}
   MUDANCAS++;
   try{fotoPat();}catch(e){}
+  marcaCfg();
   try{localStorage.setItem(KEY,JSON.stringify(S));if(USER)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true);}
   if(USER)agendaSync();
 }
@@ -1520,25 +1533,37 @@ let SNAP=null,syncFalhas=0;
 function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return t.length+':'+h;}
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
-function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},metaFii:S.metaFii,cfg:S.cfg,fixas:S.fixas||[],gerados:S.gerados||{}};}
+function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},metaFii:S.metaFii,cfg:S.cfg,cfgTs:S.cfgTs||{},fixas:S.fixas||[],gerados:S.gerados||{}};}
 /* hash por chave dos ajustes (cfg entra campo a campo) para saber o que este aparelho mudou */
 const hashV=v=>v===undefined?'u':hashObj(v);
+/* v10.54: cada ajuste guarda quando foi mudado neste aparelho (cfgTs); na junção com a nuvem vence o mais recente,
+   então um aparelho com cópia velha não devolve a meta de cotas (ou outro ajuste) para o valor antigo */
+var CFG_H; // var: usado em let S=carregar() antes desta linha
+function cfgChaves(){const h=cfgHashes(cfgNuvem());delete h.cfgTs;delete h.gerados;return h;}
+function marcaCfg(){try{const h=cfgChaves();if(CFG_H){const t=Date.now();if(!S.cfgTs)S.cfgTs={};Object.keys(h).forEach(k=>{if(h[k]!==CFG_H[k])S.cfgTs[k]=t;});}CFG_H=h;}catch(e){}}
+function zeraCfgH(){try{CFG_H=cfgChaves();}catch(e){CFG_H=null;}}
 function cfgHashes(c){const h={};Object.keys(c).forEach(k=>{if(k==='cfg')Object.keys(c.cfg||{}).forEach(j=>{h['cfg.'+j]=hashV(c.cfg[j]);});else h[k]=hashV(c[k]);});return h;}
 async function juntaCfgRemoto(){
   const {data:r,error}=await sb.from('settings').select('data,updated_at').eq('user_id',USER.id).maybeSingle();
   if(error)throw error;
   if(!r||!r.data||!r.updated_at||r.updated_at===SNAP.__cfgAt)return false; // ninguém gravou desde a nossa leitura
-  const base=SNAP.__cfgK;if(!base)return false; // sem referência (cópia antiga): mantém o comportamento anterior
+  const base=SNAP.__cfgK||{};
   const rem=r.data,loc=cfgNuvem(),toma={},tomaCfg={};
+  const tR=(rem.cfgTs&&typeof rem.cfgTs==='object')?rem.cfgTs:{},tL=S.cfgTs||{};
+  /* fica com a versão da nuvem quando este aparelho não mexeu na chave desde a última leitura, ou quando a da nuvem é mais nova */
+  const daNuvem=(k,vl)=>(base[k]&&hashV(vl)===base[k])||(+tR[k]||0)>(+tL[k]||0);
   Object.keys(rem).forEach(k=>{
-    if(k==='cfg'){Object.keys(rem.cfg||{}).forEach(j=>{if(hashV(loc.cfg[j])===(base['cfg.'+j]||'u'))tomaCfg[j]=rem.cfg[j];});return;}
+    if(k==='cfgTs')return;
+    if(k==='cfg'){Object.keys(rem.cfg||{}).forEach(j=>{if(daNuvem('cfg.'+j,loc.cfg[j]))tomaCfg[j]=rem.cfg[j];});return;}
     if(k==='gerados'){toma.gerados=Object.assign({},rem.gerados||{},loc.gerados||{});return;} // marcas: união
-    if(k in loc&&hashV(loc[k])===base[k])toma[k]=rem[k];
+    if(k in loc&&hashV(loc[k])!==hashV(rem[k])&&daNuvem(k,loc[k]))toma[k]=rem[k];
   });
+  {const ts=Object.assign({},tL);Object.keys(tR).forEach(k=>{if((+tR[k]||0)>(+ts[k]||0))ts[k]=+tR[k];});if(hashV(ts)!==hashV(tL)){S.cfgTs=ts;toma.cfgTs=ts;}}
   if(!Object.keys(toma).length&&!Object.keys(tomaCfg).length)return false;
   const z=sanea(Object.assign({},loc,toma,{cfg:Object.assign({},loc.cfg,tomaCfg)}));
   Object.keys(toma).forEach(k=>{S[k]=z[k];});
   Object.keys(tomaCfg).forEach(j=>{S.cfg[j]=z.cfg[j];});
+  zeraCfgH();
   try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   setTimeout(()=>{if(!document.querySelector('#modal.on')){try{applyCfg();render();}catch(e){}}},0);
   return true;
@@ -1616,7 +1641,7 @@ async function baixar(){
   }
   LEGADO=null;
   const cfgRem=(s.data&&s.data.data)||{};
-  S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));
+  S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();
   SNAP={__cfg:s.data?hashObj(cfgNuvem()):''};
   if(s.data){SNAP.__cfgAt=s.data.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());}
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
@@ -1814,9 +1839,24 @@ function saldoTotal(){
 function saldoTotalLanc(){
   return S.tx.reduce((a,t)=>a+(t.faturaKey?-cents(t.pagoValor):!efetivo(t)||t.tipo==='transf'?0:t.tipo==='receita'?cents(t.valor):(t.cartao?0:-cents(t.valor))),0)/100;
 }
+/* divide o valor da fatura pelas categorias das compras do ciclo, proporcional, em centavos exatos */
+function catsFatura(ft){
+  const p=String(ft.faturaKey).split('|'),c=S.cartoes.find(x=>x.id===p[1]);if(!c)return null;
+  const tot=cents(ft.valor);if(!tot)return null;
+  const mp={};let soma=0;
+  S.tx.forEach(t=>{if(t.cartao!==c.id||t.tipo!=='despesa'||!t.data||!efetivo(t))return;if(fechamentoDe(c,t.data).fecha.slice(0,7)!==p[2])return;const v=cents(t.valor);mp[t.categoria||'Outros']=(mp[t.categoria||'Outros']||0)+v;soma+=v;});
+  if(soma<=0)return null;
+  const out={};let usado=0,maior=null;
+  Object.keys(mp).forEach(k=>{out[k]=Math.floor(mp[k]*tot/soma);usado+=out[k];if(!maior||mp[k]>mp[maior])maior=k;});
+  out[maior]+=tot-usado;
+  return out;
+}
 function despesasPorCat(m){
   const mp={};
-  S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&noPer(t.data,m))mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
+  S.tx.forEach(t=>{if(!(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&noPer(t.data,m)))return;
+    /* v10.54: a fatura entra nas categorias das compras dela (antes aparecia tudo como "Cartão") */
+    if(t.faturaKey&&t.categoria==='Cartão'){const fc=catsFatura(t);if(fc){Object.keys(fc).forEach(k=>{mp[k]=(mp[k]||0)+fc[k];});return;}}
+    mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
   return Object.keys(mp).map(c=>({l:c,v:mp[c]/100})).sort((a,b)=>b.v-a.v).map(s=>Object.assign(s,{color:corCat(s.l)}));
 }
 function barData(){
@@ -2963,6 +3003,7 @@ function go(t){
   toggleSide(false);
   render();window.scrollTo(0,0);
 }
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='catBusca'){const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const q=nz(e.target.value.trim());let n=0;document.querySelectorAll('.catRow').forEach(r=>{const ok=!q||nz(r.dataset.q).includes(q);r.hidden=!ok;if(ok)n++;});const v=document.querySelector('.catVazio');if(v)v.hidden=n>0;}});
 function render(){
   $('#sub').textContent=DATA_HOJE();
   try{atualizaSino();}catch(e){}
@@ -3331,7 +3372,10 @@ function viewOrc(){
   const hist=H.map(h=>`<div class="ohRow ${h.m===m?'on':''}" data-act="orc-mes" data-id="${h.m}"><span class="ohM">${MESES[+h.m.slice(5,7)-1]}</span>
     <span class="ohBars"><i class="p" style="width:${h.plan/mx*100}%"></i><i class="g ${h.plan&&h.gasto>h.plan?'over':''}" style="width:${h.gasto/mx*100}%"></i></span>
     <span class="ohV">${h.plan?Math.round(h.gasto/h.plan*100)+'%':'—'}${h.est?` <em>${h.est} estourou</em>`:''}</span></div>`).join('');
-  const cards=S.cats.map(c=>{
+  /* v10.54: categorias sem limite e sem gasto no mês viram uma lista compacta (antes: um cartão grande para cada uma) */
+  const vazias=S.cats.filter(c=>!(L[c]||0)&&!somaMes(m,'despesa',c,true));
+  const outrasHTML=vazias.length?`<div class="card"><div class="catHead"><h4>Sem limite e sem gasto <span class="catQt">${vazias.length}</span></h4></div><p class="small" style="margin:0 0 10px">toque para definir um limite</p><div class="catList">${vazias.map(c=>`<button type="button" class="catRow" data-act="def-orc" data-id="${esc(c)}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${I('plus')}</span></button>`).join('')}</div></div>`:'';
+  const cards=S.cats.filter(c=>!vazias.includes(c)).map(c=>{
     const lim=L[c]||0,gasto=somaMes(m,'despesa',c,true);
     const pct=lim?gasto/lim*100:0,over=lim>0&&gasto>lim;
     let aviso='';
@@ -3356,7 +3400,8 @@ function viewOrc(){
     <div class="row" style="margin-top:6px"><span class="small" style="margin:0">soma dos limites</span><b>${brl(totLim)}</b></div>
   </div>
   <div class="card"><h4 style="margin:0 0 10px">Histórico · planejado x gasto</h4>${hist}<p class="small" style="margin:8px 0 0"><span class="ohLeg p"></span> planejado <span class="ohLeg g"></span> gasto nas categorias com limite</p></div>
-  ${cards}`;
+  ${cards}
+  ${outrasHTML}`;
 }
 
 const TCOR={fii:'#a3e635',acao:'#60a5fa',etf:'#f59e0b',bdr:'#f472b6',rf:'#34d399',cripto:'#fb923c'};
@@ -3597,7 +3642,7 @@ function viewMetas(){
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
-  <h2 style="margin-bottom:12px">Ajustes</h2>
+  <div class="head"><h2>Ajustes</h2></div>
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
@@ -3608,10 +3653,10 @@ function viewCfg(){
     <div class="swatches">${Object.keys(ACCENTS).map(k=>`<button class="sw ${S.cfg.accent===k?'on':''}" data-act="accent" data-id="${k}" title="${k}" style="background:linear-gradient(135deg,${ACCENTS[k][0]},${ACCENTS[k][1]})"></button>`).join('')}</div>
   </div>
   <div class="card">
-    <h4>Categorias</h4>
-    <div class="catGrid${CATS_ABERTAS?'':' catFechado'}">${S.cats.map(c=>`<div class="catCell hov" style="--cc:${corCat(c)}"><button data-act="del-cat" data-id="${esc(c)}" title="remover" aria-label="remover">${I('close')}</button><span class="cc-i">${I(catIcon(c))}</span><span class="cc-n" data-act="edit-cat" data-id="${esc(c)}" title="editar" aria-label="editar">${esc(c)}</span></div>`).join('')}</div>
-    <button class="btn2 sm" data-act="cats-toggle">${I(CATS_ABERTAS?'chevU':'chevD')} ${CATS_ABERTAS?'mostrar menos':'ver todas ('+S.cats.length+')'}</button>
-    <button class="btn full" data-act="nova-cat">+ nova categoria</button>
+    <div class="catHead"><h4>Categorias <span class="catQt">${S.cats.length}</span></h4><button class="btn2 sm" data-act="nova-cat">${I('plus')} nova</button></div>
+    ${S.cats.length>8?`<label class="catBusca">${I('search')}<input type="search" id="catBusca" placeholder="buscar categoria" autocomplete="off" aria-label="buscar categoria"></label>`:''}
+    <div class="catList">${(()=>{const n={};S.tx.forEach(t=>{if(t.categoria)n[t.categoria]=(n[t.categoria]||0)+1;});return S.cats.map(c=>`<button type="button" class="catRow" data-act="edit-cat" data-id="${esc(c)}" data-q="${esc(c.toLowerCase())}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${n[c]?n[c]:''}</span></button>`).join('');})()}</div>
+    <p class="catVazio" hidden>Nenhuma categoria com esse nome.</p>
   </div>
   ${lockCardHTML()}
   <div class="card">
@@ -3638,7 +3683,7 @@ function viewCfg(){
     </div>
     <button class="lkOff" data-act="limpar">limpar todos os dados</button>
   </div>
-  <p class="rod">GranaViva · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
+  <p class="rod">GranaViva v${GV_BUILD} · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
 }
 
 /* v10.30: cartão com a cara do banco emissor (cores oficiais aproximadas) */
@@ -3845,7 +3890,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><div class="row" style="gap:8px">${S.cfg.pluggyOn?'<button class="btn2" data-act="banco-sync">'+I('refresh')+'sincronizar'+'</button>':''}<button class="btn2" data-act="importar">importar extrato</button><button class="btn2" data-act="nova-transf">transferir</button><button class="btn" data-act="novo-banco">${I('plus')} nova conta</button></div></div>
-  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div><small>${ativos.length} conta${ativos.length===1?'':'s'}${arqs.length?' + '+arqs.length+' arquivada'+(arqs.length===1?'':'s'):''} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
+  ${S.bancos.length?`<div class="card hero"><small>total em bancos</small><div class="big">${brl(total)}</div>${(()=>{const sc=(cents(saldoTotal())-cents(total))/100;return sc?`<small class="semConta" title="dinheiro em espécie e lançamentos sem conta">${sc<0?"−":"+"} ${brl(Math.abs(sc))} sem conta (dinheiro e lançamentos sem banco) · saldo total ${brl(saldoTotal())}</small><br>`:"";})()}<small>${ativos.length} conta${ativos.length===1?'':'s'}${arqs.length?' + '+arqs.length+' arquivada'+(arqs.length===1?'':'s'):''} · principal: ${main?esc(main.nome)+' ('+brl(saldoBanco(main))+')':'nenhuma'}</small></div>
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
     :'<div class="card"><p class="vazio">nenhuma conta cadastrada. adicione seus bancos pra ver o total.</p></div>'}`;
@@ -3979,16 +4024,20 @@ function numExt(v){
   let x=String(v==null?'':v).trim().replace(/\s|R\$/g,'');if(!x)return NaN;
   let neg=false;if(/^\(.*\)$/.test(x)){neg=true;x=x.slice(1,-1);}
   if(/-$/.test(x)){neg=true;x=x.slice(0,-1);}
+  if(/^[-−]/.test(x)){neg=true;x=x.slice(1);}
   const c=x.lastIndexOf(','),d=x.lastIndexOf('.');
   /* v10.52: "1.500" com só ponto e grupos de 3 é milhar (R$ 1.500), não decimal */
   if(c<0&&d>=0&&/^\d{1,3}(\.\d{3})+$/.test(x))x=x.replace(/\./g,'');
   else if(c>d)x=x.replace(/\./g,'').replace(',','.');else x=x.replace(/,/g,'');
-  const n=parseFloat(x);return isNaN(n)?NaN:(neg?-Math.abs(n):n);
+  if(!/^\d*\.?\d+$/.test(x))return NaN; // v10.54: nada de Infinity, 1e5 ou texto
+  const n=parseFloat(x);return !isFinite(n)||n>1e10?NaN:(neg?-Math.abs(n):n);
 }
+/* v10.54: só aceita data que existe no calendário (31/02, 2026-13-01 e 9999 viram vazio) */
+function dataOk(y,m,d){y=+y;m=+m;d=+d;if(y<1990||y>2100||m<1||m>12||d<1)return '';const dt=new Date(Date.UTC(y,m-1,d));const p2=n=>(n<10?'0':'')+n;return dt.getUTCDate()===d?y+'-'+p2(m)+'-'+p2(d):'';}
 function dataExt(v){
   const s=String(v||'').trim();let m;
-  if((m=s.match(/^(\d{4})-?(\d{2})-?(\d{2})/)))return m[1]+'-'+m[2]+'-'+m[3];
-  if((m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/))){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
+  if((m=s.match(/^(\d{4})-?(\d{2})-?(\d{2})/)))return dataOk(m[1],m[2],m[3]);
+  if((m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/))){const y=m[3].length===2?'20'+m[3]:m[3];return dataOk(y,m[2],m[1]);}
   return '';
 }
 function lerOFX(txt){
@@ -4107,11 +4156,14 @@ async function pluggy(body){
   if(data&&data.erro)throw new Error(data.erro);
   return data;
 }
+let BC_ST=null;
 async function atualizaBancoUI(){
   const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
   if(!USER){bt.innerHTML='';return;}
   try{
-    const st=await pluggy({acao:'status'});
+    /* v10.54: status guardado por 5 min (antes: uma chamada ao servidor a cada vez que a tela desenhava) */
+    const st=(BC_ST&&BC_ST.uid===USER.id&&Date.now()-BC_ST.t<300000)?BC_ST.st:await pluggy({acao:'status'});
+    BC_ST={st,t:BC_ST&&BC_ST.st===st?BC_ST.t:Date.now(),uid:USER.id};
     if(!!st.conectado!==!!S.cfg.pluggyOn){S.cfg.pluggyOn=!!st.conectado;salvar();}
     if(st.conectado){
       const ul=st.ultima?new Date(st.ultima):null,sc=$('#bcSt');if(sc){sc.className='bcSt on';sc.innerHTML='<i></i>conectado';}
@@ -4134,7 +4186,7 @@ function bancoConfig(){
   ],v=>{
     if(!String(v.clientId).trim()||!String(v.clientSecret).trim()||!String(v.itemIds).trim())return 'Preencha os três campos.';
     (async()=>{toast('Conferindo com o Pluggy…');
-    try{const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
+    try{BC_ST=null;const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
       S.cfg.pluggyOn=true;salvar();render();toast('Banco conectado · '+r.contas+' '+(r.contas===1?'conta encontrada':'contas encontradas'));setTimeout(bancoSync,400);
     }catch(e){toast(e.message,true);}
     })();
@@ -4147,12 +4199,45 @@ function catDoBanco(l){
   for(const [re,c] of CAT_PLUGGY)if(re.test(l.catBanco||'')&&lista.includes(c))return c;
   return sg?sg.c:catSugerida(l.desc,l.valor<0?'despesa':'receita');
 }
-async function bancoSync(){
+/* v10.54: lê o que o webhook do Pluggy já guardou no servidor (pluggy_tx / pluggy_acc). null = usar 'sincronizar' */
+let IMP_VISTO='';
+async function bancoDaTabela(){
+  try{
+    const visto=S.cfg.pluggyVisto||'';
+    const {data:accs,error:e1}=await sb.from('pluggy_acc').select('id,item_id,data,updated_at');
+    if(e1||!accs||!accs.length)return null;               // tabela vazia / sem webhook ainda → fallback
+    const desde=S.cfg.pluggyDesde
+      ?new Date(new Date(S.cfg.pluggyDesde).getTime()-5*864e5).toISOString().slice(0,10)
+      :new Date(Date.now()-60*864e5).toISOString().slice(0,10);
+    const rows=[];let maxUpd=visto;
+    for(let de=0;de<20000;de+=1000){                       // PostgREST devolve no máx. 1000 por página
+      let q=sb.from('pluggy_tx').select('id,account_id,data,removed,updated_at').order('updated_at',{ascending:true}).range(de,de+999);
+      q=visto?q.gt('updated_at',visto):q.gte('data->>data',desde);
+      const {data,error}=await q;if(error)return null;
+      rows.push(...data);if(data.length<1000)break;
+    }
+    rows.forEach(t=>{if(t.updated_at>maxUpd)maxUpd=t.updated_at;});
+    accs.forEach(a=>{if(a.updated_at>maxUpd)maxUpd=a.updated_at;});
+    IMP_VISTO=maxUpd;
+    const porConta={};
+    rows.forEach(t=>{if(t.removed)return;(porConta[t.account_id]||(porConta[t.account_id]=[])).push(t.data);});
+    const contas=accs.map(a=>({...a.data,tx:(porConta[a.id]||[]).sort((x,y)=>x.data<y.data?-1:x.data>y.data?1:0)}));
+    let investimentos=null;
+    /* investimentos não ficam na tabela: 1 busca ao vivo por dia só para eles */
+    if(S.cfg.pluggyInvDia!==hojeISO()){
+      try{const r2=await pluggy({acao:'sincronizar',dias:7});investimentos=r2.investimentos||[];S.cfg.pluggyInvDia=hojeISO();}catch(e){}
+    }
+    return {ok:true,desde:visto?visto.slice(0,10):desde,contas,investimentos,tabela:true};
+  }catch(e){return null;}
+}
+async function bancoSync(forcar=false){
+  BC_ST=null;
   if(!USER){toast('Entre na sua conta primeiro.',true);return;}
   const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
   toast('Buscando lançamentos no banco…');
   try{
-    const r=await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
+    IMP_VISTO='';
+    const r=(!forcar&&await bancoDaTabela())||await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
     if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
     r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
     let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
@@ -4166,11 +4251,11 @@ async function bancoSync(){
     }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
       .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
     /* v10.51: a data da última busca só avança quando a revisão termina (fechar no X não perde lançamentos) */
-    if(!fila.length){S.cfg.pluggyDesde=hojeISO();salvar();toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
-    IMP_CURSOR=hojeISO();IMP_FILA=fila;proxImportBanco();
+    if(!fila.length){S.cfg.pluggyDesde=hojeISO();if(IMP_VISTO)S.cfg.pluggyVisto=IMP_VISTO;salvar();toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
+    IMP_CURSOR=hojeISO();IMP_VISTO_CURSOR=IMP_VISTO;IMP_FILA=fila;proxImportBanco();
   }catch(e){toast(e.message,true);}
 }
-let IMP_FILA=[],IMP_CURSOR='';
+let IMP_FILA=[],IMP_CURSOR='',IMP_VISTO_CURSOR='';
 function arqCartao(c){c.arq=true;c.arqEm=hojeISO();salvar();render();toast('Cartão arquivado');}
 /* v10.20: posições de investimento do banco (Pluggy /investments) entram em Investimentos */
 function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
@@ -4220,7 +4305,7 @@ function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
   salvar();return criou;}
 /* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
 function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
-function fimFilaBanco(){if(IMP_FILA.length||!IMP_CURSOR)return;S.cfg.pluggyDesde=IMP_CURSOR;IMP_CURSOR='';salvar();}
+function fimFilaBanco(){if(IMP_FILA.length||!IMP_CURSOR)return;S.cfg.pluggyDesde=IMP_CURSOR;IMP_CURSOR='';if(IMP_VISTO_CURSOR){S.cfg.pluggyVisto=IMP_VISTO_CURSOR;IMP_VISTO_CURSOR='';}salvar();}
 function proxImportBanco(){
   const c=IMP_FILA.shift();if(!c){fimFilaBanco();return;}
   const mapa=S.cfg.pluggyMap||{};
@@ -4261,12 +4346,12 @@ function montaImport(){
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||(IMP.banco&&S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2))));
+    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
-    const dupLinha=!IMP.banco&&out.some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
+    const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
     const dupT=!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
-    if(dup||dupT||dupLinha)l.dup=true;
+    if(dup||dupT)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup)ign='já está no app';
     else if(dupT)ign='já lançado como transferência';
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
@@ -4368,17 +4453,10 @@ function abreTxIA(o,arq){
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
   novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null});
 }
-const LIMITE_LEITURAS=30;
-async function usoIA(){
-  const mes=hojeISO().slice(0,7);
-  try{
-    const {data}=await sb.from('ia_uso').select('leituras').eq('mes',mes).maybeSingle();
-    return {mes,n:(data&&data.leituras)||0};
-  }catch(e){return {mes,n:0};}
-}
-async function contaLeitura(u){
-  try{await sb.from('ia_uso').upsert({user_id:USER.id,mes:u.mes,leituras:u.n+1,updated_at:new Date().toISOString()},{onConflict:'user_id,mes'});}catch(e){}
-}
+/* v10.54: o limite de leituras é contado só no servidor (função ler-comprovante, de forma atômica); o app não conta mais */
+const LIMITE_LEITURAS=40;
+async function usoIA(){return {mes:hojeISO().slice(0,7),n:0};}
+async function contaLeitura(){}
 async function chamaIA(body){
   const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body)});
   if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui entender');}
@@ -4882,6 +4960,7 @@ function catForm(id){
     if(corSel)S.catCores[n]=corSel;else delete S.catCores[n];
     salvar();render();toast(edit?'Categoria atualizada':'Categoria criada');
   });
+  if(edit){const mf=$('#mf');if(mf){const k=S.tx.filter(t=>t.categoria===edit).length;mf.insertAdjacentHTML('beforeend',`<button type="button" class="btn2 full perigo" style="margin-top:8px" data-act="del-cat" data-id="${esc(edit)}">${I('trash')} Remover categoria${k?` <small style="opacity:.7">(${k} lançamento${k>1?'s':''} mantêm o nome)</small>`:''}</button>`);}}
   // inject picker into the just-created form
   const mf=$('#mf');
   const box=document.createElement('div');
@@ -4960,7 +5039,7 @@ const ACT={
   'importar':()=>importarExtrato(),
   'banco-sync':()=>bancoSync(),
   'banco-config':()=>bancoConfig(),
-  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await pluggy({acao:'remover'});S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
+  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
@@ -5159,7 +5238,6 @@ $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
 /* a cada publicação: troque GV_BUILD aqui e V no sw.js juntos (./bump.sh faz os dois) */
-const GV_BUILD='2026-10-29.63';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
@@ -5567,7 +5645,7 @@ async function entraComSessao(sess){
     try{
       const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
       if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
-        S=sanea(pend.S);SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
+        S=sanea(pend.S);zeraCfgH();SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
       }
     }catch(e){}
     setSync('carregando seus dados…');
@@ -5630,7 +5708,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     try{
       const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
       if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
-        S=sanea(pend.S);SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
+        S=sanea(pend.S);zeraCfgH();SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
       }
     }catch(e){}
     setSync('carregando seus dados…');
