@@ -2600,7 +2600,7 @@ function viewLanc(){
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}">${t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'-'} ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
-      <div class="acts">${t.faturaKey?'':`<button data-act="anexos" data-id="${t.id}" title="comprovantes" aria-label="comprovantes" class="${t.anexos&&t.anexos.length?'temAnx':''}">${I('clip')}${t.anexos&&t.anexos.length?`<i class="anxN0">${t.anexos.length}</i>`:''}</button>`}${t.faturaKey||t.tipo==='transf'?'':`<button data-act="dup-tx" data-id="${t.id}" title="duplicar" aria-label="duplicar">${I('copy')}</button>`}${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
+      <div class="acts">${t.faturaKey?'':`<button data-act="anexos" data-id="${t.id}" title="comprovantes" aria-label="comprovantes" class="${t.anexos&&t.anexos.length?'temAnx':''}">${I('clip')}${t.anexos&&t.anexos.length?`<i class="anxN0">${t.anexos.length}</i>`:''}</button>`}${t.faturaKey||t.tipo==='transf'?'':`<button data-act="dup-tx" data-id="${t.id}" title="duplicar" aria-label="duplicar">${I('copy')}</button>`}${t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita')?`<button data-act="tx-propria" data-id="${t.id}" title="foi pra investir ou pra outra conta sua" aria-label="marcar como transferência para investimento ou conta sua">${I('swap')}</button>`:''}${t.faturaKey?'':`<button data-act="edit-tx" data-id="${t.id}" title="editar" aria-label="editar">${I('edit')}</button>`}<button data-act="del-tx" data-id="${t.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div>
       ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
   return `
@@ -2696,7 +2696,7 @@ function viewFii(){
   const custoC=cris.reduce((a,f)=>a+(f.pago||0),0),valC=cris.reduce((a,f)=>a+f.cotas*f.preco,0),plC=valC-custoC;
   const lista=filtrados.map(f=>{
     const cri=tipoOf(f)==='cripto';
-    if(tipoOf(f)==='rf'){const posi=f.preco*f.cotas,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;return `<div class="tx hov">${assetIco(f.ticker,'rf')}<div class="txt"><b>${esc(f.nome||f.ticker)}</b><small class="tipoTag">Renda fixa</small><small>saldo ${brl(posi)}${f.pago>0?` · aplicado ${brl(f.pago)} · <b class="${pl>=0?'pos':'neg'}">${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b>`:''}${f.venc?' · vence '+fmtData(f.venc):''}</small><small class="cotInfo">${f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente'}</small></div><div class="acts"><button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;}
+    if(tipoOf(f)==='rf'){const posi=f.preco*f.cotas,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;return `<div class="tx hov">${assetIco(f.ticker,'rf')}<div class="txt"><b>${esc(f.nome||f.ticker)}</b><small class="tipoTag">Renda fixa</small><small>saldo ${brl(posi)}${f.pago>0?` · aplicado ${brl(f.pago)} · <b class="${pl>=0?'pos':'neg'}">${pl>=0?'▲ +':'▼ '}${brl(pl)} (${num(plp)}%)</b>`:''}${f.venc?' · vence '+fmtData(f.venc):''}</small><small class="cotInfo">${f.manual?'valor seu'+(f.bancoValor!=null?' · o banco informou '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente'}</small></div><div class="acts"><button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>`;}
     const posi=f.cotas*f.preco,dv=f.cotas*f.dpc,pl=posi-(f.pago||0),plp=f.pago?pl/f.pago*100:0;
     const linha2=cri?`<small>${num(f.cotas)} ${esc(f.ticker)} · preço ${brl(f.preco)} · valor pago ${brl(f.pago)}</small>`
       :`<small>${num(f.cotas).replace(/,00$/,'')} cotas · cota ${brl(f.preco)}${f.pago>0&&f.cotas>0?' · preço médio '+brl(f.pago/f.cotas):''} · DPC ${brl(f.dpc)}</small>`;
@@ -3296,12 +3296,13 @@ let IMP=null;
 /* v10.17: dinheiro entre contas suas (seu nome, corretoras, câmbio) não é receita nem despesa */
 function nomeProprio(){const md=(USER&&USER.user_metadata)||{};const n=norm(String(md.full_name||md.name||S.cfg.nomeCompleto||''));return n.split(/\s+/).filter(Boolean).length>=2?n:'';}
 function ehPropria(desc){const n=norm(desc);if(!n)return false;
-  if(/mesma titularidade|conta propria|entre contas|renda variavel|renda fixa|de investimentos|saldo de investimentos|resgat|aplicacao|caixinha|\bwise\b|foxbit|binance|mercado bitcoin|nomad|avenue|inter&co|corretora de cambio|corretora de valores|xp investimentos|btg pactual|rico investimentos|clear corretora/.test(n))return true;
+  const cp=norm(String(desc).split('|').slice(1).join('|'));if(cp&&(S.cfg.proprias||[]).includes(cp))return true;
+  if(/mesma titularidade|conta propria|entre contas|renda variavel|renda fixa|de investimentos|saldo de investimentos|resgat|aplicacao|caixinha|\bwise\b|foxbit|binance|mercado bitcoin|nomad|avenue|inter&co|corretora de cambio|ativos virtuais|tokenizadora|avenia|corretora|corretora de valores|xp investimentos|btg pactual|rico investimentos|clear corretora/.test(n))return true;
   const nm=nomeProprio();if(!nm)return false;const p=nm.split(/\s+/);return n.includes(p[0]+' '+p[1])&&(p.length<3||n.includes(p[p.length-1]));}
-function migraPropria(){if(!USER||S.cfg.migPropria>=1)return false;let k=0;
+function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
   S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
-  S.cfg.migPropria=1;salvar();return k;}
+  S.cfg.migPropria=2;salvar();return k;}
 /* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
 async function pluggy(body){
   const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
@@ -3390,6 +3391,7 @@ function investDoBanco(L0){let n=0;const hj=hojeISO();
     if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
     if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
     f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
+    if(f.manual){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
     if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
     else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
     n++;});
@@ -3693,8 +3695,22 @@ function assetIco(t,tipo){
   if(tipo==='cripto'||CRIPTO_LIST.some(x=>x.t===t))return '<span class="ic fii coinic">'+cryptoIco(t)+'</span>';
   return '<span class="tkb tk-'+esc(tipo||'fii')+'">'+esc(String(t).slice(0,4))+'</span>';
 }
+function rfForm(f){
+  form(f?'Editar renda fixa':'Nova renda fixa',[
+    {name:'nome',label:'Nome (ex: Caixinha Carro)',value:f?f.nome:'',required:true},
+    {name:'valor',label:'Valor atual (R$)',value:f?num(f.preco*f.cotas):'',inputmode:'decimal',required:true,placeholder:'0,00'},
+    {name:'pago',label:'Valor aplicado (R$)',value:f&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'}
+  ],v=>{
+    const nome=String(v.nome||'').trim(),valor=parseBR(v.valor),pago=parseBR(v.pago);
+    if(!nome)return 'Informe o nome.';if(!(valor>=0))return 'Informe o valor atual.';
+    const obj={tipo:'rf',nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',cotas:1,preco:c2(valor),pago:pago>0?c2(pago):0,dpc:0,diaPag:0};
+    if(f){Object.assign(f,obj);if(f.pluggyInv){f.manual=true;f.manualEm=hojeISO();}}else S.fiis.push(Object.assign({id:uid(),ops:[],realizado:0,proventos:0},obj));
+    salvar();render();toast('Renda fixa salva');
+  });
+}
 function fiiForm(id,tipoPre){
   const f=id?S.fiis.find(x=>x.id===id):null;
+  if((f&&tipoOf(f)==='rf')||(!f&&tipoPre==='rf'))return rfForm(f);
   form(f?'Editar fundo':'Novo fundo',[
     {name:'tipo',label:'Tipo de ativo',type:'select',value:f?tipoOf(f):(tipoPre||'fii'),options:TIPOS.slice(1).map(x=>({v:x.k,t:x.l}))},
     {name:'ticker',label:'Ticker (ex: HGLG11)',value:f?f.ticker:'',required:true,placeholder:'HGLG11'},
@@ -3995,6 +4011,12 @@ const ACT={
   'limpar':limpar,
   'novo-cartao':()=>cartaoForm(),
   'edit-cartao':id=>cartaoForm(id),
+  'tx-propria':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const cp=norm(String(t.descricao).split('|').slice(1).join('|'));
+    const iguais=cp?S.tx.filter(x=>x.origem==='banco'&&x.conta&&(x.tipo==='despesa'||x.tipo==='receita')&&norm(String(x.descricao).split('|').slice(1).join('|'))===cp):[t];
+    confirma({titulo:'Foi pra investir ou pra outra conta sua?',texto:'Vira transferência e sai das receitas e despesas. O saldo da conta não muda.'+(cp&&iguais.length>1?' Vale para os '+iguais.length+' lançamentos com '+String(t.descricao).split('|').slice(1).join('|')+', e os próximos já entram assim.':cp?' Os próximos com esse destino já entram assim.':''),ok:'Marcar como transferência'},()=>{
+      iguais.forEach(x=>{const b='b:'+x.conta;Object.assign(x,{tipo:'transf',de:x.tipo==='despesa'?b:'',para:x.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});});
+      if(cp){S.cfg.proprias=(S.cfg.proprias||[]).filter(x=>x!==cp).concat(cp).slice(-200);}
+      salvar();render();toast(iguais.length>1?iguais.length+' lançamentos viraram transferência':'Virou transferência');});},
   'del-cartao':id=>confirma({titulo:'Excluir cartão?',texto:'Faturas já fechadas continuam no extrato. Compras do ciclo aberto viram despesas comuns.',ok:'Excluir',perigo:true},()=>{const c=S.cartoes.find(x=>x.id===id),hj=hojeISO();if(c)S.tx.forEach(t=>{if(t.cartao===id&&t.tipo==='despesa'&&fechamentoDe(c,t.data).fecha>hj){t.cartao='';t.forma='outro';}});S.cartoes=S.cartoes.filter(x=>x.id!==id);salvar();render();toast('Cartão excluído');}),
   'novo-banco':()=>bancoForm(),
   'edit-banco':id=>bancoForm(id),
@@ -4074,7 +4096,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.24';
+const GV_BUILD='2026-10-28.26';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
