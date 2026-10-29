@@ -54,6 +54,7 @@ h4{font-size:12px;margin-bottom:12px;color:var(--mut);font-weight:500;text-trans
 
 .btn{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(139,92,246,.25);transition:transform .15s}
 .btn:active{transform:scale(.97)}
+.iaBtn{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;border-color:color-mix(in srgb,var(--a1) 45%,var(--line));color:var(--a1);font-weight:600;min-height:44px}.iaBtn .i{width:18px;height:18px}.iaBtn:disabled{opacity:.7}.iaNota{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--a1);margin:0 0 10px}.iaNota .i{width:15px;height:15px}
 .btn2{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px;cursor:pointer;transition:transform .15s}
 .btn2:active{transform:scale(.97)}
 .btn2.danger{color:#f87171}
@@ -1286,7 +1287,7 @@ report:'<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7.5" rx="1"
 chevL:'<path d="M14.5 6.5 9 12l5.5 5.5"/>',
 chevR:'<path d="M9.5 6.5 15 12l-5.5 5.5"/>',
 home:'<path d="M3.5 10.2 12 3.5l8.5 6.7"/><path d="M5.5 9.2v10.3a1.5 1.5 0 0 0 1.5 1.5h3.5v-5.5h3v5.5H17a1.5 1.5 0 0 0 1.5-1.5V9.2"/>',
-receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
+sparkle:'<path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',receipt:'<path d="M6 3.5h12v17l-2.25-1.5L13.5 20.5 12 19l-1.5 1.5-2.25-1.5L6 20.5z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/>',
 scale:'<path d="M12 4v16.5M7 20.5h10M5 7.5h14"/><path d="m5 7.5-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
 clip:'<path d="M20 11.5 12.3 19.2a5 5 0 0 1-7.1-7.1l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"/>',
 copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
@@ -4065,10 +4066,38 @@ function novaTransf(id){
     geraRecorrentes();salvar();render();toast('Transferência salva');
   });
 }
+/* v10.43: lê foto/print/PDF de comprovante com IA (função ler-comprovante, Gemini) e abre o lançamento preenchido */
+function imgParaJpeg(f,max){return new Promise((ok,er)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1]);};im.onerror=()=>{URL.revokeObjectURL(u);er(new Error('img'));};im.src=u;});}
+function b64DeArquivo(f){return new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=er;r.readAsDataURL(f);});}
+function lerComprovanteIA(){
+  if(!USER){toast('Entre na sua conta para usar a IA.',true);return;}
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*,application/pdf';
+  inp.onchange=async()=>{
+    const f=inp.files&&inp.files[0];if(!f)return;
+    const pdf=f.type==='application/pdf';
+    if(pdf&&f.size>4.5e6){toast('PDF grande demais (máx. 4,5 MB).',true);return;}
+    const btn=document.querySelector('[data-act="ia-ler"]');if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+'Lendo o comprovante…';}
+    try{
+      let imagem,mime;
+      if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
+      else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
+      const cats=[...new Set(S.cats.concat(CATS_RECEITA))];
+      const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:{imagem,mime,categorias:cats,hoje:hojeISO()}});
+      if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui ler');}
+      if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+'Ler comprovante com IA';}return;}
+      const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
+      let forma=o.forma,cartao='';
+      if(forma==='cartao'){if(S.cartoes.length===1)cartao=S.cartoes[0].id;else if(!S.cartoes.length)forma='pix';}
+      if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
+      novoTx(null,o.tipo,{ia:o.confianca||0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[]});
+    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);if(btn){btn.disabled=false;btn.innerHTML=I('sparkle')+'Ler comprovante com IA';}}
+  };
+  inp.click();
+}
 function novoTx(id,tipoPre,base){
   const t=id?S.tx.find(x=>x.id===id):null;
   const P=t||base||null; // base: cópia de outro lançamento (duplicar)
-  form(t?'Editar lançamento':base?'Duplicar lançamento':'Novo lançamento',[
+  form(t?'Editar lançamento':base?(base.ia?'Confira o lançamento':'Duplicar lançamento'):'Novo lançamento',[
     {name:'tipo',label:'Tipo',type:'select',value:P?P.tipo:(tipoPre||'despesa'),options:[{v:'despesa',t:'Despesa'},{v:'receita',t:'Receita'}]},
     {name:'valor',label:'Valor (R$), total da compra se parcelada',value:P?num(P.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'categoria',label:'Categoria',type:'select',value:P?P.categoria:S.cats[0],options:S.cats.map(c=>({v:c,t:c}))},
@@ -4076,7 +4105,7 @@ function novoTx(id,tipoPre,base){
     {name:'pagoCom',label:'Boleto pago com',type:'select',value:P?(P.pagoCom||(P.cartao?'cartao':(P.conta&&P.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:P&&P.cartao?P.cartao:'',options:[{v:'',t:S.cartoes.length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(S.cartoes.map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
     {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:((S.bancos.find(b=>b.principal)||{}).id||''),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(bancosAtivos(P&&P.conta).map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
-    {name:'parcelas',label:'Parcelas',type:'select',value:'1',options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
+    {name:'parcelas',label:'Parcelas',type:'select',value:String(!t&&P&&P.parcSel||1),options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
     {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
     {name:'tags',label:'Tags (opcional, separe por vírgula)',value:P?(P.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
@@ -4139,6 +4168,8 @@ function novoTx(id,tipoPre,base){
     geraRecorrentes();salvar();render();toast(!t&&np>1&&usaCartao?np+' parcelas lançadas':'Lançamento salvo');
   });
   const mf=$('#mf');
+  if(!t&&!base&&USER)mf.insertAdjacentHTML('afterbegin',`<button type="button" class="btn2 full iaBtn" data-act="ia-ler">${I('sparkle')}Ler comprovante com IA</button>`);
+  if(base&&base.ia)mf.insertAdjacentHTML('afterbegin',`<p class="iaNota">${I('sparkle')}Preenchido pela IA${base.ia<0.6?', confira bem o valor':''}. Revise antes de salvar.</p>`);
   const selT=mf.querySelector('select[name="tipo"]'),selC=mf.querySelector('select[name="categoria"]');
   const listaDo=tp=>tp==='receita'?CATS_RECEITA:S.cats;
   const mkOpts=(list,sel)=>list.map(c=>`<option value="${esc(c)}" ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
@@ -4544,6 +4575,7 @@ const ACT={
   'novo-tx':()=>novoTx(),
   'push-on':()=>ativarPush(),
   'push-off':()=>desativarPush(),
+  'ia-ler':()=>lerComprovanteIA(),
   'push-teste':async()=>{const {data,error}=await sb.functions.invoke('alertas-push',{body:{teste:true}});toast(error?'não consegui enviar o teste':'teste enviado, confira as notificações');},
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
