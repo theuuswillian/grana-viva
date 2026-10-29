@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
             }
             q = r.next || null;
           }
-          contas.push({ id: a.id, nome: [a.name, a.number ? "··" + String(a.number).slice(-4) : ""].filter(Boolean).join(" "), tipo: a.type, saldo: a.balance, tx });
+          const cd = a.creditData || {};
+          const credito = a.type === "CREDIT" ? { limite: cd.creditLimit ?? null, disponivel: cd.availableCreditLimit ?? null, fecha: cd.balanceCloseDate || null, vence: cd.balanceDueDate || null, minimo: cd.minimumPayment ?? null, bandeira: cd.brand || "", final: String(a.number || "").replace(/\D/g, "").slice(-4), banco: a.marketingName || "" } : null;
+          contas.push({ id: a.id, nome: [a.name, a.number ? "··" + String(a.number).slice(-4) : ""].filter(Boolean).join(" "), tipo: a.type, saldo: a.balance, credito, tx });
         }
       }
       await sb.from("pluggy_cfg").update({ ultima_sync: new Date().toISOString() }).eq("user_id", uid);

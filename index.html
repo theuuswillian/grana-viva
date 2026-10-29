@@ -1395,6 +1395,7 @@ function saldoBanco(b){
 /* limite comprometido: compras cuja fatura ainda não venceu (ciclo aberto + fatura fechada a pagar).
    antes somava todas as compras desde sempre, então o limite nunca era liberado. */
 function usadoCartaoTotal(c){
+  if(c.bancoData&&c.bancoUsado!=null&&isFinite(c.bancoUsado))return c.bancoUsado; // o banco informa o usado de verdade
   const hj=hojeISO();let tot=0;
   S.tx.forEach(t=>{
     if(t.cartao!==c.id||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;
@@ -3040,7 +3041,7 @@ function viewCartoes(){
         <div class="cc-num">•••• •••• •••• ${esc(c.final||'••••')}</div>
         <div class="cc-bot"><div>${esc(c.nome)}</div><div style="text-align:right">limite<b>${brl(c.limite)}</b></div></div>
       </div>
-      <div class="row"><span class="small" style="margin:0">limite usado (faturas não pagas e parcelas futuras)</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
+      <div class="row"><span class="small" style="margin:0">${c.bancoData?'limite usado, segundo o banco em '+fmtData(c.bancoData):'limite usado (faturas não pagas e parcelas futuras)'}</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
       <div class="bar ${over?'over':''}"><i data-w="${pct}"></i></div>
       <div class="row small"><span>disponível ${brl(disp)}</span><span>${Math.round(pct)}% do limite</span></div>
       <p class="small">ciclo ${fmtData(u.ci.ini)} a ${fmtData(u.ci.fim)} · ${u.n} lançamento${u.n===1?'':'s'}</p>
@@ -3350,8 +3351,10 @@ async function bancoSync(){
   toast('Buscando lançamentos no banco…');
   try{
     const r=await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
-    const mapa=S.cfg.pluggyMap||{};
+    if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
     r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
+    let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
+    if(novos)toast(novos===1?'Cartão do banco adicionado em Cartões':novos+' cartões do banco adicionados');
     const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
       const cartao=c.tipo==='CREDIT';
       const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
@@ -3364,6 +3367,22 @@ async function bancoSync(){
   }catch(e){toast(e.message,true);}
 }
 let IMP_FILA=[];
+/* v10.18: o cartão do banco aparece em Cartões com limite, usado, fechamento e vencimento informados pelo banco */
+function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
+  if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
+  let id=typeof mapa[c.id]==='string'&&mapa[c.id][0]==='c'?mapa[c.id].slice(2):'';
+  let cc=id&&S.cartoes.find(x=>x.id===id);
+  if(!cc&&k.final)cc=S.cartoes.find(x=>x.final===k.final);
+  let criou=false;
+  if(!cc){cc={id:uid(),nome:String(c.nome||'Cartão').replace(/\s*··\d+$/,'').slice(0,60)||'Cartão',banco:String(k.banco||c.nome||'').slice(0,60),final:k.final||'',limite:0,fechamento:1,vencimento:10,cor:S.cartoes.length%CARD_COR.length,rotativo:0,multaPct:2,moraPct:1};S.cartoes.push(cc);criou=true;}
+  mapa[c.id]='c:'+cc.id;
+  const lim=+k.limite,disp=+k.disponivel;
+  if(isFinite(lim)&&lim>0)cc.limite=c2(lim);
+  if(isFinite(lim)&&lim>0&&isFinite(disp)){cc.bancoUsado=c2(Math.max(0,lim-disp));cc.bancoData=hojeISO();}
+  const dia=x=>{const d=String(x||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?parseInt(d.slice(8),10):0;};
+  if(dia(k.fecha))cc.fechamento=dia(k.fecha);if(dia(k.vence))cc.vencimento=dia(k.vence);
+  if(k.final&&!cc.final)cc.final=k.final;
+  salvar();return criou;}
 /* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
 function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
 function proxImportBanco(){
@@ -4025,7 +4044,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.20';
+const GV_BUILD='2026-10-28.21';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
