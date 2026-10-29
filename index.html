@@ -4768,7 +4768,7 @@ function lockAbre(forca){
   lockLimpaSaida();
   const c=lockCfg();if(!c){lockFecha();return;}
   if(!forca&&LK.o&&LK.o.modo==='abrir')return;
-  lockTela({modo:'abrir',titulo:c.bio?'Toque para usar o Face ID':'Digite seu PIN',sub:c.bio?'ou digite seu PIN':'',bio:!!c.bio,cb:async pin=>{
+  lockTela({modo:'abrir',titulo:'Digite seu PIN',sub:c.bio?'ou use o Face ID':'',bio:!!c.bio,cb:async pin=>{
     const ok=await lockConfere(pin),cc=lockCfg();
     if(ok){if(cc){cc.falhas=0;cc.ate=0;lockSalva(cc);}lockFecha();return;}
     if(!cc){lockFecha();return;}
@@ -4776,7 +4776,7 @@ function lockAbre(forca){
     if(cc.falhas>=5){const seg=Math.min(300,30*Math.pow(2,cc.falhas-5));cc.ate=Date.now()+seg*1000;lockSalva(cc);lockErro('PIN incorreto. Tente de novo em '+seg+' s');}
     else{lockSalva(cc);lockErro('PIN incorreto');}
   }});
-  if(c.bio&&!LK_IOS)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
+  if(c.bio)setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir')lockBio(true);},350);
 }
 async function lockBio(auto){
   const c=lockCfg();if(!c||!c.bio||LK.bioBusy)return;
