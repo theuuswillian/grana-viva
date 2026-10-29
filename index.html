@@ -3374,7 +3374,15 @@ let IMP_FILA=[];
 function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
   if(t==='EQUITY'){if(st==='REAL_ESTATE_FUND')return 'fii';if(st==='BDR')return 'bdr';if(st==='ETF')return 'etf';return 'acao';}
   if(t==='ETF')return 'etf';if(st==='REAL_ESTATE_FUND')return 'fii';return 'rf';}
-function investDoBanco(L){let n=0;const hj=hojeISO();
+function investDoBanco(L0){let n=0;const hj=hojeISO();
+  /* renda fixa do mesmo emissor vira uma posição só (o Nubank manda cada aplicação de CDB separada) */
+  const G={},L=[];
+  L0.forEach(v=>{if(tipoInvBanco(v)!=='rf'){L.push(v);return;}
+    const nm=String(v.nome||'Renda fixa').replace(/\s*-\s*SOCIEDADE.*$/i,'').replace(/ S\.?A\.?.*$/i,'').trim();
+    const k='g:'+norm((v.subtipo||'')+'|'+nm);
+    const g=G[k]||(G[k]={id:k,nome:nm,codigo:(v.subtipo||'RF')+' '+nm.split(/[\s-]+/).filter(x=>x.length>1&&!/^(CDB|LCI|LCA|LC|RDB)$/i.test(x))[0],tipo:v.tipo,subtipo:v.subtipo,saldo:0,original:0,status:'TOTAL_WITHDRAWAL',vencimento:''});
+    if(v.status!=='TOTAL_WITHDRAWAL'&&+v.saldo>0){g.saldo+= +v.saldo;g.original+= +v.original||0;g.status='ACTIVE';if(v.vencimento&&(!g.vencimento||v.vencimento<g.vencimento))g.vencimento=v.vencimento;}});
+  Object.values(G).forEach(g=>{g.saldo=c2(g.saldo);g.original=c2(g.original);L.push(g);});
   L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
     let f=S.fiis.find(x=>x.pluggyInv===v.id);
     const tk=String(tp==='rf'?(v.codigo||v.nome):(v.codigo||v.nome)).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV';
@@ -4066,7 +4074,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.23';
+const GV_BUILD='2026-10-28.24';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
