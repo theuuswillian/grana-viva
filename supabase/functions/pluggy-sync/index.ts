@@ -61,15 +61,17 @@ Deno.serve(async (req) => {
         const acc = (await get(key, "/accounts?itemId=" + it)).results || [];
         for (const a of acc) {
           const tx: any[] = [];
-          for (let pg = 1; pg <= 20; pg++) {
-            const r = await get(key, `/transactions?accountId=${a.id}&from=${desde}&pageSize=500&page=${pg}`);
+          // v2: paginação por cursor (o /transactions antigo responde 410 nas chaves novas)
+          let q: string | null = `?accountId=${a.id}&dateFrom=${desde}`;
+          for (let pg = 0; q && pg < 40; pg++) {
+            const r = await get(key, "/v2/transactions" + q);
             for (const t of r.results || []) {
               if (t.status === "PENDING") continue; // pendente muda de id quando compensa
               const v = Math.abs(+t.amount || 0);
               if (!v) continue;
               tx.push({ id: t.id, data: String(t.date).slice(0, 10), valor: t.type === "DEBIT" ? -v : v, desc: String(t.description || t.descriptionRaw || "").slice(0, 120), cat: t.category || "" });
             }
-            if (pg >= (r.totalPages || 1)) break;
+            q = r.next || null;
           }
           contas.push({ id: a.id, nome: [a.name, a.number ? "··" + String(a.number).slice(-4) : ""].filter(Boolean).join(" "), tipo: a.type, saldo: a.balance, tx });
         }
