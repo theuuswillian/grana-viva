@@ -1,13 +1,20 @@
--- v10.52: limite de leituras de comprovante por IA (30/mês por usuário).
--- RLS ligada: cada usuário lê/escreve só a própria linha. o app conta antes e depois da leitura.
+-- limite de leituras por IA (comprovante e frase): contado só no servidor, por dia
 create table if not exists public.ia_uso (
   user_id uuid not null references auth.users(id) on delete cascade,
-  mes text not null,
-  leituras int not null default 0,
-  updated_at timestamptz not null default now(),
-  primary key (user_id, mes)
+  dia date not null,
+  n int not null default 0,
+  primary key (user_id, dia)
 );
 alter table public.ia_uso enable row level security;
 revoke all on public.ia_uso from anon, authenticated;
-drop policy if exists ia_uso_own on public.ia_uso;
-create policy ia_uso_own on public.ia_uso for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- incrementa e confere de forma atômica; devolve false quando já chegou ao limite
+create or replace function public.ia_conta(p_uid uuid, p_dia date, p_lim int) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare v int;
+begin
+  insert into ia_uso(user_id, dia, n) values (p_uid, p_dia, 1)
+  on conflict (user_id, dia) do update set n = ia_uso.n + 1 where ia_uso.n < p_lim
+  returning n into v;
+  return v is not null;
+end $$;
+revoke all on function public.ia_conta(uuid, date, int) from public, anon, authenticated;
