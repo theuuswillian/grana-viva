@@ -45,6 +45,8 @@ function chaveFixa(f: any, d: string): string {
 // ---------- alertas de um usuário
 function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
   const out: string[] = [], pagDesde = cfg?.cfg?.pagDesde, gerados = cfg?.gerados || {};
+  /* v10.53: interruptores do app passam a valer no push (antes eram ignorados pela função) */
+  const on = (k: string) => !(cfg?.cfg?.notif && cfg.cfg.notif[k] === false);
   // antecedência escolhida no app (Ajustes): 0, 1, 2, 3, 5 ou 7 dias; padrão 3. no dia e na véspera sempre avisa.
   const N = [0, 1, 2, 3, 5, 7].includes(+cfg?.cfg?.avisoDias) ? +cfg.cfg.avisoDias : 3;
   const emN = (d: number) => `vence em ${d} dias`;
@@ -64,14 +66,14 @@ function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
       const resto = (somas[k].c - Math.round((+fat?.pagoValor || 0) * 100)) / 100;
       if (resto <= 0.009) continue;
       const d = dias(hoje, vence), nome = c.nome || "cartão";
-      if (N > 1 && d === N) out.push(`Fatura ${nome} ${emN(d)} (${fmt(vence)}) · ${brl(resto)}`);
-      else if (d === 1) out.push(`Fatura ${nome} vence amanhã · ${brl(resto)}`);
-      else if (d === 0) out.push(`Fatura ${nome} vence hoje · ${brl(resto)}`);
-      else if (d === -1 || d === -3 || d === -7) out.push(`Fatura ${nome} está atrasada desde ${fmt(vence)} · ${brl(resto)}`);
+      if (N > 1 && d === N && on("fatVence")) out.push(`Fatura ${nome} ${emN(d)} (${fmt(vence)}) · ${brl(resto)}`);
+      else if (d === 1 && on("fatVence")) out.push(`Fatura ${nome} vence amanhã · ${brl(resto)}`);
+      else if (d === 0 && on("fatVence")) out.push(`Fatura ${nome} vence hoje · ${brl(resto)}`);
+      else if ((d === -1 || d === -3 || d === -7) && on("fatAtras")) out.push(`Fatura ${nome} está atrasada desde ${fmt(vence)} · ${brl(resto)}`);
     }
   }
   const h = D(hoje), amanha = iso(new Date(h.getTime() + 864e5)), diaN = iso(new Date(h.getTime() + N * 864e5));
-  for (const f of cfg?.fixas || []) {
+  for (const f of (on("fixas") ? cfg?.fixas || [] : [])) {
     if (f.tipo === "receita") continue;
     const pago = (d: string) => { const k = chaveFixa(f, d); const t = tx.find((x) => x.fixaKey === k); return !!t && t.status !== "previsto"; };
     if (ocorreEm(f, hoje) && !pago(hoje)) out.push(`Conta fixa ${f.nome} vence hoje · ${brl(+f.valor || 0)}`);
@@ -79,7 +81,7 @@ function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
     else if (N > 1 && ocorreEm(f, diaN) && !pago(diaN)) out.push(`Conta fixa ${f.nome} ${emN(N)} (${fmt(diaN)}) · ${brl(+f.valor || 0)}`);
   }
   // lançamentos previstos (fora das fixas automáticas): hoje, amanhã e atrasados há 1, 3 ou 7 dias
-  for (const t of tx) {
+  for (const t of (on("previstos") ? tx : [])) {
     if (t.status !== "previsto" || t.tipo !== "despesa" || t.cartao || t.fxAuto || typeof t.data !== "string") continue;
     if (t.fixaKey && (cfg?.fixas || []).some((f: any) => t.fixaKey === chaveFixa(f, t.data) && (t.data === hoje || t.data === amanha || (N > 1 && t.data === diaN)))) continue; // já avisado acima
     const d = dias(hoje, t.data), nome = t.descricao || t.categoria || "conta";
@@ -93,6 +95,7 @@ function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
 
 // orçamento do mês: um aviso ao passar de 80% e outro ao estourar (chaves guardadas em push_log)
 function orcamentos(tx: any[], cfg: any, hoje: string): { chave: string; txt: string }[] {
+  if (cfg?.cfg?.notif && cfg.cfg.notif.orc === false) return [];
   const mes = hoje.slice(0, 7), out: { chave: string; txt: string }[] = [];
   // limites com histórico: o registro mensal mais recente até este mês; sem registro, o limite padrão
   const om = cfg?.orcMes && typeof cfg.orcMes === "object" ? cfg.orcMes : {};
@@ -148,6 +151,8 @@ Deno.serve(async (req) => {
     const txs = (t.data || []).map((r: any) => r.data), cfg = s.data?.data || {};
     const lista = alertas(txs, (c.data || []).map((r: any) => r.data), cfg, hoje);
     const orcs = orcamentos(txs, cfg, hoje);
+    /* v10.53: resumo diário — toda manhã, lista do dia mesmo sem alerta (ou "nada vence hoje") */
+    const resumo = cfg?.cfg?.resumoDiario !== false;
     let novos: { chave: string; txt: string }[] = [];
     if (orcs.length) {
       const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", orcs.map((o) => o.chave));
@@ -155,7 +160,8 @@ Deno.serve(async (req) => {
       novos = orcs.filter((o) => !feitos.has(o.chave));
       lista.push(...novos.map((o) => o.txt));
     }
-    if (!lista.length) continue;
+    if (!lista.length && !(resumo && cfg?.cfg?.notif?.resumo !== false)) continue;
+    if (!lista.length) lista.push("Nada vence hoje 👍");
     usuarios++;
     /* v10.52: notificações discretas (padrão): sem valores na tela bloqueada */
     const discreto = cfg.pushDiscreto !== false;
