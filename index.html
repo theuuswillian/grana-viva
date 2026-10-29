@@ -2249,7 +2249,7 @@ function drawRel(c,p){
   const cats=relCats(a,b).slice(0,6);
   const {ctx,w,h}=fitCanvas(c,260);
   const max=Math.max(1,...cats.flatMap(x=>[x.va,x.vb]));
-  const top=14,base=h-40,H=Math.max(0,base-top),gw=w/Math.max(1,cats.length);
+  const top=14,base=h-44,H=Math.max(0,base-top),gw=w/Math.max(1,cats.length);
   ctx.clearRect(0,0,w,h);
   ctx.strokeStyle=cor('--line');ctx.lineWidth=1;
   for(let i=0;i<=3;i++){const y=top+H*i/3;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
@@ -2259,8 +2259,11 @@ function drawRel(c,p){
     const ha=clamp(x.va/max*H*p),hb=clamp(x.vb/max*H*p);
     bar(ctx,cx-bw-2,base-ha,bw,ha,'#a78bfa');
     bar(ctx,cx+2,base-hb,bw,hb,'#34d399');
-    ctx.fillStyle=cor('--txt');ctx.font='14px system-ui';ctx.textAlign='center';
-    ctx.fillText(x.l.length>9?x.l.slice(0,8)+'.':x.l,cx,h-14);
+    /* v10.31: rótulo cabe na coluna; com colunas estreitas alterna em duas linhas */
+    const dois=gw<74,maxW=(dois?gw*1.9:gw)-8;
+    ctx.fillStyle=cor('--txt');ctx.font=(gw<60?'12px':'13px')+' system-ui';ctx.textAlign='center';
+    let t=x.l;if(ctx.measureText(t).width>maxW){while(t.length>2&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);t=t.trim()+'…';}
+    ctx.fillText(t,cx,dois&&i%2?h-6:h-24);
   });
   if(!cats.length){ctx.fillStyle=cor('--mut');ctx.font='13px system-ui';ctx.textAlign='center';ctx.fillText('sem despesas nesses meses',w/2,h/2);}
 }
@@ -4426,7 +4429,7 @@ $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
 /* versão nova: ao voltar para o app (o iPhone mantém a página aberta por dias), confere se saiu atualização */
-const GV_BUILD='2026-10-28.34';
+const GV_BUILD='2026-10-28.35';
 let checouEm=0;
 async function confereVersao(){
   if(Date.now()-checouEm<60000||!navigator.onLine)return;checouEm=Date.now();
