@@ -186,6 +186,8 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .bk-ic .i{width:22px;height:22px;filter:drop-shadow(0 0 4px var(--a1))}
 .bk-logo{padding:0;overflow:hidden;position:relative}
 .bl-wrap{position:relative}
+.bl-wrap img.bl-full{padding:0!important;object-fit:cover!important;background:none!important;inset:0!important;width:100%!important;height:100%!important}
+.bl-fw{background:#111!important;overflow:hidden}
 .bl-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px;box-sizing:border-box;display:block;border-radius:inherit}
 .bo-logo img{width:100%;height:100%;object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;display:block}
 .bl-ini{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--a1);border:1px solid var(--a1);box-shadow:0 0 12px -4px var(--a1);box-sizing:border-box}
@@ -628,6 +630,14 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--sat);ba
 .pushOn i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e}
 .pushSub{display:block;margin:14px 0 8px;color:var(--mut,#94a3b8);font-size:14px}
 .pushChips{display:flex;flex-wrap:wrap;gap:6px}
+.ntList{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-top:2px}
+.ntRow{display:flex;align-items:center;gap:12px;padding:12px 14px;background:none;border:0;border-top:1px solid var(--line);text-align:left;color:inherit;font-family:inherit;cursor:pointer;width:100%}
+.ntRow:first-child{border-top:0}
+.ntIc{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}.ntIc .i{width:19px;height:19px}
+.ntTx{flex:1;min-width:0}.ntTx b{display:block;font-size:15px;font-weight:600}.ntTx small{display:block;font-size:12.5px;color:var(--mut);margin-top:2px}
+.ntSw{flex:none;width:46px;height:28px;border-radius:999px;background:rgba(148,163,184,.3);position:relative;transition:background .2s}
+.ntSw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .2s}
+.ntSw.on{background:linear-gradient(135deg,#22c55e,#8b5cf6)}.ntSw.on i{transform:translateX(18px)}
 .pushChips b{font-weight:500;font-size:13px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
 html.claro .pushChips b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42,.08)}
 .pushBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
@@ -1075,7 +1085,7 @@ html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
 .bcGrid{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .bcGrid>span{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
 .bcGrid small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt);opacity:.65}.bcGrid b{font-size:15px;color:var(--hd)}
-.bcBks{grid-column:1/-1}.bcBks b{display:flex;align-items:center;gap:8px}.bcLg{width:22px;height:22px;border-radius:7px;overflow:hidden;background:#fff;display:inline-flex;align-items:center;justify-content:center}.bcLg img{width:100%;height:100%;object-fit:cover}.bcLg .bl-ini{font-size:9px;color:#333}
+.bcBks{grid-column:1/-1}.bcBks b{display:flex;align-items:center;gap:8px}.bcLg{width:30px;height:30px;border-radius:9px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.08);overflow:hidden;background:#fff;display:inline-flex;align-items:center;justify-content:center}.bcLg img{width:100%;height:100%;object-fit:cover}.bcLg .bl-ini{font-size:9px;color:#333}
 .bcNota{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--txt);opacity:.7;margin:10px 2px 14px}.bcNota .i{width:13px;height:13px}
 #bcBtns{display:flex!important;flex-direction:column;gap:10px}
 .bcSync{width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;min-height:48px}
@@ -2056,9 +2066,12 @@ async function atualizaPushUI(){
   if(!pushSuportado()){t.textContent=ios&&!instalado()?'No iPhone, primeiro instale o app: no Safari, toque em Compartilhar e em Adicionar à Tela de Início. Depois abra pelo ícone e ative aqui.':'Este navegador não aceita notificações push.';b.innerHTML='';return;}
   if(Notification.permission==='denied'){t.textContent='As notificações estão bloqueadas para o GranaViva. Libere nos ajustes do aparelho e volte aqui.';b.innerHTML='';return;}
   let s=null;try{s=await inscricaoAtual();}catch(e){}
-  if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h eu te aviso de:</span><span class="pushChips"><b>faturas a vencer</b><b>faturas atrasadas</b><b>contas fixas</b><b>orçamentos em 80% e 100%</b></span>';b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
+  if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar']];
+function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
+function notifListaHTML(){return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+'</div>';}
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
   try{
@@ -3085,7 +3098,7 @@ function viewFii(){
         if(dia)meta.push(['por dia útil','≈ '+brl(dia)],['por mês','≈ '+brl(posi*(Math.pow(1+CDI.taxa/100*k,21)-1))]);
         const L=liquidoRF(f);if(L&&f.pago)meta.push(['se resgatar hoje',brl(L.liq)]);
         meta.push(['resgate',f.semVenc||!f.venc?'diário':'vence '+fmtData(f.venc)]);
-        info=CDI.ult?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a. · atualizado até '+fmtData(CDI.ult)+(L?' · IR '+num(L.aliq).replace(/,0$/,'')+'%':''):CDI.st==='erro'?'sem conexão com o Banco Central, tentando de novo':'buscando o CDI no Banco Central…';
+        info=CDI.ult?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a. · '+(f.cdiEst?'rendimento até '+fmtData(f.cdiEst).slice(0,5)+' (último dia estimado até o BC publicar)':'atualizado até '+fmtData(CDI.ult))+(L?' · IR '+num(L.aliq).replace(/,0$/,'')+'%':''):CDI.st==='erro'?'sem conexão com o Banco Central, tentando de novo':'buscando o CDI no Banco Central…';
       }else{
         if(f.venc&&!f.semVenc)meta.push(['vence',fmtData(f.venc)]);else if(f.semVenc)meta.push(['resgate','diário']);
         info=(f.manual?'valor ajustado por você'+(f.bancoValor!=null?' · banco: '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para render pelo CDI';
@@ -3408,7 +3421,9 @@ const BANCOS_BR=[
 {c:'',n:'Carteira digital',d:'',t:'Carteira digital'},
 {c:'',n:'Binance',d:'binance.com',t:'Carteira digital'}
 ];
-function bancoLogo(d){return d?'https://www.google.com/s2/favicons?domain='+d+'&sz=128':'';}
+/* v10.40: ícones dos apps dos bancos (quadrados, ocupam o ícone todo), servidos pelo próprio app */
+const LOGO_LOCAL=new Set(['agibank.com.br','bancointer.com.br','banrisul.com.br','bb.com.br','binance.com','bmg.com.br','bnb.gov.br','bradesco.com.br','brb.com.br','btgpactual.com','bv.com.br','c6bank.com.br','caixa.gov.br','cora.com.br','daycoval.com.br','digio.com.br','genialinvestimentos.com.br','itau.com.br','mercadopago.com.br','mercantildobrasil.com.br','neon.com.br','nubank.com.br','pagbank.com.br','picpay.com','safra.com.br','santander.com.br','sicoob.com.br','sicredi.com.br','sofisa.com.br','stone.com.br','unicred.com.br','xpi.com.br']);
+function bancoLogo(d){return d?(LOGO_LOCAL.has(d)?'logos/'+d+'.png':'https://www.google.com/s2/favicons?domain='+d+'&sz=128'):'';}
 /* segunda fonte da cadeia de logos (usada se a primeira falhar) */
 function bancoLogo2(d){return d?'https://icon.horse/icon/'+d:'';}
 function bancoNext(im){if(im.dataset.s2){const u=im.dataset.s2;im.removeAttribute('data-s2');im.src=u;}else{im.remove();}}
@@ -3422,7 +3437,7 @@ function bancoLogoHTML(logo,nome,cls,logo2){
   const fb='<span class="bl-ini">'+ini+'</span>';
   if(!logo)return '<span class="'+cls+' bl-wrap">'+fb+'</span>';
   const s2=logo2?' data-s2="'+esc(logo2)+'"':'';
-  return '<span class="'+cls+' bl-wrap">'+fb+'<img src="'+esc(logo)+'"'+s2+' alt="" decoding="async" loading="lazy" onerror="bancoNext(this)" onload="bancoLoad(this)"></span>';
+  return '<span class="'+cls+' bl-wrap'+(logo.startsWith('logos/')?' bl-fw':'')+'">'+fb+'<img'+(logo.startsWith('logos/')?' class="bl-full"':'')+' src="'+esc(logo)+'"'+s2+' alt="" decoding="async" loading="lazy" onerror="bancoNext(this)" onload="bancoLoad(this)"></span>';
 }
 function cicloCartao(c){
   const h=new Date(),y=h.getFullYear(),mo=h.getMonth();
@@ -4211,6 +4226,11 @@ function rfForm(f){
    (1 + CDI do dia × %CDI) em cada dia útil publicado depois da data base. Recalcula ao abrir o app. */
 const CDI_KEY='gv-cdi';let CDI={st:'',ult:'',taxa:0};
 function cdiCache(){try{return JSON.parse(localStorage.getItem(CDI_KEY)||'null')||{s:{},em:''};}catch(e){return {s:{},em:''};}}
+/* feriados nacionais (sem CDI): 2025-2027 */
+const FER_BR=new Set(['2025-01-01','2025-03-03','2025-03-04','2025-04-18','2025-04-21','2025-05-01','2025-06-19','2025-09-07','2025-10-12','2025-11-02','2025-11-15','2025-11-20','2025-12-25','2026-01-01','2026-02-16','2026-02-17','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25','2027-01-01','2027-02-08','2027-02-09','2027-03-26','2027-04-21','2027-05-01','2027-05-27','2027-09-07','2027-10-12','2027-11-02','2027-11-15','2027-11-20','2027-12-25']);
+function diaUtil(iso){const d=new Date(iso+'T12:00:00').getDay();return d!==0&&d!==6&&!FER_BR.has(iso);}
+/* dias úteis já passados que o Banco Central ainda não publicou (estimados com a última taxa) */
+function cdiPendentes(ult){if(!ult)return [];const out=[],hj=hojeISO(),d=new Date(ult+'T12:00:00');for(let i=0;i<10;i++){d.setDate(d.getDate()+1);const x=d.toISOString().slice(0,10);if(x>=hj)break;if(diaUtil(x))out.push(x);}return out;}
 function cdiAnual(d){return (Math.pow(1+d/100,252)-1)*100;}
 function migraCaixinhas(){ // pedido do Matheus (28/10/2026): Caixinha Nubank rende 100% do CDI, sem vencimento
   if(S.cfg.migCdi1)return false;let n=0;
@@ -4226,6 +4246,8 @@ function aplicaCDI(){
     if(tipoOf(f)!=='rf'||f.idx!=='cdi'||!f.cdiBase)return;
     const k=(f.pctCdi||100)/100;let v=+f.cdiBase.v||0,n=0;
     dias.forEach(d=>{if(d>f.cdiBase.d){v*=1+c.s[d]/100*k;n++;}});
+    const est=cdiPendentes(CDI.ult).filter(d=>d>f.cdiBase.d);est.forEach(()=>{v*=1+CDI.taxa/100*k;});
+    f.cdiEst=est.length?est[est.length-1]:'';
     const nv=Math.round(v*100)/100;
     if(f.cotas!==1){f.cotas=1;mud=true;}
     if(nv!==f.preco){f.preco=nv;mud=true;}
@@ -4238,7 +4260,8 @@ async function atualizaCDI(forca){
   const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&f.idx==='cdi'&&f.cdiBase);if(!rfs.length)return;
   const c=cdiCache(),hj=hojeISO();
   const ini=rfs.map(f=>f.cdiBase.d).sort()[0];
-  const precisa=forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini);
+  const ultS=Object.keys(c.s).sort().pop()||'';
+  const precisa=forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini)||(cdiPendentes(ultS).length>0&&Date.now()-(c.t||0)>3600e3);
   if(precisa&&navigator.onLine){
     const di=new Date(ini+'T12:00:00');di.setDate(di.getDate()-7);
     const br=x=>pad(x.getDate())+'/'+pad(x.getMonth()+1)+'/'+x.getFullYear();
@@ -4248,7 +4271,7 @@ async function atualizaCDI(forca){
       if(!r.ok)throw new Error('http '+r.status);
       const j=await r.json();
       j.forEach(x=>{const [d,m,y]=String(x.data).split('/');const t=parseFloat(x.valor);if(y&&t>=0&&t<1)c.s[y+'-'+m+'-'+d]=t;});
-      c.em=hj;
+      c.em=hj;c.t=Date.now();
       // guarda só ~2 anos de histórico
       const lim=new Date();lim.setFullYear(lim.getFullYear()-2);const li=lim.toISOString().slice(0,10);
       Object.keys(c.s).forEach(d=>{if(d<li&&d<ini)delete c.s[d];});
@@ -4555,6 +4578,7 @@ const ACT={
   'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);lkBioGuarda(null);render();toast('Face ID desativado');}else lockBioAtiva();},
   'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
   'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
+  'notif-tog':id=>{if(!S.cfg.notif)S.cfg.notif={};const on=!notifOn(id);S.cfg.notif[id]=on;salvar();const b=document.querySelector('.ntRow[data-id="'+id+'"]');if(b){b.setAttribute('aria-checked',on);b.querySelector('.ntSw').classList.toggle('on',on);}toast(on?'Aviso ligado':'Aviso desligado');},
   'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
@@ -4708,7 +4732,7 @@ render();
 atualizaCotacoes();
 if(aplicaCDI())salvar();atualizaCDI();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')atualizaCDI();});
-setInterval(()=>atualizaCDI(),3*3600e3);
+setInterval(()=>atualizaCDI(),3600e3);
 /* ---------- bloqueio do app: PIN e Face ID / Touch ID, guardado só neste aparelho (não vai para a nuvem) ---------- */
 var LK_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 var LOCK_KEY='gv-lock',LOCK_LEN=4,LK={o:null,buf:'',saiu:0,bioBusy:false};
