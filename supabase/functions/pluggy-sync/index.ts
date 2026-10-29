@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
           }
         } catch (_) { /* item sem permissão de investimentos */ }
       }
-: new Date().toISOString() }).eq("user_id", uid);
+      await sb.from("pluggy_cfg").update({ ultima_sync: new Date().toISOString() }).eq("user_id", uid);
       return json({ ok: true, desde, contas, investimentos });
     }
     return json({ erro: "ação desconhecida" }, 400);
