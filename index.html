@@ -1346,7 +1346,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.65'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.67'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1750,7 +1750,7 @@ async function baixar(){
   }
   LEGADO=null;
   const cfgRem=(s.data&&s.data.data)||{};
-  S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();
+  S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();TX_VERSION++;
   SNAP={__cfg:s.data?hashObj(cfgNuvem()):''};
   if(s.data){SNAP.__cfgAt=s.data.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());}
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
