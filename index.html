@@ -1232,8 +1232,9 @@ html.claro .hPerC.on{background:#0f172a;color:#fff}
 .hB-brand{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.85)}
 .hB-brand .i{width:18px;height:18px}
 .hB-hero .olhoBtn{color:#fff;background:rgba(255,255,255,.15)!important;border-color:transparent!important}
-.hB-saldo{margin-top:14px;font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 20px rgba(0,0,0,.15);overflow:hidden}
-.hB-cur{font-size:.45em;font-weight:600;opacity:.8;vertical-align:.55em;letter-spacing:0}
+.hB-saldo{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 20px rgba(0,0,0,.15);overflow:visible}
+.hB-cur{display:inline-flex;align-items:center;justify-content:center;flex:none;padding:6px 10px;border:1px solid rgba(255,255,255,.17);border-radius:999px;background:rgba(255,255,255,.17);font-size:13px;font-weight:600;line-height:1;letter-spacing:0;opacity:.95}
+.hB-amount{display:inline-block;font-size:1em;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
 .hB-dec{font-size:.5em;opacity:.7}
 .hB-sub{margin-top:8px;font-size:12.5px;font-weight:500;color:rgba(255,255,255,.8)}
 .hB-spark{height:46px;margin:8px -20px 10px;color:#fff;opacity:.95}
@@ -1346,7 +1347,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.67'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.68'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3433,7 +3434,7 @@ function homeTopo(v,o){
   <div class="hB-hero${saldo<0?' hNeg':''}">
     <div class="hB-blob b1"></div><div class="hB-blob b2"></div><div class="hB-noise"></div>
     <div class="hB-top"><span class="hB-brand">${I('wallet')}Saldo total</span>${eye}</div>
-    <div class="hB-saldo nw">${OCULTO?'R$ •••••':`${bp.s?'−':''}<span class="hB-cur">R$</span> ${bp.i}<span class="hB-dec">${bp.d}</span>`}</div>
+    <div class="hB-saldo nw">${OCULTO?'<span class="hB-cur">R$</span><span class="hB-amount">•••••</span>':`<span class="hB-cur">R$</span> <span class="hB-amount">${bp.s?'−'+bp.i:bp.i}<span class="hB-dec">${bp.d}</span></span>`}</div>
     <div class="hB-sub">${saldo<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}${var30>=0?'+':'−'} ${OCULTO?'•••':brl(Math.abs(var30))} em 30 dias</div>
     <div class="hB-spark">${sparkSVG(ser,300,46,'hBs')}</div>
     <div class="hB-strip">
