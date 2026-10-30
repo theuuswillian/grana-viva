@@ -1306,7 +1306,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.58'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.59'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1453,7 +1453,7 @@ function sanea(d){
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
-  o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual))}));
+  o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi)))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:''}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',saldoFecha:!!b.saldoFecha,principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:'',forma:['dinheiro','pix','boleto','cartao'].includes(f.forma)?f.forma:'',conta:f.conta?sid(f.conta):'',cartao:f.cartao?sid(f.cartao):'',pagoCom:['dinheiro','cartao','conta'].includes(f.pagoCom)?f.pagoCom:''}));
@@ -3105,6 +3105,7 @@ function go(t){
   TAB=t;NAV_EXPLICITA=true;
   gravaAba(t);
   if(t==='fii'){atualizaCotacoes();atualizaCripto();atualizaCDI();}
+  if(t==='metas'&&(S.metas||[]).some(m=>m.cdi))atualizaCDI().then(()=>{if(TAB==='metas')render();}).catch(()=>{});
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   toggleSide(false);
   render();window.scrollTo(0,0);
@@ -3700,7 +3701,7 @@ function viewMetas(){
   const R=ritmoEconomia();
   /* metas com prazo reservam o que precisam por mês; o resto do ritmo se divide entre as sem prazo */
   const abertas=S.metas.filter(m=>m.atual<m.alvo);
-  const reserva=abertas.filter(m=>m.prazo&&mesesAte(m.prazo)>0).reduce((a,m)=>a+(m.alvo-m.atual)/mesesAte(m.prazo),0);
+  const reserva=abertas.filter(m=>m.prazo&&mesesAte(m.prazo)>0).reduce((a,m)=>a+pmtMeta(m.atual,m.alvo,mesesAte(m.prazo),taxaMesMeta(m)),0);
   const semPrazo=abertas.filter(m=>!m.prazo).length;
   const livre=R?Math.max(0,R.media-reserva):0,ativas=Math.max(1,semPrazo);
   const porMeta=semPrazo?livre/semPrazo:0;
@@ -3712,17 +3713,25 @@ function viewMetas(){
     if(falta<=0){st='<span class="mtSt ok">'+I('star')+'<span>meta&nbsp;batida</span></span>';}
     else if(m.prazo){const n=mesesAte(m.prazo);
       if(n<=0){st='<span class="mtSt late">'+I('alert')+'<span>prazo&nbsp;vencido</span></span>';chips=[['faltam',brlK(falta)],['prazo',mesCurto(m.prazo)]];}
-      else{const pm=falta/n,ok=R&&R.media>=reserva;st=R?`<span class="mtSt ${ok?'ok':'warn'}">${I(ok?'flag':'alert')}<span>${ok?'no&nbsp;ritmo':'acima&nbsp;do&nbsp;ritmo'}</span></span>`:'';
+      else{const r=taxaMesMeta(m),pm=pmtMeta(m.atual,m.alvo,n,r),ok=m.aporteMes?m.aporteMes>=pm-0.005:(R&&R.media>=reserva);
+        if(r){const jur=Math.max(0,m.alvo-m.atual-pm*n);nota=`rendendo ${String(m.pctCdi||100).replace('.',',')}% do CDI (${cdiAnoAtual().toFixed(2).replace('.',',')}% ao ano), os juros cobrem ${brl(jur)} da meta.`;}
+        else if(m.cdi)nota='buscando a taxa do CDI para incluir os juros.';st=R?`<span class="mtSt ${ok?'ok':'warn'}">${I(ok?'flag':'alert')}<span>${ok?'no&nbsp;ritmo':'acima&nbsp;do&nbsp;ritmo'}</span></span>`:'';
         chips=[['faltam',brlK(falta)],['guardar/mês',brl(pm)],['prazo',mesCurto(m.prazo),n+(n>1?' meses':' mês')]];
-        if(R&&!ok)nota=`seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas.`;}
-    }else if(porMeta>0){const n=Math.ceil(falta/porMeta),dt=mesAdd(mesOff(0),n);
-      chips=[['faltam',brlK(falta)],['ritmo/mês',brlK(porMeta)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];
-      nota=semPrazo>1?`ritmo = sua sobra média dividida entre ${semPrazo} metas sem prazo.`:reserva>0?'ritmo = o que sobra depois das metas com prazo.':'ritmo = sua sobra média por mês.';
+        if(m.aporteMes&&!ok)nota=`guardando ${brl(m.aporteMes)}/mês não chega no prazo. `+(nota||'');
+        else if(!m.aporteMes&&R&&!ok)nota=`seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas. `+(nota||'');}
+    }else if(m.aporteMes>0||porMeta>0||taxaMesMeta(m)&&m.atual>0){const pmM=m.aporteMes>0?m.aporteMes:porMeta,r=taxaMesMeta(m),n=mesesMeta(m.atual,m.alvo,pmM,r);
+      if(!isFinite(n)||n>600)chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)]];
+      else{const dt=mesAdd(mesOff(0),n);
+      chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];}
+      const nSem=r&&isFinite(n)?mesesMeta(m.atual,m.alvo,pmM,0):0;
+      nota=m.aporteMes?'':semPrazo>1?`ritmo = sua sobra média dividida entre ${semPrazo} metas sem prazo.`:reserva>0?'ritmo = o que sobra depois das metas com prazo.':'ritmo = sua sobra média por mês.';
+      if(r&&isFinite(n)&&isFinite(nSem)&&nSem>n)nota=(nota?nota+' ':'')+`com ${String(m.pctCdi||100).replace('.',',')}% do CDI chega ${nSem-n} ${nSem-n>1?'meses':'mês'} antes.`;
+      else if(m.cdi&&!r)nota=(nota?nota+' ':'')+'buscando a taxa do CDI para incluir os juros.';
     }else chips=[['faltam',brlK(falta)]];
     return `<div class="card meta mtx hov" style="--m1:${pal[0]};--m2:${pal[1]}">
       <div class="mtHd">
         <span class="mtIc">${I(ic)}</span>
-        <div class="mtNm"><b>${esc(m.nome)}</b><small>${m.prazo?'até '+mesCurto(m.prazo):'sem prazo'}</small></div>
+        <div class="mtNm"><b>${esc(m.nome)}</b><small>${m.prazo?'até '+mesCurto(m.prazo):'sem prazo'}${m.cdi?' · '+String(m.pctCdi||100).replace('.',',')+'% do CDI':''}</small></div>
         <div class="mtRing"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R2}" class="rb"/><circle cx="32" cy="32" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span>${pct>0&&pct<1?'<1':Math.round(pct)}%</span></div>
       </div>
       <div class="mtVal"><b class="nw">${brl(m.atual)}</b><span>de ${brl(m.alvo)}</span>${st}</div>
@@ -4957,9 +4966,9 @@ function aplicaCDI(){
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&f.idx==='cdi'&&f.cdiBase);if(!rfs.length)return;
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&f.idx==='cdi'&&f.cdiBase),mCdi=(S.metas||[]).some(m=>m.cdi);if(!rfs.length&&!mCdi)return;
   const c=cdiCache(),hj=hojeISO();
-  const ini=rfs.map(f=>f.cdiBase.d).sort()[0];
+  const ini=rfs.length?rfs.map(f=>f.cdiBase.d).sort()[0]:isoDe(new Date(Date.now()-12*864e5)); // v10.59: metas com CDI só precisam da taxa recente
   const ultS=Object.keys(c.s).sort().pop()||'';
   const precisa=forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini)||(cdiPendentes(ultS).length>0&&Date.now()-(c.t||0)>3600e3);
   if(precisa&&navigator.onLine){
@@ -5110,22 +5119,39 @@ function fiiForm(id,tipoPre){
   ajusta();
   if(selT.value==='cripto'&&!f)cgPrecos(CRIPTO_LIST.map(x=>x.id),false).then(()=>calc());
 }
+
+/* ---------- v10.59: metas que rendem pelo CDI ----------
+   taxa mensal = (1 + CDI ao ano × %)^(1/12) − 1, com o CDI mais recente do Banco Central. */
+function cdiAnoAtual(){if(!CDI.taxa){const c=cdiCache(),d=Object.keys(c.s).sort().pop();if(d){CDI.ult=d;CDI.taxa=c.s[d];}}return CDI.taxa?cdiAnual(CDI.taxa):0;}
+function taxaMesMeta(m){if(!m.cdi)return 0;const a=cdiAnoAtual();if(!a)return 0;return Math.pow(1+a/100*((m.pctCdi||100)/100),1/12)-1;}
+/* quanto guardar por mês para ir de 'at' a 'alvo' em n meses rendendo r ao mês (aporte no fim do mês) */
+function pmtMeta(at,alvo,n,r){if(n<=0)return Math.max(0,alvo-at);if(!r)return Math.max(0,(alvo-at)/n);const g=Math.pow(1+r,n);return Math.max(0,(alvo-at*g)*r/(g-1));}
+/* em quantos meses chega guardando 'pm' por mês */
+function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.ceil((alvo-at)/pm-1e-9):Infinity;
+  if(pm<=0&&at<=0)return Infinity;const n=Math.log((alvo*r+pm)/(at*r+pm))/Math.log(1+r);return isFinite(n)&&n>0?Math.ceil(n-1e-9):Infinity;}
 function metaForm(id){
   const m=id?S.metas.find(x=>x.id===id):null;
   form(m?'Editar meta':'Nova meta',[
     {name:'nome',label:'Nome da meta',value:m?m.nome:'',required:true,placeholder:'ex: reserva de emergência'},
     {name:'alvo',label:'Valor alvo (R$)',value:m?num(m.alvo):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'atual',label:'Já guardado (R$)',value:m?num(m.atual):'0,00',inputmode:'decimal'},
-    {name:'prazo',label:'Quero chegar até (opcional)',type:'month',value:m&&m.prazo||''}
+    {name:'prazo',label:'Quero chegar até (opcional)',type:'month',value:m&&m.prazo||''},
+    {name:'aporteMes',label:'Quanto pretendo guardar por mês (opcional)',value:m&&m.aporteMes?num(m.aporteMes):'',inputmode:'decimal',placeholder:'em branco = uso sua sobra média'},
+    {name:'cdi',label:'O dinheiro desta meta rende pelo CDI',type:'checkbox',value:m?!!m.cdi:false},
+    {name:'pctCdi',label:'Quantos % do CDI (ex: 100)',value:m&&m.pctCdi?String(m.pctCdi).replace('.',','):'100',inputmode:'decimal'}
   ],v=>{
     const nome=String(v.nome).trim(),alvo=parseBR(v.alvo),atual=parseBR(v.atual);
     if(!nome)return 'Dê um nome à meta.';
     if(!(alvo>0))return 'Informe o valor alvo.';
     if(atual<0)return 'Valor guardado inválido.';
     const prazo=/^\d{4}-\d{2}$/.test(String(v.prazo||''))?String(v.prazo):'';
-    const obj={nome,alvo,atual,prazo};
+    const ap=String(v.aporteMes||'').trim()?parseBR(v.aporteMes):0;
+    if(!(ap>=0))return 'Valor por mês inválido.';
+    const cdi=!!v.cdi,pc=String(v.pctCdi||'').trim()?parseBR(v.pctCdi):100;
+    if(cdi&&!(pc>0&&pc<=300))return 'Informe o % do CDI entre 1 e 300.';
+    const obj={nome,alvo,atual,prazo,aporteMes:c2(ap),cdi,pctCdi:cdi?c2(pc):0};
     if(m)Object.assign(m,obj);else S.metas.push(Object.assign({id:uid()},obj));
-    salvar();render();toast('Meta salva');
+    salvar();render();toast('Meta salva');if(cdi)atualizaCDI();
   });
 }
 function aporte(id){
@@ -5439,7 +5465,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
