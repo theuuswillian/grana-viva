@@ -354,7 +354,7 @@ body:has(#auth.on) .fab{display:none!important}
 .empMsg{width:100%;box-sizing:border-box;border-radius:14px;padding:12px;font:inherit;font-size:14px;line-height:1.45;background:color-mix(in srgb,var(--txt) 5%,transparent);color:var(--txt);border:1px solid var(--line);resize:vertical}
 .empHero>.empAv{color:#111;font-size:20px}#empWa{text-decoration:none}.ccHBar{height:8px;margin:6px 0 2px}.planHead span{white-space:nowrap}.empAtr{font-style:normal;color:#fb7185;font-weight:700}
 .empSug{padding:14px 16px}.empSugTop{display:flex;gap:12px;align-items:center}.empSugTop b{display:block;font-size:15px}.empSugTop small{font-size:12.5px;color:var(--mut)}.empSugBt{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+html.crAbrindo #app{visibility:hidden}.calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .calNav{display:flex;align-items:center;gap:8px}.calNav b{min-width:84px;text-align:center;text-transform:capitalize;font-size:14px}.calNav .btn2{padding:4px 10px}
 .calRes{margin:0 0 10px;font-size:13px;color:var(--mut)}.calRes b{color:var(--tx,inherit)}
 .calDow,.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calDow span{text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
@@ -1346,7 +1346,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.63'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.64'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1542,11 +1542,56 @@ function sanea(d){
 /* o cache local pertence a uma conta específica (gv-owner). sem dono conhecido, não é exibido. */
 const OWNER_KEY='gv-owner';
 function sessaoGuardadaId(){try{const r=JSON.parse(localStorage.getItem('sb-hydvhpfpvhopetqqjido-auth-token')||'null');return r&&r.user&&r.user.id||null;}catch(e){return null;}}
+/* ---------- v10.64: dados deste aparelho criptografados ----------
+   AES-GCM 256. a chave é uma CryptoKey NÃO exportável guardada no IndexedDB: o app usa, mas ela não pode ser lida nem copiada.
+   quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. sem WebCrypto/IndexedDB, grava como antes. */
+const CR_PFX='gve1:';
+let CR_RAW=null,CR_OK=true,CR_KEY=null,CR_FALHOU=false;const CR_G={};
+function crIdbOp(modo,fn){return new Promise((ok,er)=>{const r=indexedDB.open('gv-cripto',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onerror=()=>er(r.error);
+  r.onsuccess=()=>{const db=r.result;let q;try{const tx=db.transaction('k',modo);q=fn(tx.objectStore('k'));tx.oncomplete=()=>{db.close();ok(q&&q.result);};tx.onerror=tx.onabort=()=>{db.close();er(tx.error);};}catch(e){db.close();er(e);}};});}
+async function crChave(criar){
+  if(CR_KEY)return CR_KEY;
+  if(!(window.crypto&&crypto.subtle&&window.indexedDB))return null;
+  let k=await crIdbOp('readonly',st=>st.get('main')).catch(()=>null);
+  if(!k&&criar){k=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);await crIdbOp('readwrite',st=>st.put(k,'main'));}
+  return CR_KEY=k||null;
+}
+function crB64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}
+function crBin(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0));}
+async function crCifra(txt){const k=await crChave(true);if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(txt)));return CR_PFX+crB64(iv)+':'+crB64(ct);}
+async function crDecifra(raw){const k=await crChave(false);if(!k)throw new Error('sem chave');const [iv,ct]=raw.slice(CR_PFX.length).split(':');
+  return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:crBin(iv)},k,crBin(ct)));}
+/* grava cifrado; gravações mais novas da mesma chave vencem as antigas que ainda estavam cifrando */
+function gravaCifrado(chave,txt){const g=CR_G[chave]=(CR_G[chave]||0)+1;
+  return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;localStorage.setItem(chave,c||txt);},()=>{if(CR_G[chave]!==g)return;try{localStorage.setItem(chave,txt);}catch(e){}});}
+function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;}
+async function leTalvezCifrado(chave){const raw=localStorage.getItem(chave);if(!raw)return null;return JSON.parse(raw.indexOf(CR_PFX)===0?await crDecifra(raw):raw);}
+function gravaLocal(){
+  if(!CR_OK)return; // ainda abrindo a cópia cifrada: não sobrescreve com dados vazios
+  try{localStorage.setItem('gv-ui',JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent}));}catch(e){}
+  gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
+}
+function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'?'claro':'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
+async function abreCripto(){
+  try{
+    const d=JSON.parse(await crDecifra(CR_RAW));
+    const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
+    S=dono&&sess&&dono===sess&&d&&typeof d==='object'?sanea(d):Object.assign(vazio(),{cfg:S.cfg});
+  }catch(e){
+    /* chave perdida (o sistema limpou o IndexedDB) ou cópia corrompida: descarta o cache local e baixa tudo da nuvem de novo */
+    CR_FALHOU=true;limpaCache();S=Object.assign(vazio(),{cfg:S.cfg});
+  }
+  CR_RAW=null;CR_OK=true;zeraCfgH();document.documentElement.classList.remove('crAbrindo');
+  try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();}catch(e){}
+}
 let LEGADO=null;
 function carregar(){
   try{
     const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
-    const d=JSON.parse(localStorage.getItem(KEY)||'null');
+    const raw=localStorage.getItem(KEY)||'null';
+    if(raw.indexOf(CR_PFX)===0){if(!dono||!sess||dono!==sess)return vazio();CR_RAW=raw;CR_OK=false;document.documentElement.classList.add('crAbrindo');const u=uiSalva();const v=vazio();if(u)Object.assign(v.cfg,u);return v;}
+    const d=JSON.parse(raw);
     if(!dono&&d&&typeof d==='object'&&Array.isArray(d.tx)){LEGADO=d;return vazio();}
     if(!dono||!sess||dono!==sess)return vazio();
     if(d&&typeof d==='object')return sanea(d);
@@ -1554,6 +1599,9 @@ function carregar(){
   return vazio();
 }
 let S=carregar();zeraCfgH();
+const CR_PRONTO=CR_RAW?abreCripto():Promise.resolve();
+/* cópia antiga em texto puro, da mesma conta: regrava cifrada */
+try{const r0=localStorage.getItem(KEY),o0=localStorage.getItem(OWNER_KEY);if(!CR_RAW&&r0&&r0.indexOf(CR_PFX)!==0&&o0&&o0===sessaoGuardadaId())setTimeout(gravaLocal,0);}catch(e){}
 const SB_URL='https://hydvhpfpvhopetqqjido.supabase.co';
 const SB_KEY='sb_publishable_hq7L3RL6Y-BE49SlgjqcTw_Sh-N9hJj';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
@@ -1577,7 +1625,8 @@ function salvar(){
   MUDANCAS++;
   try{fotoPat();}catch(e){}
   marcaCfg();
-  try{localStorage.setItem(KEY,JSON.stringify(S));if(USER)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true);}
+  try{if(USER&&CR_OK)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){}
+  gravaLocal();
   if(USER)agendaSync();
 }
 function agendaSync(ms){clearTimeout(syncT);syncT=setTimeout(enviar,ms==null?700:ms);}
@@ -1623,7 +1672,7 @@ async function juntaCfgRemoto(){
   Object.keys(toma).forEach(k=>{S[k]=z[k];});
   Object.keys(tomaCfg).forEach(j=>{S.cfg[j]=z.cfg[j];});
   zeraCfgH();
-  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  gravaLocal();
   setTimeout(()=>{if(!document.querySelector('#modal.on')){try{applyCfg();render();}catch(e){}}},0);
   return true;
 }
@@ -1645,7 +1694,7 @@ async function upTabela(tab,arr){
   }
 }
 async function enviar(){
-  if(!USER)return;
+  if(!USER||!CR_OK)return;
   if(syncBusy){syncPend=true;return;}
   if(!navigator.onLine){setSync('offline, salvo no aparelho');return;}
   if(!SNAP)SNAP=lerSnap()||{};
@@ -1707,7 +1756,8 @@ async function baixar(){
   /* registros que o saneamento corrigiu ficam com hash diferente do que veio da nuvem e são reenviados */
   TABELAS.forEach(t=>{const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});Object.keys(SNAP[t]).forEach(id=>{if(orig[id]!==SNAP[t][id])SNAP[t][id]='x';});});
   gravaSnap();
-  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(OWNER_KEY,USER.id);}catch(err){}
+  try{localStorage.setItem(OWNER_KEY,USER.id);}catch(err){}
+  gravaLocal();
   setSync('sincronizado');
 }
 window.addEventListener('online',()=>{if(USER)enviar();});
@@ -5762,7 +5812,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={get S(){return S},go,render,salvar,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={get S(){return S},go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -6130,6 +6180,7 @@ $('#authForm').addEventListener('submit',async ev=>{
   }finally{btn.disabled=false;}
 });
 function limpaCache(){
+  crCancela(KEY);
   try{
     const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k===KEY||k===OWNER_KEY||k==='gv-cot-ts'||/^gv-snap-/.test(k))rm.push(k);}
     rm.forEach(k=>localStorage.removeItem(k));
@@ -6183,6 +6234,7 @@ $('#uchip').addEventListener('click',async e=>{
 });
 async function entraComSessao(sess){
   if(!sess||!sess.user)return;
+  await CR_PRONTO;
   try{localStorage.removeItem('gv-reauth');}catch(e){}
   {const lc=lockCfg();if(lc&&lc.uid&&lc.uid!==sess.user.id){lockSalva(null);lockFecha();}}
   if(!USER||USER.id!==sess.user.id){
@@ -6193,7 +6245,7 @@ async function entraComSessao(sess){
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
-      const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
+      const pend=await leTalvezCifrado('gv-pend');
       if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
         S=sanea(pend.S);zeraCfgH();SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
       }
@@ -6238,7 +6290,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       if(saiuDeProposito)lockSalva(null);LK.manual=false;lockFecha();
       /* v10.52: sessão expirada (não foi um sair de propósito) com edições ainda não enviadas:
          guarda uma cópia local e devolve no próximo login da mesma conta, em vez de apagar sem aviso */
-      if(!saiuDeProposito&&USER&&temPendencia()){try{localStorage.setItem('gv-pend',JSON.stringify({dono:USER.id,S:sanea(S)}));}catch(e){}}
+      if(!saiuDeProposito&&USER&&temPendencia()){try{gravaCifrado('gv-pend',JSON.stringify({dono:USER.id,S:sanea(S)}));}catch(e){}}
       USER=null;pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
@@ -6248,6 +6300,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     return;
   }
   if(ev==='SIGNED_IN'){try{localStorage.removeItem('gv-reauth');}catch(e){}}
+  await CR_PRONTO; // v10.64: espera abrir a cópia cifrada antes de comparar/enviar
   if(!USER||USER.id!==sess.user.id){
     if(localStorage.getItem(OWNER_KEY)!==sess.user.id){
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
@@ -6256,7 +6309,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
-      const pend=JSON.parse(localStorage.getItem('gv-pend')||'null');
+      const pend=await leTalvezCifrado('gv-pend');
       if(pend&&pend.dono===sess.user.id&&pend.S&&Array.isArray(pend.S.tx)){
         S=sanea(pend.S);zeraCfgH();SNAP={};salvar();try{localStorage.removeItem('gv-pend');}catch(e){}
       }
