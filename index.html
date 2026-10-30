@@ -314,6 +314,10 @@ body:has(#auth.on) .fab{display:none!important}
 .revTx{flex:1;display:flex;flex-direction:column;gap:2px}.revTx small{color:var(--mut);font-size:12px}.revCard>svg{width:18px;height:18px;opacity:.6}
 .revRow{align-items:flex-start}.revRow .txt select{margin-top:6px;padding:5px 8px;font-size:13px;max-width:100%}
 .revR{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.revBt{display:flex;gap:6px}.revBt .btn2{padding:6px 9px}.revBt svg{width:16px;height:16px}.revOk{color:#4ade80}
+.rsHero{text-align:center;padding:14px 0 6px}.rsHero small{display:block;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.rsHero b{display:block;font-size:34px;font-weight:800;color:#4ade80;letter-spacing:-.02em}.rsHero.neg b{color:#f87171}.rsHero span{font-size:13px;color:var(--mut)}
+.rsG{margin:10px 0}.rsG .card{display:flex;flex-direction:column;gap:2px}.rsD{font-style:normal;font-size:11.5px;font-weight:700;color:var(--mut)}.rsD.pos{color:#4ade80}.rsD.neg{color:#f87171}
+.rsFr{display:grid;gap:6px;margin:6px 0 4px}.rsFr p{margin:0;font-size:13.5px;padding:9px 12px;border-radius:12px;background:rgba(163,230,53,.07)}
+.rsH{margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}.rsCat{margin-bottom:10px}.rsCt{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:5px}.rsCt span{flex:1;display:flex;align-items:center;gap:7px}.rsCat .bar{height:6px}
 .calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .calNav{display:flex;align-items:center;gap:8px}.calNav b{min-width:84px;text-align:center;text-transform:capitalize;font-size:14px}.calNav .btn2{padding:4px 10px}
 .calRes{margin:0 0 10px;font-size:13px;color:var(--mut)}.calRes b{color:var(--tx,inherit)}
@@ -1306,7 +1310,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.59'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.60'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2761,7 +2765,7 @@ function viewRel(){
     return `<div class="rrow"><span>${nome}</span>${cel(y,col(y))}${cel(x,col(x))}${va}</div>`;
   };
   return `<div class="relWrap">
-  <div class="head relHead"><h2>Relatório mensal</h2><div class="relPills noprint"><button class="btn2" data-act="rel-csv">csv</button><button class="btn2" data-act="rel-print">imprimir</button></div></div>
+  <div class="head relHead"><h2>Relatório mensal</h2><div class="relPills noprint"><button class="btn2" data-act="res-rel">resumo</button><button class="btn2" data-act="rel-csv">csv</button><button class="btn2" data-act="rel-print">imprimir</button></div></div>
   <div class="card relSel noprint">
     <div class="rsTop"><button class="mcal-nav" data-act="rel-a-prev" aria-label="mês anterior">${I('chevL')}</button><div class="rsMes"><small>mês analisado</small><b>${mesNome(a)}</b></div><button class="mcal-nav" data-act="rel-a-next" aria-label="próximo mês" ${a>=mesOff(0)?'disabled':''}>${I('chevR')}</button></div>
     <div class="rsPills" id="rsPills">${Array.from({length:12},(_,k)=>mesOff(11-k)).map(m=>`<button class="rsPill${m===a?' on':''}" data-act="rel-mes" data-id="${m}"><span>${MESES[+m.slice(5,7)-1]}</span><small>${m.slice(2,4)}</small></button>`).join('')}</div>
@@ -3291,7 +3295,7 @@ function homeTopo(v,o){
     </div>
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  ${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${resumoCardHTML()}${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3342,7 +3346,7 @@ function viewInicio(){
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${resumoCardHTML()}${revisarHTML()}${concHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
@@ -4617,6 +4621,49 @@ function abreConc(){
   </div>`;
   box.classList.add('on');
 }
+
+/* ---------- v10.60: resumo do mês ----------
+   aparece na tela inicial do dia 1 ao 10 com o mês que fechou (some ao tocar em "ok"); sempre disponível no Relatório. */
+function dadosResumo(ym){
+  const ant=mesAdd(ym,-1),r=resumoMes(ym),ra=resumoMes(ant);
+  const cats=despesasPorCat(ym),catsA={};despesasPorCat(ant).forEach(c=>catsA[c.l]=c.v);
+  const top=cats.slice(0,4).map(c=>({l:c.l,v:c.v,a:catsA[c.l]||0,color:c.color}));
+  let maior=null;S.tx.forEach(t=>{if(efetivo(t)&&t.tipo==='despesa'&&!t.faturaKey&&noPer(t.data,ym)&&(!maior||cents(t.valor)>cents(maior.valor)))maior=t;});
+  const lim=limOrc(ym)||{},mp={};cats.forEach(c=>mp[c.l]=c.v);
+  const estouros=Object.keys(lim).filter(k=>lim[k]>0&&(mp[k]||0)>lim[k]).map(k=>({l:k,v:mp[k],lim:lim[k]})).sort((a,b)=>(b.v-b.lim)-(a.v-a.lim));
+  const subiu=cats.map(c=>({l:c.l,d:c.v-(catsA[c.l]||0)})).filter(x=>x.d>0).sort((a,b)=>b.d-a.d)[0]||null;
+  const taxa=r.rec>0?Math.round(r.sal/r.rec*100):null;
+  return {ym,ant,r,ra,top,maior,estouros,subiu,taxa,tem:!!(r.rec||r.des)};
+}
+function nomeMesL(ym){return MESES_LONGO[+ym.slice(5,7)-1]+(ym.slice(0,4)!==String(new Date().getFullYear())?' de '+ym.slice(0,4):'');}
+function resumoCardHTML(){
+  const h=new Date();if(h.getDate()>10)return '';
+  const ym=mesOff(1);if((S.cfg.resumoVisto||'')>=ym)return '';
+  const D=dadosResumo(ym);if(!D.tem)return '';
+  return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}"><span class="revIc">${I('report')}</span><span class="revTx"><b>Seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}</b><small>${D.r.sal>=0?'sobrou '+brl(D.r.sal):'faltou '+brl(-D.r.sal)}${D.taxa!=null&&D.r.sal>0?' · '+D.taxa+'% da renda':''}</small></span>${I('chevR')}</button>`;
+}
+function abreResumo(ym){
+  ym=ym||mesOff(1);const D=dadosResumo(ym),box=$('#modal');
+  const dif=(v,a,inv)=>{if(!a)return '';const p=Math.round((v-a)/a*100);if(!p)return '<em class="rsD">igual</em>';const bom=inv?p<0:p>0;return `<em class="rsD ${bom?'pos':'neg'}">${p>0?'+':''}${p}%</em>`;};
+  const mx=Math.max(1,...D.top.map(c=>c.v));
+  const frases=[];
+  if(D.r.sal>0&&D.ra.sal>0&&D.r.sal>D.ra.sal)frases.push(`Você guardou ${brl(D.r.sal-D.ra.sal)} a mais que em ${MESES_LONGO[+D.ant.slice(5,7)-1]}.`);
+  else if(D.r.sal<0)frases.push(`As despesas passaram a renda em ${brl(-D.r.sal)}.`);
+  else if(D.r.sal>0&&D.ra.sal>D.r.sal)frases.push(`Sobrou ${brl(D.ra.sal-D.r.sal)} a menos que em ${MESES_LONGO[+D.ant.slice(5,7)-1]}.`);
+  if(D.subiu&&D.subiu.d>=50)frases.push(`${esc(D.subiu.l)} foi o que mais subiu: ${brl(D.subiu.d)} a mais.`);
+  if(D.estouros.length)frases.push(`${D.estouros.length===1?'Um orçamento passou':D.estouros.length+' orçamentos passaram'} do limite: ${D.estouros.slice(0,3).map(e=>esc(e.l)).join(', ')}.`);
+  else if(Object.keys(limOrc(ym)||{}).length)frases.push('Todos os orçamentos ficaram dentro do limite.');
+  box.innerHTML=`<div class="sheet resSheet" role="dialog" aria-modal="true" aria-label="Resumo do mês"><div class="sh-head"><h3>Resumo de ${nomeMesL(ym)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <div class="rsHero ${D.r.sal<0?'neg':''}"><small>${D.r.sal>=0?'sobrou':'faltou'}</small><b>${brl(Math.abs(D.r.sal))}</b>${D.taxa!=null&&D.r.sal>0?`<span>${D.taxa}% do que entrou</span>`:''}</div>
+    <div class="grid2 rsG"><div class="card mini"><small>ENTROU</small><b class="pos">${brl(D.r.rec)}</b>${dif(D.r.rec,D.ra.rec)}</div><div class="card mini"><small>SAIU</small><b class="neg">${brl(D.r.des)}</b>${dif(D.r.des,D.ra.des,true)}</div></div>
+    ${frases.length?`<div class="rsFr">${frases.map(f=>`<p>${f}</p>`).join('')}</div>`:''}
+    ${D.top.length?`<h4 class="rsH">onde mais gastou</h4>${D.top.map(c=>`<div class="rsCat"><div class="rsCt"><span><i class="dot" style="background:${c.color}"></i>${esc(c.l)}</span><b>${brl(c.v)}</b>${dif(c.v,c.a,true)}</div><div class="bar"><i style="width:${(c.v/mx*100).toFixed(1)}%;background:${c.color}"></i></div></div>`).join('')}`:''}
+    ${D.maior?`<h4 class="rsH">maior gasto</h4><div class="tx"><span class="ic despesa" style="color:${corCat(D.maior.categoria)}">${I(catIcon(D.maior.categoria))}</span><div class="txt"><b>${esc(D.maior.descricao||D.maior.categoria)}</b><small>${fmtDataCurta(D.maior.data)} · ${esc(D.maior.categoria)}</small></div><div class="val neg">− ${brl(D.maior.valor)}</div></div>`:''}
+    <p class="small" style="margin-top:12px">comparado com ${nomeMesL(D.ant)}. compras no cartão contam no mês em que a fatura é paga.</p>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn2" data-act="res-m" data-id="${mesAdd(ym,-1)}">‹ ${MESES_LONGO[+mesAdd(ym,-1).slice(5,7)-1]}</button>${ym<mesOff(1)?`<button class="btn2" data-act="res-m" data-id="${mesAdd(ym,1)}">${MESES_LONGO[+mesAdd(ym,1).slice(5,7)-1]} ›</button>`:''}<button class="btn" style="margin-left:auto" data-act="res-ok" data-id="${ym}">ok</button></div>
+  </div>`;
+  box.classList.add('on');
+}
 function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;}
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
 document.addEventListener('keydown',e=>{
@@ -5350,6 +5397,10 @@ const ACT={
   'cal-m':id=>{CAL_M=Math.max(0,Math.min(3,CAL_M+(+id||0)));render();},
   'cal-dia':id=>abreDiaSaldo(id),
   'rev-abre':()=>abreRevisar(),
+  'res-abre':id=>abreResumo(id),
+  'res-m':id=>abreResumo(id),
+  'res-ok':id=>{if(id&&(S.cfg.resumoVisto||'')<id){S.cfg.resumoVisto=id;salvar();render();}closeModal();},
+  'res-rel':()=>abreResumo(mesOff(1)),
   'conc-abre':()=>abreConc(),
   'conc-sim':k=>{const p=concCache()[+k];if(p&&juntaPar(p)){salvar();render();toast('Virou transferência');}abreConc();},
   'conc-nao':k=>{const p=concCache()[+k];if(p){S.cfg.concIgn=(S.cfg.concIgn||[]).concat(p.o.id+'|'+p.i.id).slice(-2000);salvar();render();}abreConc();},
@@ -5465,7 +5516,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
