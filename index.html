@@ -1346,7 +1346,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.64'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.65'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1621,6 +1621,7 @@ window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
 let MUDANCAS=0; // v10.45: conta salvamentos locais; download que atravessou uma edição é descartado
 function salvar(){
+  TX_VERSION++;
   try{localStorage.setItem('gv-last-act',String(Date.now()));}catch(e){}
   MUDANCAS++;
   try{fotoPat();}catch(e){}
@@ -1874,15 +1875,39 @@ function toast(m,erro){
 /* ---------- cálculos ---------- */
 /* dinheiro: somas feitas em centavos inteiros para não acumular erro de ponto flutuante */
 const cents=v=>Math.round((Number(v)||0)*100);
-const somaC=(arr,f)=>arr.reduce((a,x)=>a+cents(f(x)),0)/100;
+function somaC(arr,f){let total=0;for(let i=0;i<arr.length;i++)total+=cents(f(arr[i]));return total/100;}
+function agregaLancamentosMes(m){
+  const out={tipo:{},despCat:{},faturas:[]};
+  S.tx.forEach(t=>{
+    if(!efetivo(t)||!noPer(t.data,m))return;
+    const tipo=t.tipo,cat=t.categoria||'Outros',v=cents(t.valor);
+    if(!out.tipo[tipo])out.tipo[tipo]={total:0,semFat:0,comFat:0,cats:{},catsSemFat:{},catsComFat:{}};
+    const x=out.tipo[tipo];x.total+=v;x.cats[cat]=(x.cats[cat]||0)+v;
+    if(tipo!=='despesa'||!t.faturaKey){x.semFat+=v;x.catsSemFat[cat]=(x.catsSemFat[cat]||0)+v;}
+    if(tipo!=='despesa'||!t.cartao){x.comFat+=v;x.catsComFat[cat]=(x.catsComFat[cat]||0)+v;}
+    if(tipo==='despesa'&&!t.cartao){if(t.faturaKey&&t.categoria==='Cartão')out.faturas.push(t);else out.despCat[cat]=(out.despCat[cat]||0)+v;}
+  });
+  out.despCat._ready=true;
+  return out;
+}
+let TX_VERSION=0,RESUMO_MES_CACHE=new Map();
 /* status do lançamento: sem status (dados antigos) = pago.
    só "pago" mexe em saldo, orçamento, relatório e fatura. "previsto" entra apenas na previsão; "cancelado" não conta em nada. */
 const efetivo=t=>!t.status||t.status==='pago';
 function statusTx(t){if(t.status==='cancelado')return 'cancelado';if(t.status==='previsto')return t.data<hojeISO()?'atrasado':'previsto';return 'pago';}
 const ST_TX={previsto:['previsto','warn'],atrasado:['atrasado','over'],cancelado:['cancelado','mut']};
 const noPer=(d,m)=>typeof m==='string'?d.startsWith(m):(d>=m.ini&&d<=m.fim);
+function statsMes(m){
+  const key=TX_VERSION+'|'+(typeof m==='string'?m:JSON.stringify(m));let out=RESUMO_MES_CACHE.get(key);if(out)return out;
+  out=agregaLancamentosMes(m);
+  RESUMO_MES_CACHE.set(key,out);if(RESUMO_MES_CACHE.size>36){const oldest=RESUMO_MES_CACHE.keys().next().value;RESUMO_MES_CACHE.delete(oldest);}
+  return out;
+}
 function somaMes(m,tipo,cat,comCartao){
-  return somaC(S.tx.filter(t=>efetivo(t)&&noPer(t.data,m)&&t.tipo===tipo&&(tipo!=='despesa'||(comCartao?!t.faturaKey:!t.cartao))&&(!cat||t.categoria===cat)),t=>t.valor);
+  const x=statsMes(m).tipo[tipo];if(!x)return 0;
+  const useComCartao=tipo==='despesa'?!comCartao:comCartao;
+  const v=cat?(useComCartao?x.catsComFat[cat]:x.catsSemFat[cat])||0:(useComCartao?x.comFat:x.semFat);
+  return v/100;
 }
 // dinheiro em espécie só movimenta uma conta do tipo Dinheiro (antes caía na conta principal, misturando espécie com banco)
 /* contas arquivadas: somem das escolhas (menos a já selecionada), continuam no saldo, histórico e relatórios */
@@ -1965,11 +1990,8 @@ function catsFatura(ft){
   return out;
 }
 function despesasPorCat(m){
-  const mp={};
-  S.tx.forEach(t=>{if(!(efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&noPer(t.data,m)))return;
-    /* v10.54: a fatura entra nas categorias das compras dela (antes aparecia tudo como "Cartão") */
-    if(t.faturaKey&&t.categoria==='Cartão'){const fc=catsFatura(t);if(fc){Object.keys(fc).forEach(k=>{mp[k]=(mp[k]||0)+fc[k];});return;}}
-    mp[t.categoria]=(mp[t.categoria]||0)+cents(t.valor);});
+  const stats=statsMes(m),mp=Object.assign({},stats.despCat);
+  stats.faturas.forEach(t=>{const fc=catsFatura(t);if(fc)Object.keys(fc).forEach(k=>{mp[k]=(mp[k]||0)+fc[k];});});
   return Object.keys(mp).map(c=>({l:c,v:mp[c]/100})).sort((a,b)=>b.v-a.v).map(s=>Object.assign(s,{color:corCat(s.l)}));
 }
 function barData(){
@@ -2074,12 +2096,16 @@ function proximoPag(){
   return best;
 }
 const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-let LIM_LISTA=50,FILT_SIG='';
+let LIM_LISTA=50,FILT_SIG='',FILTRADOS_CACHE_KEY='',FILTRADOS_CACHE=[],LANC_ITEM_RENDER=null;
 function filtrados(){
-  const sig=JSON.stringify(F);if(sig!==FILT_SIG){FILT_SIG=sig;LIM_LISTA=50;}
-  const nq=norm(F.q);
-  return S.tx.filter(t=>(!F.mes||t.data.startsWith(F.mes))&&(!F.cat||t.categoria===F.cat)&&(!F.tipo||t.tipo===F.tipo)&&(!F.tag||(t.tags||[]).includes(F.tag))&&(!nq||norm((t.descricao||'')+' '+t.categoria+' '+(t.sub||'')+' '+(t.tags||[]).join(' ')+' '+(t.obs||'')).includes(nq)))
-    .sort((a,b)=>b.data.localeCompare(a.data));
+  const filtros=JSON.stringify(F),sig=TX_VERSION+'|'+filtros;
+  if(FILT_SIG!==filtros){FILT_SIG=filtros;LIM_LISTA=50;}
+  if(sig!==FILTRADOS_CACHE_KEY){
+    FILTRADOS_CACHE_KEY=sig;const nq=norm(F.q);
+    FILTRADOS_CACHE=S.tx.filter(t=>(!F.mes||t.data.startsWith(F.mes))&&(!F.cat||t.categoria===F.cat)&&(!F.tipo||t.tipo===F.tipo)&&(!F.tag||(t.tags||[]).includes(F.tag))&&(!nq||norm((t.descricao||'')+' '+t.categoria+' '+(t.sub||'')+' '+(t.tags||[]).join(' ')+' '+(t.obs||'')).includes(nq)))
+      .sort((a,b)=>b.data.localeCompare(a.data));
+  }
+  return FILTRADOS_CACHE;
 }
 
 /* ---------- animação e gráficos (canvas puro) ---------- */
@@ -2808,7 +2834,7 @@ function viewPlan(){
 /* ---------- relatório mensal ---------- */
 let REL={a:'',b:''};
 function mesNome(m){return MESES_LONGO[+m.slice(5,7)-1]+' de '+m.slice(0,4);}
-function resumoMes(m){const r=somaMes(m,'receita'),d=somaMes(m,'despesa');return {rec:r,des:d,sal:(cents(r)-cents(d))/100};}
+function resumoMes(m){const s=statsMes(m),r=(s.tipo.receita&&s.tipo.receita.total)||0,d=(s.tipo.despesa&&s.tipo.despesa.comFat)||0;return {rec:r/100,des:d/100,sal:(r-d)/100};}
 /* juros + multas pagos e descontos obtidos num mês (lançamentos efetivos) */
 function encargosMes(m){let e=0,d=0;S.tx.forEach(t=>{if(t.tipo!=='despesa'||!efetivo(t)||!t.data||t.data.slice(0,7)!==m)return;e+=cents(t.multa||0)+cents(t.juros||0);d+=cents(t.desconto||0);});return {enc:e/100,desc:d/100};}
 function relCats(a,b){
@@ -3243,6 +3269,7 @@ function render(){
   const v=$('#view');
   if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(v.contains(ch.canvas))ch.destroy();}catch(e){}}); // v10.51: gráficos da tela antiga não ficam presos na memória
   v.innerHTML=VIEWS[TAB]();
+  if(TAB==='lanc'&&FILT_SIG!==JSON.stringify(F))FILT_SIG=JSON.stringify(F);
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
   requestAnimationFrame(()=>{
     if(AFTER[TAB])AFTER[TAB]();
@@ -3548,6 +3575,7 @@ function viewLanc(){
       <button class="txMore" data-act="tx-menu" data-id="${t.id}" aria-label="ações do lançamento">${I('more')}</button>
       ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
     </div>`;
+  LANC_ITEM_RENDER=item;
   return `
   <div class="head lHead"><h2>${F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
   <div class="ltools">${S.cfg.pluggyOn?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
@@ -5628,7 +5656,7 @@ const ACT={
     if(!fu.length)return confirma({titulo:'Excluir compra parcelada?',texto:'As '+pl(rest.length)+' de "'+nm+'" já estão em faturas fechadas. Fatura paga continua com o pagamento; a sobra aparece como pago a mais.',ok:'Excluir todas',perigo:true},()=>apaga(rest));
     return confirma({titulo:'Excluir compra parcelada?',texto:'"'+nm+'": '+pl(fu.length)+' por vir e '+pl(fe)+' em fatura já fechada. O mais seguro é excluir só as futuras.',ok:'Só as futuras ('+fu.length+')',alt:'Todas, até as fechadas ('+rest.length+')',altPerigo:true,altCb:()=>apaga(rest)},()=>apaga(fu));}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';if(t)removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
-  'mais-lista':()=>{const y=scrollY;LIM_LISTA+=50;render();scrollTo(0,y);},
+  'mais-lista':()=>{LIM_LISTA+=50;FILTRADOS_CACHE_KEY='';render();},
   'tag-filtro':g=>{F.tag=F.tag===g?'':g;render();},
   'orc-mes':m=>{if(/^\d{4}-\d{2}$/.test(m)){OMES=m;render();}},
   'orc-copia':()=>{const m=OMES||mesAtual(),ant=mesMais(m,-1),L=limOrc(ant);if(!Object.keys(L).length)return toast('Sem limites em '+nomeMes(ant));
