@@ -1346,7 +1346,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.62'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.63'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -6016,14 +6016,27 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
   }
   function pinta(p){const sd=$('#side'),ov=$('#ov');sd.style.transition='none';ov.style.transition='none';sd.style.transform='translateX('+((p-1)*102)+'%)';ov.style.pointerEvents='none';ov.style.opacity=String(p);ov.classList.add('on');}
   function limpa(){const sd=$('#side'),ov=$('#ov');sd.style.transition='';sd.style.transform='';ov.style.transition='';ov.style.opacity='';ov.style.pointerEvents='';}
+  /* v10.63: se o dedo começa num elemento que o render troca no meio do gesto, o touchend não sobe até o document
+     e o menu ficava preso aberto pela metade. agora o fim também é ouvido no próprio alvo, e um gesto preso é desfeito. */
+  function preso(){const sd=$('#side');return !!(sd&&sd.style.transform);}
+  function solta(){if(preso()){limpa();toggleSide($('#side').classList.contains('open'));}}
+  let alvo=null,guarda=0;
+  function ligaAlvo(el){if(alvo===el)return;desligaAlvo();alvo=el;if(!el)return;el.addEventListener('touchmove',mv,{passive:false});el.addEventListener('touchend',fimAlvo,{passive:true});el.addEventListener('touchcancel',fimAlvo,{passive:true});}
+  function desligaAlvo(){if(!alvo)return;alvo.removeEventListener('touchmove',mv);alvo.removeEventListener('touchend',fimAlvo);alvo.removeEventListener('touchcancel',fimAlvo);alvo=null;}
+  function fimAlvo(e){if(e.target&&e.target.isConnected)return;fim();} // ainda no DOM: o listener do document trata
+  document.addEventListener('visibilitychange',()=>{modo=null;solta();});
+  window.addEventListener('resize',()=>{if(modo!=='arrasta')solta();});
   document.addEventListener('touchstart',e=>{
+    if(modo!=='arrasta')solta();
     modo=null;if(e.touches.length!==1||bloqueado())return;
     const t=e.touches[0];abrindo=$('#side').classList.contains('open');
     if(!abrindo&&t.clientX>30&&rolaHoriz(e.target))return;
-    x0=t.clientX;y0=t.clientY;t0=performance.now();dx=0;modo='?';
+    x0=t.clientX;y0=t.clientY;t0=performance.now();dx=0;modo='?';ligaAlvo(e.target);
   },{passive:true});
-  document.addEventListener('touchmove',e=>{
-    if(!modo)return;const t=e.touches[0],ddx=t.clientX-x0,ddy=t.clientY-y0;
+  let ultMv=null;
+  function mv(e){
+    if(!modo||e===ultMv)return;ultMv=e;const t=e.touches[0];if(!t)return;const ddx=t.clientX-x0,ddy=t.clientY-y0;
+    clearTimeout(guarda);guarda=setTimeout(()=>{if(modo==='arrasta')fim();},900); // nenhum movimento nem fim por quase 1s: encerra o gesto
     if(modo==='?'){
       if(Math.abs(ddx)<10&&Math.abs(ddy)<10)return;
       if(Math.abs(ddx)>Math.abs(ddy)*1.3&&(abrindo?ddx<0:ddx>0))modo='arrasta';else{modo=null;return;}
@@ -6031,9 +6044,11 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
     if(e.cancelable)e.preventDefault();
     dx=ddx;const w=W();
     pinta(abrindo?Math.max(0,Math.min(1,1+dx/w)):Math.max(0,Math.min(1,dx/w)));
-  },{passive:false});
+  }
+  document.addEventListener('touchmove',mv,{passive:false});
   function fim(){
-    if(modo!=='arrasta'){modo=null;return;}
+    clearTimeout(guarda);desligaAlvo();
+    if(modo!=='arrasta'){modo=null;solta();return;}
     modo=null;const w=W(),v=dx/Math.max(1,performance.now()-t0);
     const abre=abrindo?!(dx<-w*.35||v<-.5):(dx>w*.35||v>.5);
     limpa();toggleSide(abre);
