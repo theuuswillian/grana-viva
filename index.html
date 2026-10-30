@@ -358,7 +358,10 @@ body:has(#auth.on) .fab{display:none!important}
 .empMsg{width:100%;box-sizing:border-box;border-radius:14px;padding:12px;font:inherit;font-size:14px;line-height:1.45;background:color-mix(in srgb,var(--txt) 5%,transparent);color:var(--txt);border:1px solid var(--line);resize:vertical}
 .empHero>.empAv{color:#111;font-size:20px}#empWa{text-decoration:none}.ccHBar{height:8px;margin:6px 0 2px}.planHead span{white-space:nowrap}.empAtr{font-style:normal;color:#fb7185;font-weight:700}
 .empSug{padding:14px 16px}.empSugTop{display:flex;gap:12px;align-items:center}.empSugTop b{display:block;font-size:15px}.empSugTop small{font-size:12.5px;color:var(--mut)}.empSugBt{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-html.crAbrindo #app{visibility:hidden}.calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+html.crAbrindo #app{visibility:hidden}
+html.crAbrindo::after{content:'GranaViva';position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg,#0b0f17);color:var(--txt,#e2e8f0);font:600 20px/1 -apple-system,system-ui,sans-serif;letter-spacing:.04em}
+html.crAbrindo::before{content:'';position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);z-index:10000;width:22px;height:22px;border-radius:50%;border:3px solid rgba(148,163,184,.25);border-top-color:var(--a1,#4ade80);animation:crSpin .8s linear infinite}
+@keyframes crSpin{to{transform:translateX(-50%) rotate(360deg)}}.calCard h4{margin:0}.calTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .calNav{display:flex;align-items:center;gap:8px}.calNav b{min-width:84px;text-align:center;text-transform:capitalize;font-size:14px}.calNav .btn2{padding:4px 10px}
 .calRes{margin:0 0 10px;font-size:13px;color:var(--mut)}.calRes b{color:var(--tx,inherit)}
 .calDow,.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calDow span{text-align:center;font-size:11px;color:var(--mut);padding-bottom:2px}
@@ -1354,7 +1357,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.70'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.71'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1595,7 +1598,7 @@ async function abreCripto(){
     CR_FALHOU=true;limpaCache();S=Object.assign(vazio(),{cfg:S.cfg});
   }
   CR_RAW=null;CR_OK=true;zeraCfgH();document.documentElement.classList.remove('crAbrindo');
-  try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();}catch(e){}
+  try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();applyCfg();restauraAba();render();}catch(e){}setTimeout(function(){try{if(geraRecorrentes())render();}catch(e){}},0);
 }
 let LEGADO=null;
 function carregar(){
