@@ -348,7 +348,11 @@ body:has(#auth.on) .fab{display:none!important}
 .empHero{text-align:center;padding:8px 0 12px;display:flex;flex-direction:column;align-items:center;gap:2px}.empHero .empAv{width:52px;height:52px;font-size:20px;margin-bottom:6px}.empHero small{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.empHero b{font-size:32px;font-weight:800;letter-spacing:-.02em}.empHero>span{font-size:13px;color:var(--mut)}
 .empP{padding:12px;border-radius:16px;background:color-mix(in srgb,var(--txt) 4%,transparent);border:1px solid var(--line);margin-bottom:10px}
 .empPTop{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:inherit;font:inherit;padding:0;text-align:left;cursor:pointer}.empPN{flex:1;min-width:0}.empPN b{display:block;font-size:15px}.empPN .badge{font-size:11px}.empPV{text-align:right}.empPV b{display:block;font-size:16px}.empPV small{font-size:11.5px;color:var(--mut)}
-.empBar{height:6px;margin:10px 0}.empBar i{background:#4ade80}
+ .empBar{height:6px;margin:10px 0}.empBar i{background:#4ade80}
+.empPlanoInfo{margin:3px 0 10px;color:var(--a2);font-size:12px;line-height:1.4;font-weight:600}
+.empDevoHero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px;padding:12px;border-radius:14px;background:color-mix(in srgb,var(--txt) 4%,transparent);border:1px solid var(--line)}
+.empDevoHero small{display:block;font-size:10px;line-height:1.3;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.empDevoHero b{display:block;margin-top:3px;font-size:13px;line-height:1.25;overflow-wrap:anywhere}
 .empBt{display:flex;gap:8px}.empBt>*{flex:1;justify-content:center;display:inline-flex;align-items:center;gap:6px}.empBt .i{width:16px;height:16px}
 .empQt{margin-top:12px}.empQt summary{cursor:pointer;color:var(--mut);font-size:13px}.empQRow{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;gap:10px}
 .empMsg{width:100%;box-sizing:border-box;border-radius:14px;padding:12px;font:inherit;font-size:14px;line-height:1.45;background:color-mix(in srgb,var(--txt) 5%,transparent);color:var(--txt);border:1px solid var(--line);resize:vertical}
@@ -1350,7 +1354,7 @@ label.lkRow{cursor:pointer;margin:0}
 </div>
 
 <script>
-const GV_BUILD='10.69'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.70'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1507,8 +1511,10 @@ function sanea(d){
   o.passivos=arr(o.passivos).map(p=>({id:sid(p.id),nome:str(p.nome,80),tipo:PAS_T.includes(p.tipo)?p.tipo:'outro',saldo:Math.max(0,c2(p.saldo)),parcela:Math.max(0,c2(p.parcela)),juros:Math.max(0,Math.min(100,n0(p.juros))),restantes:Math.max(0,Math.min(600,Math.round(n0(p.restantes))))})).filter(p=>p.nome);
   {const ph={};const src=o.patHist&&typeof o.patHist==='object'&&!Array.isArray(o.patHist)?o.patHist:{};Object.entries(src).forEach(([k,v])=>{if(/^\d{4}-\d{2}$/.test(k)&&v&&typeof v==='object')ph[k]={a:c2(v.a),p:Math.max(0,c2(v.p))};});o.patHist=ph;}
   /* v10.62: empréstimos a receber (uma ficha por pessoa; o dinheiro anda por lançamentos transf com t.emp) */
-  o.emprestimos=arr(o.emprestimos).map(e=>({id:sid(e.id),pessoa:str(e.pessoa,60).trim(),tel:str(e.tel,15).replace(/\D/g,''),prev:ISO_RE.test(e.prev||'')?e.prev:'',obs:str(e.obs,140),criadoEm:ISO_RE.test(String(e.criadoEm||'').slice(0,10))?String(e.criadoEm).slice(0,10):''})).filter(e=>e.pessoa);
-  o.tx.forEach(t=>{if(t.emp&&t.tipo==='transf'){t.emp=sid(t.emp);t.empDir=t.empDir==='in'?'in':'out';}else{delete t.emp;delete t.empDir;}});
+  o.emprestimos=arr(o.emprestimos).map(e=>({id:sid(e.id),pessoa:str(e.pessoa,60).trim(),tel:str(e.tel,15).replace(/\D/g,''),prev:ISO_RE.test(e.prev||'')?e.prev:'',obs:str(e.obs,140),criadoEm:ISO_RE.test(String(e.criadoEm||'').slice(0,10))?String(e.criadoEm).slice(0,10):'',lado:e.lado==='devo'?'devo':'receber',planoParcela:Math.max(0,c2(e.planoParcela)),planoCriadoEm:ISO_RE.test(e.planoCriadoEm||'')?e.planoCriadoEm:''})).filter(e=>e.pessoa);
+  const lados=new Map(o.emprestimos.map(e=>[e.id,e.lado]));
+  o.tx.forEach(t=>{if(t.emp&&t.tipo==='transf'){t.emp=sid(t.emp);if(!lados.has(t.emp))lados.set(t.emp,'receber');if(t.empDir==='borrow'||t.empDir==='payback')lados.set(t.emp,'devo');else if(t.empDir==='out'||t.empDir==='in')lados.set(t.emp,'receber');t.empDir=['in','borrow','payback'].includes(t.empDir)?t.empDir:'out';}else{delete t.emp;delete t.empDir;}});
+  o.emprestimos.forEach(e=>{e.lado=lados.get(e.id)||e.lado;});
   // status do lançamento: só valores conhecidos (sem status = pago)
   o.tx.forEach(t=>{if(!['pago','previsto','cancelado'].includes(t.status))delete t.status;if(t.status!=='previsto')delete t.fxAuto;});
   /* v10.45: pagamentos da fatura em lista (cada um com data e conta). formato antigo (pagoValor/pagaEm/pagoConta) vira 1 pagamento.
@@ -4751,8 +4757,8 @@ function revCat(id,cat){
    uma ficha por pessoa. o dinheiro anda por lançamentos transf com t.emp (saída: empDir 'out', de = conta; volta: 'in', para = conta),
    então emprestar não conta como gasto e receber de volta não conta como receita, mas o saldo das contas mexe certo.
    o que está em aberto entra no patrimônio como "a receber". */
-function empDelta(t){return t.empDir==='in'?cents(t.valor):-cents(t.valor);}
-function empTot(id){let saiu=0,voltou=0;S.tx.forEach(t=>{if(t.emp!==id||!efetivo(t))return;if(t.empDir==='in')voltou+=cents(t.valor);else saiu+=cents(t.valor);});return {saiu:saiu/100,voltou:voltou/100,aberto:Math.max(0,saiu-voltou)/100,ult:S.tx.filter(t=>t.emp===id).map(t=>t.data).sort().pop()||''};}
+function empDelta(t){return ['in','borrow'].includes(t.empDir)?cents(t.valor):-cents(t.valor);}
+function empTot(id){let saiu=0,voltou=0,pegou=0,pagou=0;S.tx.forEach(t=>{if(t.emp!==id||!efetivo(t))return;if(t.empDir==='in')voltou+=cents(t.valor);else if(t.empDir==='borrow')pegou+=cents(t.valor);else if(t.empDir==='payback')pagou+=cents(t.valor);else saiu+=cents(t.valor);});const aberto=Math.max(0,saiu-voltou)/100,devendo=Math.max(0,pegou-pagou)/100;return {saiu:saiu/100,voltou:voltou/100,aberto,pegou:pegou/100,pagou:pagou/100,devendo,ult:S.tx.filter(t=>t.emp===id).map(t=>t.data).sort().pop()||''};}
 function empAbertoTotal(){return (S.emprestimos||[]).reduce((a,e)=>a+cents(empTot(e.id).aberto),0)/100;}
 function empPorId(id){return (S.emprestimos||[]).find(e=>e.id===id);}
 function empNome(id){const e=empPorId(id);return e?e.pessoa:'alguém';}
@@ -4763,16 +4769,22 @@ function empPrazo(e,ab){if(!(ab>0))return ['ok','quitado'];if(!e.prev)return ['m
   return k<0?['over','atrasado '+(-k)+' dia'+(-k===1?'':'s')]:k===0?['warn','volta hoje']:k<=7?['warn','volta em '+k+' dia'+(k===1?'':'s')]:['mut','volta em '+fmtDataCurta(e.prev)];}
 function empAvatar(n){const c=['#f59e0b','#22d3ee','#a78bfa','#f472b6','#34d399','#60a5fa'][[...String(n)].reduce((a,ch)=>a+ch.charCodeAt(0),0)%6];return `<span class="empAv" style="--c:${c}">${esc((primeiroNome(n)[0]||'?').toUpperCase())}</span>`;}
 function contasOpts(sel){const A=bancosAtivos(sel);return A.length?A.map(b=>({v:'b:'+b.id,t:b.nome})):[{v:'',t:'sem conta (dinheiro)'}];}
-function empAchaOuCria(nome){nome=String(nome||'').trim().slice(0,60);const k=norm(nome);let e=(S.emprestimos||[]).find(x=>norm(x.pessoa)===k);
-  if(!e){e={id:uid(),pessoa:nome,tel:'',prev:'',obs:'',criadoEm:hojeISO()};(S.emprestimos=S.emprestimos||[]).push(e);}return e;}
+function empDataQuitacao(meses){const d=new Date(hojeISO()+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()+Math.max(0,meses-1));return MESES[d.getMonth()]+'/'+d.getFullYear();}
+function empPlano(e,ab){const p=cents(e.planoParcela)/100;if(!(p>0&&ab>0))return null;const n=Math.max(1,Math.ceil(cents(ab)/cents(p)));return {parcela:p,meses:n,fim:empDataQuitacao(n)};}
+function empDevoTotal(){return (S.emprestimos||[]).filter(e=>e.lado==='devo').reduce((a,e)=>a+cents(empTot(e.id).devendo),0)/100;}
+function empAchaOuCria(nome,lado){nome=String(nome||'').trim().slice(0,60);const k=norm(nome);let e=(S.emprestimos||[]).find(x=>norm(x.pessoa)===k&&x.lado===(lado||'receber'));
+  if(!e){e={id:uid(),pessoa:nome,tel:'',prev:'',obs:'',criadoEm:hojeISO(),lado:lado||'receber',planoParcela:0,planoCriadoEm:''};(S.emprestimos=S.emprestimos||[]).push(e);}return e;}
 function empCardHTML(){
-  const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
+  const emprestimos=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)}));
+  const L=emprestimos.filter(x=>x.e.lado!=='devo'&&x.t.aberto>0);
+  const deve=emprestimos.filter(x=>x.e.lado==='devo'&&x.t.devendo>0);
   const sug=empSugestoes()[0];
   let h='';
   if(sug)h+=`<div class="card empSug"><div class="empSugTop">${empAvatar(sug.e.pessoa)}<div><b>${esc(primeiroNome(sug.e.pessoa))} te pagou?</b><small>entrou ${brl(sug.t.valor)} em ${fmtDataCurta(sug.t.data)} · ${esc(nomeTx(sug.t).n||sug.t.descricao||'')}</small></div></div><div class="empSugBt"><button class="btn2 sm" data-act="emp-sug-nao" data-id="${sug.t.id}">não é</button><button class="btn sm" data-act="emp-sug-ok" data-id="${sug.t.id}~${sug.e.id}">é devolução</button></div></div>`;
+  if(deve.length)h+=`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('receipt')}</span><span class="revTx"><b>Você deve ${brl(deve.reduce((a,x)=>a+cents(x.t.devendo),0)/100)}</b><small>${deve.length} dívida${deve.length===1?'':'s'} com pessoas</small></span>${I('chevR')}</button>`;
   if(!L.length)return h;
-  const tot=L.reduce((a,x)=>a+cents(x.t.aberto),0)/100,atr=L.filter(x=>x.e.prev&&diasAte(x.e.prev)<0);
-  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('user')}</span><span class="revTx"><b>Te devem ${brl(tot)}</b><small>${L.length===1?esc(L[0].e.pessoa):L.length+' pessoas'}${atr.length?` · <em class="empAtr">${atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' atrasado':atr.length+' atrasados'}</em>`:''}</small></span>${I('chevR')}</button>`;
+  const receber=L,tot=receber.reduce((a,x)=>a+cents(x.t.aberto),0)/100,atr=receber.filter(x=>x.e.prev&&diasAte(x.e.prev)<0);
+  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('user')}</span><span class="revTx"><b>Te devem ${brl(tot)}</b><small>${receber.length===1?esc(receber[0].e.pessoa):receber.length+' pessoas'}${atr.length?` · <em class="empAtr">${atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' atrasado':atr.length+' atrasados'}</em>`:''}</small></span>${I('chevR')}</button>`;
 }
 /* receita recente com o nome de quem te deve e valor até o que falta = provável devolução */
 function empSugestoes(){
@@ -4785,16 +4797,24 @@ function empSugestoes(){
 }
 function abreEmprestimos(){
   const box=$('#modal'),L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)}));
-  const ab=L.filter(x=>x.t.aberto>0).sort((a,b)=>(a.e.prev||'9')<(b.e.prev||'9')?-1:1),qt=L.filter(x=>!(x.t.aberto>0));
-  const tot=ab.reduce((a,x)=>a+cents(x.t.aberto),0)/100;
+  const ab=L.filter(x=>x.e.lado!=='devo'&&x.t.aberto>0).sort((a,b)=>(a.e.prev||'9')<(b.e.prev||'9')?-1:1),devo=L.filter(x=>x.e.lado==='devo'&&x.t.devendo>0),qt=L.filter(x=>x.e.lado!=='devo'&&!(x.t.aberto>0));
+  const tot=ab.reduce((a,x)=>a+cents(x.t.aberto),0)/100,devendo=devo.reduce((a,x)=>a+cents(x.t.devendo),0)/100;
+  const planos=devo.map(x=>({x,p:empPlano(x.e,x.t.devendo)})).filter(x=>x.p),parc=planos.reduce((a,x)=>a+cents(x.p.parcela),0)/100,geral=planos.sort((a,b)=>b.p.meses-a.p.meses)[0];
   const card=({e,t})=>{const [k,l]=empPrazo(e,t.aberto),pc=t.saiu>0?Math.min(100,t.voltou/t.saiu*100):0;
     return `<div class="empP"><button type="button" class="empPTop" data-act="emp-abre" data-id="${e.id}">${empAvatar(e.pessoa)}<span class="empPN"><b>${esc(e.pessoa)}</b><small><span class="badge ${k}">${l}</span></small></span><span class="empPV"><b>${brl(t.aberto)}</b><small>de ${brl(t.saiu)}</small></span></button>
       <div class="bar empBar"><i style="width:${pc.toFixed(1)}%"></i></div>
       <div class="empBt"><button class="btn2 sm" data-act="emp-cobrar" data-id="${e.id}">${I('mail')}cobrar</button><button class="btn sm" data-act="emp-recebi" data-id="${e.id}">${I('arrowDown')}recebi</button></div></div>`;};
+  const cardDevo=({e,t})=>{const plano=empPlano(e,t.devendo),pc=t.pegou>0?Math.min(100,t.pagou/t.pegou*100):0;
+    return `<div class="empP"><button type="button" class="empPTop" data-act="emp-abre" data-id="${e.id}">${empAvatar(e.pessoa)}<span class="empPN"><b>${esc(e.pessoa)}</b><small>você deve</small></span><span class="empPV"><b>${brl(t.devendo)}</b><small>de ${brl(t.pegou)}</small></span></button>
+      ${plano?`<div class="bar empBar"><i style="width:${pc.toFixed(1)}%"></i></div><div class="empPlanoInfo">quitação em ${plano.meses} ${plano.meses===1?'mês':'meses'} (${brl(plano.parcela)}/mês, termina em ${plano.fim})</div>`:''}
+      <div class="empBt">${plano?`<button class="btn2 sm" data-act="emp-plano" data-id="${e.id}">editar plano</button>`:`<button class="btn2 sm" data-act="emp-plano" data-id="${e.id}">plano de quitação</button>`}<button class="btn sm" data-act="emp-paguei" data-id="${e.id}">${I('arrowUp')}paguei</button></div></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="Empréstimos"><div class="sh-head"><h3>Empréstimos</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero"><small>te devem</small><b>${brl(tot)}</b><span>${ab.length?ab.length+' pessoa'+(ab.length>1?'s':''):'ninguém te deve agora'}</span></div>
+    ${(devo.length||ab.length)?`<div class="empDevoHero"><div><small>você deve</small><b>${brl(devendo)}</b></div><div><small>parcelas mensais</small><b>${brl(parc)}/mês</b></div><div><small>quitação geral</small><b>${geral?geral.p.fim:'sem plano'}</b></div></div>`:''}
     ${ab.map(card).join('')||'<p class="small" style="text-align:center">Quando emprestar dinheiro, registre aqui. Não conta como gasto, aparece no patrimônio como valor a receber e você acompanha cada devolução.</p>'}
+    ${devo.length?`<h4 class="rsH">você deve</h4>${devo.map(cardDevo).join('')}`:''}
     <button class="btn full" data-act="emp-novo">${I('plus')} emprestei dinheiro</button>
+    <button class="btn2 full" style="margin-top:8px" data-act="emp-devo-novo">${I('plus')} registrei uma dívida com alguém</button>
     ${qt.length?`<details class="empQt"><summary>quitados (${qt.length})</summary>${qt.map(({e,t})=>`<button type="button" class="tx empQRow" data-act="emp-abre" data-id="${e.id}">${empAvatar(e.pessoa)}<div class="txt"><b>${esc(e.pessoa)}</b><small>${t.saiu?'devolveu '+brl(t.voltou):'sem lançamentos'}</small></div>${I('chevR')}</button>`).join('')}</details>`:''}
     <p class="small" style="margin-top:12px">Já fez a transferência e ela veio do banco? Toque nela no extrato e escolha "Emprestei (vai voltar)".</p>
   </div>`;
@@ -4814,6 +4834,45 @@ function abreEmp(id){
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn2 sm" data-act="emp-novo" data-id="${id}">${I('plus')}emprestar mais</button><button class="btn2 sm" data-act="emp-edit" data-id="${id}">${I('edit')}editar</button><button class="btn2 sm danger" data-act="emp-del" data-id="${id}">${I('trash')}excluir</button><button class="btn2 sm" style="margin-left:auto" data-act="emp-lista">todos</button></div>
   </div>`;
   box.classList.add('on');
+}
+function empNovoDevo(){
+  form('Registrei uma dívida',[
+    {name:'pessoa',label:'Pra quem você deve',value:'',required:true,placeholder:'nome da pessoa'},
+    {name:'valor',label:'Saldo devido (R$)',value:'',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'parcela',label:'Parcela mensal (R$, opcional)',value:'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'data',label:'Data do empréstimo',type:'date',value:hojeISO(),required:true}
+  ],v=>{
+    const valor=parseBR(v.valor),parcela=v.parcela?parseBR(v.parcela):0;
+    if(!(valor>0))return 'Informe um saldo maior que zero.';if(isNaN(parcela)||parcela<0)return 'Confira o valor da parcela.';
+    const e=empAchaOuCria(v.pessoa,'devo');
+    S.tx.push({id:uid(),tipo:'transf',emp:e.id,empDir:'borrow',valor,data:v.data,de:'',para:'',categoria:'Empréstimo',descricao:'empréstimo recebido de '+e.pessoa,cartao:'',conta:'',forma:''});
+    if(parcela>0){e.planoParcela=c2(parcela);e.planoCriadoEm=hojeISO();}
+    salvar();render();toast('Dívida registrada');setTimeout(abreEmprestimos,40);
+  });
+}
+function empPlanoForm(id){
+  const e=empPorId(id);if(!e||e.lado!=='devo')return;
+  const t=empTot(id);if(!(t.devendo>0)){toast('Essa dívida já foi quitada');return;}
+  form('Plano de quitação · '+primeiroNome(e.pessoa),[
+    {name:'parcela',label:'Valor da parcela mensal (R$)',value:e.planoParcela?num(e.planoParcela):'',inputmode:'decimal',placeholder:'ex.: 250,00'},
+    {name:'meses',label:'ou número de meses',value:'',inputmode:'numeric',placeholder:'ex.: 10'}
+  ],v=>{
+    let p=v.parcela?parseBR(v.parcela):0,m=v.meses?Math.max(0,parseInt(String(v.meses).replace(/\D/g,''),10)||0):0;
+    if(p>0&&m>0)return 'Preencha o valor mensal ou os meses, não os dois.';
+    if(!(p>0)&&m>0)p=Math.ceil(cents(t.devendo)/m)/100;
+    if(!(p>0)){e.planoParcela=0;e.planoCriadoEm='';}else{if(p>t.devendo)p=t.devendo;e.planoParcela=c2(p);e.planoCriadoEm=hojeISO();}
+    salvar();render();setTimeout(abreEmprestimos,40);
+  });
+}
+function empPaguei(id){
+  const e=empPorId(id);if(!e||e.lado!=='devo')return;const t=empTot(id);
+  form('Paguei · '+primeiroNome(e.pessoa),[
+    {name:'valor',label:'Valor pago (R$)',value:num(t.devendo),required:true,inputmode:'decimal'},
+    {name:'data',label:'Quando',type:'date',value:hojeISO(),required:true}
+  ],v=>{const valor=parseBR(v.valor);if(!(valor>0)||valor>t.devendo)return 'Confira o valor pago.';
+    S.tx.push({id:uid(),tipo:'transf',emp:id,empDir:'payback',valor,data:v.data,de:'',para:v.conta?'b:'+v.conta:'',categoria:'Empréstimo',descricao:'pagamento de empréstimo para '+e.pessoa,cartao:'',conta:'',forma:''});
+    salvar();render();toast(empTot(id).devendo>0?'Pagamento registrado':'Dívida quitada');setTimeout(abreEmprestimos,40);
+  });
 }
 function novoEmp(id){
   const e=id?empPorId(id):null;
@@ -4879,6 +4938,7 @@ function aplicaEmp(t,eid,dir){
   const c=t.conta||(t.tipo!=='transf'?contaDoLanc(t):'')||'';
   t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:t.conta||''};
   t.tipo='transf';t.emp=eid;t.empDir=dir;t.categoria='Empréstimo';
+  const eEmp=empPorId(eid);if(eEmp)eEmp.lado=dir==='out'?'receber':'devo';
   if(dir==='out'){t.de=c?'b:'+c:'';t.para='';}else{t.para=c?'b:'+c:'';t.de='';}
   t.conta='';t.cartao='';delete t.rev;
   salvar();render();const ab=empTot(eid).aberto;toast(dir==='in'?(ab>0?'Devolução registrada · falta '+brl(ab):primeiroNome(empNome(eid))+' quitou tudo 🎉'):'Marcado como empréstimo');
@@ -5662,6 +5722,9 @@ const ACT={
   'tx-empv':id=>converteEmp(id,'in'),
   'tx-desemp':id=>desfazEmp(id),
   'emp-lista':()=>abreEmprestimos(),
+  'emp-devo-novo':()=>empNovoDevo(),
+  'emp-plano':id=>empPlanoForm(id),
+  'emp-paguei':id=>empPaguei(id),
   'emp-abre':id=>abreEmp(id),
   'emp-novo':id=>novoEmp(id||''),
   'emp-recebi':id=>recebiEmp(id),
