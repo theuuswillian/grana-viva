@@ -22,7 +22,7 @@ function corCat(c){
 const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const MESES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
-const ICONS={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+const ICONS={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',send:'<path d="M21 3 10.5 13.5"/><path d="M21 3l-6.5 18-4-7.5L3 9.5z"/>',
   refresh:'<path d="M20 11a8 8 0 0 0-14.6-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.6 4.5L21 15M21 20v-5h-5"/>',
   link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
   swap:'<path d="M7 4 3.5 7.5 7 11M3.5 7.5h13M17 13l3.5 3.5L17 20M20.5 16.5h-13"/>',
@@ -3922,33 +3922,107 @@ function fraseIA(){
   box.innerHTML=`<div class="sheet">
     <div class="sh-head"><h3>Falar ou escrever</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <p class="iaDica">Diga do seu jeito: valor, onde, quando e como pagou.</p>
-    <div class="iaCampo"><textarea id="iaTxt" rows="3" maxlength="600" placeholder="ex: gastei 45 no iFood ontem no cartão"></textarea>${SR_API?`<button type="button" class="iaMic" data-act="ia-mic" aria-label="ditar">${I('mic')}</button>`:''}</div>
+    <div class="iaCampo"><textarea id="iaTxt" rows="3" maxlength="600" placeholder="ex: gastei 45 no iFood ontem no cartão"></textarea>${SR_API?`<div class="iaRec" aria-live="polite"><span class="rDot"></span><span class="rTempo">0:00</span><span class="rDesl">${I('chevL')}deslize para cancelar</span><button type="button" class="rCanc">cancelar</button></div><div class="iaLock" aria-hidden="true">${I('lock')}${I('chevU')}</div><button type="button" class="iaMic" aria-label="segure para falar">${I('mic')}${I('send')}</button>`:''}</div>
+    ${SR_API?'<p class="iaDica sm iaSeg">Segure o microfone e fale. Solte para enviar, deslize para o lado para cancelar ou para cima para gravar sem segurar.</p>':''}
     <div class="iaEx">${['almoço 32 reais hoje no pix','uber 18,50 ontem no cartão','recebi 1200 do freela sexta'].map(x=>`<button type="button" class="chipEx" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     <button type="button" class="btn full" data-act="ia-frase-ok">${I('sparkle')} Preencher lançamento</button>
     <p class="iaDica sm">${SR_API?'':'Para ditar, toque no microfone do teclado. '}A frase é enviada para a IA do Google só para montar o lançamento.</p>
   </div>`;
   box.classList.add('on');
-  const ta=$('#iaTxt');setTimeout(()=>ta.focus(),60);
+  const ta=$('#iaTxt');if(!(SR_API&&matchMedia('(pointer:coarse)').matches))setTimeout(()=>ta.focus(),60); // no celular abre sem teclado para o microfone ficar à vista
+  if(SR_API)ligaMic();
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviaFraseIA();}});
   box.querySelectorAll('.chipEx').forEach(b=>b.onclick=()=>{ta.value=b.dataset.ex;ta.focus();});
 }
-let REC=null;
-function micIA(){
-  const btn=document.querySelector('.iaMic'),ta=$('#iaTxt');if(!SR_API||!ta)return;
-  if(REC){try{REC.stop();}catch(e){}return;}
-  try{REC=new SR_API();}catch(e){toast('Ditado indisponível, use o microfone do teclado.',true);return;}
-  REC.lang='pt-BR';REC.interimResults=true;REC.continuous=false;
-  const base=ta.value?ta.value.trim()+' ':'';
-  REC.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;ta.value=base+t;};
-  REC.onend=()=>{REC=null;btn&&btn.classList.remove('on');};
-  REC.onerror=e=>{REC=null;btn&&btn.classList.remove('on');if(e.error==='not-allowed')toast('Permita o microfone para ditar.',true);};
-  btn&&btn.classList.add('on');REC.start();
+/* v10.76: microfone estilo WhatsApp: segure para gravar, solte para enviar, deslize para o lado para cancelar,
+   deslize para cima para travar (grava sem segurar). Toque rápido também trava. A fala vira texto ao vivo no campo. */
+let REC=null,RS=null;
+const REC_MAX=60;
+function ligaMic(){
+  const btn=document.querySelector('.iaMic');if(!btn)return;
+  btn.addEventListener('pointerdown',micDown);
+  btn.addEventListener('pointermove',micMove);
+  btn.addEventListener('pointerup',micUp);
+  btn.addEventListener('pointercancel',()=>{if(RS&&!RS.travado)fimRec(false);});
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
+  const c=document.querySelector('.iaRec .rCanc');if(c)c.onclick=()=>cancelaRec();
 }
+function micUI(){
+  const campo=document.querySelector('.iaCampo');if(!campo)return;
+  campo.classList.toggle('gravando',!!RS);campo.classList.toggle('travado',!!(RS&&RS.travado));
+  const ta=$('#iaTxt');if(ta)ta.placeholder=RS?'ouvindo…':'ex: gastei 45 no iFood ontem no cartão';
+  const btn=document.querySelector('.iaMic');if(btn)btn.setAttribute('aria-label',RS&&RS.travado?'enviar':'segure para falar');
+  if(!RS){const d=document.querySelector('.iaRec .rDesl');if(d){d.style.transform='';d.style.opacity='';}
+    const l=document.querySelector('.iaLock');if(l)l.style.transform='';const m=document.querySelector('.iaMic');if(m)m.style.transform='';}
+}
+function tempoRec(){
+  const el=document.querySelector('.iaRec .rTempo');if(!RS)return;
+  if(!el||!el.isConnected){cancelaRec(true);return;} // folha fechada no meio da gravação
+  const s=Math.floor((Date.now()-RS.t0)/1000);el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  if(s>=REC_MAX)fimRec(true);
+}
+function vibra(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
+function micDown(e){
+  e.preventDefault();
+  if(RS&&RS.travado){fimRec(true);return;} // travado: o botão vira "enviar"
+  if(RS)return;
+  try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+  const ta=$('#iaTxt');if(!ta)return;ta.blur();
+  RS={x0:e.clientX,y0:e.clientY,t0:Date.now(),base:ta.value.trim(),fin:'',travado:false,fim:false,ouviu:false};
+  RS.tm=setInterval(tempoRec,250);tempoRec();
+  vibra(12);micUI();iniciaRec();
+}
+function micMove(e){
+  if(!RS||RS.travado||RS.fim)return;
+  const dx=Math.min(0,e.clientX-RS.x0),dy=Math.min(0,e.clientY-RS.y0);
+  const d=document.querySelector('.iaRec .rDesl'),l=document.querySelector('.iaLock'),m=document.querySelector('.iaMic');
+  if(d){d.style.transform=`translateX(${Math.max(dx,-120)}px)`;d.style.opacity=String(Math.max(.15,1+dx/130));}
+  if(l)l.style.transform=`translateY(${Math.max(dy,-70)*.5}px)`;
+  if(m)m.style.transform=`translate(${Math.max(dx,-120)*.35}px,${Math.max(dy,-70)*.35}px) scale(1.25)`;
+  if(dx<-110){cancelaRec();return;}
+  if(dy<-75){RS.travado=true;vibra(12);micUI();}
+}
+function micUp(e){
+  if(!RS||RS.fim||RS.travado)return;
+  if(Date.now()-RS.t0<400){RS.travado=true;micUI();return;} // toque rápido: grava sem segurar
+  fimRec(true);
+}
+function textoRec(r){const ta=$('#iaTxt');if(!ta||!RS)return;const t=(r||'').trim();ta.value=(RS.base?RS.base+' ':'')+t;ta.scrollTop=ta.scrollHeight;}
+function iniciaRec(){
+  if(!RS)return;
+  let rec;try{rec=new SR_API();}catch(e){cancelaRec(true);toast('Ditado indisponível, use o microfone do teclado.',true);return;}
+  REC=rec;rec.lang='pt-BR';rec.interimResults=true;rec.continuous=true;
+  const antes=RS.fin;
+  rec.onresult=ev=>{if(!RS||REC!==rec)return;let f='',it='';for(const r of ev.results){if(r.isFinal)f+=r[0].transcript;else it+=r[0].transcript;}
+    RS.fin=(antes?antes+' ':'')+f;RS.ouviu=true;textoRec(RS.fin+(it?' '+it:''));};
+  rec.onerror=ev=>{if(REC!==rec)return;if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){cancelaRec(true);toast('Permita o microfone para o GranaViva nos ajustes do iPhone.',true);}};
+  rec.onend=()=>{if(REC!==rec)return;REC=null;
+    if(RS&&!RS.fim){try{iniciaRec();}catch(e){}return;} // o iPhone para sozinho depois de um silêncio: continua gravando
+    if(RS&&RS.fim)concluiRec();};
+  try{rec.start();}catch(e){}
+}
+function fimRec(enviar){
+  if(!RS||RS.fim)return;RS.fim=true;RS.enviar=enviar;clearInterval(RS.tm);
+  if(REC){try{REC.stop();}catch(e){}RS.esp=setTimeout(concluiRec,1500);}else concluiRec(); // espera o último trecho reconhecido
+}
+function concluiRec(){
+  if(!RS)return;const st=RS;RS=null;clearTimeout(st.esp);clearInterval(st.tm);REC=null;micUI();
+  const ta=$('#iaTxt');if(!ta||!ta.isConnected)return;
+  if(!st.ouviu||ta.value.trim()===st.base){if(st.enviar)toast('Não ouvi nada. Segure o microfone e fale.',true);return;}
+  if(st.enviar&&ta.value.trim().length>=3)enviaFraseIA();
+}
+function cancelaRec(quieto){
+  if(!RS)return;const st=RS;RS=null;clearInterval(st.tm);clearTimeout(st.esp);
+  const r=REC;REC=null;if(r){try{r.abort();}catch(e){}}
+  const ta=$('#iaTxt');if(ta)ta.value=st.base;
+  micUI();if(!quieto){vibra([10,40,10]);const c=document.querySelector('.iaCampo');if(c){c.classList.remove('lixo');void c.offsetWidth;c.classList.add('lixo');}}
+}
+function micIA(){} // compatibilidade: o microfone agora usa os eventos de segurar (ligaMic)
 async function enviaFraseIA(){
   const ta=$('#iaTxt'),btn=document.querySelector('[data-act="ia-frase-ok"]');if(!ta)return;
   const texto=ta.value.trim();
   if(texto.length<3){toast('Escreva o que você gastou ou recebeu.',true);ta.focus();return;}
-  if(REC){try{REC.stop();}catch(e){}}
+  if(RS){const st=RS;RS=null;clearInterval(st.tm);clearTimeout(st.esp);const r=REC;REC=null;if(r){try{r.abort();}catch(e){}}micUI();} // mantém o que já foi transcrito
   if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+' Entendendo…';}
   try{
     const o=await chamaIA({texto});

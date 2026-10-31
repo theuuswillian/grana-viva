@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-g+TuhrPYGSs2E/p4pjq71c/Soi5XJOms2VP4PqPS+mY=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-GDSxPB/BO18R8V75LwsN+h+62PmUnA1zmIHeF0+2o+c=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1529,6 +1529,33 @@ html.claro .rfChip.warn{color:#b45309}
 .catRow .cr-n{word-break:normal;overflow-wrap:normal;hyphens:auto;-webkit-hyphens:auto}
 @media (max-width:420px){.catRow .cr-n{font-size:12.5px;letter-spacing:-.015em}}
 .pushTxt,#bcTxt.bcIntro{font-size:13.5px;line-height:1.45;color:var(--mut)}
+/* v10.76: microfone estilo WhatsApp */
+.iaCampo textarea{padding-right:66px;transition:padding .2s}
+.iaCampo .iaMic{right:8px;bottom:8px;width:48px;height:48px;background:var(--a1);color:#04140a;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;z-index:3;transition:transform .12s ease-out,background .2s;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+.iaCampo .iaMic .i{width:22px;height:22px}.iaMic .i:last-child{display:none}
+.iaCampo.travado .iaMic .i:first-child{display:none}.iaCampo.travado .iaMic .i:last-child{display:block}
+.iaCampo.gravando .iaMic{transform:scale(1.25);animation:none}
+.iaCampo.travado .iaMic{transform:none}
+.iaCampo.gravando textarea{padding-bottom:58px;border-color:var(--a1)}
+.iaRec{display:none;position:absolute;left:1px;right:64px;bottom:1px;height:56px;align-items:center;gap:10px;padding:0 12px;background:var(--card2);border-radius:0 0 0 12px;z-index:2;overflow:hidden;font-size:15px}
+.iaCampo.gravando .iaRec{display:flex}
+.rDot{width:10px;height:10px;border-radius:50%;background:#ef4444;flex:none;animation:rPisca 1s infinite}
+@keyframes rPisca{50%{opacity:.2}}
+.rTempo{font-variant-numeric:tabular-nums;font-weight:600;min-width:36px;color:var(--txt)}
+.rDesl{display:flex;align-items:center;gap:2px;margin-left:auto;color:var(--mut);font-size:14px;white-space:nowrap;transition:opacity .1s;animation:rBrilho 1.6s infinite}
+.rDesl .i{width:16px;height:16px}
+@keyframes rBrilho{50%{color:var(--txt)}}
+.rCanc{display:none;margin-left:auto;background:none;border:0;color:#ef4444;font:inherit;font-weight:600;font-size:15px;padding:8px 4px;cursor:pointer}
+.iaCampo.travado .rDesl{display:none}.iaCampo.travado .rCanc{display:block}
+.iaLock{display:none;position:absolute;right:13px;bottom:78px;width:38px;padding:9px 0 6px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--mut);flex-direction:column;align-items:center;gap:2px;z-index:3;box-shadow:0 8px 20px -10px rgba(0,0,0,.6);animation:rSobe .25s ease-out}
+.iaLock .i{width:17px;height:17px}.iaLock .i:last-child{width:14px;height:14px;animation:rSeta 1.2s infinite}
+.iaCampo.gravando:not(.travado) .iaLock{display:flex}
+@keyframes rSobe{from{opacity:0;transform:translateY(10px)}}
+@keyframes rSeta{50%{transform:translateY(-3px)}}
+.iaCampo.lixo{animation:rLixo .35s}
+@keyframes rLixo{20%{transform:translateX(-6px)}50%{transform:translateX(5px)}80%{transform:translateX(-2px)}}
+.iaSeg{margin:8px 0 0!important}
+html.claro .iaCampo .iaMic{color:#fff}
 /* ===== v10.69: telas estreitas (iPhone 16 Pro = 402pt, SE/mini = 320-375pt) sem texto cortado ===== */
 @media(max-width:420px){
   .hB-a{gap:8px;padding:0 8px 0 7px}
@@ -1646,7 +1673,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.75'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.76'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1667,7 +1694,7 @@ const GV_BUILD='10.75'; // versão publicada (./bump.sh troca aqui e no sw.js)
 })();
 </script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script src="app.js?v=10.75"></script>
+<script src="app.js?v=10.76"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
