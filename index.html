@@ -1466,6 +1466,20 @@ html.claro .fixas-card{background:#fff!important}
 .meta .acts2 .btn{background:var(--a1)!important;color:#08110b!important}
 .seg button.on{background:var(--a1)!important;color:#08110b!important}
 .lanc-lista .card.vz,.card .card.vz{background:transparent!important;border:0!important;box-shadow:none!important;padding:20px 8px!important}
+/* ===== v10.68: renda fixa ===== */
+.rfDica{margin:-4px 0 12px;padding:10px 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line);font-size:13px;line-height:1.45;color:var(--mut)}
+.rfChips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.rfChip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--card2);border:1px solid var(--line);color:var(--mut)}
+.rfChip i{width:6px;height:6px;border-radius:50%;background:#4ade80}
+.rfChip.off i{background:#94a3b8}
+.rfChip.on{color:var(--txt)}
+.rfChip.warn{color:#f59e0b;border-color:rgba(245,158,11,.3)}
+html.claro .rfChip.warn{color:#b45309}
+.rfMov{display:flex;gap:8px;margin:10px 0 4px}
+.rfMov .btn2{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.rfMov .btn2 .i{width:15px;height:15px}
+#toast{white-space:normal!important;width:max-content;max-width:calc(100vw - 32px);text-align:left;line-height:1.35}
+.astMeta.rfm{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -1511,7 +1525,7 @@ html.claro .fixas-card{background:#fff!important}
 </div>
 
 <script>
-const GV_BUILD='10.67'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.68'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1657,7 +1671,7 @@ function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
-  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))}));
+  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi)))}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:''}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',saldoFecha:!!b.saldoFecha,principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
@@ -1935,6 +1949,8 @@ async function baixar(){
   try{localStorage.setItem(OWNER_KEY,USER.id);}catch(err){}
   gravaLocal();
   setSync('sincronizado');
+  /* v10.68: renda fixa recalcula com o que veio da nuvem */
+  try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
 }
 window.addEventListener('online',()=>{if(USER)enviar();});
 /* ao voltar para a aba: envia o que estiver pendente e puxa o que outro aparelho mudou */
@@ -3938,19 +3954,9 @@ function viewFii(){
     const titulo=rf?esc(f.nome||f.ticker):esc(f.ticker);
     const sub=rf?'':esc(f.nome||'');
     let meta=[],info='';
+    let chips=[],tagT=TIPO_L[t]||'FII';
     if(rf){
-      if(f.pago>0)meta.push(['guardado',brl(f.pago)]);
-      if(f.idx==='cdi'){
-        const k=(f.pctCdi||100)/100,dia=CDI.taxa?posi*CDI.taxa/100*k:0;
-        meta.push(['rende',num(f.pctCdi||100).replace(/,00$/,'')+'% do CDI']);
-        if(dia)meta.push(['por dia útil','≈ '+brl(dia)],['por mês','≈ '+brl(posi*(Math.pow(1+CDI.taxa/100*k,21)-1))]);
-        const L=liquidoRF(f);if(L&&f.pago)meta.push(['se resgatar hoje',brl(L.liq)]);
-        meta.push(['resgate',f.semVenc||!f.venc?'diário':'vence '+fmtData(f.venc)]);
-        info=CDI.ult?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a. · '+(f.cdiEst?'rendimento até '+fmtData(f.cdiEst).slice(0,5)+' (último dia estimado até o BC publicar)':'atualizado até '+fmtData(CDI.ult))+(L?' · IR '+num(L.aliq).replace(/,0$/,'')+'%':''):CDI.st==='erro'?'sem conexão com o Banco Central, tentando de novo':'buscando o CDI no Banco Central…';
-      }else{
-        if(f.venc&&!f.semVenc)meta.push(['vence',fmtData(f.venc)]);else if(f.semVenc)meta.push(['resgate','diário']);
-        info=(f.manual?'valor ajustado por você'+(f.bancoValor!=null?' · banco: '+brl(f.bancoValor)+' em '+fmtData(f.bancoData):''):f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para render pelo CDI';
-      }
+      const R=rfCardInfo(f,posi);meta=R.meta;info=R.info;chips=R.chips;tagT=R.tag;
     }else if(cri){
       meta.push(['quantidade',Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8})+' '+esc(f.ticker)],['preço',brl(f.preco)]);
       if(f.pago>0)meta.push(['pago',brl(f.pago)]);
@@ -3965,10 +3971,12 @@ function viewFii(){
     }
     return `<div class="ast hov" style="--tc:${TCOR[t]||'var(--a1)'}">
       <div class="astTop">${ico}
-        <div class="astNm"><b>${titulo}</b><span class="astTag">${TIPO_L[t]||'FII'}</span>${sub?`<small>${sub}</small>`:''}</div>
+        <div class="astNm"><b>${titulo}</b><span class="astTag">${tagT}</span>${sub?`<small>${sub}</small>`:''}</div>
         <div class="astVal"><b>${brl(posi)}</b>${f.pago>0?plPill(pl,plp):''}</div>
       </div>
-      ${meta.length?`<div class="astMeta">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
+      ${meta.length?`<div class="astMeta${rf?' rfm':''}">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
+      ${chips.length?`<div class="rfChips">${chips.map(([k,txt,cl])=>`<span class="rfChip ${cl||''}">${k==='dia'?'<i></i>':''}${esc(txt)}</span>`).join('')}</div>`:''}
+      ${rf&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
       <div class="astFoot"><small>${info}</small><div class="acts">${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
@@ -5509,30 +5517,6 @@ function assetIco(t,tipo){
   if(tipo==='cripto'||CRIPTO_LIST.some(x=>x.t===t))return '<span class="ic fii coinic">'+cryptoIco(t)+'</span>';
   return '<span class="tkb tk-'+esc(tipo||'fii')+'">'+esc(String(t).slice(0,4))+'</span>';
 }
-function rfForm(f){
-  const cdi=f?f.idx==='cdi':true;
-  form(f?'Editar renda fixa':'Nova renda fixa',[
-    {name:'nome',label:'Nome (ex: Caixinha Carro)',value:f?f.nome:'',required:true},
-    {name:'valor',label:'Saldo hoje (R$)',value:f?num(f.preco*f.cotas):'',inputmode:'decimal',required:true,placeholder:'0,00'},
-    {name:'pago',label:'Total que você guardou (R$)',value:f&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'},
-    {name:'idx',label:'Como rende',type:'select',value:cdi?'cdi':'fixo',options:[{v:'cdi',t:'% do CDI (atualiza sozinho todo dia útil)'},{v:'fixo',t:'valor fixo (eu atualizo)'}]},
-    {name:'pct',label:'Percentual do CDI (%)',value:f&&f.pctCdi?num(f.pctCdi).replace(/,00$/,''):'100',inputmode:'decimal'},
-    {name:'liq',label:'Resgate',type:'select',value:f&&f.venc&&!f.semVenc?'venc':'diaria',options:[{v:'diaria',t:'liquidez diária, sem vencimento'},{v:'venc',t:'tem data de vencimento'}]},
-    {name:'venc',label:'Vencimento (se tiver)',type:'date',value:f&&f.venc&&!f.semVenc?f.venc:''},
-    {name:'aplic',label:'Data do 1º depósito (para o imposto)',type:'date',value:f&&f.aplicEm||''}
-  ],v=>{
-    const nome=String(v.nome||'').trim(),valor=parseBR(v.valor),pago=parseBR(v.pago),pct=parseBR(v.pct);
-    if(!nome)return 'Informe o nome.';if(!(valor>=0))return 'Informe o saldo de hoje.';
-    if(v.idx==='cdi'&&!(pct>0&&pct<=300))return 'Informe o percentual do CDI (ex: 100).';
-    if(v.liq==='venc'&&!ISO_RE.test(v.venc))return 'Informe a data de vencimento.';
-    const obj={tipo:'rf',nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',cotas:1,preco:c2(valor),pago:pago>0?c2(pago):0,dpc:0,diaPag:0,
-      idx:v.idx==='cdi'?'cdi':'',pctCdi:v.idx==='cdi'?pct:0,semVenc:v.liq!=='venc',venc:v.liq==='venc'?v.venc:'',aplicEm:ISO_RE.test(v.aplic)?v.aplic:''};
-    if(obj.idx==='cdi')obj.cdiBase={v:c2(valor),d:hojeISO()};else obj.cdiBase=null;
-    if(f){Object.assign(f,obj);if(f.pluggyInv||obj.idx){f.manual=true;f.manualEm=hojeISO();}}else S.fiis.push(Object.assign({id:uid(),ops:[],realizado:0,proventos:0},obj));
-    salvar();render();toast(obj.idx?'Salvo. O saldo passa a render '+num(obj.pctCdi).replace(/,00$/,'')+'% do CDI todo dia útil.':'Renda fixa salva');
-    if(obj.idx)atualizaCDI(true);
-  });
-}
 /* v10.29: renda fixa atrelada ao CDI (ex: Caixinha Nubank 100% CDI).
    Fonte: Banco Central, série SGS 12 (CDI diário, % ao dia). O saldo base digitado rende
    (1 + CDI do dia × %CDI) em cada dia útil publicado depois da data base. Recalcula ao abrir o app. */
@@ -5550,63 +5534,314 @@ function migraCaixinhas(){ // pedido do Matheus (28/10/2026): Caixinha Nubank re
     f.idx='cdi';f.pctCdi=100;f.semVenc=true;f.venc='';f.cdiBase={v:c2(f.preco*f.cotas),d:hojeISO()};f.cotas=1;f.manual=true;f.manualEm=hojeISO();n++;}});
   if(n)S.cfg.migCdi1=1;return n>0;
 }
+/* ===== v10.68: renda fixa de verdade =====
+   Cada produto tem a sua regra (pesquisado em 30/10/2026):
+   - CDB, RDB, LC, caixinhas e contas que rendem: rendem só em dia útil (base 252), IR regressivo
+     22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois; IOF regressivo nos primeiros 30 dias; FGC até R$ 250 mil.
+   - LCI, LCA, CRI, CRA e debênture incentivada: isentos de IR para pessoa física (a MP 1.303 caducou em 08/10/2025).
+     LCI e LCA sem índice de preços têm prazo mínimo de 6 meses (Res. CMN 5.215/2025).
+   - Tesouro Selic, Prefixado e IPCA+: IR regressivo, taxa B3 de 0,20% ao ano (no Tesouro Selic, só acima de R$ 10 mil por CPF).
+     Antes do vencimento o preço de mercado varia; aqui o valor é o da curva do título.
+   - Poupança: rende uma vez por mês, no aniversário do depósito (dias 29, 30 e 31 viram dia 1º). Com a Selic acima de 8,5%
+     são 0,5% ao mês + TR; abaixo disso, 70% da Selic + TR. Isenta de IR e IOF.
+   Fontes das taxas: Banco Central, SGS 12 (CDI), 11 (Selic diária), 433 (IPCA), 226 (TR) e 432 (meta Selic).
+   Cada aporte rende e paga IR pela própria data, como no banco. Resgate sai dos aportes mais antigos primeiro. */
+const RF_PROD={
+  caixinha:{l:'Caixinha ou conta que rende',c:'Caixinha',ir:1,g:'fgc',idx:['cdi','cdimais'],liq:'diaria'},
+  cdb:{l:'CDB / RDB',c:'CDB',ir:1,g:'fgc',idx:['cdi','cdimais','pre','ipca']},
+  lci:{l:'LCI',c:'LCI',ir:0,g:'fgc',idx:['cdi','cdimais','pre','ipca'],car:1},
+  lca:{l:'LCA',c:'LCA',ir:0,g:'fgc',idx:['cdi','cdimais','pre','ipca'],car:1},
+  tsel:{l:'Tesouro Selic / Tesouro Reserva',c:'Tesouro Selic',ir:1,g:'tn',idx:['selic'],cust:1,isen:10000},
+  tpre:{l:'Tesouro Prefixado',c:'Tesouro Pré',ir:1,g:'tn',idx:['pre'],cust:1,mm:1},
+  tipca:{l:'Tesouro IPCA+',c:'Tesouro IPCA+',ir:1,g:'tn',idx:['ipca'],cust:1,mm:1},
+  poup:{l:'Poupança',c:'Poupança',ir:0,iof:0,g:'fgc',idx:['poup'],liq:'diaria'},
+  lc:{l:'LC (letra de câmbio)',c:'LC',ir:1,g:'fgc',idx:['cdi','cdimais','pre','ipca']},
+  deb:{l:'Debênture',c:'Debênture',ir:1,g:'',idx:['cdimais','cdi','pre','ipca']},
+  debinc:{l:'Debênture incentivada',c:'Deb. incentivada',ir:0,g:'',idx:['ipca','cdimais','cdi','pre']},
+  cri:{l:'CRI',c:'CRI',ir:0,g:'',idx:['ipca','cdi','cdimais','pre']},
+  cra:{l:'CRA',c:'CRA',ir:0,g:'',idx:['ipca','cdi','cdimais','pre']},
+  outro:{l:'Outro',c:'Renda fixa',ir:1,g:'',idx:['cdi','cdimais','pre','ipca','selic','fixo']}
+};
+const RF_IDX={
+  cdi:{l:'% do CDI',tl:'Quanto do CDI (%)',ph:'100',def:'100'},
+  cdimais:{l:'CDI + taxa',tl:'Taxa acima do CDI (% ao ano)',ph:'1,5',def:''},
+  pre:{l:'Prefixado',tl:'Taxa (% ao ano)',ph:'13,5',def:''},
+  ipca:{l:'IPCA + taxa',tl:'Taxa acima da inflação (% ao ano)',ph:'7,2',def:''},
+  selic:{l:'Selic',tl:'Taxa acima da Selic (% ao ano)',ph:'0',def:'0'},
+  poup:{l:'Regra da poupança',tl:'',def:''},
+  fixo:{l:'Eu atualizo o saldo',tl:'',def:''}
+};
+const RF_DICA={
+  caixinha:'Rende só em dia útil, de segunda a sexta e fora dos feriados. Tem IR pela tabela regressiva e IOF se resgatar em menos de 30 dias.',
+  cdb:'Rende só em dia útil. IR pela tabela regressiva (22,5% até 180 dias, 15% depois de 2 anos) e IOF nos primeiros 30 dias.',
+  lci:'Isenta de IR. Só rende em dia útil e normalmente só pode ser resgatada no vencimento (mínimo de 6 meses).',
+  lca:'Isenta de IR. Só rende em dia útil e normalmente só pode ser resgatada no vencimento (mínimo de 6 meses).',
+  tsel:'Rende todo dia útil pela Selic, com resgate a qualquer momento. IR regressivo e taxa da B3 de 0,20% ao ano só sobre o que passar de R$ 10 mil.',
+  tpre:'Taxa travada até o vencimento. Se vender antes, o preço de mercado pode ser maior ou menor que o valor mostrado aqui.',
+  tipca:'Rende a inflação mais a taxa. Se vender antes do vencimento, o preço de mercado pode variar bastante.',
+  poup:'Rende uma vez por mês, no dia do aniversário do depósito. Hoje paga 0,5% ao mês + TR. Isenta de IR.',
+  lc:'Rende só em dia útil, IR regressivo e cobertura do FGC.',
+  deb:'Sem FGC: o risco é da empresa. IR pela tabela regressiva.',
+  debinc:'Isenta de IR, mas sem FGC: o risco é da empresa.',
+  cri:'Isento de IR, mas sem FGC.',cra:'Isento de IR, mas sem FGC.',
+  outro:'Escolha como ele rende. Se não souber, use "Eu atualizo o saldo".'
+};
+const IR_RF=d=>d<=180?22.5:d<=360?20:d<=720?17.5:15;
+const IOF_T=[96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3,0];
+function rfProdOf(f){
+  if(f.prod&&RF_PROD[f.prod])return f.prod;
+  const n=((f.nome||'')+' '+(f.ticker||'')).toLowerCase();
+  return /caixinha|cofrinho|porquinho|conta remunerada/.test(n)?'caixinha':/\blci\b/.test(n)?'lci':/\blca\b/.test(n)?'lca':/tesouro\s*(selic|reserva)/.test(n)?'tsel':/tesouro\s*(pre|pré)/.test(n)?'tpre':/tesouro\s*ipca/.test(n)?'tipca':/poupan/.test(n)?'poup':/\bcdb\b|\brdb\b/.test(n)?'cdb':/\bcri\b/.test(n)?'cri':/\bcra\b/.test(n)?'cra':/deb[eê]nture/.test(n)?'deb':'outro';
+}
+function rfIdxOf(f){return f.idx||'fixo';}
+function rfTaxaOf(f){return f.idx==='cdi'?(+f.pctCdi||100):(+f.taxa||0);}
+function rfRotulo(f){const i=rfIdxOf(f),t=rfTaxaOf(f),n=x=>num(x).replace(/,00$/,'').replace(/(,\d)0$/,'$1');
+  return i==='cdi'?n(t)+'% do CDI':i==='cdimais'?'CDI + '+n(t)+'% a.a.':i==='pre'?n(t)+'% a.a.':i==='ipca'?'IPCA + '+n(t)+'% a.a.':i==='selic'?(t?'Selic + '+n(t)+'%':'100% da Selic'):i==='poup'?'poupança':'saldo atualizado por você';}
+/* aportes: [{v: valor que está rendendo desde d, d: data, p: quanto disso é dinheiro seu (base do IR), ir: data para contar o prazo do IR}] */
+function rfAportes(f){
+  if(Array.isArray(f.ap)&&f.ap.length)return f.ap;
+  if(f.cdiBase&&f.cdiBase.d){const p=f.pago>0?Math.min(+f.pago,+f.cdiBase.v||0):(+f.cdiBase.v||0);return [{v:+f.cdiBase.v||0,d:f.cdiBase.d,p,ir:f.aplicEm&&f.aplicEm<f.cdiBase.d?f.aplicEm:f.cdiBase.d}];}
+  return [];
+}
+const diasEntre=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
+const isoMais=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+function duMes(ym){let n=0;const d=new Date(ym+'-01T12:00:00'),m=d.getMonth();while(d.getMonth()===m){const x=d.toISOString().slice(0,10);if(diaUtil(x))n++;d.setDate(d.getDate()+1);}return n||21;}
+/* aniversário k da poupança a partir do dia d0 */
+function poupAnivK(d0,k){const [y,m,dd]=d0.split('-').map(Number);const base=dd>28?new Date(y,m,1,12):new Date(y,m-1,dd,12);const dt=new Date(base.getFullYear(),base.getMonth()+k,base.getDate(),12);return dt.toISOString().slice(0,10);}
+function poupTaxaMes(c,ini){
+  const meta=+c.meta||13.75,tr=(()=>{const ks=Object.keys(c.tr||{}).filter(k=>k<=ini).sort();return ks.length?c.tr[ks[ks.length-1]]:(Object.values(c.tr||{}).pop()||0);})();
+  const base=meta>8.5?0.5:(Math.pow(1+meta*0.7/100,1/12)-1)*100;return (base+(+tr||0))/100;
+}
+/* quanto um valor v aplicado em d0 vale em 'ate' (exclusivo). est = usou taxa estimada em algum dia */
+function rfCresce(v,d0,idx,taxa,ate,c){
+  ate=ate||hojeISO();c=c||cdiCache();if(!(v>0)||!d0||d0>=ate||idx==='fixo')return {v:+v||0,est:false};
+  let est=false;
+  if(idx==='cdi'||idx==='cdimais'||idx==='selic'){
+    const S0=idx==='selic'?(c.sel||{}):c.s,dias=Object.keys(S0).sort(),ult=dias[dias.length-1]||'',tx=ult?S0[ult]:0;
+    const k=idx==='cdi'?taxa/100:1,sp=idx==='cdi'?1:Math.pow(1+taxa/100,1/252);
+    dias.forEach(d=>{if(d>=d0&&d<ate)v*=(1+S0[d]/100*k)*sp;});
+    if(tx){let d=ult&&ult>=d0?isoMais(ult,1):d0;let n=0;while(d<ate&&n<400){if(diaUtil(d)&&(!ult||d>ult)){v*=(1+tx/100*k)*sp;est=true;}d=isoMais(d,1);n++;}}
+    else est=true;
+  }else if(idx==='pre'){
+    const f1=Math.pow(1+taxa/100,1/252);let d=d0,n=0;while(d<ate&&n<20000){if(diaUtil(d))v*=f1;d=isoMais(d,1);n++;}
+  }else if(idx==='ipca'){
+    const I=c.ipca||{},ks=Object.keys(I).sort(),ultI=ks.length?I[ks[ks.length-1]]:0.4,f1=Math.pow(1+taxa/100,1/252),dm={};
+    let d=d0,n=0;while(d<ate&&n<20000){if(diaUtil(d)){const ym=d.slice(0,7);if(!dm[ym])dm[ym]=duMes(ym);let im=I[ym];if(im==null){im=ultI;est=true;}v*=Math.pow(1+im/100,1/dm[ym])*f1;}d=isoMais(d,1);n++;}
+  }else if(idx==='poup'){
+    for(let k=1;k<600;k++){const an=poupAnivK(d0,k);if(an>ate)break;v*=1+poupTaxaMes(c,poupAnivK(d0,k-1));}
+  }
+  return {v,est};
+}
+/* posição de hoje: bruto, imposto, IOF, taxa B3 e líquido, somando aporte por aporte */
+function rfPosicao(f,c){
+  c=c||cdiCache();const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),tx=rfTaxaOf(f),hj=hojeISO(),A=rfAportes(f);
+  if(idx==='fixo'||!A.length||f.pluggyInv&&!f.manual){
+    const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
+    if(!f.aplicEm||!f.pago)return {bruto:c2(posi),liq:null,ir:0,iof:0,cust:0,aliq:null,est:false,itens:[]};
+    const dias=Math.max(1,diasEntre(f.aplicEm,hj)),iof=P.iof!==0&&dias<30?ganho*IOF_T[dias-1]/100:0,ir=P.ir?(ganho-iof)*IR_RF(dias)/100:0;
+    return {bruto:c2(posi),liq:c2(posi-iof-ir),ir:c2(ir),iof:c2(iof),cust:0,aliq:P.ir?IR_RF(dias):0,est:false,dias,itens:[]};
+  }
+  let bruto=0,ir=0,iof=0,cust=0,est=false,minDias=1e9;const itens=[];
+  A.forEach(a=>{const r=rfCresce(a.v,a.d,idx,tx,hj,c);est=est||r.est;const g=Math.max(0,r.v-(a.p!=null?a.p:a.v));
+    const dias=Math.max(0,diasEntre(a.ir||a.d,hj)),di=Math.max(1,dias);minDias=Math.min(minDias,dias);
+    const io=P.iof!==0&&di<30?g*IOF_T[di-1]/100:0,i=P.ir?(g-io)*IR_RF(di)/100:0,cu=P.cust?r.v*0.002*diasEntre(a.d,hj)/365:0;
+    bruto+=r.v;ir+=i;iof+=io;cust+=cu;itens.push({v:r.v,g,dias,a});});
+  if(P.isen&&cust>0){const tot=S.fiis.filter(x=>tipoOf(x)==='rf'&&rfProdOf(x)==='tsel').reduce((s,x)=>s+x.preco*x.cotas,0)||bruto;cust*=Math.max(0,tot-P.isen)/Math.max(tot,1);}
+  return {bruto:c2(bruto),ir:c2(ir),iof:c2(iof),cust:c2(cust),liq:c2(bruto-ir-iof-cust),aliq:P.ir?IR_RF(Math.max(1,minDias)):0,est,dias:minDias,itens};
+}
+/* taxa ao ano equivalente, para projetar o mês e o vencimento */
+function rfAnual(f,c){c=c||cdiCache();const idx=rfIdxOf(f),tx=rfTaxaOf(f);
+  const ult=o=>{const k=Object.keys(o||{}).sort().pop();return k?o[k]:0;};
+  if(idx==='cdi')return (Math.pow(1+ult(c.s)/100*tx/100,252)-1)*100;
+  if(idx==='cdimais')return ((Math.pow(1+ult(c.s)/100,252))*(1+tx/100)-1)*100;
+  if(idx==='selic')return ((Math.pow(1+ult(c.sel||{})/100,252))*(1+tx/100)-1)*100;
+  if(idx==='pre')return tx;
+  if(idx==='ipca'){const I=c.ipca||{},ks=Object.keys(I).sort().slice(-12);const a12=ks.length?ks.reduce((p,k)=>p*(1+I[k]/100),1)-1:0.045;return ((1+a12)*(1+tx/100)-1)*100;}
+  if(idx==='poup')return (Math.pow(1+poupTaxaMes(c,hojeISO()),12)-1)*100;
+  return 0;
+}
+function rfProxDiaUtil(iso){let d=isoMais(iso,1),n=0;while(!diaUtil(d)&&n<15){d=isoMais(d,1);n++;}return d;}
+const DSEM=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+function rfStatusHoje(f){
+  const idx=rfIdxOf(f),hj=hojeISO();if(idx==='fixo')return '';
+  if(idx==='poup'){const A=rfAportes(f);if(!A.length)return '';let prox='';A.forEach(a=>{for(let k=1;k<600;k++){const x=poupAnivK(a.d,k);if(x>=hj){if(!prox||x<prox)prox=x;break;}}});
+    return prox===hj?'rende hoje (aniversário)':prox?'próximo rendimento em '+fmtData(prox).slice(0,5):'';}
+  if(diaUtil(hj))return 'rende hoje';
+  const dw=new Date(hj+'T12:00:00').getDay(),p=rfProxDiaUtil(hj),pw=new Date(p+'T12:00:00').getDay();
+  return (dw===0||dw===6?'hoje é '+DSEM[dw]:'hoje é feriado')+', não rende. Volta '+(diasEntre(hj,p)<=6?(pw===1?'na segunda':'na '+DSEM[pw]):'em '+fmtData(p).slice(0,5));
+}
+function rfRecalc(c){
+  c=c||cdiCache();let mud=false;
+  S.fiis.forEach(f=>{
+    if(tipoOf(f)!=='rf')return;
+    if(f.idx==='cdi'&&f.cdiBase&&!f.ap){f.ap=rfAportes(f);mud=true;}
+    if(!f.prod){f.prod=rfProdOf(f);mud=true;}
+    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length||(f.pluggyInv&&!f.manual))return;
+    const P=rfPosicao(f,c);
+    if(f.cotas!==1){f.cotas=1;mud=true;}
+    if(P.bruto!==f.preco){f.preco=P.bruto;mud=true;}
+    const pg=c2(f.ap.reduce((s,a)=>s+(a.p!=null?a.p:a.v),0));if(pg!==f.pago){f.pago=pg;mud=true;}
+    f.cdiEst=P.est?'1':'';
+  });
+  const dias=Object.keys(c.s||{}).sort();if(dias.length){CDI.ult=dias[dias.length-1];CDI.taxa=c.s[CDI.ult];}
+  return mud;
+}
 function aplicaCDI(){
   if(S.fiis&&S.fiis.length&&migraCaixinhas())salvar();
-  const c=cdiCache(),dias=Object.keys(c.s).sort();let mud=false;
-  if(dias.length){CDI.ult=dias[dias.length-1];CDI.taxa=c.s[CDI.ult];}
-  S.fiis.forEach(f=>{
-    if(tipoOf(f)!=='rf'||f.idx!=='cdi'||!f.cdiBase)return;
-    const k=(f.pctCdi||100)/100;let v=+f.cdiBase.v||0,n=0;
-    dias.forEach(d=>{if(d>=f.cdiBase.d){v*=1+c.s[d]/100*k;n++;}});
-    const est=cdiPendentes(CDI.ult).filter(d=>d>=f.cdiBase.d);est.forEach(()=>{v*=1+CDI.taxa/100*k;});
-    f.cdiEst=est.length?est[est.length-1]:'';
-    const nv=Math.round(v*100)/100;
-    if(f.cotas!==1){f.cotas=1;mud=true;}
-    if(nv!==f.preco){f.preco=nv;mud=true;}
-    f.cdiAte=CDI.ult;
-  });
-  return mud;
+  return rfRecalc();
+}
+async function bcbSerie(cod,ini,fim){
+  const br=x=>pad(x.getDate())+'/'+pad(x.getMonth()+1)+'/'+x.getFullYear();
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),10000);
+  try{const r=await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.'+cod+'/dados?formato=json&dataInicial='+br(ini)+'&dataFinal='+br(fim||new Date()),{signal:ctl.signal});
+    if(!r.ok)throw new Error('http '+r.status);const j=await r.json();
+    return j.map(x=>{const [d,m,y]=String(x.data).split('/');return [y+'-'+m+'-'+d,parseFloat(x.valor)];}).filter(x=>x[0].length===10&&isFinite(x[1]));}
+  finally{clearTimeout(to);}
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&f.idx==='cdi'&&f.cdiBase),mCdi=(S.metas||[]).some(m=>m.cdi);if(!rfs.length&&!mCdi)return;
-  const c=cdiCache(),hj=hojeISO();
-  const ini=rfs.length?rfs.map(f=>f.cdiBase.d).sort()[0]:isoDe(new Date(Date.now()-12*864e5)); // v10.59: metas com CDI só precisam da taxa recente
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi);
+  if(!rfs.length&&!mCdi)return;
+  const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');
+  const c=cdiCache();c.sel=c.sel||{};c.ipca=c.ipca||{};c.tr=c.tr||{};c.emX=c.emX||{};const hj=hojeISO();
+  const iniDe=ks=>{const ds=rfs.filter(f=>ks.includes(rfIdxOf(f))).flatMap(f=>rfAportes(f).map(a=>a.d)).sort();return ds[0]||isoDe(new Date(Date.now()-12*864e5));};
   const ultS=Object.keys(c.s).sort().pop()||'';
-  const precisa=forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini)||(cdiPendentes(ultS).length>0&&Date.now()-(c.t||0)>3600e3);
-  if(precisa&&navigator.onLine){
-    const di=new Date(ini+'T12:00:00');di.setDate(di.getDate()-7);
-    const br=x=>pad(x.getDate())+'/'+pad(x.getMonth()+1)+'/'+x.getFullYear();
-    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),10000);
-    try{
-      const r=await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial='+br(di)+'&dataFinal='+br(new Date()),{signal:ctl.signal});
-      if(!r.ok)throw new Error('http '+r.status);
-      const j=await r.json();
-      j.forEach(x=>{const [d,m,y]=String(x.data).split('/');const t=parseFloat(x.valor);if(y&&t>=0&&t<1)c.s[y+'-'+m+'-'+d]=t;});
-      c.em=hj;c.t=Date.now();
-      // guarda só ~2 anos de histórico
-      const lim=new Date();lim.setFullYear(lim.getFullYear()-2);const li=lim.toISOString().slice(0,10);
-      Object.keys(c.s).forEach(d=>{if(d<li&&d<ini)delete c.s[d];});
-      localStorage.setItem(CDI_KEY,JSON.stringify(c));CDI.st='ok';
-    }catch(e){CDI.st='erro';if(TAB==='fii')setTimeout(render,0);}finally{clearTimeout(to);}
+  let ok=true;const pede=[];
+  if(usa.has('cdi')||usa.has('cdimais')){const ini=iniDe(['cdi','cdimais']);
+    if(forca||c.em!==hj||!Object.keys(c.s).some(d=>d<=ini)||(cdiPendentes(ultS).length>0&&Date.now()-(c.t||0)>3600e3))pede.push(['s',12,ini]);}
+  if(usa.has('selic')){const ini=iniDe(['selic']);if(forca||c.emX.sel!==hj||!Object.keys(c.sel).some(d=>d<=ini))pede.push(['sel',11,ini]);}
+  if(usa.has('ipca')){const ini=iniDe(['ipca']).slice(0,7)+'-01';if(forca||c.emX.ipca!==hj||!Object.keys(c.ipca).some(d=>d<=ini.slice(0,7)))pede.push(['ipca',433,isoMais(ini,-400)]);}
+  if(usa.has('poup')){if(forca||c.emX.tr!==hj)pede.push(['tr',226,iniDe(['poup'])],['meta',432,isoMais(hj,-60)]);}
+  if(pede.length&&navigator.onLine){
+    await Promise.all(pede.map(async([k,cod,ini])=>{
+      try{const di=new Date(ini+'T12:00:00');di.setDate(di.getDate()-7);const L=await bcbSerie(cod,di);
+        if(k==='s'){L.forEach(([d,v])=>{if(v>=0&&v<1)c.s[d]=v;});c.em=hj;c.t=Date.now();}
+        else if(k==='sel'){L.forEach(([d,v])=>{if(v>=0&&v<1)c.sel[d]=v;});c.emX.sel=hj;}
+        else if(k==='ipca'){L.forEach(([d,v])=>{if(v>-5&&v<10)c.ipca[d.slice(0,7)]=v;});c.emX.ipca=hj;}
+        else if(k==='tr'){L.forEach(([d,v])=>{if(v>=0&&v<3)c.tr[d]=v;});c.emX.tr=hj;}
+        else if(k==='meta'){const u=L[L.length-1];if(u&&u[1]>0)c.meta=u[1];}
+      }catch(e){ok=false;}
+    }));
+    const lim=new Date();lim.setFullYear(lim.getFullYear()-6);const li=lim.toISOString().slice(0,10);
+    const mins=rfs.flatMap(f=>rfAportes(f).map(a=>a.d)).sort()[0]||hj;
+    ['s','sel','tr'].forEach(k=>Object.keys(c[k]||{}).forEach(d=>{if(d<li&&d<mins)delete c[k][d];}));
+    try{localStorage.setItem(CDI_KEY,JSON.stringify(c));}catch(e){}
+    CDI.st=ok?'ok':'erro';if(!ok&&TAB==='fii')setTimeout(render,0);
   }
   const ant=CDI.ult;
-  if(aplicaCDI()){salvar();if(TAB==='fii'||TAB==='dash'||TAB==='pat')render();}
-  else if(TAB==='fii'&&(forca||precisa||ant!==CDI.ult))render();
+  if(rfRecalc(c)){salvar();if(TAB==='fii'||TAB==='dash'||TAB==='pat'||TAB==='inicio')render();}
+  else if(TAB==='fii'&&(forca||pede.length||ant!==CDI.ult))render();
 }
-const IR_RF=d=>d<=180?22.5:d<=360?20:d<=720?17.5:15;
-const IOF_T=[96,93,90,86,83,80,76,73,70,66,63,60,56,53,50,46,43,40,36,33,30,26,23,20,16,13,10,6,3,0];
-function liquidoRF(f){
-  const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
-  if(!f.aplicEm||!f.pago)return null;
-  const dias=Math.max(1,Math.round((new Date(hojeISO()+'T12:00:00')-new Date(f.aplicEm+'T12:00:00'))/864e5));
-  const iof=dias<30?ganho*IOF_T[dias-1]/100:0,ir=(ganho-iof)*IR_RF(dias)/100;
-  return {dias,aliq:IR_RF(dias),iof:c2(iof),ir:c2(ir),liq:c2(posi-iof-ir)};
+function liquidoRF(f){const P=rfPosicao(f);return P.liq==null?null:{dias:P.dias,aliq:P.aliq,iof:P.iof,ir:P.ir,liq:P.liq};}
+/* formulário */
+function rfForm(f){
+  const prod0=f?rfProdOf(f):'caixinha',idx0=f?rfIdxOf(f):RF_PROD[prod0].idx[0],A=f?rfAportes(f):[],um=A.length<=1;
+  const tx0=f?(idx0==='cdi'?f.pctCdi:f.taxa):'';
+  const v0=f?(A.length===1?A[0].p!=null?A[0].p:A[0].v:0):0,d0=f&&A.length===1?(A[0].ir||A[0].d):'';
+  form(f?'Editar renda fixa':'Nova renda fixa',[
+    {name:'prod',label:'Tipo de investimento',type:'select',value:prod0,options:Object.entries(RF_PROD).map(([k,p])=>({v:k,t:p.l}))},
+    {name:'nome',label:'Nome (ex: Caixinha Viagem, CDB Inter)',value:f?f.nome:'',required:true},
+    {name:'idx',label:'Como rende',type:'select',value:idx0,options:Object.entries(RF_IDX).map(([k,x])=>({v:k,t:x.l}))},
+    {name:'taxa',label:RF_IDX[idx0].tl||'Taxa',value:tx0!==''&&tx0!=null?num(tx0).replace(/,00$/,''):RF_IDX[idx0].def,inputmode:'decimal',placeholder:RF_IDX[idx0].ph||''},
+    {name:'aplic',label:'Valor aplicado (R$)',value:um&&v0?num(v0):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'data',label:'Data da aplicação',type:'date',value:d0||hojeISO(),max:hojeISO()},
+    {name:'saldo',label:'Saldo de hoje (R$)',value:f&&idx0==='fixo'?num(f.preco*f.cotas):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'pago',label:'Quanto você aplicou no total (R$, opcional)',value:f&&idx0==='fixo'&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'liq',label:'Resgate',type:'select',value:f?(f.venc&&!f.semVenc?'venc':'diaria'):(RF_PROD[prod0].liq||'diaria'),options:[{v:'diaria',t:'a qualquer momento (liquidez diária)'},{v:'venc',t:'só no vencimento'}]},
+    {name:'venc',label:'Vencimento',type:'date',value:f&&f.venc||''}
+  ],v=>{
+    const P=RF_PROD[v.prod]||RF_PROD.outro,idx=P.idx.includes(v.idx)?v.idx:P.idx[0],nome=String(v.nome||'').trim(),tx=parseBR(v.taxa),apl=parseBR(v.aplic),hj=hojeISO();
+    if(!nome)return 'Informe o nome.';
+    if(idx==='cdi'&&!(tx>0&&tx<=300))return 'Informe quanto do CDI rende (ex: 100).';
+    if(['cdimais','pre','ipca'].includes(idx)&&!(tx>-5&&tx<100))return 'Informe a taxa ao ano.';
+    if(idx==='selic'&&!(tx>-5&&tx<20)&&String(v.taxa).trim())return 'Informe a taxa acima da Selic (geralmente 0).';
+    const venc=v.liq==='venc'||P.mm||P.car?(ISO_RE.test(v.venc)?v.venc:''):'';
+    if(v.liq==='venc'&&!venc)return 'Informe a data de vencimento.';
+    const obj={tipo:'rf',prod:v.prod,nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',dpc:0,diaPag:0,
+      idx:idx==='fixo'?'':idx,pctCdi:idx==='cdi'?tx:0,taxa:idx==='cdi'?0:(isFinite(tx)?tx:0),semVenc:!venc,venc,cdiBase:null};
+    if(idx==='fixo'){
+      const sd=parseBR(v.saldo);if(!(sd>=0))return 'Informe o saldo de hoje.';
+      const pg=parseBR(v.pago);Object.assign(obj,{cotas:1,preco:c2(sd),pago:pg>0?c2(pg):0,ap:[],aplicEm:ISO_RE.test(v.data)?v.data:''});
+    }else if(um||!f){
+      if(!(apl>0))return 'Informe o valor aplicado.';
+      if(!ISO_RE.test(v.data)||v.data>hj)return 'Informe a data da aplicação (hoje ou antes).';
+      obj.ap=[{v:c2(apl),d:v.data,p:c2(apl),ir:v.data}];obj.aplicEm=v.data;obj.cotas=1;obj.pago=c2(apl);
+      obj.preco=c2(rfCresce(apl,v.data,idx,tx).v);
+    }
+    if(f){Object.assign(f,obj);f.manual=true;f.manualEm=hj;}else S.fiis.push(Object.assign({id:uid(),ops:[],realizado:0,proventos:0},obj));
+    rfRecalc();salvar();render();toast(idx==='fixo'?'Renda fixa salva':'Salvo. Rende '+rfRotulo(obj)+'.');
+    if(idx!=='fixo')atualizaCDI(true);
+  });
+  const box=$('#modal'),Q=n=>box.querySelector('[name="'+n+'"]'),L=n=>Q(n)&&Q(n).closest('label');
+  const dica=document.createElement('p');dica.className='rfDica';L('prod').after(dica);
+  if(f&&!um){const p=document.createElement('p');p.className='rfDica';p.textContent='Este investimento tem '+A.length+' aportes. Para mudar valores, use aportar ou resgatar no cartão.';L('data').after(p);}
+  const sync=ev=>{
+    const prod=Q('prod').value,P=RF_PROD[prod]||RF_PROD.outro,sel=Q('idx');
+    [...sel.options].forEach(o=>{o.hidden=!P.idx.includes(o.value);o.disabled=!P.idx.includes(o.value);});
+    if(!P.idx.includes(sel.value))sel.value=P.idx[0];
+    const idx=sel.value,X=RF_IDX[idx],tl=L('taxa');
+    tl.style.display=X.tl?'':'none';if(X.tl){tl.firstChild.nodeValue=X.tl;Q('taxa').placeholder=X.ph||'';if(ev&&ev.target===sel||ev&&ev.target===Q('prod'))Q('taxa').value=X.def||'';}
+    L('idx').style.display=P.idx.length>1?'':'none';
+    const fixo=idx==='fixo';
+    L('aplic').style.display=fixo||!um?'none':'';L('data').style.display=fixo||!um?'none':'';L('data').firstChild.nodeValue=fixo?'Data da aplicação':'Data da aplicação';
+    L('saldo').style.display=fixo?'':'none';L('pago').style.display=fixo?'':'none';
+    const lq=Q('liq');if(ev&&ev.target===Q('prod')&&P.liq)lq.value=P.liq;if(ev&&ev.target===Q('prod')&&(P.car||P.mm))lq.value='venc';
+    L('liq').style.display=P.liq?'none':'';L('venc').style.display=lq.value==='venc'||P.mm?'':'none';
+    dica.textContent=RF_DICA[prod]||'';
+  };
+  ['prod','idx','liq'].forEach(n=>Q(n).addEventListener('change',sync));sync();
 }
+function rfMovForm(id,tipo){
+  const f=S.fiis.find(x=>x.id===id);if(!f)return;const P=rfPosicao(f),res=tipo==='res';
+  form(res?'Resgatar de '+f.nome:'Aportar em '+f.nome,[
+    {name:'valor',label:res?'Valor do resgate (R$)':'Valor do aporte (R$)',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'data',label:'Data',type:'date',value:hojeISO(),max:hojeISO()}
+  ],v=>{
+    const val=parseBR(v.valor),d=ISO_RE.test(v.data)&&v.data<=hojeISO()?v.data:hojeISO();
+    if(!(val>0))return 'Informe o valor.';
+    f.ap=rfAportes(f).map(a=>Object.assign({},a));
+    if(!res){f.ap.push({v:c2(val),d,p:c2(val),ir:d});}
+    else{
+      if(val>P.bruto+0.005)return 'O resgate passa do saldo bruto ('+brl(P.bruto)+').';
+      let falta=val;const idx=rfIdxOf(f),tx=rfTaxaOf(f);f.ap.sort((a,b)=>(a.ir||a.d)<(b.ir||b.d)?-1:1);
+      f.ap.forEach(a=>{if(falta<=0)return;const g=rfCresce(a.v,a.d,idx,tx,d).v;if(g<=0)return;const tira=Math.min(falta,g),fr=1-tira/g;a.v=c2(a.v*fr);a.p=c2((a.p!=null?a.p:a.v)*fr);falta-=tira;});
+      f.ap=f.ap.filter(a=>a.v>0.004);
+    }
+    f.manual=true;f.manualEm=hojeISO();rfRecalc();salvar();render();toast(res?'Resgate registrado':'Aporte registrado');
+  });
+  if(res&&P.liq!=null){const p=document.createElement('p');p.className='rfDica';p.textContent='Saldo bruto '+brl(P.bruto)+'. Se resgatar tudo hoje, cai na conta cerca de '+brl(P.liq)+(P.ir?' (IR '+brl(P.ir)+')':'')+(P.iof?' (IOF '+brl(P.iof)+')':'')+'.';$('#modal [name="valor"]').closest('label').after(p);}
+}
+/* cartão da renda fixa na carteira */
+function rfCardInfo(f,posi){
+  const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),X=rfPosicao(f),meta=[];let info='';
+  if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
+  meta.push(['rende',rfRotulo(f)]);
+  if(idx!=='fixo'&&rfAportes(f).length&&!(f.pluggyInv&&!f.manual)){
+    const an=rfAnual(f),mes=posi*(Math.pow(1+an/100,1/12)-1);
+    if(mes>0)meta.push(['por mês','≈ '+brl(mes*(1-(P.ir?(X.aliq||15)/100:0)))+(P.ir?' líq.':'')]);
+    if(X.liq!=null&&X.liq<posi-0.004)meta.push(['se resgatar hoje',brl(X.liq)]);
+    if(f.venc&&!f.semVenc){const dv=diasEntre(hojeISO(),f.venc);if(dv>0){
+      const fim=rfAportes(f).reduce((s,a)=>s+rfCresce(a.v,a.d,idx,rfTaxaOf(f),hojeISO()).v,0)*Math.pow(1+an/100,dv/365);
+      const g=fim-f.pago,irv=P.ir?Math.max(0,g)*IR_RF(diasEntre(rfAportes(f)[0].ir||rfAportes(f)[0].d,f.venc))/100:0;
+      meta.push(['no vencimento','≈ '+brl(fim-irv)+(P.ir?' líq.':'')]);}}
+  }
+  meta.push(['resgate',f.venc&&!f.semVenc?(diasEntre(hojeISO(),f.venc)<=0?'venceu '+fmtData(f.venc):'vence '+fmtData(f.venc)):'diário']);
+  const chips=[];
+  const st=rfStatusHoje(f);if(st)chips.push(['dia',st,/não rende/.test(st)?'off':'on']);
+  chips.push(['ir',P.ir?(X.aliq?'IR '+num(X.aliq).replace(/,00$/,'').replace(/(,\d)0$/,'$1')+'%'+(X.dias!=null&&X.aliq>15?' até '+fmtData(isoMais(hojeISO(),({22.5:180,20:360,17.5:720})[X.aliq]-X.dias+1)).slice(0,5):''):'IR regressivo'):'isento de IR','']);
+  if(P.cust)chips.push(['b3',P.isen?'taxa B3 só acima de R$ 10 mil':'taxa B3 0,20% a.a.','']);
+  chips.push(['g',P.g==='fgc'?'FGC até R$ 250 mil':P.g==='tn'?'garantia do Tesouro':'sem FGC',P.g?'':'warn']);
+  if(idx==='fixo')info=(f.manual?'saldo atualizado por você':f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para o app calcular o rendimento';
+  else if(f.pluggyInv&&!f.manual)info=f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'saldo do banco';
+  else{const c=cdiCache(),k=Object.keys(idx==='selic'?(c.sel||{}):c.s||{}).sort().pop();
+    info=(['cdi','cdimais'].includes(idx)&&CDI.taxa?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a.':idx==='selic'&&k?'Selic '+num(cdiAnual(c.sel[k]))+'% a.a.':idx==='poup'?'poupança: '+num(poupTaxaMes(c,hojeISO())*100)+'% ao mês':idx==='ipca'?'inflação dos últimos 12 meses no cálculo':'taxa travada')+(X.est?' · últimos dias estimados até o Banco Central publicar':'')+(CDI.st==='erro'?' · sem conexão com o Banco Central':'')+(P.mm?' · valor na curva, o preço de mercado varia':'');}
+  return {meta,info,chips,tag:P.c};
+}
+
 function fiiForm(id,tipoPre){
   const f=id?S.fiis.find(x=>x.id===id):null;
   if((f&&tipoOf(f)==='rf')||(!f&&tipoPre==='rf'))return rfForm(f);
-  form(f?'Editar fundo':'Novo fundo',[
+  form(f?'Editar ativo':'Novo ativo',[
     {name:'tipo',label:'Tipo de ativo',type:'select',value:f?tipoOf(f):(tipoPre||'fii'),options:TIPOS.slice(1).map(x=>({v:x.k,t:x.l}))},
     {name:'ticker',label:'Ticker (ex: HGLG11)',value:f?f.ticker:'',required:true,placeholder:'HGLG11'},
     {name:'pago',label:'Valor total investido (R$)',value:f&&f.pago?num(f.pago):'',inputmode:'decimal',placeholder:'0,00'},
@@ -5717,6 +5952,7 @@ function fiiForm(id,tipoPre){
   box.addEventListener('click',e=>{const b=e.target.closest('.acItem');if(!b)return;const it=achaItem(b.dataset.t);if(it)pick(it);});
   inpT.addEventListener('input',lista);
   inpT.addEventListener('change',()=>{const it=achaItem(inpT.value);if(it&&(selT.value!=='cripto'||!(cgCache().p[it.id]>0)))pick(it);});
+  selT.addEventListener('change',()=>{if(selT.value==='rf'&&!f){closeModal();setTimeout(()=>rfForm(null),30);}});
   selT.addEventListener('change',()=>{precoOff=false;inpT.value='';nomeEl.textContent='';box.innerHTML='';ajusta();});
   if(f)nomeEl.textContent=f.nome||'';
   ajusta();
@@ -5917,11 +6153,13 @@ const ACT={
   'novo-fii':()=>fiiForm(),
   'edit-fii':id=>fiiForm(id),
   'hist-fii':id=>historico(id),
+  'rf-ap':id=>rfMovForm(id,'ap'),
+  'rf-res':id=>rfMovForm(id,'res'),
   'op-compra':id=>opForm(id,'compra'),
   'op-venda':id=>opForm(id,'venda'),
   'op-provento':id=>opForm(id,'provento'),
   'del-op':v=>{const [a,b]=String(v).split('|');delOp(a,b);},
-  'del-fii':id=>confirma({titulo:'Remover fundo?',texto:'Ele sai da sua carteira.',ok:'Remover',perigo:true},()=>{S.fiis=S.fiis.filter(x=>x.id!==id);salvar();render();toast('Fundo removido');}),
+  'del-fii':id=>confirma({titulo:'Remover da carteira?',texto:'O investimento sai da sua carteira.',ok:'Remover',perigo:true},()=>{S.fiis=S.fiis.filter(x=>x.id!==id);salvar();render();toast('Removido da carteira');}),
   'meta-fii':()=>form('Meta de cotas',[{name:'meta',label:'Quantas cotas você quer acumular?',inputmode:'numeric',value:S.metaFii||100}],v=>{
     const n=parseBR(v.meta);
     if(!(n>0))return 'Informe um número maior que zero.';
@@ -6109,7 +6347,7 @@ async function confereVersao(){
     const m=h.match(/const GV_BUILD='([^']+)'/);if(!m||m[1]===GV_BUILD)return;
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)reg.update().catch(()=>{});
     const ocupado=$('#modal').classList.contains('on')||$('#lock').classList.contains('on')||document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-    if(!ocupado)location.reload();else toast('Nova versão do GranaViva. Ela entra quando você fechar este formulário.');
+    if(!ocupado)location.reload();else toast('Versão nova pronta. Ela entra quando você fechar este formulário.');
   }catch(e){}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')confereVersao();});
