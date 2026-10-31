@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-X7KdBPjXJUKfErgGirIuQRQv41BAV/qDA2ZIG98k8sU=' 'sha256-T5lY7JluDApbLkFMWJSA7u/Cyrwge5BzBNhKjuKBEJ0=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-Lp7jRG425MlByObwy27fpv0Dpn+GFtXCCuHBnrcwHpU=' 'sha256-E60Buo/+SwQxZMnGWq9/oNJOfTXiT7B0SLhSwE0JAXc=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1543,6 +1543,13 @@ html.claro .rfChip.warn{color:#b45309}
 @media(max-width:380px){
   .catName b{font-size:14px}
   .rd-cat{font-size:12.5px;gap:6px}
+  /* v10.74: telas estreitas: a % vai para baixo do valor e o nome da categoria ganha espaço (antes cortava "Transpo") */
+  .rd-it{grid-template-columns:14px minmax(0,1fr) auto;grid-template-areas:"ar cat v" "ar cat p";column-gap:8px;row-gap:1px;padding:9px 0}
+  .rd-ar{grid-area:ar}.rd-cat{grid-area:cat;overflow-wrap:anywhere}.rd-v{grid-area:v;text-align:right;font-size:14px}.rd-p{grid-area:p;font-size:11.5px}
+  /* os três números de "gastos por dia": dois em cima e um embaixo, sem cortar o valor */
+  .relDia .rdStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .relDia .rdStats>.rdS:nth-child(3){grid-column:1/-1}
+  .rdS b{white-space:nowrap}
   .astTop{flex-wrap:wrap;row-gap:8px}
   .astVal{flex-basis:100%;flex-direction:row;justify-content:space-between;align-items:center}
   .astNm b{-webkit-line-clamp:3}
@@ -1633,7 +1640,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.73'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.74'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3723,7 +3730,7 @@ function abreRapido(){
 let TAB='inicio';
 const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:''};
 const MESES_NOME=()=>{const d=new Date();return MESES_LONGO[d.getMonth()]+' de '+d.getFullYear();};
-const DATA_HOJE=()=>{const d=new Date();return ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][d.getDay()]+' · '+d.getDate()+' de '+MESES_LONGO[d.getMonth()];};
+const DATA_HOJE=()=>{const d=new Date();if(innerWidth<=360)return ['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+' · '+d.getDate()+' '+MESES[d.getMonth()];return ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][d.getDay()]+' · '+d.getDate()+' de '+MESES_LONGO[d.getMonth()];}; // v10.74: curta em telas bem estreitas
 
 function applyCfg(){
   document.documentElement.classList.toggle('claro',S.cfg.tema==='claro');
