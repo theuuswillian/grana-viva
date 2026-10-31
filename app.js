@@ -143,6 +143,8 @@ function sanea(d){
     else{delete t.emp;delete t.empDir;delete t.empAnt;delete t.empAntDe;}});
   // status do lançamento: só valores conhecidos (sem status = pago)
   o.tx.forEach(t=>{if(!['pago','previsto','cancelado'].includes(t.status))delete t.status;if(t.status!=='previsto')delete t.fxAuto;});
+  /* v10.80: dia trabalhado (competência), só em receita. data inválida ou em outro tipo é descartada; backup antigo não tem e segue igual */
+  o.tx.forEach(t=>{const w=String(t.trab||'').slice(0,10);if(t.tipo==='receita'&&DATA_OK.test(w)&&dataOk(...w.split('-')))t.trab=w;else delete t.trab;});
   /* v10.45: pagamentos da fatura em lista (cada um com data e conta). formato antigo (pagoValor/pagaEm/pagoConta) vira 1 pagamento.
      pagoValor = soma; pagaEm/pagoConta espelham o último (compatibilidade com a função de alertas). */
   o.tx.forEach(t=>{
@@ -259,6 +261,7 @@ window.addEventListener('online',()=>{if(USER)agendaSync();});
 let MUDANCAS=0; // v10.45: conta salvamentos locais; download que atravessou uma edição é descartado
 function salvar(){
   if(MEMO)MEMO={};
+  try{PROJ_C=null;}catch(e){} // v10.80: mudar só a data de um previsto (mesmo número de lançamentos) também refaz o saldo dia a dia
   try{localStorage.setItem('gv-last-act',String(Date.now()));}catch(e){}
   MUDANCAS++;
   try{fotoPat();}catch(e){}
@@ -542,6 +545,48 @@ const somaC=(arr,f)=>arr.reduce((a,x)=>a+cents(f(x)),0)/100;
 const efetivo=t=>!t.status||t.status==='pago';
 function statusTx(t){if(t.status==='cancelado')return 'cancelado';if(t.status==='previsto')return t.data<hojeISO()?'atrasado':'previsto';return 'pago';}
 const ST_TX={previsto:['previsto','warn'],atrasado:['atrasado','over'],cancelado:['cancelado','mut']};
+/* ---------- v10.80: dia trabalhado (competência) separado do dia em que o dinheiro entra ----------
+   t.data continua sendo SEMPRE o dia do recebimento: saldo, previsão, planejamento, saldo dia a dia, "atrasado", alertas e banco usam só ela.
+   t.trab (opcional, receita) guarda o dia trabalhado: aparece na lista e permite ver as receitas por mês trabalhado. */
+const TRAB_CATS=['Horas extras','Salário','Freelance','Bônus/Promoções'];
+function trabCat(c){return TRAB_CATS.includes(c)||/hora|extra|salari|freela|plantao|comiss/.test(norm(c));}
+function mesesEntre(a,b){return (+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7));}
+function diaNoMes(m,dia){const u=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate();return m+'-'+pad(Math.min(Math.max(1,dia),u));}
+/* "Recebo em" sugerido pelo padrão dos recebimentos anteriores da mesma categoria (de preferência mesma descrição):
+   com dia trabalhado guardado, repete a distância (ex.: dia 5 do mês seguinte); sem ele, usa o dia do mês do último recebimento, no mês seguinte.
+   previstos sem dia trabalhado não servem de padrão (podem ser justamente os lançados no dia trabalhado). */
+function sugereReceb(trab,cat,desc,exc){
+  if(!DATA_OK.test(trab||'')||!cat)return null;
+  const k=desc?chaveRegra(desc):'';
+  const L=S.tx.filter(t=>t.id!==exc&&t.tipo==='receita'&&t.categoria===cat&&t.status!=='cancelado'&&DATA_OK.test(t.data||'')&&(t.trab||t.status!=='previsto'));
+  if(!L.length)return null;
+  const pt=t=>(t.trab?2:0)+(k&&t.descricao&&chaveRegra(t.descricao)===k?1:0);
+  L.sort((a,b)=>pt(b)-pt(a)||b.data.localeCompare(a.data));
+  const r=L[0],dia=+r.data.slice(8,10),md=r.trab?Math.max(0,mesesEntre(r.trab,r.data)):1;
+  let m=mesAdd(trab.slice(0,7),md),d=diaNoMes(m,dia);
+  if(d<=trab){m=mesAdd(m,1);d=diaNoMes(m,dia);}
+  return {data:d,ref:r,dia,md};
+}
+function sugTxt(sg){return 'dia '+sg.dia+(sg.md===0?' do mesmo mês':sg.md===1?' do mês seguinte':', '+sg.md+' meses depois')+', como '+(sg.ref.trab?'da última vez':'o último recebimento');}
+function txDatasHTML(t){return t.trab&&t.tipo==='receita'?'<span class="txDw">trabalhado</span> '+fmtDataCurta(t.trab)+' · <span class="txDw">'+(t.status==='previsto'?'recebe':'recebeu')+'</span> '+fmtDataCurta(t.data):fmtDataCurta(t.data);}
+function txDatas(t){return t.trab&&t.tipo==='receita'?'trabalhado '+fmtDataCurta(t.trab)+' · '+(t.status==='previsto'?'recebe ':'recebeu ')+fmtDataCurta(t.data):fmtDataCurta(t.data);}
+/* receitas previstas com data que já passou: talvez lançadas no dia trabalhado */
+function receitasAtrasadas(){const hj=hojeISO();return S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&t.data<hj&&!t.emp).sort((a,b)=>a.data.localeCompare(b.data));}
+function trabDicaHTML(L,extra){L=L||receitasAtrasadas();if(!L.length)return '';
+  return `<div class="trabDica${extra?' '+extra:''}"><span class="trabDicaI">${I('calendar')}</span><span class="trabDicaT"><b>Ainda não recebeu? Informe quando vai cair</b><small>${L.length===1?esc(nomeTx(L[0]).n||L[0].descricao||L[0].categoria)+' está como atrasada desde '+fmtDataCurta(L[0].data):L.length+' receitas previstas com data que já passou'}. A data lançada vira o dia trabalhado.</small></span><button type="button" class="btn2 sm" data-act="trab-lote">informar</button></div>`;}
+/* visão de competência: receitas de um mês trabalhado (dia trabalhado; sem ele, o próprio dia do recebimento), por categoria */
+function compMes(m){
+  const C={};
+  S.tx.forEach(t=>{if(t.tipo!=='receita'||t.status==='cancelado'||t.emp)return;const w=t.trab||t.data;if(!w||w.slice(0,7)!==m)return;
+    const c=C[t.categoria]||(C[t.categoria]={cat:t.categoria,tot:0,n:0,trab:0,rec:{},prev:0});
+    const v=cents(t.valor);c.tot+=v;c.n++;if(t.trab)c.trab++;const rm=t.data.slice(0,7);c.rec[rm]=(c.rec[rm]||0)+v;if(t.status==='previsto')c.prev+=v;});
+  return Object.values(C).map(c=>Object.assign(c,{tot:c.tot/100,prev:c.prev/100,rec:Object.fromEntries(Object.entries(c.rec).map(([k,v])=>[k,v/100]))})).sort((a,b)=>b.tot-a.tot);
+}
+function nomeMesMin(m){return MESES_LONGO[+m.slice(5,7)-1].toLowerCase();}
+function compRecTxt(c,m){const ks=Object.keys(c.rec).sort();const tudo=c.prev>=c.tot-0.004,nada=c.prev<0.005;const v=tudo?'recebe':nada?'recebeu':'recebe';
+  if(ks.length===1&&!tudo&&!nada)return brl(c.tot-c.prev)+' recebido · '+brl(c.prev)+' a receber em '+nomeMesMin(ks[0]);
+  if(ks.length===1)return ks[0]===m?(nada?'recebeu no mesmo mês':'recebe no mesmo mês'):v+' em '+nomeMesMin(ks[0])+(ks[0].slice(0,4)!==m.slice(0,4)?' de '+ks[0].slice(0,4):'');
+  return ks.map(k=>brl(c.rec[k])+' em '+nomeMesMin(k)).join(' · ');}
 const noPer=(d,m)=>typeof m==='string'?d.startsWith(m):(d>=m.ini&&d<=m.fim);
 /* v10.65: memória de cálculo que vive só durante um render (e o desenho que vem logo depois).
    a mesma soma pedida várias vezes na mesma tela é feita uma vez; nada fica velho porque é zerada a cada render e a cada salvar. */
@@ -768,8 +813,10 @@ function filtrados(){
   const rng=F.ini&&F.fim,cb=F.conta?'b:'+F.conta:'';
   const naConta=t=>t.tipo==='transf'?(t.de===cb||t.para===cb):contaDoLanc(t)===F.conta||(t.faturaKey&&pagsFatura(t).some(p=>p.conta===F.conta));
   const st=t=>F.st==='aberto'?(t.status==='previsto'||(t.faturaKey&&restanteFatura(t)>0)):true;
-  return S.tx.filter(t=>(rng?(t.data>=F.ini&&t.data<=F.fim):(!F.mes||t.data.startsWith(F.mes)))&&(!F.conta||naConta(t))&&(!F.st||st(t))&&(!F.cat||t.categoria===F.cat)&&(!F.tipo||t.tipo===F.tipo)&&(!F.tag||(t.tags||[]).includes(F.tag))&&(!nq||norm((t.descricao||'')+' '+t.categoria+' '+(t.sub||'')+' '+(t.tags||[]).join(' ')+' '+(t.obs||'')).includes(nq)))
-    .sort((a,b)=>b.data.localeCompare(a.data));
+  /* v10.80: "por dia trabalhado" (só em Receitas): o mês/período olha o dia trabalhado; sem ele, o dia do recebimento */
+  const cp=F.comp==='trab'&&F.tipo==='receita',dR=t=>cp&&t.trab?t.trab:t.data;
+  return S.tx.filter(t=>(rng?(dR(t)>=F.ini&&dR(t)<=F.fim):(!F.mes||dR(t).startsWith(F.mes)))&&(!F.conta||naConta(t))&&(!F.st||st(t))&&(!F.cat||t.categoria===F.cat)&&(!F.tipo||t.tipo===F.tipo)&&(!F.tag||(t.tags||[]).includes(F.tag))&&(!nq||norm((t.descricao||'')+' '+t.categoria+' '+(t.sub||'')+' '+(t.tags||[]).join(' ')+' '+(t.obs||'')).includes(nq)))
+    .sort((a,b)=>dR(b).localeCompare(dR(a))||b.data.localeCompare(a.data));
 }
 
 /* ---------- animação e gráficos (canvas puro) ---------- */
@@ -1751,7 +1798,18 @@ function viewRel(){
     <div class="card"><h4>maiores categorias · ${mesNome(b)}</h4>${top(b)}</div>
   </div>
   ${relMaiores(a)}
+  ${relComp(a)}
   </div>`;
+}
+/* v10.80: receitas por mês trabalhado (só aparece quando há dia trabalhado envolvido no mês) */
+function relComp(a){
+  const L=compMes(a).filter(c=>c.trab);
+  const de=S.tx.filter(t=>t.tipo==='receita'&&efetivo(t)&&!t.emp&&t.trab&&t.data.slice(0,7)===a&&t.trab.slice(0,7)<a);
+  if(!L.length&&!de.length)return '';
+  const deT=somaC(de,t=>t.valor);
+  return `<div class="card relComp tap" data-act="nav-rel-comp" data-id="${a}" role="button" tabindex="0" aria-label="ver receitas por dia trabalhado"><div class="hmH"><h4>por mês trabalhado · ${nomeMesMin(a)}</h4>${I('chevR','tapCh')}</div>
+    ${L.map(c=>`<div class="compR"><span class="compI" style="--cc:${corCat(c.cat)}">${I(catIcon(c.cat))}</span><span class="compT"><b>${esc(c.cat)} ${/^horas/i.test(c.cat)?'trabalhadas em '+nomeMesMin(a):'de '+nomeMesMin(a)}</b><small>${compRecTxt(c,a)}</small></span><span class="compV nw">${brl(c.tot)}</span></div>`).join('')}
+    ${de.length?`<p class="rsX">entrou em ${nomeMesMin(a)} referente a meses anteriores <b class="pos">${brl(deT)}</b></p>`:''}</div>`;
 }
 function relResumo(a,b,ra,rb){
   const pou=x=>x.rec>0?Math.round(x.sal/x.rec*100):null;
@@ -1837,12 +1895,12 @@ function txLinhasPlanilha(lista){
   const n=v=>(+v||0).toFixed(2).replace('.',',');
   const conta=t=>{const id=contaDoLanc(t);const b=S.bancos.find(x=>x.id===id);return b?b.nome:'';};
   const cart=t=>{const c=S.cartoes.find(x=>x.id===t.cartao);return c?c.nome:'';};
-  const L=[['Data','Tipo','Descrição','Categoria','Subcategoria','Valor','Status','Conta','Cartão','Parcela','Tags','Juros/multa','Desconto','Observação']];
+  const L=[['Data','Tipo','Descrição','Categoria','Subcategoria','Valor','Status','Conta','Cartão','Parcela','Tags','Juros/multa','Desconto','Observação','Dia trabalhado']];
   /* v10.78: transferência e empréstimo com o tipo, o sinal e as contas certos (devolução entrava como saída) */
   const tipoL=t=>t.emp?(t.empDir==='in'?'devolução de empréstimo':t.empDir==='perdao'?'empréstimo perdoado':'empréstimo'):t.tipo==='transf'?'transferência':t.tipo;
   const valL=t=>t.emp?(t.empDir==='in'?t.valor:-t.valor):t.tipo==='receita'?t.valor:t.tipo==='transf'?t.valor:-t.valor;
   const contaL=t=>{if(t.tipo!=='transf')return conta(t);const a=t.de?nomeLado(t.de):'',b=t.para?nomeLado(t.para):'';return t.emp?(t.empAnt?'antes do app':t.empDir==='in'?b:a):[a,b].filter(Boolean).join(' → ');};
-  lista.forEach(t=>L.push([t.data.split('-').reverse().join('/'),tipoL(t),t.descricao||'',t.categoria||'',t.sub||'',n(valL(t)),t.status||'pago',contaL(t),cart(t),t.parcela&&t.parcelas?t.parcela+'/'+t.parcelas:'',(t.tags||[]).join(', '),(+t.juros||0)+(+t.multa||0)?n((+t.juros||0)+(+t.multa||0)):'',+t.desconto?n(t.desconto):'',t.obs||'']));
+  lista.forEach(t=>L.push([t.data.split('-').reverse().join('/'),tipoL(t),t.descricao||'',t.categoria||'',t.sub||'',n(valL(t)),t.status||'pago',contaL(t),cart(t),t.parcela&&t.parcelas?t.parcela+'/'+t.parcelas:'',(t.tags||[]).join(', '),(+t.juros||0)+(+t.multa||0)?n((+t.juros||0)+(+t.multa||0)):'',+t.desconto?n(t.desconto):'',t.obs||'',t.trab&&t.tipo==='receita'?t.trab.split('-').reverse().join('/'):'']));
   return L;
 }
 function txPlanilha(){
@@ -2090,7 +2148,7 @@ function abreRapido(){
 
 /* ---------- navegação e renderização ---------- */
 let TAB='inicio';
-const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:''};
+const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 const MESES_NOME=()=>{const d=new Date();return MESES_LONGO[d.getMonth()]+' de '+d.getFullYear();};
 const DATA_HOJE=()=>{const d=new Date();if(innerWidth<=360)return ['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+' · '+d.getDate()+' '+MESES[d.getMonth()];return ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][d.getDay()]+' · '+d.getDate()+' de '+MESES_LONGO[d.getMonth()];}; // v10.74: curta em telas bem estreitas
 
@@ -2127,7 +2185,7 @@ function go(t){
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
 const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes'};
-const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:''};
+const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
   NAV_PILHA.push({tab:TAB,F:Object.assign({},F),y:window.scrollY||0,rel:typeof REL!=='undefined'?Object.assign({},REL):null});
@@ -2423,6 +2481,7 @@ function viewInicio(){
   const prevHTML=pv.tem?`<div class="card hmPrev tap" data-act="prev-abre" role="button" tabindex="0" aria-label="ver o que entra na previsão"><div class="hmH"><h4>previsão para o fim do mês</h4>${I('chevR','tapCh')}</div>
     <div class="hmPrevV ${pv.fim<0?'neg':'pos'} nw">${brl(pv.fim)}</div>
     <div class="hmPrevL"><span><small>hoje</small><b class="nw">${brl(pv.hoje)}</b></span>${pv.rec?`<span><small>a receber</small><b class="nw pos">+ ${brl(pv.rec)}</b></span>`:''}${pv.emp?`<span><small>empréstimos</small><b class="nw pos">+ ${brl(pv.emp)}</b></span>`:''}${pv.des?`<span><small>a pagar</small><b class="nw neg">− ${brl(pv.des)}</b></span>`:''}${pv.cart?`<span><small>cartão</small><b class="nw neg">− ${brl(pv.cart)}</b></span>`:''}</div>
+    ${(()=>{const L=receitasAtrasadas();return L.length?`<button type="button" class="hmTrab" data-act="trab-lote">${I('calendar')}<span>${L.length===1?'1 receita atrasada':L.length+' receitas atrasadas'} · ainda não recebeu? informe quando cai</span>${I('chevR')}</button>`:'';})()}
     <p class="hmNota">estimativa com o que já está lançado como previsto.</p></div>`:'';
   /* carteira só aparece se houver investimentos */
   const patr=patrimonio(),dm=divMensal();
@@ -2565,13 +2624,13 @@ function viewLanc(){
   const stB=t=>{const s=statusTx(t);if(s==='pago')return '';const [l,k]=ST_TX[s];return ` <span class="badge ${k} stb">${l}</span>`;};
   const item=t=>`<div class="tx hov txTap" data-act="tx-menu" data-id="${t.id}"${t.status==='cancelado'?' tx-cancel':''}${t.status==='previsto'?' tx-prev':''}">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
-      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}<span class="txD">${fmtDataCurta(t.data)}</span> · `;})()}${t.emp||t.tipo==='transf'?esc(t.emp?empRotulo(t):nomeLado(t.de)+' → '+nomeLado(t.para)):esc(t.categoria)+(t.sub?' › '+esc(t.sub):'')+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()}</small></div>
+      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}<span class="txD">${txDatasHTML(t)}</span>${t.trab&&t.tipo==='receita'&&!t.sub&&norm(nm.n)===norm(t.categoria)?'<i class="txSemCat"></i>':' · '}`;})()}${t.emp||t.tipo==='transf'?esc(t.emp?empRotulo(t):nomeLado(t.de)+' → '+nomeLado(t.para)):(t.trab&&t.tipo==='receita'&&!t.sub&&norm(nomeTx(t).n)===norm(t.categoria)?'':esc(t.categoria)+(t.sub?' › '+esc(t.sub):''))+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()}</small></div>
       ${t.multa||t.juros||t.desconto?`<div class="txMeta"><span class="encChip">${[t.multa?'multa '+brl(t.multa):'',t.juros?'juros '+brl(t.juros):'',t.desconto?'desconto '+brl(t.desconto):''].filter(Boolean).join(' · ')}</span></div>`:''}
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
       <div class="val ${t.emp?(t.empDir==='in'?'pos':t.empDir==='perdao'?'neg':'neu'):t.tipo==='receita'?'pos':t.tipo==='transf'?'neu':'neg'}"><span class="sg">${t.emp?(t.empDir==='in'?'+':t.empDir==='perdao'?'−':'↗'):t.tipo==='receita'?'+':t.tipo==='transf'?'⇄':'−'}</span> ${brl(t.valor)}</div>
       ${t.faturaKey?`<div class="fatAct">${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>${t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer o último pagamento">desfazer</button>`:''}`:(t.pagoValor>0?`<button class="btn2 sm" data-act="desfaz-pag" data-id="${t.id}" title="desfazer pagamento">desfazer</button>`:'')}</div>`:''}
       <button class="txMore" data-act="tx-menu" data-id="${t.id}" aria-label="ações do lançamento">${I('more')}</button>
-      ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}</div>`:''}
+      ${statusTx(t)!=='pago'?`<div class="stLine">${stB(t)}${t.status==='previsto'?`<button class="btn2 sm" data-act="tx-pagar" data-id="${t.id}">${t.tipo==='receita'?'marcar recebido':'marcar pago'}</button>`:''}${t.tipo==='receita'&&statusTx(t)==='atrasado'?`<button class="btn2 sm" data-act="trab-lote" data-id="${t.id}">${I('calendar')}quando cai?</button>`:''}</div>`:''}
     </div>`;
   return `
   ${voltaHTML()}<div class="head lHead"><h2>${F.st==='aberto'?'A pagar e a receber':F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
@@ -2587,7 +2646,10 @@ function viewLanc(){
   </div>
   ${(()=>{const ch=[];if(F.ini&&F.fim)ch.push(['per',I('calendar')+esc(F.perL||'período')]);if(F.conta){const b=S.bancos.find(x=>x.id===F.conta);ch.push(['conta',I('bank')+esc(b?b.nome:'conta')]);}if(F.st==='aberto')ch.push(['st',I('clock')+'em aberto']);if(F.cat)ch.push(['cat',esc(F.cat)]);
     return ch.length?`<div class="fChips" aria-label="filtros ativos">${ch.map(([k,l])=>`<button type="button" class="fChip" data-act="f-tira" data-id="${k}" aria-label="tirar filtro">${l}${I('close')}</button>`).join('')}</div>`:'';})()}
+  ${F.tipo==='receita'&&(F.comp||S.tx.some(t=>t.trab))?`<div class="seg compSeg" role="group" aria-label="agrupar receitas por"><button class="${F.comp?'':'on'}" data-act="set-comp" data-id="">${I('calendar')}por recebimento</button><button class="${F.comp?'on':''}" data-act="set-comp" data-id="trab">${I('horas')}por dia trabalhado</button></div>`:''}
+  ${F.tipo==='receita'&&!F.comp?trabDicaHTML(null,'card'):''}
   ${(()=>{const n=lista.length,cnt=`${n} ${n===1?'lançamento':'lançamentos'}`;
+    if(F.tipo==='receita'&&F.comp==='trab')return compLancHTML(lista);
     if(F.tipo==='despesa'){const ex=[tdCartao?`compras no cartão ${brl(tdCartao)} (entram pela fatura)`:'',prvD?`+ ${brl(prvD)} previsto`:''].filter(Boolean).join(' · ');return `<div class="card lsum"><small>Gasto ${F.mes?'no mês':'no período'}</small><b class="neg">${brl(td)}</b><p>${ex||cnt}</p></div>`;}
     if(F.tipo==='receita')return `<div class="card lsum"><small>Recebido ${F.mes?'no mês':'no período'}</small><b class="pos">${brl(tr)}</b><p>${prvR?`+ ${brl(prvR)} previsto`:cnt}</p></div>`;
     if(F.tipo==='transf')return `<div class="card lsum"><small>Movimentado entre suas contas</small><b>${brl(somaC(ef.filter(t=>t.tipo==='transf'),t=>t.valor))}</b><p>${cnt} · não contam como gasto</p></div>`;
@@ -2596,6 +2658,16 @@ function viewLanc(){
   ${fixasCard()}`;
 }
 
+/* v10.80: resumo da visão por dia trabalhado (Receitas) */
+function compLancHTML(lista){
+  const vivas=lista.filter(t=>t.status!=='cancelado'&&!t.emp),tot=somaC(vivas,t=>t.valor);
+  const m=F.mes&&!(F.ini&&F.fim)?F.mes:'';const quando=m?'em '+nomeMesMin(m):'no período';
+  const C={};vivas.forEach(t=>{const c=C[t.categoria]||(C[t.categoria]={cat:t.categoria,tot:0,prev:0,rec:{}});const v=cents(t.valor);c.tot+=v;if(t.status==='previsto')c.prev+=v;c.rec[t.data.slice(0,7)]=(c.rec[t.data.slice(0,7)]||0)+v;});
+  const L=Object.values(C).map(c=>Object.assign(c,{tot:c.tot/100,prev:c.prev/100,rec:Object.fromEntries(Object.entries(c.rec).map(([k,v])=>[k,v/100]))})).sort((a,b)=>b.tot-a.tot);
+  const aRec=somaC(vivas.filter(t=>t.status==='previsto'),t=>t.valor);
+  return `<div class="card lsum compSum"><small>Trabalhado ${quando}</small><b class="pos">${brl(tot)}</b><p>${aRec?brl(aRec)+' ainda vai cair':vivas.length?'tudo já recebido':'nada trabalhado '+quando}</p>
+    ${L.length?`<div class="compL">${L.map(c=>`<div class="compR"><span class="compI" style="--cc:${corCat(c.cat)}">${I(catIcon(c.cat))}</span><span class="compT"><b>${esc(c.cat)}${m?(/^horas/i.test(c.cat)?' trabalhadas ':' de ')+(/^horas/i.test(c.cat)?quando:nomeMesMin(m)):''}</b><small>${compRecTxt(c,m||'')}</small></span><span class="compV nw">${brl(c.tot)}</span></div>`).join('')}</div>`:''}</div>`;
+}
 /* orçamentos com histórico: limOrc(m) devolve os limites válidos no mês m */
 let OMES='';
 function limOrc(m){
@@ -3620,19 +3692,24 @@ function montaImport(){
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
     /* v10.79: empréstimo ou devolução lançado à mão que o banco trouxe agora: liga um ao outro em vez de duplicar */
     const vm=!dup&&ehConta&&!l.propria&&!l.transf?empManualIgual(l,d,usados):null;
     l.vinc=vm?vm.id:'';if(vm)usados.add(vm.id);
+    /* v10.80: receita prevista que o banco trouxe: casa pela data de RECEBIMENTO (até 3 dias), nunca pelo dia trabalhado.
+       vira recebida com a data e o id do banco, sem lançar de novo */
+    const pv=!dup&&!vm&&ehConta&&l.valor>0&&!l.propria&&!l.transf?prevReceitaIgual(l,d,usados):null;
+    l.vincPrev=pv?pv.id:'';if(pv)usados.add(pv.id);
     /* v10.79: Pix com o nome de quem te deve (entrada até o que falta) ou de quem já pegou emprestado (saída) */
     const es=!dup&&!vm&&ehConta&&!l.propria&&!l.transf?empCasa(l.desc,Math.abs(l.valor),l.data,l.valor>0?'in':'out'):null;
     if(!es||l.empSug!==es.id)l.empOk=false;l.empSug=es?es.id:'';
     const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     if(dup||dupT)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup)ign='já está no app';
+    else if(pv)ign='é a receita prevista '+(nomeTx(pv).n||pv.descricao||pv.categoria).slice(0,40)+' (recebe '+fmtDataCurta(pv.data)+') · fica marcada como recebida';
     else if(vm)ign='já lançado como '+(vm.empDir==='in'?'devolução de ':'empréstimo para ')+primeiroNome(empNome(vm.emp))+' · fica ligado ao do banco';
     else if(dupT)ign='já lançado como transferência';
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
@@ -3640,7 +3717,7 @@ function montaImport(){
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT||!!vm;if(vm)l.on=false;
+    l.ign=ign;l.dup=dup||dupT||!!vm||!!pv;if(vm||pv)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -3672,9 +3749,10 @@ function montaImport(){
 function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
-  let n=0,lig=0;
+  let n=0,lig=0,rcb=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
     if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
@@ -3695,7 +3773,7 @@ function confirmaImport(){
   const eraBanco=IMP.banco,mudo=IMP.silent;
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
   if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
-  else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':''));
+  else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
   if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
 }
 
@@ -4023,12 +4101,48 @@ function abrePrevisao(){
   const row=(ic,cc,nome,sub,v,pos,act,id)=>`<div class="rmRow tap" data-act="${act}" data-id="${esc(id)}" role="button" tabindex="0"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${sub}</small></div><span class="rmV nw ${pos?'pos':'neg'}">${pos?'+':'−'} ${brl(v)}</span></div>`;
   box.innerHTML=`<div class="sheet prevSheet" role="dialog" aria-modal="true" aria-label="Previsão do fim do mês"><div class="sh-head"><h3>Previsão do fim do mês</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="prevConta"><div class="row"><span>saldo de hoje</span><b>${brl(p.hoje)}</b></div>${p.rec?`<div class="row"><span>a receber</span><b class="pos">+ ${brl(p.rec)}</b></div>`:''}${p.emp?`<div class="row"><span>empréstimos combinados</span><b class="pos">+ ${brl(p.emp)}</b></div>`:''}${p.des?`<div class="row"><span>a pagar</span><b class="neg">− ${brl(p.des)}</b></div>`:''}${p.cart?`<div class="row"><span>cartão</span><b class="neg">− ${brl(p.cart)}</b></div>`:''}<div class="row prevTot"><span>fim do mês</span><b class="${p.fim<0?'neg':'pos'}">${brl(p.fim)}</b></div></div>
-    ${prev.length?`<h4 class="rsH">previstos</h4>${prev.map(t=>row(t.tipo==='receita'?'arrowUp':catIcon(t.categoria),t.tipo==='receita'?'#4ade80':corCat(t.categoria),nomeTx(t).n||t.descricao||t.categoria,fmtDataCurta(t.data)+(t.data<hj?' · atrasado':''),t.valor,t.tipo==='receita','tx-menu',t.id)).join('')}`:''}
+    ${prev.length?`<h4 class="rsH">previstos</h4>${prev.map(t=>row(t.tipo==='receita'?'arrowUp':catIcon(t.categoria),t.tipo==='receita'?'#4ade80':corCat(t.categoria),nomeTx(t).n||t.descricao||t.categoria,(t.trab&&t.tipo==='receita'?'trabalhado '+fmtDataCurta(t.trab)+' · recebe ':'')+fmtDataCurta(t.data)+(t.data<hj?' · atrasado':''),t.valor,t.tipo==='receita','tx-menu',t.id)).join('')}`:''}
+    ${trabDicaHTML(null,'prevTrab')}
     ${em.length?`<h4 class="rsH">empréstimos para receber</h4>${em.map(x=>row('handCoins','#22d3ee',x.e.pessoa,'combinado para '+fmtDataCurta(x.data),x.valor,true,'emp-abre',x.e.id)).join('')}`:''}
     ${fats.length||ciclos.length?`<h4 class="rsH">cartões</h4>${fats.map(t=>row('card','#60a5fa',t.descricao,'fatura · vence '+fmtDataCurta(venceFatura(t)),restanteFatura(t),false,'fat-abre',t.id)).join('')}${ciclos.map(x=>row('card','#60a5fa','compras '+x.c.nome,'fatura ainda aberta, vence este mês',x.v,false,'fat-abre',x.k)).join('')}`:''}
     <p class="hmNota">estimativa com o que já está lançado. toque num item para abrir.</p>
   </div>`;
   box.classList.add('on');
+}
+/* ---------- v10.80: "ainda não recebeu?" em lote ----------
+   receitas previstas com data passada: a pessoa marca as que ainda não caíram e diz quando vão cair.
+   a data lançada vira o dia trabalhado e a data passa a ser a do recebimento. nada muda sem ela confirmar. */
+function abreTrabLote(pre){
+  const L=receitasAtrasadas(),box=$('#modal');
+  if(!L.length){toast('Nenhuma receita atrasada.');return;}
+  const um=L.length===1;
+  box.innerHTML=`<div class="sheet tlSheet" role="dialog" aria-modal="true" aria-label="Ainda não recebeu?"><div class="sh-head"><h3>Ainda não recebeu?</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">Se você lançou no dia em que trabalhou, marque o que ainda não caiu e diga quando vai cair. A data de agora fica guardada como <b>dia trabalhado</b> e a previsão passa a contar no mês certo.</p>
+    <form id="tlForm" novalidate>
+    ${um?'':`<div class="row small tlTop"><span id="tlN"></span><span class="row" style="gap:6px"><button type="button" class="btn2 sm" data-tl="todos">marcar todos</button><button type="button" class="btn2 sm" data-tl="nenhum">nenhum</button></span></div>`}
+    <div class="tlLista">${L.map(t=>{const w=t.trab||t.data,sg=sugereReceb(w,t.categoria,t.descricao,t.id),on=um||pre===t.id;
+      return `<div class="tlRow${on?' on':''}" data-id="${t.id}"><label class="tlCk"><input type="checkbox" name="s_${t.id}" ${on?'checked':''}><span class="tlI" style="--cc:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span><span class="tlT"><b>${esc(nomeTx(t).n||t.descricao||t.categoria)}</b><small>trabalhado ${fmtDataCurta(w)} · ${brl(t.valor)}</small></span></label>
+        <label class="tlD"><span>Recebo em</span><input type="date" name="d_${t.id}" value="${sg?sg.data:''}" min="${w}"><small>${sg?'sugerido: '+sugTxt(sg)+' ('+fmtDataCurta(sg.ref.data)+')':'sem recebimento anterior: informe a data'}</small></label></div>`;}).join('')}</div>
+    <button class="btn full" type="submit" id="tlOk">Mover</button></form>
+  </div>`;
+  box.classList.add('on');
+  const f=$('#tlForm'),cks=[...f.querySelectorAll('input[type=checkbox]')];
+  const conta=()=>{const n=cks.filter(c=>c.checked).length;cks.forEach(c=>c.closest('.tlRow').classList.toggle('on',c.checked));const b=$('#tlOk');b.textContent=n?'Mover '+(n===1?'1 receita':n+' receitas'):'Marque o que ainda não recebeu';b.disabled=!n;const tn=$('#tlN');if(tn)tn.textContent=n+' de '+L.length+' marcadas';};
+  cks.forEach(c=>c.addEventListener('change',conta));
+  f.querySelectorAll('[data-tl]').forEach(b=>b.onclick=()=>{cks.forEach(c=>c.checked=b.dataset.tl==='todos');conta();});
+  f.querySelectorAll('.tlD input').forEach(i=>i.addEventListener('input',()=>{const ck=f.querySelector('[name="s_'+i.name.slice(2)+'"]');if(ck&&!ck.checked){ck.checked=true;conta();}}));
+  conta();
+  f.onsubmit=e=>{e.preventDefault();
+    const sel=L.filter(t=>{const c=f.querySelector('[name="s_'+t.id+'"]');return c&&c.checked;});
+    if(!sel.length){toast('Marque pelo menos uma receita.',true);return;}
+    f.querySelectorAll('.tlD.bad').forEach(x=>x.classList.remove('bad'));
+    for(const t of sel){const inp=f.querySelector('[name="d_'+t.id+'"]'),d=inp.value,w=t.trab||t.data;
+      if(!DATA_OK.test(d)||!dataOk(...d.split('-'))){inp.closest('.tlD').classList.add('bad');toast('Informe quando vai cair '+(nomeTx(t).n||t.categoria)+'.',true);return;}
+      if(d<=w){inp.closest('.tlD').classList.add('bad');toast('A data em que cai precisa ser depois do dia trabalhado ('+fmtDataCurta(w)+').',true);return;}}
+    sel.forEach(t=>{const d=f.querySelector('[name="d_'+t.id+'"]').value;if(!t.trab)t.trab=t.data;t.data=d;});
+    salvar();closeModal();render();
+    toast(sel.length===1?'Pronto: recebe em '+fmtDataCurta(sel[0].data)+', trabalhado '+fmtDataCurta(sel[0].trab):'Pronto: '+sel.length+' receitas com o dia trabalhado guardado');
+  };
 }
 /* do "Novo lançamento" para o fluxo de empréstimo, levando valor, data e conta já digitados */
 function empDoNovoTx(dir){
@@ -4100,6 +4214,12 @@ function empCasa(desc,valor,data,dir){
     const sc=tk.filter(w=>d.includes(' '+w+' ')).length*1000+(dir==='in'?Math.min(999,Math.round(t.aberto)):0);
     if(!best||sc>best.sc)best={e,sc};});
   return best?best.e:null;
+}
+/* v10.80: receita prevista (manual) que corresponde a uma entrada do extrato: mesmo valor, conta igual (ou sem conta), até 3 dias da data de recebimento */
+function prevReceitaIgual(l,d,usados){
+  const id=d.slice(2),v=cents(l.valor);
+  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data)||(a.conta===id?-1:1))[0]||null;
 }
 /* lançamento manual de empréstimo que corresponde a uma linha do extrato (mesma conta, valor, até 3 dias) */
 function empManualIgual(l,d,usados){
@@ -4426,6 +4546,7 @@ function novoTx(id,tipoPre,base){
     {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
     {name:'tags',label:'Tags (opcional, separe por vírgula)',value:P?(P.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
+    {name:'trab',label:'Dia trabalhado (opcional)',type:'date',value:P&&P.trab&&P.tipo==='receita'?P.trab:''},
     {name:'data',label:'Data',type:'date',value:P?P.data:hojeISO(),required:true},
     {name:'status',label:'Situação',type:'select',value:P?(P.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
     {name:'obs',label:'Observação (opcional)',type:'textarea',value:P?(P.obs||''):'',placeholder:'detalhes, número do pedido…',maxlength:300},
@@ -4436,7 +4557,10 @@ function novoTx(id,tipoPre,base){
     const valor=parseBR(v.valor);
     if(!String(v.valor).trim())return 'Informe o valor';
     if(!(valor>0))return 'Informe um valor maior que zero.';
-    if(!v.data)return 'Informe a data.';
+    const trabOk=v.tipo==='receita'&&v.trab?(DATA_OK.test(v.trab)&&dataOk(...v.trab.split('-'))?v.trab:null):'';
+    if(trabOk===null)return 'Dia trabalhado inválido.';
+    if(!v.data)return trabOk?'Informe quando o dinheiro vai cair (Recebo em).':'Informe a data.';
+    if(trabOk&&v.data<trabOk)return 'O dia em que recebe não pode ser antes do dia trabalhado.';
     if(!t&&(parseInt(v.parcelas,10)||1)>1&&cents(valor)<(parseInt(v.parcelas,10)||1))return 'Valor pequeno demais para essas parcelas.';
     if(v.fixa&&!t&&(parseInt(v.parcelas,10)||1)>1)return 'Compra parcelada não repete todo mês.';
     { /* aprende: a pessoa trocou a categoria sugerida, então lembra para a próxima */
@@ -4467,6 +4591,7 @@ function novoTx(id,tipoPre,base){
     if(t){
       if(t.parcelas>1)obj.descricao=(obj.descricao||t.categoria)+' ('+t.parcela+'/'+t.parcelas+')';
       Object.assign(t,obj);
+      if(trabOk)t.trab=trabOk;else delete t.trab;
     }else if(np>1&&usaCartao&&obj.cartao){
       /* parcelado: n lançamentos, um por fatura a partir da data da compra; centavos que sobram ficam na 1ª parcela */
       const tot=cents(valor),base=Math.floor(tot/np),sobra=tot-base*np,grupo=uid();
@@ -4476,7 +4601,7 @@ function novoTx(id,tipoPre,base){
         if(!k)novoId=grupo+'-1';
         S.tx.push(Object.assign({},obj,{id:grupo+'-'+(k+1),valor:(base+(k===0?sobra:0))/100,data:dt,descricao:(obj.descricao||obj.categoria)+' ('+(k+1)+'/'+np+')',grupo,parcela:k+1,parcelas:np}));
       }
-    }else{novoId=uid();S.tx.push(Object.assign({id:novoId},obj));}
+    }else{novoId=uid();S.tx.push(Object.assign({id:novoId},obj,trabOk?{trab:trabOk}:{}));}
     if(v.fixa&&!t){
       /* v10.51: a fixa nasce só depois de tudo validado e guarda como foi paga (cartão entra na fatura, pix sai da conta certa) */
       if(!S.fixas)S.fixas=[];
@@ -4525,6 +4650,34 @@ function novoTx(id,tipoPre,base){
   const pintaS=()=>{const cart=selF.value==='cartao'||(selF.value==='boleto'&&selP.value==='cartao');wS.style.display=cart&&!(t&&t.status==='cancelado')?'none':'';
     if(!stMexeu&&inD.value)selS.value=inD.value>hojeISO()&&!cart?'previsto':'pago';};
   inD.addEventListener('change',pintaS);inD.addEventListener('input',pintaS);selF.addEventListener('change',pintaS);selP.addEventListener('change',pintaS);pintaS();
+  /* v10.80: dia trabalhado. aparece sozinho em Horas extras, Salário, Freelance...; nas outras receitas, por um atalho.
+     o campo de data vira "Recebo em" (receita prevista/futura). informando só o dia trabalhado, sugere o "Recebo em" pelo padrão anterior. */
+  {const inT=mf.querySelector('input[name="trab"]'),wT=inT.closest('label'),lD=inD.closest('label'),lDtxt=lD.firstChild;
+   wT.classList.add('trabCampo');
+   const tDica=document.createElement('div');tDica.className='catDica trabSug';tDica.hidden=true;wT.appendChild(tDica);
+   const tLink=document.createElement('button');tLink.type='button';tLink.className='trabLink';tLink.innerHTML=I('calendar')+'<span>trabalhou num dia e recebe em outro? informar dia trabalhado</span>';wT.insertAdjacentElement('beforebegin',tLink);
+   let abriu=!!(P&&P.trab),dMexeu=false,auto=false;
+   inD.addEventListener('input',()=>{dMexeu=true;auto=false;});
+   const pintaT=()=>{const rec=selT.value==='receita',mostra=rec&&(abriu||trabCat(selC.value)||!!inT.value);
+     wT.style.display=mostra?'':'none';tLink.style.display=rec&&!mostra?'':'none';if(!rec)tDica.hidden=true;
+     const fut=selS.value==='previsto'||(inD.value&&inD.value>hojeISO());
+     lDtxt.nodeValue=rec&&fut?'Recebo em':rec&&inT.value?'Recebi em':'Data';
+     if(rec&&mostra&&!inT.value&&tDica.hidden){tDica.hidden=false;tDica.innerHTML=`${I('clock')}<span>lance no dia em que trabalhou: eu sugiro quando o dinheiro cai</span>`;}};
+   const sugT=()=>{if(selT.value!=='receita')return;const w=inT.value;
+     if(!w){if(auto){inD.value=t?t.data:hojeISO();auto=false;pintaS();}tDica.hidden=false;tDica.innerHTML=`${I('clock')}<span>lance no dia em que trabalhou: eu sugiro quando o dinheiro cai</span>`;pintaT();return;}
+     const pode=!dMexeu&&(!t||!inD.value||inD.value<=w||auto);
+     const sg=sugereReceb(w,selC.value,inDesc.value,t&&t.id);
+     if(pode){if(sg){inD.value=sg.data;auto=true;}else{inD.value='';auto=true;}pintaS();}
+     tDica.hidden=false;
+     tDica.innerHTML=sg?`${I('star')}<span>${pode?'Recebo em sugerido':'sugestão'}: <b>${fmtDataCurta(sg.data)}</b> · ${sugTxt(sg)} de ${esc(selC.value)} (${fmtDataCurta(sg.ref.data)})</span>`:`${I('calendar')}<span>${pode||!inD.value?'sem recebimento anterior de '+esc(selC.value)+' para comparar: informe abaixo quando vai cair':'confira abaixo quando vai cair'}</span>`;
+     pintaT();};
+   tLink.onclick=()=>{abriu=true;pintaT();try{inT.focus();}catch(e){}};
+   inT.addEventListener('change',sugT);inT.addEventListener('input',sugT);
+   selC.addEventListener('change',()=>{if(inT.value&&auto)sugT();pintaT();});
+   selT.addEventListener('change',pintaT);selS.addEventListener('change',pintaT);inD.addEventListener('change',pintaT);inD.addEventListener('input',pintaT);selF.addEventListener('change',pintaT);
+   if(P&&P.trab&&P.tipo==='receita'){tDica.hidden=true;}
+   pintaT();
+   mf._sugTrab=sugT;}
   /* v10.78: atalho para empréstimo no lançamento novo (sai/entra na conta, mas não é gasto nem receita) */
   if(!t){
     selT.closest('label').insertAdjacentHTML('afterend','<div class="empAt" id="empAt"></div>');
@@ -5152,6 +5305,7 @@ function txMenu(id){
   if(t.faturaKey)ops.push(['fat-abre','card','Ver compras e pagamentos']);
   if(t.emp)ops.push(['emp-abre-tx','handCoins','Ver empréstimo de '+primeiroNome(empNome(t.emp))]);
   if(!t.faturaKey)ops.push(['edit-tx','edit','Editar']);
+  if(t.tipo==='receita'&&statusTx(t)==='atrasado')ops.push(['trab-lote','calendar','Ainda não recebi: informar quando cai']);
   if(!t.faturaKey)ops.push(['anexos','clip','Comprovantes'+(t.anexos&&t.anexos.length?' ('+t.anexos.length+')':'')]);
   if(!t.faturaKey&&t.tipo!=='transf')ops.push(['dup-tx','copy','Duplicar']);
   if(t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita'))ops.push(['tx-propria','swap','Foi pra outra conta minha']);
@@ -5161,7 +5315,7 @@ function txMenu(id){
   if(t.emp&&t.empDir!=='perdao')ops.push(['tx-desemp','close','Não foi empréstimo']);
   ops.push(['del-tx','trash','Excluir',1]);
   const box=$('#modal');
-  box.innerHTML=`<div class="sheet txSheet"><div class="txsHead"><span class="ic" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span><div><b>${esc(nomeTx(t).n||t.categoria)}</b>${nomeTx(t).n!==t.descricao&&t.descricao?`<small class="txOrig">${esc(t.descricao)}</small>`:''}<small>${esc(t.categoria)}${t.sub?' › '+esc(t.sub):''} · ${fmtData(t.data)}</small></div><strong class="${t.tipo==='receita'?'pos':t.tipo==='transf'?'':'neg'}">${brl(t.valor)}</strong></div>
+  box.innerHTML=`<div class="sheet txSheet"><div class="txsHead"><span class="ic" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span><div><b>${esc(nomeTx(t).n||t.categoria)}</b>${nomeTx(t).n!==t.descricao&&t.descricao?`<small class="txOrig">${esc(t.descricao)}</small>`:''}<small>${esc(t.categoria)}${t.sub?' › '+esc(t.sub):''} · ${t.trab&&t.tipo==='receita'?'trabalhado '+fmtData(t.trab)+' · '+(t.status==='previsto'?'recebe ':'recebeu ')+fmtData(t.data):fmtData(t.data)}</small></div><strong class="${t.tipo==='receita'?'pos':t.tipo==='transf'?'':'neg'}">${brl(t.valor)}</strong></div>
     ${ops.map(([a,ic,l,d])=>`<button class="txsOp${d?' perigo':''}" data-tm="${a}">${I(ic)}<span>${esc(l)}</span></button>`).join('')}
     <button class="btn2 full" data-tm="">Fechar</button></div>`;
   box.classList.add('on');
@@ -5194,7 +5348,7 @@ const ACT={
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
     confirma({titulo:'Remover comprovante?',texto:a.n,ok:'Remover',perigo:true},()=>{t.anexos=t.anexos.filter(x=>x!==a);removeArquivos([a.p]);salvar();render();telaAnexos(id);toast('Comprovante removido');});},
   'dup-tx':id=>{const t=S.tx.find(x=>x.id===id);if(!t||t.faturaKey||t.tipo==='transf')return;
-    novoTx(null,t.tipo,Object.assign({},t,{anexos:[],data:hojeISO(),status:'pago',parcelas:1,parcela:0,descricao:String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,'')}));},
+    novoTx(null,t.tipo,Object.assign({},t,{anexos:[],trab:'',data:hojeISO(),status:'pago',parcelas:1,parcela:0,descricao:String(t.descricao||'').replace(/ \(\d+\/\d+\)$/,'')}));},
   'edit-tx':id=>{const t=S.tx.find(x=>x.id===id);if(t&&t.emp)return abreEmp(t.emp);return t&&t.tipo==='transf'?novaTransf(id):novoTx(id);},
   'tx-emp':id=>converteEmp(id,'out'),
   'tx-empv':id=>converteEmp(id,'in'),
@@ -5234,6 +5388,7 @@ const ACT={
   'nav-rel':()=>{const p=periodo();navega('rel');if(p.meses===1){REL.a=p.ini.slice(0,7);REL.b=mesAdd(REL.a,-1);render();}},
   'nav-rel-mes':(m)=>navega('lanc',{tipo:'',mes:m}),
   'nav-rel-rec':m=>navega('lanc',{tipo:'receita',mes:m}),
+  'nav-rel-comp':m=>navega('lanc',{tipo:'receita',mes:m,comp:'trab'}),
   'nav-rel-des':m=>navega('lanc',{tipo:'despesa',mes:m}),
   'nav-rel-cat':k=>{const [m,c]=String(k).split('~');navega('lanc',{tipo:'despesa',mes:m,cat:c});},
   'tx-emp-novo':()=>empDoNovoTx('out'),
@@ -5303,6 +5458,8 @@ const ACT={
   'q-inv':()=>abreInvest(),
   'inv-tipo':id=>fiiForm(undefined,id),
   'set-tipo':id=>{F.tipo=id;render();},
+  'set-comp':id=>{F.comp=id==='trab'?'trab':'';render();},
+  'trab-lote':id=>abreTrabLote(id),
   'lmes':id=>{const base=F.mes||(F.ini?F.ini.slice(0,7):hojeISO().slice(0,7));F.mes=mesMais(base,+id);F.ini=F.fim=F.perL='';render();},
   'nav-volta':()=>navVolta(),
   'f-tira':k=>{if(k==='per'){F.ini=F.fim=F.perL='';F.mes=mesAtual();}else F[k]='';render();},
@@ -5444,7 +5601,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
