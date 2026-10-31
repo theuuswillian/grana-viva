@@ -136,7 +136,11 @@ function sanea(d){
   /* v10.62: empréstimos a receber (uma ficha por pessoa; o dinheiro anda por lançamentos transf com t.emp) */
   o.emprestimos=arr(o.emprestimos).map(e=>({id:sid(e.id),pessoa:str(e.pessoa,60).trim(),tel:str(e.tel,15).replace(/\D/g,''),prev:ISO_RE.test(e.prev||'')?e.prev:'',obs:str(e.obs,140),modo:e.modo==='partes'?'partes':'avista',criadoEm:ISO_RE.test(String(e.criadoEm||'').slice(0,10))?String(e.criadoEm).slice(0,10):''})).filter(e=>e.pessoa);
   /* v10.78: empDir 'perdao' (dívida perdoada): transf (não conta como gasto) ou despesa (se a pessoa escolheu contar) */
-  o.tx.forEach(t=>{if(t.emp&&(t.tipo==='transf'||(t.tipo==='despesa'&&t.empDir==='perdao'))){t.emp=sid(t.emp);t.empDir=t.empDir==='in'?'in':t.empDir==='perdao'?'perdao':'out';if(t.empDir==='perdao'){t.de='';t.para='';t.cartao='';t.conta='';t.forma='';}}else{delete t.emp;delete t.empDir;}});
+  /* v10.79: empAnt = dinheiro que saiu (ou voltou) antes de usar o app: conta no empréstimo, mas não mexe em conta nenhuma.
+     empAntDe guarda a conta de antes, para desfazer a correção. */
+  o.tx.forEach(t=>{if(t.emp&&(t.tipo==='transf'||(t.tipo==='despesa'&&t.empDir==='perdao'))){t.emp=sid(t.emp);t.empDir=t.empDir==='in'?'in':t.empDir==='perdao'?'perdao':'out';if(t.empDir==='perdao'){t.de='';t.para='';t.cartao='';t.conta='';t.forma='';}
+      if(t.empAnt&&t.empDir!=='perdao'){t.empAnt=1;t.de='';t.para='';t.empAntDe=/^b:/.test(String(t.empAntDe||''))?'b:'+sid(String(t.empAntDe).slice(2)):'';if(!t.empAntDe)delete t.empAntDe;}else{delete t.empAnt;delete t.empAntDe;}}
+    else{delete t.emp;delete t.empDir;delete t.empAnt;delete t.empAntDe;}});
   // status do lançamento: só valores conhecidos (sem status = pago)
   o.tx.forEach(t=>{if(!['pago','previsto','cancelado'].includes(t.status))delete t.status;if(t.status!=='previsto')delete t.fxAuto;});
   /* v10.45: pagamentos da fatura em lista (cada um com data e conta). formato antigo (pagoValor/pagaEm/pagoConta) vira 1 pagamento.
@@ -262,6 +266,7 @@ function salvar(){
   try{if(USER&&CR_OK)localStorage.setItem(OWNER_KEY,USER.id);}catch(e){}
   gravaLocal();
   if(USER)agendaSync();
+  if(!ORC_V)setTimeout(()=>{try{orcVigia();}catch(e){}},0); // v10.79
 }
 function agendaSync(ms){clearTimeout(syncT);syncT=setTimeout(enviar,ms==null?700:ms);}
 /* sincronização incremental.
@@ -1062,7 +1067,7 @@ function listaAlertas(completo){
   if(completo){
     const m=mesAtual();
     const LO=limOrc(m);S.cats.filter(c=>LO[c]>0).forEach(c=>{const g=somaMes(m,'despesa',c,true),p=g/LO[c]*100;
-      if(p>=80)out.push({id:'or|'+c+'|'+m+'|'+(p>=100?2:1),k:p>=100?'venc':'aviso',h:`${I('alert')} orçamento de <b>${esc(c)}</b> ${p>=100?'estourou':'em '+Math.round(p)+'%'} · ${brl(g)} de ${brl(LO[c])}`});});
+      if(p>=80)out.push({id:'or|'+c+'|'+m+'|'+(p>=100?2:1),k:p>=100?'venc':'aviso',h:`${I('alert')} orçamento de <b>${esc(c)}</b> ${p>=100?'estourou':'em '+Math.floor(p)+'%'} · ${brl(g)} de ${brl(LO[c])}`});});
     S.cartoes.forEach(c=>{if(c.arq||!(c.limite>0))return;const u=usadoCartaoTotal(c),p=u/c.limite*100;
       if(p>=90)out.push({id:'lm|'+c.id+'|'+m+'|'+(p>=100?2:1),k:p>=100?'venc':'aviso',h:`${I('card')} cartão <b>${esc(c.nome)}</b> com ${Math.round(p)}% do limite usado · livre ${brl(Math.max(0,c.limite-u))}`});});
   }
@@ -1092,7 +1097,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)']];
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber']];
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -1336,10 +1341,11 @@ function fixaForm(id){
     if(freq==='semanal'){obj.dow=new Date(+inicio.slice(0,4),+inicio.slice(5,7)-1,+inicio.slice(8,10)).getDay();obj.dia=f&&f.dia||1;}
     else if(!porIntervalo)obj.dia=+inicio.slice(8,10);
     if(freq==='anual')obj.mes=+inicio.slice(5,7);
+    let valorAntigo=0; // v10.79: declarado fora do bloco (antes dava "valorAntigo is not defined" ao editar conta fixa)
     if(f){
       const inicioAnt=f.inicio||primeiraFixa(f),mudouInicio=inicioAnt!==inicio;
       const mudouRegra=mudouInicio||(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes)||(porIntervalo&&(f.inicio!==obj.inicio||(freq==='intervalo'&&(+f.n!==obj.n||f.un!==obj.un))))||(f.fim||'')!==fimR;
-      const valorAntigo=+f.valor||0;
+      valorAntigo=+f.valor||0;
       Object.assign(f,obj);
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
       if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=mudouInicio?inicio:(f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj);}
@@ -1835,7 +1841,7 @@ function txLinhasPlanilha(lista){
   /* v10.78: transferência e empréstimo com o tipo, o sinal e as contas certos (devolução entrava como saída) */
   const tipoL=t=>t.emp?(t.empDir==='in'?'devolução de empréstimo':t.empDir==='perdao'?'empréstimo perdoado':'empréstimo'):t.tipo==='transf'?'transferência':t.tipo;
   const valL=t=>t.emp?(t.empDir==='in'?t.valor:-t.valor):t.tipo==='receita'?t.valor:t.tipo==='transf'?t.valor:-t.valor;
-  const contaL=t=>{if(t.tipo!=='transf')return conta(t);const a=t.de?nomeLado(t.de):'',b=t.para?nomeLado(t.para):'';return t.emp?(t.empDir==='in'?b:a):[a,b].filter(Boolean).join(' → ');};
+  const contaL=t=>{if(t.tipo!=='transf')return conta(t);const a=t.de?nomeLado(t.de):'',b=t.para?nomeLado(t.para):'';return t.emp?(t.empAnt?'antes do app':t.empDir==='in'?b:a):[a,b].filter(Boolean).join(' → ');};
   lista.forEach(t=>L.push([t.data.split('-').reverse().join('/'),tipoL(t),t.descricao||'',t.categoria||'',t.sub||'',n(valL(t)),t.status||'pago',contaL(t),cart(t),t.parcela&&t.parcelas?t.parcela+'/'+t.parcelas:'',(t.tags||[]).join(', '),(+t.juros||0)+(+t.multa||0)?n((+t.juros||0)+(+t.multa||0)):'',+t.desconto?n(t.desconto):'',t.obs||'']));
   return L;
 }
@@ -2147,6 +2153,7 @@ function navRestaura(){
   return true;
 }
 addEventListener('popstate',()=>{if(!navRestaura()&&$('#modal').classList.contains('on'))closeModal();});
+ICONS.info='<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>';
 ICONS.clock='<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
 ICONS.handCoins='<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>';
 ICONS.undo='<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
@@ -2160,6 +2167,7 @@ document.addEventListener('input',e=>{if(e.target&&e.target.id==='catBusca'){con
 function render(){
   $('#sub').textContent=DATA_HOJE();
   try{atualizaSino();}catch(e){}
+  {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||/[?&]gvtest\b/.test(location.search))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
   const v=$('#view');
   if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(v.contains(ch.canvas))ch.destroy();}catch(e){}}); // v10.51: gráficos da tela antiga não ficam presos na memória
@@ -2450,20 +2458,70 @@ function viewInicio(){
   ${cartHTML}
   ${dicaInstalarHTML(false)}`;
 }
-function proximosVenc(dias){
-  const h=new Date(),hj=hojeISO(),ate=isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),out=[],vistos=new Set();
+function proximosVenc(dias){const h=new Date();return vencEntre(hojeISO(),isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),true);}
+/* v10.79: o que vence entre ini e ate (atrasados=true também traz as previstas de antes de ini). a função alertas-push repete esta regra no resumo semanal */
+function vencEntre(ini,ate,atrasados){
+  const hj=ini,out=[],vistos=new Set();
   S.tx.forEach(t=>{
-    if(t.status!=='previsto'||t.tipo!=='despesa'||t.cartao||!t.data||t.data>ate)return;
+    if(t.status!=='previsto'||t.tipo!=='despesa'||t.cartao||!t.data||t.data>ate||(!atrasados&&t.data<ini))return;
     if(t.fixaKey)vistos.add(t.fixaKey);
     out.push({data:t.data,nome:t.descricao||t.categoria||'conta',valor:+t.valor||0,cat:t.categoria,tipo:t.fixaKey?'fixa':'conta',tx:t.id});
   });
   (S.fixas||[]).forEach(f=>{if(f.tipo==='receita')return;
     ocorrenciasFixa(f,hj,ate).forEach(o=>{if(vistos.has(o.key)||S.tx.some(t=>t.fixaKey===o.key))return;out.push({data:o.data,nome:f.nome,valor:+f.valor||0,cat:f.categoria,tipo:'fixa',fx:f.id});});});
-  S.tx.forEach(t=>{if(!t.faturaKey)return;const r=restanteFatura(t),v=venceFatura(t);if(r>0.009&&v<=ate)out.push({data:v,nome:t.descricao||'fatura',valor:r,cat:null,tipo:'fatura',fat:t.id});});
+  S.tx.forEach(t=>{if(!t.faturaKey)return;const r=restanteFatura(t),v=venceFatura(t);if(r>0.009&&v<=ate&&(atrasados||v>=ini))out.push({data:v,nome:t.descricao||'fatura',valor:r,cat:null,tipo:'fatura',fat:t.id});});
   // v10.72: mesma conta (nome, valor e data) só uma vez; a conta fixa ganha da prevista avulsa
   const un={};out.forEach(x=>{if(x.tipo!=='fatura')x.nome=String(x.nome).replace(/\s*\(fixa\)\s*$/i,'');const k=x.tipo==='fatura'?Math.random():nomeConta(x.nome)+'|'+x.data+'|'+Math.round(x.valor*100);if(!un[k]||(un[k].tipo!=='fixa'&&x.tipo==='fixa'))un[k]=x;});
   out.length=0;Object.values(un).forEach(x=>out.push(x));
   return out.sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
+}
+/* ---------- v10.79: resumo da semana ----------
+   todo domingo às 9h (push da função alertas-push): o que entrou e saiu na semana que terminou (domingo a sábado),
+   o que vence de domingo a sábado seguinte e o total a receber de empréstimos. a função repete estas mesmas contas. */
+function domingoDe(iso){const x=new Date(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10));return addDias(iso,-x.getDay());}
+function resumoSemana(R){
+  R=DATA_OK.test(R||'')?domingoDe(R):domingoDe(hojeISO());
+  const ini=addDias(R,-7),fim=addDias(R,-1),ate=addDias(R,6);let ent=0,sai=0,nE=0,nS=0;
+  S.tx.forEach(t=>{if(!t.data||t.data<ini||t.data>fim||!efetivo(t))return;
+    if(t.tipo==='receita'){ent+=cents(t.valor);nE++;}else if(t.tipo==='despesa'&&!t.faturaKey){sai+=cents(t.valor);nS++;}});
+  const V=vencEntre(R,ate,false),P=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
+  return {R,ini,fim,ate,entrou:ent/100,saiu:sai/100,nE,nS,venc:V,vencTot:V.reduce((a,x)=>a+cents(x.valor),0)/100,receber:P.reduce((a,x)=>a+cents(x.t.aberto),0)/100,pessoas:P.length};
+}
+function fmtFaixa(a,b){const ma=+a.slice(5,7),mb=+b.slice(5,7);return ma===mb?`${+a.slice(8,10)} a ${+b.slice(8,10)} de ${MESES_LONGO[mb-1]}`:`${+a.slice(8,10)} de ${MESES_LONGO[ma-1]} a ${+b.slice(8,10)} de ${MESES_LONGO[mb-1]}`;}
+function abreSemana(R){
+  const r=resumoSemana(R),box=$('#modal'),hj=hojeISO();
+  const quando=d=>{const n=Math.round((new Date(d+'T12:00')-new Date(hj+'T12:00'))/864e5);return n<0?{t:'atrasada',c:'late'}:n===0?{t:'hoje',c:'now'}:n===1?{t:'amanhã',c:'now'}:{t:d.slice(8,10)+'/'+d.slice(5,7),c:n<=3?'soon':''};};
+  const tile=(cls,ic,lb,val,sub,act,id)=>`<div class="rsT ${cls} tap" data-act="${act}" data-id="${id||''}" role="button" tabindex="0" aria-label="${esc(lb)}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b><span class="rsD">${sub}</span></div>`;
+  const rows=r.venc.slice(0,12).map(x=>{const q=quando(x.data),ic=x.tipo==='fatura'?'card':x.cat?catIcon(x.cat):'receipt',cc=x.tipo==='fatura'?'#60a5fa':x.cat?corCat(x.cat):'#fbbf24';
+    const ref=x.fat?`data-act="fat-abre" data-id="${esc(x.fat)}"`:x.tx?`data-act="tx-menu" data-id="${esc(x.tx)}"`:x.fx?`data-act="edit-fixa" data-id="${esc(x.fx)}"`:'';
+    return `<div class="rmRow${ref?' tap':''}" ${ref}${ref?' role="button" tabindex="0"':''}><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(x.nome)}</b><small>${x.tipo==='fatura'?'fatura do cartão':x.tipo==='fixa'?'conta fixa':'conta prevista'}</small></div><div class="hvR"><span class="rmV nw">${brl(x.valor)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
+  box.innerHTML=`<div class="sheet semSheet" role="dialog" aria-modal="true" aria-label="Resumo da semana"><div class="sh-head"><h3>Resumo da semana</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small semSub">semana de ${fmtFaixa(r.ini,r.fim)}</p>
+    <div class="relRes semRes">
+      ${tile('rec','arrowDown','entrou',brl(r.entrou),r.nE+(r.nE===1?' receita':' receitas'),'sem-rec',r.R)}
+      ${tile('des','arrowUp','saiu',brl(r.saiu),r.nS+(r.nS===1?' gasto':' gastos'),'sem-des',r.R)}
+      ${tile('sal'+(r.entrou-r.saiu<0?' neg':''),'scale','saldo da semana',brl(r.entrou-r.saiu),'entrou menos saiu','sem-tudo',r.R)}
+      ${tile('pou','handCoins','a receber',brl(r.receber),r.pessoas?r.pessoas+(r.pessoas===1?' pessoa te deve':' pessoas te devem'):'ninguém te deve','emp-lista','')}
+    </div>
+    <div class="card semVenc"><div class="hmH tap" data-act="nav-aberto" role="button" tabindex="0" aria-label="ver tudo que está em aberto"><h4>vence de ${fmtDataCurta(r.R)} a ${fmtDataCurta(r.ate)}</h4><span class="hmSub">${brl(r.vencTot)}${I('chevR','tapCh')}</span></div>
+      ${rows||'<p class="small" style="margin:6px 0 2px">nada vence nesses 7 dias.</p>'}${r.venc.length>12?`<button type="button" class="hmLink hmMais" data-act="nav-aberto">+${r.venc.length-12} vencimentos${I('chevR')}</button>`:''}</div>
+    <p class="small semRodape">${I('bell')}Chega todo domingo às 9h. Ligue ou desligue em Ajustes, nas notificações.</p>
+  </div>`;
+  box.classList.add('on');
+}
+/* ---------- v10.79: orçamento passou de 80% ou de 100% ----------
+   um aviso por limite, por categoria, por mês (S.cfg.orcAv sincroniza entre aparelhos); o sino continua mostrando o alerta.
+   o push vem da função alertas-push, que guarda o "já avisado" em push_log. mesma conta da aba Orçamentos. */
+let ORC_V=false,ORC_T=null;
+function orcNiveis(m){const LO=limOrc(m),out={};S.cats.forEach(c=>{const lim=LO[c];if(!(lim>0))return;const g=somaMes(m,'despesa',c,true),p=g/lim*100;out[c]={g,lim,p,nv:p>=100?100:p>=80?80:0};});return out;}
+function orcVigia(){
+  if(!S||!S.cfg||ORC_V)return null;const m=mesAtual(),N=orcNiveis(m),av=Object.assign({},S.cfg.orcAv||{});let msg='',mud=false;
+  Object.keys(N).forEach(c=>{const x=N[c],k=c+'|'+m;if(x.nv>(+av[k]||0)){av[k]=x.nv;mud=true;if(!msg)msg='Orçamento de '+c+(x.nv>=100?' estourou: ':' passou de 80%: ')+brl(x.g)+' de '+brl(x.lim);}});
+  if(!mud)return null;
+  const lim=mesAdd(m,-2);Object.keys(av).forEach(k=>{if(k.slice(-7)<lim)delete av[k];});
+  S.cfg.orcAv=av;ORC_V=true;try{salvar();}finally{ORC_V=false;}
+  if(msg&&notifOn('orc')){clearTimeout(ORC_T);ORC_T=setTimeout(()=>{toast(msg);try{atualizaSino();}catch(e){}},2600);}
+  return msg;
 }
 function proxVencHTML(){
   const L=proximosVenc(30);if(!L.length)return '';
@@ -2871,6 +2929,7 @@ function viewCfg(){
     <h4>Notificações no celular</h4>
     <p class="pushTxt" id="pushTxt">verificando…</p>
     <div class="pushBtns" id="pushBtns"></div>
+    <button type="button" class="semLink" data-act="sem-abre">${I('report')}<span><b>Resumo da semana</b><small>${notifOn('semanal')?'chega domingo às 9h · ver o desta semana':'desligado · ver o desta semana'}</small></span>${I('chevR')}</button>
     <label class="avisoSel"><span>${I('bell')}avisar contas com antecedência de</span><select data-aviso="1">${[[0,'só no dia'],[1,'1 dia'],[2,'2 dias'],[3,'3 dias'],[5,'5 dias'],[7,'7 dias']].map(([v,l])=>`<option value="${v}" ${avisoDias()===v?'selected':''}>${l}</option>`).join('')}</select></label>
     <p class="hmNota">vale para os avisos do app e para as notificações. no dia e na véspera você também é avisado.</p>
   </div>
@@ -3553,7 +3612,7 @@ function abreImport(nome,txt){
   montaImport();
 }
 function montaImport(){
-  const d=IMP.destino,ehCartao=d.indexOf('c:')===0;
+  const d=IMP.destino,ehCartao=d.indexOf('c:')===0,ehConta=d.indexOf('b:')===0,usados=new Set();
   IMP.linhas.forEach(l=>{
     l.tipo=l.valor<0?'despesa':'receita';
     l.transf=ehCartao&&l.valor<0&&/limite convertido|credito do limite|saldo .*limite/.test(norm(l.desc));
@@ -3561,20 +3620,27 @@ function montaImport(){
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
-    const dupT=!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
+    /* v10.79: empréstimo ou devolução lançado à mão que o banco trouxe agora: liga um ao outro em vez de duplicar */
+    const vm=!dup&&ehConta&&!l.propria&&!l.transf?empManualIgual(l,d,usados):null;
+    l.vinc=vm?vm.id:'';if(vm)usados.add(vm.id);
+    /* v10.79: Pix com o nome de quem te deve (entrada até o que falta) ou de quem já pegou emprestado (saída) */
+    const es=!dup&&!vm&&ehConta&&!l.propria&&!l.transf?empCasa(l.desc,Math.abs(l.valor),l.data,l.valor>0?'in':'out'):null;
+    if(!es||l.empSug!==es.id)l.empOk=false;l.empSug=es?es.id:'';
+    const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     if(dup||dupT)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup)ign='já está no app';
+    else if(vm)ign='já lançado como '+(vm.empDir==='in'?'devolução de ':'empréstimo para ')+primeiroNome(empNome(vm.emp))+' · fica ligado ao do banco';
     else if(dupT)ign='já lançado como transferência';
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT;
+    l.ign=ign;l.dup=dup||dupT||!!vm;if(vm)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -3588,7 +3654,7 @@ function montaImport(){
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
-        ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}</div>
+        ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
     <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
   </div>`;
@@ -3596,6 +3662,7 @@ function montaImport(){
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
   box.querySelectorAll('input[data-i]').forEach(c=>c.onchange=()=>{IMP.linhas[+c.dataset.i].on=c.checked;c.closest('.impRow').classList.toggle('off',!c.checked);resumoImp();});
   box.querySelectorAll('select[data-c]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.c].cat=s.value;});
+  box.querySelectorAll('input[data-emp]').forEach(c=>c.onchange=()=>{const l=IMP.linhas[+c.dataset.emp];l.empOk=c.checked;if(c.checked&&!l.on){l.on=true;const ck=box.querySelector('input[data-i="'+c.dataset.emp+'"]');if(ck){ck.checked=true;ck.closest('.impRow').classList.remove('off');}resumoImp();}});
   box.querySelectorAll('select[data-p]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.p].para=s.value;});
   box.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{
     if(b.dataset.imp==='pular'||b.dataset.imp==='nunca'){if(b.dataset.imp==='nunca'){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]='x';salvar();}const eb=IMP.banco;IMP=null;closeModal();if(IMP_FILA.length)setTimeout(proxImportBanco,250);else if(eb)fimFilaBanco();return;}
@@ -3605,15 +3672,20 @@ function montaImport(){
 function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
-  let n=0;
-  IMP.linhas.forEach(l=>{if(!l.on||S.tx.some(t=>t.id===l.id))return;
+  let n=0,lig=0;
+  IMP.linhas.forEach(l=>{
+    /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
+    if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
     if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
     else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
     else if(ehCartao){t.forma='cartao';t.cartao=alvo;}else{t.forma='pix';t.conta=alvo;}
-    if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
+    if(l.empSug&&l.empOk&&!l.propria&&!l.transf&&!ehCartao&&empPorId(l.empSug)){const dir=l.valor>0?'in':'out';
+      t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:alvo};Object.assign(t,{tipo:'transf',emp:l.empSug,empDir:dir,categoria:'Empréstimo',de:dir==='out'?d:'',para:dir==='in'?d:'',conta:'',forma:'',cartao:''});delete t.rev;}
+    else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     S.tx.push(t);n++;});
   if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
     if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
@@ -3623,7 +3695,7 @@ function confirmaImport(){
   const eraBanco=IMP.banco,mudo=IMP.silent;
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
   if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
-  else toast(n+' lançamentos importados');
+  else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':''));
   if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
 }
 
@@ -3645,12 +3717,17 @@ function abreRevisar(){
       <div class="txt"><b>${esc(t.descricao||t.categoria)}</b><small>${fmtDataCurta(t.data)}${ct?' · '+esc(ct.nome):bc?' · '+esc(bc.nome):''}</small>
       <select data-revcat="${esc(t.id)}" aria-label="categoria de ${esc(t.descricao||'')}">${catOpts(t)}</select></div>
       <div class="revR"><div class="val ${t.tipo==='receita'?'pos':'neg'}">${t.tipo==='receita'?'+':'−'} ${brl(t.valor)}</div>
-      <div class="revBt"><button class="btn2 sm" data-act="rev-del" data-id="${esc(t.id)}" aria-label="descartar">${I('trash')}</button><button class="btn2 sm revOk" data-act="rev-ok" data-id="${esc(t.id)}" aria-label="confirmar">${I('check')}</button></div></div></div>`;}).join('')}</div>
+      <div class="revBt"><button class="btn2 sm" data-act="rev-del" data-id="${esc(t.id)}" aria-label="descartar">${I('trash')}</button><button class="btn2 sm revOk" data-act="rev-ok" data-id="${esc(t.id)}" aria-label="confirmar">${I('check')}</button></div></div>${revEmpHTML(t)}</div>`;}).join('')}</div>
     <button class="btn full" data-act="rev-todos">confirmar ${L.length>150?'os 150 primeiros':L.length>1?'todos os '+L.length:'este'}</button>
   </div>`;
   box.classList.add('on');
   box.querySelectorAll('select[data-revcat]').forEach(sl=>sl.onchange=()=>revCat(sl.dataset.revcat,sl.value));
 }
+/* v10.79: Pix do banco com o nome de quem te deve: oferece virar a devolução (ou o empréstimo, na saída) */
+function revEmpHTML(t){if(t.emp||t.cartao||!(t.tipo==='receita'||t.tipo==='despesa'))return '';const dir=t.tipo==='receita'?'in':'out';
+  if(dir==='in'&&(S.cfg.empIgn||[]).includes(t.id))return '';
+  const e=empCasa(t.descricao,t.valor,t.data,dir);if(!e)return '';
+  return `<div class="revEmp">${I('handCoins')}<span>${dir==='in'?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+'?'}</span><button class="btn2 sm" data-act="${dir==='in'?'emp-sug-ok':'emp-sug-out'}" data-id="${esc(t.id)}~${e.id}">sim</button></div>`;}
 function revCat(id,cat){
   const t=S.tx.find(x=>x.id===id);if(!t||!cat||t.categoria===cat)return;
   t.categoria=cat;delete t.rev;let parecidos=0;
@@ -3669,14 +3746,14 @@ function revCat(id,cat){
    então emprestar não conta como gasto e receber de volta não conta como receita, mas o saldo das contas mexe certo.
    o que está em aberto entra no patrimônio como "a receber". */
 /* v10.78: "perdao" baixa o que falta sem mexer em conta nenhuma (vira despesa só se a pessoa escolher) */
-function empDelta(t){return t.empDir==='perdao'?0:t.empDir==='in'?cents(t.valor):-cents(t.valor);}
+function empDelta(t){return t.empDir==='perdao'||t.empAnt?0:t.empDir==='in'?cents(t.valor):-cents(t.valor);}
 function empPerdao(t){return !!(t&&t.emp&&t.empDir==='perdao');}
 function empTot(id){let saiu=0,voltou=0,perd=0;S.tx.forEach(t=>{if(t.emp!==id||!efetivo(t))return;if(t.empDir==='in')voltou+=cents(t.valor);else if(t.empDir==='perdao')perd+=cents(t.valor);else saiu+=cents(t.valor);});
   return {saiu:saiu/100,voltou:voltou/100,perdoado:perd/100,aberto:Math.max(0,saiu-voltou-perd)/100,ult:S.tx.filter(t=>t.emp===id).map(t=>t.data).sort().pop()||''};}
 function empAbertoTotal(){return (S.emprestimos||[]).reduce((a,e)=>a+cents(empTot(e.id).aberto),0)/100;}
 function empPorId(id){return (S.emprestimos||[]).find(e=>e.id===id);}
 function empNome(id){const e=empPorId(id);return e?e.pessoa:'alguém';}
-function empRotulo(t){const n=empNome(t.emp),ld=t.empDir==='in'?t.para:t.empDir==='perdao'?'':t.de;return (t.empDir==='in'?n+' devolveu':t.empDir==='perdao'?'perdoado · '+n+(t.tipo==='despesa'?' · conta como despesa':''):'emprestado a '+n)+(ld?' · '+nomeLado(ld):'');}
+function empRotulo(t){const n=empNome(t.emp),ld=t.empDir==='in'?t.para:t.empDir==='perdao'?'':t.de;return (t.empDir==='in'?n+' devolveu':t.empDir==='perdao'?'perdoado · '+n+(t.tipo==='despesa'?' · conta como despesa':''):'emprestado a '+n)+(t.empAnt?' · antes do app':ld?' · '+nomeLado(ld):'');}
 function primeiroNome(n){return String(n||'').trim().split(/\s+/)[0]||'';}
 function diasAte(d){if(!d)return null;const a=new Date(hojeISO()+'T12:00'),b=new Date(d+'T12:00');return Math.round((b-a)/864e5);}
 function empPrazo(e,ab){if(!(ab>0))return ['ok',empTot(e.id).perdoado>0?'encerrado':'quitado'];const pt=e.modo==='partes';if(!e.prev)return ['mut',pt?'sem prazo':'sem data pra voltar'];const k=diasAte(e.prev);
@@ -3689,6 +3766,7 @@ function empCardHTML(){
   const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
   const sug=empSugestoes()[0];
   let h='';
+  const sp=empSuspeitos()[0];if(sp)h+=`<div class="card empSug empAntCard">${empSuspDica(sp,true)}</div>`;
   if(sug)h+=`<div class="card empSug"><div class="empSugTop">${empAvatar(sug.e.pessoa)}<div><b>${esc(primeiroNome(sug.e.pessoa))} te pagou?</b><small>entrou ${brl(sug.t.valor)} em ${fmtDataCurta(sug.t.data)} · ${esc(nomeTx(sug.t).n||sug.t.descricao||'')}</small></div></div><div class="empSugBt"><button class="btn2 sm" data-act="emp-sug-nao" data-id="${sug.t.id}">não é</button><button class="btn sm" data-act="emp-sug-ok" data-id="${sug.t.id}~${sug.e.id}">é devolução</button></div></div>`;
   if(!L.length)return h;
   const tot=L.reduce((a,x)=>a+cents(x.t.aberto),0)/100,atr=L.filter(x=>x.e.prev&&diasAte(x.e.prev)<0);
@@ -3699,8 +3777,8 @@ function empSugestoes(){
   const ign=new Set(S.cfg.empIgn||[]),lim=isoDe(new Date(Date.now()-45*864e5)),out=[];
   const P=(S.emprestimos||[]).map(e=>({e,ab:empTot(e.id).aberto,k:norm(primeiroNome(e.pessoa))})).filter(x=>x.ab>0&&x.k.length>=3);
   if(!P.length)return out;
-  S.tx.forEach(t=>{if(t.tipo!=='receita'||!efetivo(t)||t.emp||ign.has(t.id)||!t.data||t.data<lim)return;const d=' '+norm(t.descricao||'').replace(/[^a-z0-9]+/g,' ')+' ';
-    const x=P.find(p=>d.includes(' '+p.k+' ')&&cents(t.valor)<=cents(p.ab)+1);if(x)out.push({t,e:x.e});});
+  S.tx.forEach(t=>{if(t.tipo!=='receita'||!efetivo(t)||t.emp||ign.has(t.id)||!t.data||t.data<lim)return;
+    const e=empCasa(t.descricao,t.valor,t.data,'in');if(e)out.push({t,e});}); // v10.79: nome inteiro conta mais, data depois do empréstimo
   return out.sort((a,b)=>b.t.data.localeCompare(a.t.data));
 }
 /* v10.78: forma de devolver. "avista" = um pagamento só (com data prevista opcional); "partes" = vai pagando o quanto puder até quitar.
@@ -3733,6 +3811,7 @@ function abreEmprestimos(){
       <div class="empBt"><button class="btn2 sm" data-act="emp-cobrar" data-id="${e.id}">${I('mail')}cobrar</button><button class="btn sm" data-act="emp-recebi" data-id="${e.id}">${I('arrowDown')}registrar pagamento</button></div></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="Empréstimos"><div class="sh-head"><h3>Empréstimos</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero"><span class="empHeroIc">${I('handCoins')}</span><small>a receber</small><b>${brl(tot)}</b><span>${ab.length?ab.length+' pessoa'+(ab.length>1?'s':'')+' · já voltou '+brl(voltou)+' de '+brl(saiu):'ninguém te deve agora'}</span>${atr.length?`<em class="empAtrH">${I('alert')}${atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' está atrasado':atr.length+' atrasados'} · ${brl(totAtr)}</em>`:''}</div>
+    ${empSuspeitos().slice(0,3).map(x=>empSuspDica(x,false)).join('')}
     ${ab.map(card).join('')||'<p class="small empVazio">Quando emprestar dinheiro, registre aqui. Sai da conta mas não conta como gasto nem entra no orçamento. Você acompanha cada devolução até quitar.</p>'}
     <button class="btn full" data-act="emp-novo">${I('plus')} emprestei dinheiro</button>
     <label class="ckrow empPrevCk"><input type="checkbox" id="empPrevCk" ${S.cfg.empPrev===false?'':'checked'}><span>contar a data combinada como entrada prevista (previsão e planejamento)</span></label>
@@ -3748,18 +3827,19 @@ function abreEmp(id){
   const H=S.tx.filter(x=>x.emp===id).sort((a,b)=>b.data.localeCompare(a.data)||(a.empDir==='out'?1:-1));
   const dev=H.filter(x=>x.empDir==='in'&&efetivo(x));
   const linha=x=>{const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
-    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${ld?' · '+esc(nomeLado(ld)):''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
+    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.pluggyId?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="${esc(e.pessoa)}"><div class="sh-head"><h3>${esc(e.pessoa)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero">${empAvatar(e.pessoa)}<small>${t.aberto>0?'falta receber':t.perdoado>0?'encerrado':'quitado'}</small><b>${brl(t.aberto)}</b><span><span class="empModo">${EMP_MODO[empModo(e)]}</span> <span class="badge ${k}">${l}</span></span></div>
     <div class="empProg">${empBarHTML(t)}<p class="empProgT"><b>${esc(empResumo(t))}</b></p>
       <div class="empProgL"><span><i class="pg"></i>recebido ${brl(t.voltou)}</span>${t.perdoado>0?`<span><i class="pd"></i>perdoado ${brl(t.perdoado)}</span>`:''}<span><i class="ab"></i>falta ${brl(t.aberto)}</span></div></div>
     ${e.obs?`<p class="small empObs">${esc(e.obs)}</p>`:''}
+    ${empSuspeitos().filter(x=>x.e.id===id).slice(0,1).map(x=>empSuspDica(x,false)).join('')}
     ${t.aberto>0?`<div class="empBt" style="margin:10px 0 4px"><button class="btn2" data-act="emp-cobrar" data-id="${id}">${I('mail')}cobrar</button><button class="btn" data-act="emp-recebi" data-id="${id}">${I('arrowDown')}registrar pagamento</button></div>`:''}
     <h4 class="rsH">devoluções ${dev.length?'('+dev.length+')':''}</h4>
     ${dev.length?dev.map(linha).join(''):`<p class="small">${t.aberto>0?(empModo(e)==='partes'?'nenhuma parte devolvida ainda. cada pagamento que entrar baixa o que falta.':'ainda não devolveu. se pagar em partes, registre cada uma.'):'sem devoluções.'}</p>`}
     <h4 class="rsH">histórico completo</h4>
     ${H.map(linha).join('')||'<p class="small">sem lançamentos ainda.</p>'}
-    <div class="row empRodape"><button class="btn2 sm" data-act="emp-novo" data-id="${id}">${I('plus')}emprestar mais</button><button class="btn2 sm" data-act="emp-edit" data-id="${id}">${I('edit')}editar</button>${t.aberto>0?`<button class="btn2 sm" data-act="emp-perdoa" data-id="${id}">${I('heartHand')}perdoar o resto</button>`:''}<button class="btn2 sm danger" data-act="emp-del" data-id="${id}">${I('trash')}excluir</button><button class="btn2 sm" style="margin-left:auto" data-act="emp-lista">todos</button></div>
+    <div class="row empRodape"><button class="btn2 sm" data-act="emp-novo" data-id="${id}">${I('plus')}emprestar mais</button><button class="btn2 sm" data-act="emp-edit" data-id="${id}">${I('edit')}editar</button>${empSaidasCorrigiveis(id).length?`<button class="btn2 sm" data-act="emp-ant" data-id="${id}">${I('clock')}${empSaidasCorrigiveis(id).every(x=>x.empAnt)?'saiu antes do app':'já tinha saído antes do app'}</button>`:''}${t.aberto>0?`<button class="btn2 sm" data-act="emp-perdoa" data-id="${id}">${I('heartHand')}perdoar o resto</button>`:''}<button class="btn2 sm danger" data-act="emp-del" data-id="${id}">${I('trash')}excluir</button><button class="btn2 sm" style="margin-left:auto" data-act="emp-lista">todos</button></div>
   </div>`;
   box.classList.add('on');
 }
@@ -3771,6 +3851,7 @@ function novoEmp(id,pre){
   form(e?'Emprestar mais a '+e.pessoa:'Emprestei dinheiro',[
     e?{name:'pessoa',type:'hidden',value:e.pessoa}:{name:'pessoa',label:'Pra quem',value:pre.pessoa||'',required:true,placeholder:'nome da pessoa',list:nomes,maxlength:60},
     {name:'valor',label:'Valor (R$)',value:pre.valor?num(pre.valor):'',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'antes',label:'Já tinha emprestado antes de usar o app',type:'checkbox',value:!!pre.antes},
     {name:'conta',label:'Saiu de',type:'select',value:pre.conta||'b:'+bancoPadrao(),options:contasOpts(pre.conta&&pre.conta.slice(2))},
     {name:'data',label:'Quando',type:'date',value:pre.data||hojeISO(),required:true},
     {name:'modo',label:'Como vai devolver',type:'seg',value:e?empModo(e):'avista',options:[{v:'avista',t:'À vista',d:'tudo de uma vez'},{v:'partes',t:'Em partes',d:'vai pagando até quitar'}]},
@@ -3780,11 +3861,20 @@ function novoEmp(id,pre){
     const valor=parseBR(v.valor);if(!(valor>0))return 'Informe um valor maior que zero.';
     if(!String(v.pessoa||'').trim())return 'Diga pra quem você emprestou.';
     if(!DATA_OK.test(String(v.data)))return 'Informe a data.';
+    const antes=!!v.antes;
     const p=empAchaOuCria(v.pessoa);p.modo=v.modo==='partes'?'partes':'avista';if(v.prev)p.prev=v.prev;if(v.obs)p.obs=String(v.obs).slice(0,140);
-    S.tx.push({id:uid(),tipo:'transf',emp:p.id,empDir:'out',valor,data:v.data,de:v.conta||'',para:'',categoria:'Empréstimo',descricao:'empréstimo para '+p.pessoa,cartao:'',conta:'',forma:''});
-    salvar();render();toast('Empréstimo registrado · não conta como gasto');setTimeout(()=>abreEmp(p.id),40);
+    /* v10.79: o mesmo Pix já veio do banco? vira o empréstimo (não conta duas vezes) */
+    const bx=antes?null:txBancoIgual(v.conta,'despesa',valor,v.data);
+    if(bx){aplicaEmp(bx,p.id,'out');toast('Usei a saída que já veio do banco · não conta duas vezes');setTimeout(()=>abreEmp(p.id),40);return;}
+    S.tx.push(Object.assign({id:uid(),tipo:'transf',emp:p.id,empDir:'out',valor,data:v.data,de:antes?'':v.conta||'',para:'',categoria:'Empréstimo',descricao:'empréstimo para '+p.pessoa,cartao:'',conta:'',forma:''},antes?{empAnt:1}:{}));
+    salvar();render();toast(antes?'Empréstimo antigo registrado · não mexe no saldo':'Empréstimo registrado · não conta como gasto');setTimeout(()=>abreEmp(p.id),40);
   });
   const mf=$('#mf');if(!mf)return;
+  /* v10.79: empréstimo antigo: some o "Saiu de", a data pode ser antiga e nada sai das contas */
+  const ckA=mf.querySelector('[name="antes"]'),lbC=mf.querySelector('[name="conta"]').closest('label'),lbD=mf.querySelector('[name="data"]').closest('label');
+  ckA.closest('label').classList.add('empAntCk');ckA.closest('label').insertAdjacentHTML('afterend','<p class="empAntDica" id="empAntDica">Não tira dinheiro de nenhuma conta (ele já tinha saído antes). Continua em A receber, no patrimônio, na previsão e nos avisos.</p>');
+  const pintaA=()=>{const on=ckA.checked;lbC.style.display=on?'none':'';$('#empAntDica').style.display=on?'':'none';if(lbD.firstChild)lbD.firstChild.textContent=on?'Quando emprestou (pode ser antiga)':'Quando';};
+  ckA.addEventListener('change',pintaA);pintaA();
   const pv=mf.querySelector('[name="prev"]'),lb=pv&&pv.closest('label');
   const pinta=()=>{const m=(mf.querySelector('[name="modo"]:checked')||{}).value;if(lb&&lb.firstChild)lb.firstChild.textContent=m==='partes'?'Quitar até (opcional)':'Data prevista para devolver (opcional)';};
   mf.querySelectorAll('[name="modo"]').forEach(r=>r.addEventListener('change',pinta));pinta();
@@ -3801,14 +3891,18 @@ function recebiEmp(id,pre){
   const campos=[];
   if(!e)campos.push({name:'quem',label:'Quem pagou',type:'select',value:abertos[0].e.id,options:abertos.map(x=>({v:x.e.id,t:x.e.pessoa+' · falta '+brl(x.t.aberto)}))});
   campos.push({name:'valor',label:'Valor recebido agora (R$)',value:num(pre.valor&&pre.valor<=t0.aberto?pre.valor:t0.aberto),required:true,inputmode:'decimal'},
-    {name:'conta',label:'Entrou em',type:'select',value:pre.conta||'b:'+bancoPadrao(),options:contasOpts(pre.conta&&pre.conta.slice(2))},
+    {name:'conta',label:'Entrou em',type:'select',value:pre.conta||'b:'+bancoPadrao(),options:contasOpts(pre.conta&&pre.conta.slice(2)).concat([{v:'ant',t:'não mexer no saldo (recebi antes de usar o app)'}])},
     {name:'data',label:'Quando',type:'date',value:pre.data||hojeISO(),required:true});
   form(e?'Pagamento de '+primeiroNome(e.pessoa):'Recebi de volta',campos,v=>{
     const eid=e?e.id:v.quem,ee=empPorId(eid);if(!ee)return 'Escolha quem pagou.';
     const tt=empTot(eid),valor=parseBR(v.valor);if(!(valor>0))return 'Informe um valor maior que zero.';
     if(cents(valor)>cents(tt.aberto))return 'Passa do que falta ('+brl(tt.aberto)+'). Se recebeu a mais, registre só o que faltava.';
     if(!DATA_OK.test(String(v.data)))return 'Informe a data.';
-    S.tx.push({id:uid(),tipo:'transf',emp:eid,empDir:'in',valor,data:v.data,de:'',para:v.conta||'',categoria:'Empréstimo',descricao:ee.pessoa+' devolveu',cartao:'',conta:'',forma:''});
+    const ant=v.conta==='ant';
+    /* v10.79: a entrada já veio do banco? vira a devolução (não conta duas vezes) */
+    const bx=ant?null:txBancoIgual(v.conta,'receita',valor,v.data);
+    if(bx){aplicaEmp(bx,eid,'in');setTimeout(()=>abreEmp(eid),40);return;}
+    S.tx.push(Object.assign({id:uid(),tipo:'transf',emp:eid,empDir:'in',valor,data:v.data,de:'',para:ant?'':v.conta||'',categoria:'Empréstimo',descricao:ee.pessoa+' devolveu',cartao:'',conta:'',forma:''},ant?{empAnt:1}:{}));
     salvar();render();const ab=empTot(eid).aberto;toast(ab>0?'Pagamento registrado · falta '+brl(ab):primeiroNome(ee.pessoa)+' quitou tudo');setTimeout(()=>abreEmp(eid),40);
   });
   const mf=$('#mf');if(!mf)return;
@@ -3879,8 +3973,8 @@ function aplicaEmp(t,eid,dir){
   t.conta='';t.cartao='';delete t.rev;
   salvar();render();const ab=empTot(eid).aberto;toast(dir==='in'?(ab>0?'Devolução registrada · falta '+brl(ab):primeiroNome(empNome(eid))+' quitou tudo'):'Marcado como empréstimo');
 }
-function desfazEmpTx(t){const o=t.empOrig||{};const dir=t.empDir,lado=(dir==='in'?t.para:t.de)||'';
-  t.tipo=o.tipo||(dir==='in'?'receita':'despesa');t.categoria=o.categoria||'Outros';t.conta=o.conta||(lado.indexOf('b:')===0?lado.slice(2):'');t.de='';t.para='';delete t.emp;delete t.empDir;delete t.empOrig;}
+function desfazEmpTx(t){const o=t.empOrig||{};const dir=t.empDir,lado=(t.empAnt?t.empAntDe:(dir==='in'?t.para:t.de))||'';
+  t.tipo=o.tipo||(dir==='in'?'receita':'despesa');t.categoria=o.categoria||'Outros';t.conta=o.conta||(lado.indexOf('b:')===0?lado.slice(2):'');t.de='';t.para='';delete t.emp;delete t.empDir;delete t.empOrig;delete t.empAnt;delete t.empAntDe;}
 function desfazEmp(id){const t=S.tx.find(x=>x.id===id);if(!t||!t.emp)return;desfazEmpTx(t);salvar();render();toast(t.tipo==='receita'?'Voltou a ser receita':'Voltou a ser gasto');}
 function converteEmp(id,dir){
   const t=S.tx.find(x=>x.id===id);if(!t)return;
@@ -3943,6 +4037,75 @@ function empDoNovoTx(dir){
   const conta=forma==='dinheiro'&&contaDinheiroId()?'b:'+contaDinheiroId():cb?'b:'+cb:'';
   closeModal();
   setTimeout(()=>{if(dir==='in')recebiEmp('',{valor,data,conta});else novoEmp('',{valor,data,conta});},30);
+}
+/* ---------- v10.79: empréstimo antigo (dinheiro que já tinha saído antes de usar o app) ----------
+   a saída continua no empréstimo (o que falta, A receber, patrimônio, previsão e avisos), mas não desconta de conta nenhuma.
+   marcar guarda a conta em empAntDe; desmarcar devolve a saída para ela. as devoluções não mudam. */
+function empAntMarca(t){if(!t||!t.emp||t.empDir!=='out'||t.empAnt)return false;if(t.de)t.empAntDe=t.de;t.de='';t.empAnt=1;return true;}
+function empAntDesfaz(t){if(!t||!t.empAnt)return false;const d=t.empAntDe&&S.bancos.some(b=>'b:'+b.id===t.empAntDe)?t.empAntDe:(bancoPadrao()?'b:'+bancoPadrao():'');
+  if(t.empDir==='in')t.para=d;else t.de=d;delete t.empAnt;delete t.empAntDe;return true;}
+/* saídas que dá para corrigir: lançadas à mão (as que vieram do banco aconteceram de verdade na conta) */
+function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.pluggyId&&!t.importado&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
+/* dica: a saída deixou a conta negativa, ou é anterior a tudo que foi lançado naquela conta */
+function empSuspeitos(){
+  const out=[],ign=new Set(S.cfg.empAntIgn||[]);
+  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.pluggyId||t.importado||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
+    const e=empPorId(t.emp),b=S.bancos.find(x=>'b:'+x.id===t.de);if(!e||!b)return;
+    if(b.saldoData&&t.data<b.saldoData)return; // anterior ao saldo informado: já não desconta nada
+    const sb=saldoBanco(b);
+    if(sb<0&&sb+t.valor>=-0.004){out.push({t,e,b,motivo:'neg'});return;}
+    const k='b:'+b.id;let pri='';S.tx.forEach(x=>{if(x===t||x.emp||!x.data)return;if(x.conta===b.id||x.de===k||x.para===k||x.pagoConta===b.id){if(!pri||x.data<pri)pri=x.data;}});
+    if(pri&&t.data<pri)out.push({t,e,b,motivo:'antes'});
+  });
+  return out;
+}
+function empSuspDica(x,compacto){const n=esc(primeiroNome(x.e.pessoa)),c=esc(x.b.nome);
+  const txt=x.motivo==='neg'?`O empréstimo de ${brl(x.t.valor)} para ${n} deixou a conta ${c} no negativo.`:`O empréstimo para ${n} (${fmtDataCurta(x.t.data)}) é anterior a tudo que você lançou em ${c}.`;
+  return `<div class="empAntTip" role="note">${I('info')}<div><p>${txt} Se esse dinheiro já tinha saído antes de você usar o app, corrija para não descontar da conta.</p><div class="empAntTipB">${compacto?`<button class="btn2 sm" data-act="emp-ant-ign" data-id="${x.t.id}">não é isso</button>`:''}<button class="btn2 sm" data-act="emp-ant" data-id="${x.e.id}">corrigir</button></div></div></div>`;}
+function empAntForm(id){
+  const e=empPorId(id);if(!e)return;const L=empSaidasCorrigiveis(id);
+  if(!L.length){toast('Nenhuma saída lançada à mão para corrigir.',true);return;}
+  const susp=new Set(empSuspeitos().map(x=>x.t.id));
+  form('Saiu antes do app?',L.map(t=>({name:'s_'+t.id,type:'checkbox',value:!!t.empAnt||L.length===1||susp.has(t.id),
+    label:`${brl(t.valor)} em ${fmtData(t.data)} · `+(t.empAnt?'já marcado como antes do app':'saiu de '+nomeLado(t.de))})),v=>{
+    let marcou=0,desfez=0;const contas={};
+    L.forEach(t=>{const on=!!v['s_'+t.id];if(on&&!t.empAnt){const c=t.de;if(empAntMarca(t)){marcou++;contas[c]=(contas[c]||0)+cents(t.valor);}}else if(!on&&t.empAnt){if(empAntDesfaz(t))desfez++;}});
+    if(!marcou&&!desfez)return;
+    salvar();render();
+    const cs=Object.keys(contas).filter(Boolean);
+    toast(marcou?(cs.length===1?brl(contas[cs[0]]/100)+' voltou para o saldo de '+nomeLado(cs[0]):'Corrigido · não desconta mais das contas'):'Voltou a descontar da conta');
+    setTimeout(()=>abreEmp(id),40);
+  });
+  const mf=$('#mf');if(!mf)return;
+  const t=empTot(id);
+  mf.insertAdjacentHTML('afterbegin',`<p class="empNota">Marque o dinheiro que você emprestou <b>antes</b> de começar a usar o app. Ele deixa de descontar do saldo da conta, mas o empréstimo continua igual: falta ${brl(t.aberto)}. As devoluções registradas não mudam. Dá para desfazer depois, aqui mesmo.</p>`);
+  const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Salvar correção';
+}
+/* ---------- v10.79: empréstimo × lançamentos do banco ----------
+   txBancoIgual: lançamento que veio do banco na mesma conta, mesmo valor, até 3 dias de diferença (para não lançar duas vezes).
+   empCasa: pessoa do empréstimo cujo nome aparece na descrição do Pix. */
+function difDias(a,b){return Math.abs(Math.round((new Date(a+'T12:00')-new Date(b+'T12:00'))/864e5));}
+function txBancoIgual(contaSel,tipo,valor,data){
+  const id=/^b:/.test(contaSel||'')?contaSel.slice(2):'';if(!id)return null;
+  const L=S.tx.filter(t=>t.pluggyId&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
+  return L.sort((a,b)=>difDias(a.data,data)-difDias(b.data,data))[0]||null;
+}
+function empTokens(n){return norm(n).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>=3&&!['das','dos','del'].includes(w));}
+function empCasa(desc,valor,data,dir){
+  const d=' '+norm(desc||'').replace(/[^a-z0-9]+/g,' ')+' ';let best=null;
+  (S.emprestimos||[]).forEach(e=>{const tk=empTokens(e.pessoa);if(!tk.length||!d.includes(' '+tk[0]+' '))return;
+    const t=empTot(e.id);
+    if(dir==='in'){if(!(t.aberto>0)||cents(valor)>cents(t.aberto)+1)return;
+      const q=S.tx.filter(x=>x.emp===e.id&&x.empDir==='out'&&efetivo(x)).map(x=>x.data).sort()[0]||'';if(q&&data&&data<q)return;}
+    const sc=tk.filter(w=>d.includes(' '+w+' ')).length*1000+(dir==='in'?Math.min(999,Math.round(t.aberto)):0);
+    if(!best||sc>best.sc)best={e,sc};});
+  return best?best.e:null;
+}
+/* lançamento manual de empréstimo que corresponde a uma linha do extrato (mesma conta, valor, até 3 dias) */
+function empManualIgual(l,d,usados){
+  const sai=l.valor<0,v=cents(Math.abs(l.valor));
+  const L=S.tx.filter(t=>t.emp&&!t.pluggyId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
+  return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* ---------- v10.58: conciliação de transferências ----------
    saída numa conta sua + entrada noutra conta sua, mesmo valor, até 2 dias de diferença = provável transferência.
@@ -4994,6 +5157,7 @@ function txMenu(id){
   if(t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita'))ops.push(['tx-propria','swap','Foi pra outra conta minha']);
   if(t.tipo==='despesa'&&!t.emp&&!t.cartao&&!t.faturaKey&&efetivo(t))ops.push(['tx-emp','handCoins','Emprestei (vai voltar)']);
   if(t.tipo==='receita'&&efetivo(t))ops.push(['tx-empv','handCoins','Devolução de empréstimo']);
+  if(t.emp&&t.empDir==='out'&&!t.pluggyId&&!t.importado)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
   if(t.emp&&t.empDir!=='perdao')ops.push(['tx-desemp','close','Não foi empréstimo']);
   ops.push(['del-tx','trash','Excluir',1]);
   const box=$('#modal');
@@ -5044,6 +5208,15 @@ const ACT={
   'emp-del':id=>delEmp(id),
   'emp-perdoa':id=>perdoaEmp(id),
   'emp-abre-tx':id=>{const t=S.tx.find(x=>x.id===id);if(t&&t.emp)abreEmp(t.emp);},
+  'emp-ant':id=>empAntForm(id),
+  'sem-abre':id=>abreSemana(id||''),
+  'sem-rec':R=>{const r=resumoSemana(R);navega('lanc',{tipo:'receita',ini:r.ini,fim:r.fim,perL:'semana de '+fmtFaixa(r.ini,r.fim)});},
+  'sem-tudo':R=>{const r=resumoSemana(R);navega('lanc',{tipo:'',ini:r.ini,fim:r.fim,perL:'semana de '+fmtFaixa(r.ini,r.fim)});},
+  'sem-des':R=>{const r=resumoSemana(R);navega('lanc',{tipo:'despesa',ini:r.ini,fim:r.fim,perL:'semana de '+fmtFaixa(r.ini,r.fim)});},
+  'emp-ant-tx':id=>{const t=S.tx.find(x=>x.id===id);if(t&&t.emp)empAntForm(t.emp);},
+  'emp-desant-tx':id=>{const t=S.tx.find(x=>x.id===id);if(!t||!empAntDesfaz(t))return;salvar();render();toast('Voltou a descontar de '+nomeLado(t.de||t.para));setTimeout(()=>abreEmp(t.emp),40);},
+  'emp-ant-ign':id=>{S.cfg.empAntIgn=(S.cfg.empAntIgn||[]).concat(id).slice(-200);salvar();render();},
+  'emp-sug-out':id=>{const [tid,eid]=String(id).split('~');const t=S.tx.find(x=>x.id===tid);if(t&&empPorId(eid))aplicaEmp(t,eid,'out');if($('#modal').classList.contains('on')&&$('.revSheet'))abreRevisar();},
   'fat-abre':id=>abreFatura(id),
   'prev-abre':()=>abrePrevisao(),
   'nav-contas':()=>navega('bancos'),
@@ -5065,7 +5238,7 @@ const ACT={
   'nav-rel-cat':k=>{const [m,c]=String(k).split('~');navega('lanc',{tipo:'despesa',mes:m,cat:c});},
   'tx-emp-novo':()=>empDoNovoTx('out'),
   'tx-emp-volta':()=>empDoNovoTx('in'),
-  'emp-sug-ok':id=>{const [tid,eid]=String(id).split('~');const t=S.tx.find(x=>x.id===tid);if(t)aplicaEmp(t,eid,'in');},
+  'emp-sug-ok':id=>{const [tid,eid]=String(id).split('~');const t=S.tx.find(x=>x.id===tid);if(t)aplicaEmp(t,eid,'in');if($('#modal').classList.contains('on')&&$('.revSheet'))abreRevisar();},
   'emp-sug-nao':id=>{const tid=String(id).split('~')[0];S.cfg.empIgn=(S.cfg.empIgn||[]).concat(tid).slice(-300);salvar();render();},
   'nova-transf':()=>novaTransf(),
   'del-tx':id=>{const tx=S.tx.find(x=>x.id===id);if(tx&&tx.grupo&&tx.parcelas>1){
@@ -5271,7 +5444,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={proximosVenc,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 

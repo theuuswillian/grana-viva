@@ -13,4 +13,5 @@ echo "v$ant -> v$novo"
 
 # v10.75: o código do app fica em app.js?v=versão (index.html e sw.js trocam a versão juntos)
 sed -i "s/app\.js?v=[0-9.]*/app.js?v=$novo/g" index.html sw.js
-python3 ./csp.py
+# v10.79: o GV_BUILD fica num script inline, então os hashes da CSP precisam ser recalculados junto
+python3 ./csp.py index.html --fix

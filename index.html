@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-fPZ7KMHWA55cR1QlebSkHv5QwFFwPMU9L3juwTOq4R8=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-sHmNB3abmtH2cFlOlBMnm/9XY1/+T6TIgPQBEBVV4SA=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1714,6 +1714,26 @@ html.claro .empModo{color:#0e7490}
 .empRecTop b{display:block;font-size:14px;line-height:1.35}
 .empRecDepois{margin:2px 0 0;font-size:13px;color:var(--mut)}.empRecDepois b{color:var(--txt)}
 .empNota{font-size:13px;color:var(--mut);margin:0 0 12px;line-height:1.45}
+/* v10.79: empréstimo antigo, dica de correção, conciliação com o banco e resumo da semana */
+#mf label.ckrow.empAntCk{margin-bottom:6px}
+.empAntDica{font-size:12.5px;color:var(--mut);margin:0 2px 16px;line-height:1.45}
+.empAntTip{display:flex;gap:10px;align-items:flex-start;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45;color:var(--mut)}
+.empAntTip>.i{flex:none;width:17px;height:17px;margin-top:1px;color:#fbbf24}
+.empAntTip p{margin:0;color:var(--txt)}
+.empAntTipB{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+.empAntCard{padding:4px 6px}.empAntCard .empAntTip{margin:0;background:none;border:0}
+.impEmp{display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,#22d3ee 10%,transparent);font-size:13px;color:var(--txt);cursor:pointer;line-height:1.35}
+.impEmp input{width:18px;height:18px;flex:none;margin:1px 0 0;accent-color:#22d3ee}
+.impEmp small{display:block;font-size:11.5px;color:var(--mut);margin-top:2px}
+.revEmp{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 8px 7px 10px;border-radius:10px;background:color-mix(in srgb,#22d3ee 10%,transparent);font-size:12.5px;color:var(--txt);line-height:1.3}
+.revEmp>.i{flex:none;width:15px;height:15px;color:#22d3ee}.revEmp span{flex:1;min-width:0}.revEmp .btn2{flex:none}
+.revRow:has(>.revEmp){flex-wrap:wrap}.revRow>.revEmp{flex:1 1 100%;margin:8px 0 0 52px}
+.semSub{margin:-4px 0 4px}.semRes{margin-top:8px}.semRes .rsT{cursor:pointer}
+.semVenc{margin-top:12px}.semVenc .hmH h4{font-size:15px}
+.semRodape{display:flex;gap:6px;align-items:center;margin-top:12px}.semRodape .i{width:14px;height:14px;flex:none}
+.semLink{display:flex;align-items:center;gap:12px;width:100%;margin-top:14px;padding:12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card2);color:var(--txt);text-align:left;cursor:pointer;font:inherit}
+.semLink>.i:first-child{flex:none;width:18px;height:18px;padding:7px;border-radius:10px;color:#34d399;background:rgba(52,211,153,.12);box-sizing:content-box}
+.semLink span{flex:1;min-width:0}.semLink b{display:block;font-size:14px}.semLink small{display:block;font-size:12px;color:var(--mut);margin-top:1px}.semLink>.i:last-child{flex:none;width:16px;height:16px;color:var(--mut)}
 .empVazio{text-align:center;margin:6px 0 14px}
 /* v10.78: fatura e previsão em detalhe */
 .fatHero,.prevConta{padding:14px;border-radius:16px;border:1px solid var(--line);background:color-mix(in srgb,var(--txt) 3%,transparent);margin-bottom:12px}
@@ -1770,7 +1790,7 @@ html.claro .empModo{color:#0e7490}
 </div>
 
 <script>
-const GV_BUILD='10.78'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.79'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1791,7 +1811,7 @@ const GV_BUILD='10.78'; // versão publicada (./bump.sh troca aqui e no sw.js)
 })();
 </script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script src="app.js?v=10.78"></script>
+<script src="app.js?v=10.79"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

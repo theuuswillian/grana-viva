@@ -1,10 +1,14 @@
 // GranaViva · alertas-push
-// - chamada diária pelo pg_cron (cabeçalho x-cron-secret): confere faturas e contas fixas de
-//   quem ativou notificações e manda um push por aparelho.
+// - chamada diária pelo pg_cron às 12:00 UTC (9h de Brasília, cabeçalho x-cron-secret): confere faturas, contas fixas,
+//   previstos, empréstimos e orçamentos de quem ativou notificações e manda um push por aparelho.
+//   v10.79: aos domingos manda também o resumo da semana (entrou, saiu, o que vence em 7 dias, a receber de empréstimos).
+// - {dry:true} com o segredo do cron: calcula tudo e devolve o que seria enviado, sem mandar push e sem gravar push_log.
+//   {hoje:'AAAA-MM-DD'} junto com dry simula outro dia (para conferir o resumo de domingo).
 // - chamada pelo app com o login do usuário e {teste:true}: manda uma notificação de teste.
 // verify_jwt desligado: a função confere o segredo do cron ou o token do usuário por conta própria.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { alertas, orcamentos, resumoSemana, textoSemana, discretoOn, semValores, diaSemana, ISO_RE } from "./calc.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT") || "mailto:contato@granaviva.app", Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
@@ -13,120 +17,7 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-
-// ---------- datas (fuso de Brasília)
 const hojeBR = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-const D = (iso: string) => new Date(iso + "T00:00:00Z");
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const diaMes = (y: number, m: number, d: number) => { const x = new Date(Date.UTC(y, m, 1)); const ult = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate(); return new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), Math.min(d, ult))); };
-const dias = (a: string, b: string) => Math.round((D(b).getTime() - D(a).getTime()) / 864e5);
-const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fmt = (s: string) => s.slice(8, 10) + "/" + s.slice(5, 7);
-function fechamentoDe(c: any, dt: string) {
-  const fe = Math.max(1, Math.min(31, c.fechamento || 1)), ve = Math.max(1, Math.min(31, c.vencimento || 1));
-  const y = +dt.slice(0, 4), m = +dt.slice(5, 7) - 1;
-  let C = diaMes(y, m, fe); if (iso(C) < dt) C = diaMes(y, m + 1, fe);
-  const V = diaMes(C.getUTCFullYear(), C.getUTCMonth() + (ve > fe ? 0 : 1), ve);
-  return { fecha: iso(C), vence: iso(V) };
-}
-
-// status: sem status = pago; previsto/cancelado não contam em fatura nem orçamento (mesma regra do app)
-const efetivo = (t: any) => !t.status || t.status === "pago";
-// conta fixa acontece na data d? (mensal / semanal / anual, mesma regra do app)
-function ocorreEm(f: any, d: string): boolean {
-  const x = D(d), fr = f.freq || "mensal";
-  if (f.criadoEm && d < String(f.criadoEm).slice(0, 10)) return false;
-  if (fr === "semanal") return x.getUTCDay() === (+f.dow || 0);
-  if (fr === "anual" && x.getUTCMonth() + 1 !== (+f.mes || 1)) return false;
-  return iso(diaMes(x.getUTCFullYear(), x.getUTCMonth(), f.dia || 1)) === d;
-}
-function chaveFixa(f: any, d: string): string {
-  const fr = f.freq || "mensal";
-  return "fx|" + f.id + "|" + (fr === "semanal" ? d : fr === "anual" ? d.slice(0, 4) : d.slice(0, 7));
-}
-
-// ---------- alertas de um usuário
-function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
-  const out: string[] = [], pagDesde = cfg?.cfg?.pagDesde, gerados = cfg?.gerados || {};
-  /* v10.53: interruptores do app passam a valer no push (antes eram ignorados pela função) */
-  const on = (k: string) => !(cfg?.cfg?.notif && cfg.cfg.notif[k] === false);
-  // antecedência escolhida no app (Ajustes): 0, 1, 2, 3, 5 ou 7 dias; padrão 3. no dia e na véspera sempre avisa.
-  const N = [0, 1, 2, 3, 5, 7].includes(+cfg?.cfg?.avisoDias) ? +cfg.cfg.avisoDias : 3;
-  const emN = (d: number) => `vence em ${d} dias`;
-  for (const c of cartoes) {
-    const somas: Record<string, { c: number; fecha: string }> = {};
-    for (const t of tx) {
-      if (t.cartao !== c.id || !(t.tipo === "despesa" || t.tipo === "transf") || !t.data || !efetivo(t)) continue;
-      const f = fechamentoDe(c, t.data);
-      const k = "fat|" + c.id + "|" + f.fecha.slice(0, 7);
-      (somas[k] = somas[k] || { c: 0, fecha: f.fecha }).c += Math.round((+t.valor || 0) * 100);
-    }
-    for (const k of Object.keys(somas)) {
-      if (gerados[k] === "del") continue;
-      const { vence } = fechamentoDe(c, somas[k].fecha);
-      const fat = tx.find((t) => t.faturaKey === k);
-      if (!fat?.pagaEm && pagDesde && vence < pagDesde) continue;
-      const resto = (somas[k].c - Math.round((+fat?.pagoValor || 0) * 100)) / 100;
-      if (resto <= 0.009) continue;
-      const d = dias(hoje, vence), nome = c.nome || "cartão";
-      if (N > 1 && d === N && on("fatVence")) out.push(`Fatura ${nome} ${emN(d)} (${fmt(vence)}) · ${brl(resto)}`);
-      else if (d === 1 && on("fatVence")) out.push(`Fatura ${nome} vence amanhã · ${brl(resto)}`);
-      else if (d === 0 && on("fatVence")) out.push(`Fatura ${nome} vence hoje · ${brl(resto)}`);
-      else if ((d === -1 || d === -3 || d === -7) && on("fatAtras")) out.push(`Fatura ${nome} está atrasada desde ${fmt(vence)} · ${brl(resto)}`);
-    }
-  }
-  const h = D(hoje), amanha = iso(new Date(h.getTime() + 864e5)), diaN = iso(new Date(h.getTime() + N * 864e5));
-  for (const f of (on("fixas") ? cfg?.fixas || [] : [])) {
-    if (f.tipo === "receita") continue;
-    const pago = (d: string) => { const k = chaveFixa(f, d); const t = tx.find((x) => x.fixaKey === k); return !!t && t.status !== "previsto"; };
-    if (ocorreEm(f, hoje) && !pago(hoje)) out.push(`Conta fixa ${f.nome} vence hoje · ${brl(+f.valor || 0)}`);
-    else if (ocorreEm(f, amanha) && !pago(amanha)) out.push(`Conta fixa ${f.nome} vence amanhã · ${brl(+f.valor || 0)}`);
-    else if (N > 1 && ocorreEm(f, diaN) && !pago(diaN)) out.push(`Conta fixa ${f.nome} ${emN(N)} (${fmt(diaN)}) · ${brl(+f.valor || 0)}`);
-  }
-  // lançamentos previstos (fora das fixas automáticas): hoje, amanhã e atrasados há 1, 3 ou 7 dias
-  for (const t of (on("previstos") ? tx : [])) {
-    if (t.status !== "previsto" || t.tipo !== "despesa" || t.cartao || t.fxAuto || typeof t.data !== "string") continue;
-    if (t.fixaKey && (cfg?.fixas || []).some((f: any) => t.fixaKey === chaveFixa(f, t.data) && (t.data === hoje || t.data === amanha || (N > 1 && t.data === diaN)))) continue; // já avisado acima
-    const d = dias(hoje, t.data), nome = t.descricao || t.categoria || "conta";
-    if (d === 0) out.push(`${nome} vence hoje · ${brl(+t.valor || 0)}`);
-    else if (d === 1) out.push(`${nome} vence amanhã · ${brl(+t.valor || 0)}`);
-    else if (N > 1 && d === N) out.push(`${nome} ${emN(d)} (${fmt(t.data)}) · ${brl(+t.valor || 0)}`);
-    else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasada desde ${fmt(t.data)} · ${brl(+t.valor || 0)}`);
-  }
-  /* v10.78: empréstimos a receber com data combinada (emprestimos[].prev): no dia, na véspera, com N dias e atrasado há 1, 3 ou 7 dias.
-     o que falta = saiu (empDir out) − voltou (in) − perdoado (perdao), só lançamentos efetivos. */
-  for (const e of (on("previstos") ? cfg?.emprestimos || [] : [])) {
-    if (typeof e?.prev !== "string" || !e.prev) continue;
-    let ab = 0;
-    for (const t of tx) { if (t.emp !== e.id || !efetivo(t)) continue; const v = Math.round((+t.valor || 0) * 100); ab += t.empDir === "out" ? v : -v; }
-    if (ab <= 0) continue;
-    const d = Math.round((Date.parse(e.prev + "T12:00:00Z") - Date.parse(hoje + "T12:00:00Z")) / 864e5), nome = String(e.pessoa || "alguém").slice(0, 40);
-    if (d === 0) out.push(`${nome} combinou de devolver hoje · falta ${brl(ab / 100)}`);
-    else if (d === 1) out.push(`${nome} combinou de devolver amanhã · falta ${brl(ab / 100)}`);
-    else if (N > 1 && d === N) out.push(`${nome} combinou de devolver em ${d} dias (${fmt(e.prev)}) · falta ${brl(ab / 100)}`);
-    else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasado desde ${fmt(e.prev)} · falta ${brl(ab / 100)}`);
-  }
-  return out;
-}
-
-// orçamento do mês: um aviso ao passar de 80% e outro ao estourar (chaves guardadas em push_log)
-function orcamentos(tx: any[], cfg: any, hoje: string): { chave: string; txt: string }[] {
-  if (cfg?.cfg?.notif && cfg.cfg.notif.orc === false) return [];
-  const mes = hoje.slice(0, 7), out: { chave: string; txt: string }[] = [];
-  // limites com histórico: o registro mensal mais recente até este mês; sem registro, o limite padrão
-  const om = cfg?.orcMes && typeof cfg.orcMes === "object" ? cfg.orcMes : {};
-  const k = Object.keys(om).filter((x) => /^\d{4}-\d{2}$/.test(x) && x <= mes).sort().pop();
-  const orc = (k ? om[k] : cfg?.orc) || {};
-  for (const cat of Object.keys(orc)) {
-    const lim = +orc[cat] || 0; if (lim <= 0) continue;
-    let g = 0;
-    for (const t of tx) if (t.tipo === "despesa" && efetivo(t) && !t.faturaKey && t.categoria === cat && typeof t.data === "string" && t.data.startsWith(mes)) g += Math.round((+t.valor || 0) * 100);
-    const p = g / 100 / lim * 100;
-    if (p >= 100) out.push({ chave: `orc|${cat}|${mes}|100`, txt: `Orçamento de ${cat} estourou · ${brl(g / 100)} de ${brl(lim)}` });
-    else if (p >= 80) out.push({ chave: `orc|${cat}|${mes}|80`, txt: `Orçamento de ${cat} em ${Math.round(p)}% · ${brl(g / 100)} de ${brl(lim)}` });
-  }
-  return out;
-}
 
 async function enviar(subs: any[], payload: object) {
   let ok = 0;
@@ -142,7 +33,7 @@ Deno.serve(async (req) => {
   ORIG = origemOk(og) ? og : ORIGENS[0];
   if (og && !origemOk(og)) return new Response("origem não permitida", { status: 403 });
   if (req.method === "OPTIONS") return new Response("ok", { headers: { ...CORS } });
-  const hoje = hojeBR();
+  const body: any = await req.json().catch(() => ({}));
   // teste pedido pelo app
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const cron = req.headers.get("x-cron-secret");
@@ -156,24 +47,32 @@ Deno.serve(async (req) => {
     const n = await enviar(subs, { title: "GranaViva", body: "Notificações ativadas. Vou te avisar de faturas e contas perto do vencimento.", url: "./", tag: "gv-teste" });
     return json({ enviados: n });
   }
-  // sem CRON_SECRET configurado, nenhum cabeçalho é aceito (antes, ausente vs. ausente podia passar)
+  // sem CRON_SECRET configurado, nenhum cabeçalho é aceito
   const segredo = Deno.env.get("CRON_SECRET");
   if (!segredo || cron !== segredo) return json({ erro: "não autorizado" }, 401);
+  const dry = body?.dry === true;
+  // GV_HOJE_TESTE só existe no teste local (simula outro dia); em produção não está definido
+  const hj = dry && typeof body?.hoje === "string" ? body.hoje : (Deno.env.get("GV_HOJE_TESTE") || "");
+  const hoje = ISO_RE.test(hj) ? hj : hojeBR();
+  const domingo = diaSemana(hoje) === 0;
   const { data: subs } = await sb.from("push_subs").select("*");
   const porUser: Record<string, any[]> = {};
   for (const s of subs || []) (porUser[s.user_id] = porUser[s.user_id] || []).push(s);
   let enviados = 0, usuarios = 0;
+  const simulado: any[] = [];
   for (const uid of Object.keys(porUser)) {
     const [t, c, s] = await Promise.all([
       sb.from("tx").select("data").eq("user_id", uid),
       sb.from("cartoes").select("data").eq("user_id", uid),
       sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
     ]);
-    const txs = (t.data || []).map((r: any) => r.data), cfg = s.data?.data || {};
-    const lista = alertas(txs, (c.data || []).map((r: any) => r.data), cfg, hoje);
-    const orcs = orcamentos(txs, cfg, hoje);
-    /* v10.53: resumo diário — toda manhã, lista do dia mesmo sem alerta (ou "nada vence hoje") */
-    const resumo = cfg?.cfg?.resumoDiario !== false;
+    const cfg = s.data?.data || {};
+    const D = { tx: (t.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), cartoes: (c.data || []).map((r: any) => r.data).filter(Boolean), cfg };
+    const on = (k: string) => !(cfg?.cfg?.notif && cfg.cfg.notif[k] === false);
+    const discreto = discretoOn(cfg);
+    const lista = alertas(D, hoje);
+    // orçamento: um aviso por limite, por categoria, por mês (chaves em push_log)
+    const orcs = orcamentos(D, hoje);
     let novos: { chave: string; txt: string }[] = [];
     if (orcs.length) {
       const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", orcs.map((o) => o.chave));
@@ -181,16 +80,35 @@ Deno.serve(async (req) => {
       novos = orcs.filter((o) => !feitos.has(o.chave));
       lista.push(...novos.map((o) => o.txt));
     }
-    if (!lista.length && !(resumo && cfg?.cfg?.notif?.resumo !== false)) continue;
-    if (!lista.length) lista.push("Nada vence hoje 👍");
+    // resumo da semana: domingo, padrão ligado (Ajustes › notificações › Resumo da semana); um por domingo
+    let sem: { chave: string; payload: any; r: any } | null = null;
+    if (domingo && on("semanal")) {
+      const chave = "sem|" + hoje;
+      const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).eq("chave", chave);
+      if (!ja?.length) { const r = resumoSemana(D, hoje, hoje); const tx = textoSemana(r, discreto); sem = { chave, r, payload: { title: tx.title, body: tx.body, url: "./?semana=" + hoje, tag: "gv-sem-" + hoje } }; }
+    }
+    /* resumo diário: toda manhã, mesmo sem alerta ("Nada vence hoje."). no domingo com resumo da semana, ele já cobre isso */
+    const resumo = cfg?.cfg?.resumoDiario !== false && on("resumo");
+    let diario: any = null;
+    if (lista.length || (resumo && !sem)) {
+      if (!lista.length) lista.push("Nada vence hoje.");
+      const corpo = discreto ? lista.map(semValores) : lista;
+      const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
+      diario = { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje };
+    }
+    if (!diario && !sem) continue;
     usuarios++;
-    /* v10.52: notificações discretas (padrão): sem valores na tela bloqueada */
-    const discreto = (cfg?.cfg?.pushDiscreto ?? cfg?.pushDiscreto) !== false; // v10.54: o app guarda em cfg.cfg
-    const corpo = discreto ? lista.map((t) => t.replace(/\s*·\s*R\$\s?-?\d[\d.,]*/g, "").replace(/\s*(de|em)?\s*R\$\s?-?\d[\d.,]*/g, "").replace(/\s·\s*$/, "").trim()) : lista;
-    const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
-    const n = await enviar(porUser[uid], { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje });
-    enviados += n;
-    if (n && novos.length) await sb.from("push_log").upsert(novos.map((o) => ({ user_id: uid, chave: o.chave })));
+    if (dry) { simulado.push({ usuario: uid.slice(0, 8), aparelhos: porUser[uid].length, discreto, diario, semana: sem && { payload: sem.payload, numeros: { ...sem.r, venc: sem.r.venc.length } }, orcNovos: novos.map((o) => o.chave) }); continue; }
+    if (diario) {
+      const n = await enviar(porUser[uid], diario);
+      enviados += n;
+      if (n && novos.length) await sb.from("push_log").upsert(novos.map((o) => ({ user_id: uid, chave: o.chave })));
+    }
+    if (sem) {
+      const n = await enviar(porUser[uid], sem.payload);
+      enviados += n;
+      if (n) await sb.from("push_log").upsert([{ user_id: uid, chave: sem.chave }]);
+    }
   }
-  return json({ hoje, usuarios, enviados });
+  return json(dry ? { hoje, dry: true, usuarios, simulado } : { hoje, usuarios, enviados });
 });
