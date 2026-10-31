@@ -10,3 +10,7 @@ if [ -n "$1" ]; then novo=$1; else novo=$(echo "$ant" | awk -F. '{printf "%d.%02
 sed -i "s/^const GV_BUILD='[^']*';/const GV_BUILD='$novo';/" index.html
 sed -i "s/^const V='[^']*';/const V='gv-v$novo';/" sw.js
 echo "v$ant -> v$novo"
+
+# v10.75: o código do app fica em app.js?v=versão (index.html e sw.js trocam a versão juntos)
+sed -i "s/app\.js?v=[0-9.]*/app.js?v=$novo/g" index.html sw.js
+python3 ./csp.py
