@@ -93,6 +93,19 @@ function alertas(tx: any[], cartoes: any[], cfg: any, hoje: string): string[] {
     else if (N > 1 && d === N) out.push(`${nome} ${emN(d)} (${fmt(t.data)}) · ${brl(+t.valor || 0)}`);
     else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasada desde ${fmt(t.data)} · ${brl(+t.valor || 0)}`);
   }
+  /* v10.78: empréstimos a receber com data combinada (emprestimos[].prev): no dia, na véspera, com N dias e atrasado há 1, 3 ou 7 dias.
+     o que falta = saiu (empDir out) − voltou (in) − perdoado (perdao), só lançamentos efetivos. */
+  for (const e of (on("previstos") ? cfg?.emprestimos || [] : [])) {
+    if (typeof e?.prev !== "string" || !e.prev) continue;
+    let ab = 0;
+    for (const t of tx) { if (t.emp !== e.id || !efetivo(t)) continue; const v = Math.round((+t.valor || 0) * 100); ab += t.empDir === "out" ? v : -v; }
+    if (ab <= 0) continue;
+    const d = Math.round((Date.parse(e.prev + "T12:00:00Z") - Date.parse(hoje + "T12:00:00Z")) / 864e5), nome = String(e.pessoa || "alguém").slice(0, 40);
+    if (d === 0) out.push(`${nome} combinou de devolver hoje · falta ${brl(ab / 100)}`);
+    else if (d === 1) out.push(`${nome} combinou de devolver amanhã · falta ${brl(ab / 100)}`);
+    else if (N > 1 && d === N) out.push(`${nome} combinou de devolver em ${d} dias (${fmt(e.prev)}) · falta ${brl(ab / 100)}`);
+    else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasado desde ${fmt(e.prev)} · falta ${brl(ab / 100)}`);
+  }
   return out;
 }
 
