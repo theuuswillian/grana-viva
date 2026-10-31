@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-G+vSCl3oEor8fuLlMyGRSGv6k63qMqAxae0uzRm4nP0=' 'sha256-8xtKrXkHvSiQmbAXSLVW7SCcPHacfmCFaB1PUrqk93s=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-X7KdBPjXJUKfErgGirIuQRQv41BAV/qDA2ZIG98k8sU=' 'sha256-T5lY7JluDApbLkFMWJSA7u/Cyrwge5BzBNhKjuKBEJ0=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1633,7 +1633,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.72'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.73'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1834,7 +1834,7 @@ function sessaoGuardadaId(){try{const r=JSON.parse(localStorage.getItem('sb-hydv
    AES-GCM 256. a chave é uma CryptoKey NÃO exportável guardada no IndexedDB: o app usa, mas ela não pode ser lida nem copiada.
    quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. sem WebCrypto/IndexedDB, grava como antes. */
 const CR_PFX='gve1:';
-let CR_RAW=null,CR_OK=true,CR_KEY=null,CR_FALHOU=false;const CR_G={};
+let CR_RAW=null,CR_OK=true,CR_KEY=null,CR_FALHOU=false,CR_TELA=false;const CR_G={};
 function crIdbOp(modo,fn){return new Promise((ok,er)=>{const r=indexedDB.open('gv-cripto',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onerror=()=>er(r.error);
   r.onsuccess=()=>{const db=r.result;let q;try{const tx=db.transaction('k',modo);q=fn(tx.objectStore('k'));tx.oncomplete=()=>{db.close();ok(q&&q.result);};tx.onerror=tx.onabort=()=>{db.close();er(tx.error);};}catch(e){db.close();er(e);}};});}
 async function crChave(criar){
@@ -1845,7 +1845,7 @@ async function crChave(criar){
   return CR_KEY=k||null;
 }
 function crB64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}
-function crBin(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0));}
+function crBin(s){const b=atob(s),n=b.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=b.charCodeAt(i);return u;} // v10.73: ~10x mais rápido que Uint8Array.from com função
 async function crCifra(txt){const k=await crChave(true);if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(txt)));return CR_PFX+crB64(iv)+':'+crB64(ct);}
 async function crDecifra(raw){const k=await crChave(false);if(!k)throw new Error('sem chave');const [iv,ct]=raw.slice(CR_PFX.length).split(':');
@@ -1871,7 +1871,7 @@ async function abreCripto(){
     CR_FALHOU=true;limpaCache();S=Object.assign(vazio(),{cfg:S.cfg});
   }
   CR_RAW=null;CR_OK=true;zeraCfgH();document.documentElement.classList.remove('crAbrindo');
-  try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();}catch(e){}
+  try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();CR_TELA=!CR_FALHOU;}catch(e){}
 }
 let LEGADO=null;
 function carregar(){
@@ -2045,6 +2045,16 @@ async function baixar(){
     }
     return;
   }
+  /* v10.73: a nuvem está igual ao que já está neste aparelho (mesmos registros, mesmos hashes e mesmas configurações):
+     não reprocessa, não regrava o cache e não redesenha a tela. abrir o app fica bem mais leve com milhares de lançamentos. */
+  if(SNAP&&s.data&&SNAP.__cfgAt&&SNAP.__cfgAt===(s.data.updated_at||'')&&localStorage.getItem(OWNER_KEY)===USER.id&&!temPendencia()&&TABELAS.every(t=>{
+      const o=SNAP[t];if(!o)return false;const rows=res[t].data.filter(r=>r.data),n=Object.keys(o).length;
+      if(rows.length!==n||(S[t]||[]).length!==n)return false;
+      return rows.every(r=>o[String(r.id)]===hashObj(r.data));})){
+    LEGADO=null;setSync('sincronizado');
+    try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
+    return 'igual';
+  }
   LEGADO=null;
   const cfgRem=(s.data&&s.data.data)||{};
   S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();
@@ -2070,9 +2080,9 @@ async function puxar(){
   try{
     if(temPendencia()){await enviar();if(temPendencia())return;}
     syncBusy=true;setSync('sincronizando…');
-    await baixar();
-    if(geraRecorrentes())salvar();
-    render();
+    const igual=(await baixar())==='igual';
+    const ger=geraRecorrentes();if(ger)salvar();
+    if(!igual||ger)render();
   }catch(e){setSync('offline, usando cópia deste aparelho');}
   finally{syncBusy=false;}
 }
@@ -7060,12 +7070,13 @@ async function entraComSessao(sess){
     if(SNAP&&temPendencia()){try{await enviar();}catch(e){}}
     if(SNAP&&temPendencia()){setSync('pendente, tenta de novo ao voltar a conexão');applyCfg();render();restauraAba();agendaSync(15000);return;}
     syncBusy=true;
-    try{await baixar();}catch(err){setSync('offline, usando cópia deste aparelho');}
+    let igual=false;
+    try{igual=(await baixar())==='igual';}catch(err){setSync('offline, usando cópia deste aparelho');}
     finally{syncBusy=false;}
     if(!S.cfg.pagDesde){S.cfg.pagDesde=hojeISO();salvar();}
-    if(geraRecorrentes())salvar();
-    restauraAba();
-    applyCfg();render();
+    const ger=geraRecorrentes();if(ger)salvar();
+    // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
+    if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
   }
 }
 // bootstrap explícito: após o redirect do Google a sessão vem no hash (#access_token)
@@ -7124,12 +7135,13 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     if(SNAP&&temPendencia()){try{await enviar();}catch(e){}}
     if(SNAP&&temPendencia()){setSync('pendente, tenta de novo ao voltar a conexão');applyCfg();render();restauraAba();agendaSync(15000);return;}
     syncBusy=true;
-    try{await baixar();}catch(err){setSync('offline, usando cópia deste aparelho');}
+    let igual=false;
+    try{igual=(await baixar())==='igual';}catch(err){setSync('offline, usando cópia deste aparelho');}
     finally{syncBusy=false;}
     if(!S.cfg.pagDesde){S.cfg.pagDesde=hojeISO();salvar();}
-    if(geraRecorrentes())salvar();
-    restauraAba();
-    applyCfg();render();
+    const ger=geraRecorrentes();if(ger)salvar();
+    // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
+    if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
   }
 });
 if(!navigator.onLine){
