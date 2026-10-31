@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-wOUrUKSP34ou01sJ6w+n1+4K9EkCp5YpvHLj31XKHJ8=' 'sha256-U/N7fWjy4AeqQxWWYSZkF+ix+7xfBzIXvjxXE2u6fzU=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-G+vSCl3oEor8fuLlMyGRSGv6k63qMqAxae0uzRm4nP0=' 'sha256-8xtKrXkHvSiQmbAXSLVW7SCcPHacfmCFaB1PUrqk93s=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1633,7 +1633,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.71'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.72'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2568,10 +2568,37 @@ function dataDaChave(f,key){const p=key.split('|')[2]||'';if((f.freq||'mensal')!
 function descFreq(f){const ate=f.fim&&ISO_RE.test(f.fim)?' até '+fmtData(f.fim):'';return descFreq0(f)+ate;}
 function descFreq0(f){const fr=f.freq||'mensal';if(fr==='diaria')return 'todo dia';if(fr==='quinzenal')return 'a cada 2 semanas';if(fr==='intervalo'){const r=regraIntervalo(f),U={dia:['dia','dias'],semana:['semana','semanas'],mes:['mês','meses']}[r.un];return r.n===1?(r.un==='semana'?'toda semana':r.un==='mes'?'todo mês':'todo dia'):'a cada '+r.n+' '+U[1];}if(fr==='semanal'){const d=DOW_L[+f.dow||0];return (d==='sábado'||d==='domingo'?'todo ':'toda ')+d;}if(fr==='anual')return 'todo ano em '+pad(f.dia||1)+'/'+pad(f.mes||1);return 'todo dia '+(f.dia||1);}
 function mensalEq(f){const v=+f.valor||0,fr=f.freq||'mensal',ri=regraIntervalo(f);if(ri)return ri.un==='dia'?v*365/12/ri.n:ri.un==='semana'?v*52/12/ri.n:v/ri.n;return fr==='semanal'?v*52/12:fr==='anual'?v/12:v;}
+/* v10.72: a mesma conta não aparece duas vezes.
+   nomeConta tira acento, caixa e o sufixo "(fixa)"; dedupFixas junta contas fixas idênticas e liga a conta prevista
+   lançada à mão à ocorrência da conta fixa com o mesmo nome e valor no mesmo mês. */
+function nomeConta(x){return String(x||'').replace(/\s*\(fixa\)\s*$/i,'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+function dedupFixas(){
+  let mudou=false;const vistos={};
+  S.fixas.slice().sort((a,b)=>(a.criadoEm||'')<(b.criadoEm||'')?-1:1).forEach(f=>{
+    const k=[nomeConta(f.nome),f.tipo==='receita'?'r':'d',cents(f.valor),f.freq||'mensal',f.dia||'',f.dow||'',f.mes||'',f.n||'',f.un||'',f.fim||''].join('|');
+    const keep=vistos[k];if(!keep){vistos[k]=f;return;}
+    // duplicada: some a regra e os previstos dela; o que já foi pago fica
+    S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'));
+    if(f.criadoEm&&(!keep.criadoEm||f.criadoEm<keep.criadoEm))keep.criadoEm=f.criadoEm;
+    S.fixas=S.fixas.filter(x=>x!==f);mudou=true;
+  });
+  S.tx.slice().forEach(t=>{
+    if(t.fixaKey||t.status!=='previsto'||!t.data||t.parcelas>1||t.cartao)return;
+    const nm=nomeConta(t.descricao);if(!nm)return;
+    const f=S.fixas.find(x=>nomeConta(x.nome)===nm&&cents(x.valor)===cents(t.valor)&&(x.tipo==='receita'?'receita':'despesa')===t.tipo);if(!f)return;
+    const ym=t.data.slice(0,7),D=new Date(+ym.slice(0,4),+ym.slice(5,7),0);
+    const o=ocorrenciasFixa(Object.assign({},f,{criadoEm:''}),ym+'-01',isoDe(D))[0];if(!o)return;
+    const ja=S.tx.find(x=>x.fixaKey===o.key);
+    if(ja){S.tx=S.tx.filter(x=>x!==t);}else{t.fixaKey=o.key;if(f.auto!==false)t.fxAuto=1;S.gerados[o.key]=1;}
+    mudou=true;
+  });
+  return mudou;
+}
 function geraRecorrentes(){
   const h=new Date(),hoje=hojeISO();let mudou=false;
   if(!S.gerados)S.gerados={};
   if(!S.fixas)S.fixas=[];
+  if(dedupFixas())mudou=true;
   /* remove duplicatas de lançamentos automáticos (ex.: gerados em dois aparelhos antes do id determinístico) */
   const vistos=new Set(),antes=S.tx.length;
   S.tx=S.tx.filter(t=>{const k=t.fixaKey||t.faturaKey;if(!k)return true;if(vistos.has(k))return false;vistos.add(k);return true;});
@@ -4019,6 +4046,9 @@ function proximosVenc(dias){
   (S.fixas||[]).forEach(f=>{if(f.tipo==='receita')return;
     ocorrenciasFixa(f,hj,ate).forEach(o=>{if(vistos.has(o.key)||S.tx.some(t=>t.fixaKey===o.key))return;out.push({data:o.data,nome:f.nome,valor:+f.valor||0,cat:f.categoria,tipo:'fixa'});});});
   S.tx.forEach(t=>{if(!t.faturaKey)return;const r=restanteFatura(t),v=venceFatura(t);if(r>0.009&&v<=ate)out.push({data:v,nome:t.descricao||'fatura',valor:r,cat:null,tipo:'fatura'});});
+  // v10.72: mesma conta (nome, valor e data) só uma vez; a conta fixa ganha da prevista avulsa
+  const un={};out.forEach(x=>{if(x.tipo!=='fatura')x.nome=String(x.nome).replace(/\s*\(fixa\)\s*$/i,'');const k=x.tipo==='fatura'?Math.random():nomeConta(x.nome)+'|'+x.data+'|'+Math.round(x.valor*100);if(!un[k]||(un[k].tipo!=='fixa'&&x.tipo==='fixa'))un[k]=x;});
+  out.length=0;Object.values(un).forEach(x=>out.push(x));
   return out.sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
 }
 function proxVencHTML(){
@@ -6583,7 +6613,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={proximosVenc,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
