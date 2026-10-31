@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-PjWYZucUlkjjSoxs1Bp3cZuTA/M9g8gXESlhGwkk0Rw=' 'sha256-QKw2Ho8+48BWd8hMF6srhvlgjrX/MVS/x02iIMeJK1U=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1480,6 +1480,61 @@ html.claro .rfChip.warn{color:#b45309}
 .rfMov .btn2 .i{width:15px;height:15px}
 #toast{white-space:normal!important;width:max-content;max-width:calc(100vw - 32px);text-align:left;line-height:1.35}
 .astMeta.rfm{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+
+.liveDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:1px;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:liveP 2s infinite}
+@keyframes liveP{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@media(prefers-reduced-motion:reduce){.liveDot{animation:none}}
+.astFoot small .pos{color:#22c55e}.astFoot small .neg{color:#f87171}
+/* ===== v10.69: telas estreitas (iPhone 16 Pro = 402pt, SE/mini = 320-375pt) sem texto cortado ===== */
+@media(max-width:420px){
+  .hB-a{gap:8px;padding:0 8px 0 7px}
+  .hB-ai{width:34px;height:34px;border-radius:11px}
+  .hB-al{font-size:13.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15;overflow-wrap:normal;word-break:normal}
+  .hB-a .hB-ch{display:none}
+  .tx .txt small{white-space:normal;line-height:1.3}
+  .mtNm b{white-space:normal;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .astNm b{word-break:normal;overflow-wrap:anywhere;-webkit-line-clamp:3}
+  .astMeta b{white-space:normal;line-height:1.25}
+  .astNm small{white-space:normal}
+  .astFoot small{white-space:normal;line-height:1.35}
+  .rdS small{white-space:normal;line-height:1.2}
+  .rd-cat{white-space:normal;line-height:1.2}
+  .catName{min-width:0}.catName b{white-space:normal;line-height:1.2}
+  .row:has(>.catName)>.btn2{flex:none;padding-inline:12px}
+}
+@media(max-width:380px){
+  .catName b{font-size:14px}
+  .rd-cat{font-size:12.5px;gap:6px}
+  .astTop{flex-wrap:wrap;row-gap:8px}
+  .astVal{flex-basis:100%;flex-direction:row;justify-content:space-between;align-items:center}
+  .astNm b{-webkit-line-clamp:3}
+  .hB-strip>div{padding:0 7px}
+  .hB-strip b{font-size:13px}
+  .hB-strip small{font-size:10.5px}
+  .rdS{padding:8px}
+  .rdS b{font-size:13px}
+  .mtChips b{font-size:13px}
+}
+
+/* ===== v10.69: tema Preto OLED — fundo #000 (pixel apagado no iPhone), superfícies quase pretas com fio de borda, sem brilho nem sombra ===== */
+html.preto{--bg:#000;--card:#0a0a0b;--card2:#121214;--txt:#ededef;--mut:#8b8b93;--hd:#fff;--line:#1c1c1f;--shadow:none;color-scheme:dark}
+html.preto,html.preto body{background:#000!important}
+html.preto body::before{background:#000}
+html.preto .card{background:#0a0a0b!important;border:1px solid #1a1a1d!important;box-shadow:none!important}
+html.preto .card::before,html.preto .card::after{opacity:0!important}
+html.preto .sheet{background:#0a0a0b!important;border:1px solid #1f1f23!important;border-bottom:0!important;box-shadow:none!important}
+html.preto #modal.on{background:rgba(0,0,0,.82)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.preto .side{background:#000!important;border-right:1px solid #161618!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.preto .top::before{display:none!important}
+html.preto .topBar{background:#000!important;border:1px solid #1a1a1d!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.preto .topBar::after{opacity:.55}
+html.preto .topBar .ham,html.preto .topBar .bell,html.preto .topBar .syncPill{background:#0e0e10!important;border-color:#1c1c1f!important;box-shadow:none!important}
+html.preto .hB-hero{background:#000!important;border:1px solid #1e1e22!important;box-shadow:none!important}
+html.preto .hB-hero::before,html.preto .hB-hero::after{display:none!important}
+html.preto .hB-strip{background:#0b0b0c!important;border:1px solid #1a1a1d;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.preto .hB-a,html.preto .seg,html.preto .chip,html.preto input,html.preto select,html.preto textarea{background:#0a0a0b;border-color:#1c1c1f}
+html.preto .fab{box-shadow:none!important}
+html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -1525,7 +1580,7 @@ html.claro .rfChip.warn{color:#b45309}
 </div>
 
 <script>
-const GV_BUILD='10.68'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.69'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -1712,7 +1767,7 @@ function sanea(d){
   if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
   if(!ACCENTS[o.cfg.accent])o.cfg.accent='verde';
   if(o.cfg.pagDesde&&!DATA_OK.test(String(o.cfg.pagDesde)))o.cfg.pagDesde='';
-  if(o.cfg.tema!=='claro')o.cfg.tema='escuro';
+  if(o.cfg.tema!=='claro'&&o.cfg.tema!=='preto')o.cfg.tema='escuro';
   o.cfg.assinIgnora=[...new Set((Array.isArray(o.cfg.assinIgnora)?o.cfg.assinIgnora:[]).filter(x=>typeof x==='string').map(x=>str(x,40).trim()).filter(Boolean))].slice(-300);
   {const av={};Object.entries(obj(o.cfg.assinVisto)).slice(-300).forEach(([k,v])=>{if(/^\d{4}-\d{2}$/.test(String(v)))av[str(k,40)]=v;});o.cfg.assinVisto=av;}
   {const ae={},lim=new Date(Date.now()-90*864e5).toISOString().slice(0,10);Object.entries(obj(o.cfg.alEst)).slice(-400).forEach(([k,v])=>{v=String(v);if(/^[lx]:\d{4}-\d{2}-\d{2}$/.test(v)&&v.slice(2)>=lim)ae[str(k,90)]=v;});if(Object.keys(ae).length)o.cfg.alEst=ae;else delete o.cfg.alEst;}
@@ -1752,7 +1807,7 @@ function gravaLocal(){
   try{localStorage.setItem('gv-ui',JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent}));}catch(e){}
   gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
 }
-function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'?'claro':'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
+function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'||u.tema==='preto'?u.tema:'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
 async function abreCripto(){
   try{
     const d=JSON.parse(await crDecifra(CR_RAW));
@@ -2242,7 +2297,7 @@ async function cgPrecos(ids,forca){
   const c=cgCache();
   if(!ids.length)return c.p;
   const ok=ids.every(i=>c.p[i]>0);
-  if(!forca&&ok&&Date.now()-c.ts<5*60e3)return c.p;
+  if(!forca&&ok&&Date.now()-c.ts<60e3)return c.p;
   if(!navigator.onLine){CG_ST={st:'manual',msg:'sem conexão, usando valores manuais'};return c.p;}
   const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);
   try{
@@ -3271,19 +3326,49 @@ function relCSV(){
   setTimeout(()=>{URL.revokeObjectURL(url);aa.remove();},500);
 }
 
-/* ---------- cotações FII (brapi.dev, com fallback manual) ---------- */
+/* ---------- cotações B3 (v10.69: função cotacoes no servidor, sem token; brapi.dev como reserva; manual por último) ---------- */
 let COT={st:'manual',em:'',msg:'valores manuais'};
+/* pregão da B3: seg a sex, 10h às 18h10 no horário de Brasília (inclui o after-market curto) */
+function b3Aberta(d){
+  const pt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(d||new Date());
+  const g=k=>(pt.find(x=>x.type===k)||{}).value;const wd=g('weekday'),m=Number(g('hour'))*60+Number(g('minute'));
+  return !['Sat','Sun'].includes(wd)&&m>=600&&m<=1090;
+}
+let COT_RODANDO=false;
 async function atualizaCotacoes(forca){
-  if(!S.fiis.length)return;
+  if(!S.fiis.length||COT_RODANDO)return;
   const ultimo=Number(localStorage.getItem('gv-cot-ts')||0);
-  if(!forca&&Date.now()-ultimo<30*60e3)return;
-  if(!navigator.onLine){COT={st:'manual',msg:'sem conexão, usando valores manuais'};return;}
-  const tks=[...new Set(S.fiis.filter(f=>tipoOf(f)!=='cripto'&&tipoOf(f)!=='rf').map(f=>f.ticker).filter(Boolean))];if(!tks.length)return;
+  if(!forca&&Date.now()-ultimo<(b3Aberta()?55e3:30*60e3))return;
+  if(!navigator.onLine){COT={st:'manual',msg:'sem conexão, usando o último preço salvo'};return;}
+  const todos=[...new Set(S.fiis.filter(f=>tipoOf(f)!=='cripto'&&tipoOf(f)!=='rf').map(f=>f.ticker).filter(Boolean))];if(!todos.length)return;
+  COT_RODANDO=true;
+  try{await cotacoesB3(todos);}finally{COT_RODANDO=false;}
+}
+async function cotacoesB3(todos){
+  const agora=new Date().toISOString();let viaSrv=0;const pegos=new Set();
+  try{
+    const {data:sess}=sb?await sb.auth.getSession():{data:null};
+    if(sess&&sess.session){
+      const {data:o,error}=await sb.functions.invoke('cotacoes',{body:{tickers:todos}});
+      if(!error&&o&&o.q){
+        Object.entries(o.q).forEach(([sym,q])=>{
+          const pr=Number(q&&q.p);if(!(pr>0))return;pegos.add(sym);
+          S.fiis.filter(f=>f.ticker===sym).forEach(f=>{
+            f.preco=Math.round(pr*100)/100;f.cotEm=q.t||agora;f.cotFonte='b3';viaSrv++;
+            f.ant=Number(q.ant)>0?Math.round(Number(q.ant)*100)/100:null;
+            if(tipoOf(f)==='fii'&&q.div&&q.div.v>0&&(Date.now()-new Date(q.div.d+'T12:00:00'))<75*864e5)f.dpc=q.div.v;
+          });
+        });
+      }
+    }
+  }catch(e){}
+  const tks=todos.filter(t=>!pegos.has(t));
+  if(!tks.length){localStorage.setItem('gv-cot-ts',String(Date.now()));COT={st:'auto',em:agora,msg:b3Aberta()?'cotações ao vivo da B3 (atraso de até 15 min)':'cotações de fechamento da B3'};salvar();if(TAB==='fii')render();return;}
   const tok=S.cfg.brapi?'&token='+encodeURIComponent(S.cfg.brapi):'';
   /* sem token, a brapi recusa (401) qualquer pedido com vários tickers; então pede um a um.
      com token, um pedido só. */
   const lotes=S.cfg.brapi?[tks]:tks.map(t=>[t]);
-  let n=0,negados=0,falhas=0;const agora=new Date().toISOString();
+  let n=viaSrv,negados=0,falhas=0;
   for(const lote of lotes){
     const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);
     try{
@@ -3295,7 +3380,7 @@ async function atualizaCotacoes(forca){
         const sym=String(q.symbol||'').toUpperCase();
         S.fiis.filter(f=>f.ticker===sym).forEach(f=>{
           const pr=Number(q.regularMarketPrice);
-          if(pr>0){f.preco=pr;f.cotEm=q.regularMarketTime?new Date(q.regularMarketTime).toISOString():agora;f.cotFonte='brapi';n++;}
+          if(pr>0){f.preco=pr;f.cotEm=q.regularMarketTime?new Date(q.regularMarketTime).toISOString():agora;f.cotFonte='brapi';f.ant=Number(q.regularMarketPreviousClose)>0?Number(q.regularMarketPreviousClose):null;n++;}
           // só FIIs pagam todo mês: para ações/ETFs/BDRs o último provento não é uma renda mensal
           if(tipoOf(f)==='fii'){
             const cd=(q.dividendsData&&q.dividendsData.cashDividends)||[];
@@ -3308,11 +3393,18 @@ async function atualizaCotacoes(forca){
   }
   if(n||(!negados&&!falhas))localStorage.setItem('gv-cot-ts',String(Date.now()));
   const resto=negados?` · ${negados} ativo${negados>1?'s':''} sem permissão na brapi: configure o token grátis em Ajustes`:'';
-  if(n)COT={st:'auto',em:agora,msg:`cotações automáticas (brapi.dev)${resto}`};
+  if(n)COT={st:'auto',em:agora,msg:(b3Aberta()?'cotações ao vivo da B3 (atraso de até 15 min)':'cotações de fechamento da B3')+resto};
   else if(negados)COT={st:'manual',msg:'cotação automática precisa de token brapi (grátis, em Ajustes). usando preços manuais'};
   else COT={st:'manual',msg:'brapi indisponível agora, usando o último preço salvo'};
   if(n)salvar();
   if(TAB==='fii')render();
+}
+function infoCot(f){
+  if(!(f.cotFonte==='brapi'||f.cotFonte==='b3')||!f.cotEm)return 'preço digitado manualmente';
+  const vivo=b3Aberta()&&Date.now()-new Date(f.cotEm)<40*60e3;
+  const dv=f.ant>0?(f.preco-f.ant)/f.ant*100:null;
+  const dia=dv==null?'':` · <span class="${dv>0?'pos':dv<0?'neg':''}">hoje ${dv>0?'+':''}${dv.toFixed(2).replace('.',',')}%</span>`;
+  return (vivo?'<i class="liveDot"></i>ao vivo · ':'fechamento · ')+fmtHora(f.cotEm)+dia;
 }
 /* ---------- histórico de operações (preço médio ponderado, como na B3/IR)
    op: inicial (posição que já existia: qtd + custo) · compra (qtd, preço, taxas) · venda (qtd, preço, taxas) · provento (valor)
@@ -3461,6 +3553,8 @@ const DATA_HOJE=()=>{const d=new Date();return ['domingo','segunda','terça','qu
 
 function applyCfg(){
   document.documentElement.classList.toggle('claro',S.cfg.tema==='claro');
+  document.documentElement.classList.toggle('preto',S.cfg.tema==='preto');
+  {const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content',S.cfg.tema==='preto'?'#000000':S.cfg.tema==='claro'?'#f2f5fb':'#0b0f1a');}
   const [a,b]=ACCENTS[S.cfg.accent]||ACCENTS.verde;
   document.documentElement.style.setProperty('--a1',a);
   document.documentElement.style.setProperty('--a2',b);
@@ -3507,9 +3601,9 @@ function render(){
 }
 /* v10.34: valores grandes encolhem a fonte para caber, sem quebrar o número no meio */
 function cabeNum(root){
-  root.querySelectorAll('.hmSaldo,.mini b,.bk-val,.fit').forEach(el=>{
+  root.querySelectorAll('.hmSaldo,.mini b,.bk-val,.fit,.rdS b').forEach(el=>{
     el.style.fontSize='';if(!el.clientWidth)return;
-    let fs=parseFloat(getComputedStyle(el).fontSize),min=Math.max(11,fs*.45),i=0;
+    let fs=parseFloat(getComputedStyle(el).fontSize),min=Math.max(10,fs*.45),i=0;
     while(el.scrollWidth>el.clientWidth+1&&fs>min&&i++<30){fs-=1;el.style.fontSize=fs+'px';}
   });
 }
@@ -3966,7 +4060,7 @@ function viewFii(){
       if(f.pago>0&&f.cotas>0)meta.push(['preço médio',brl(f.pago/f.cotas)]);
       if(t==='fii')meta.push(['renda/mês',brl(dv)]);else if(f.dpc)meta.push(['provento/cota',brl(f.dpc)]);
       if(f.diaPag)meta.push(['paga dia',String(f.diaPag)]);
-      info=f.cotFonte==='brapi'&&f.cotEm?'cotação de '+fmtHora(f.cotEm):'preço digitado manualmente';
+      info=infoCot(f);
       if(f.ops&&f.ops.length)info+=' · '+f.ops.length+' operações'+(f.realizado?' · realizado '+brl(f.realizado):'')+(f.proventos?' · proventos '+brl(f.proventos):'');
     }
     return `<div class="ast hov" style="--tc:${TCOR[t]||'var(--a1)'}">
@@ -4172,7 +4266,8 @@ function viewCfg(){
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
-      <button data-act="tema" data-id="escuro" class="${claro?'':'on'}">Escuro</button>
+      <button data-act="tema" data-id="escuro" class="${S.cfg.tema==='escuro'?'on':''}">Escuro</button>
+      <button data-act="tema" data-id="preto" class="${S.cfg.tema==='preto'?'on':''}">Preto OLED</button>
       <button data-act="tema" data-id="claro" class="${claro?'on':''}">Claro</button>
     </div>
     <h4 style="margin-top:16px">Cor de destaque</h4>
@@ -4299,6 +4394,9 @@ function bancoNext(im){if(im.dataset.s2){const u=im.dataset.s2;im.removeAttribut
 /* se a primeira fonte devolver ícone pequeno (ex.: 16px borrado), troca pela segunda */
 function bancoLoad(im){if(im.naturalWidth<40&&im.dataset.s2)bancoNext(im);}
 window.bancoNext=bancoNext;window.bancoLoad=bancoLoad;
+/* v10.69: sem onload/onerror no HTML (a CSP não permite script embutido em atributo) */
+document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.closest('.bl-wrap'))bancoNext(t);},true);
+document.addEventListener('load',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.closest('.bl-wrap'))bancoLoad(t);},true);
 function bancoIni(n){const w=String(n||'').split(/\s+/).filter(x=>x&&!/^(do|da|de|dos|das|e)$/i.test(x));return ((w[0]||'?').charAt(0)+(w[1]?w[1].charAt(0):'')).toUpperCase();}
 /* logo em <img>; se não carregar, troca por círculo com as iniciais */
 function bancoLogoHTML(logo,nome,cls,logo2){
@@ -4306,7 +4404,7 @@ function bancoLogoHTML(logo,nome,cls,logo2){
   const fb='<span class="bl-ini">'+ini+'</span>';
   if(!logo)return '<span class="'+cls+' bl-wrap">'+fb+'</span>';
   const s2=logo2?' data-s2="'+esc(logo2)+'"':'';
-  return '<span class="'+cls+' bl-wrap'+(logo.startsWith('logos/')?' bl-fw':'')+'">'+fb+'<img'+(logo.startsWith('logos/')?' class="bl-full"':'')+' src="'+esc(logo)+'"'+s2+' alt="" decoding="async" loading="lazy" onerror="bancoNext(this)" onload="bancoLoad(this)"></span>';
+  return '<span class="'+cls+' bl-wrap'+(logo.startsWith('logos/')?' bl-fw':'')+'">'+fb+'<img'+(logo.startsWith('logos/')?' class="bl-full"':'')+' src="'+esc(logo)+'"'+s2+' alt="" decoding="async" loading="lazy"></span>';
 }
 function cicloCartao(c){
   const h=new Date(),y=h.getFullYear(),mo=h.getMonth();
@@ -6180,7 +6278,7 @@ const ACT={
   'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
   'notif-tog':id=>{if(!S.cfg.notif)S.cfg.notif={};const on=!notifOn(id);S.cfg.notif[id]=on;salvar();const b=document.querySelector('.ntRow[data-id="'+id+'"]');if(b){b.setAttribute('aria-checked',on);b.querySelector('.ntSw').classList.toggle('on',on);}toast(on?'Aviso ligado':'Aviso desligado');},
   'notif-disc':()=>{const on=!(S.cfg.pushDiscreto!==false);S.cfg.pushDiscreto=!on;salvar();const b=document.querySelector('[data-act="notif-disc"]');if(b){b.setAttribute('aria-checked',S.cfg.pushDiscreto);b.querySelector('.ntSw').classList.toggle('on',S.cfg.pushDiscreto);}toast(S.cfg.pushDiscreto?'Discretas: sem valores':'Discretas: com valores');},
-  'tema':id=>{S.cfg.tema=id;salvar();applyCfg();render();},
+  'tema':id=>{S.cfg.tema=['claro','preto'].includes(id)?id:'escuro';salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
   'cats-toggle':()=>{const y=window.scrollY;CATS_ABERTAS=!CATS_ABERTAS;render();window.scrollTo(0,y);
@@ -6379,6 +6477,9 @@ document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.datas
 render();
 
 atualizaCotacoes();
+/* v10.69: com a Carteira aberta e o app na tela, atualiza sozinho a cada minuto (B3 no pregão, cripto sempre) */
+setInterval(()=>{if(document.visibilityState==='visible'&&TAB==='fii'&&!document.querySelector('#modal.on')){atualizaCotacoes();atualizaCripto();}},60e3);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&TAB==='fii'){atualizaCotacoes();atualizaCripto();}});
 if(aplicaCDI())salvar();atualizaCDI();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')atualizaCDI();});
 setInterval(()=>atualizaCDI(),3600e3);
