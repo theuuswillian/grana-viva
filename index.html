@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-PjWYZucUlkjjSoxs1Bp3cZuTA/M9g8gXESlhGwkk0Rw=' 'sha256-QKw2Ho8+48BWd8hMF6srhvlgjrX/MVS/x02iIMeJK1U=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-gjWhjedvCQ7yuc2+GFIj04vIdMf+kiipWVWK7sgPDyw=' 'sha256-aJKeH5QdOF9MiWUhRRxJr34Ri8nKeWbFx4UytlElMRk=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1485,6 +1485,41 @@ html.claro .rfChip.warn{color:#b45309}
 @keyframes liveP{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @media(prefers-reduced-motion:reduce){.liveDot{animation:none}}
 .astFoot small .pos{color:#22c55e}.astFoot small .neg{color:#f87171}
+.simCard{display:flex;flex-direction:column;gap:12px}
+.simTop h4{margin:0}.simTop small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.simFolga{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.simFolga>div{min-width:0;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+.simFolga small{display:block;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.simFolga b{display:block;font-size:18px;font-weight:700;color:var(--hd);margin-top:3px;overflow:hidden;white-space:nowrap}
+.simFolga em{display:block;font-style:normal;font-size:11px;color:var(--mut);margin-top:3px;line-height:1.3}
+.simDia{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 12px;color:var(--txt);cursor:pointer}
+.simDia b{display:block;font-size:14px;color:var(--hd)}.simDia small{display:block;font-size:12px;color:var(--mut);margin-top:2px;line-height:1.3}
+.simTg{flex:none;width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;transition:background .2s}
+.simTg i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.simDia.on .simTg{background:var(--a1)}.simDia.on .simTg i{transform:translateX(16px)}
+.simLista{display:flex;flex-direction:column;gap:8px}
+.simIt{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--card2);border-left:3px solid #f87171}
+.simIt.up{border-left-color:#22c55e}
+.simItH{display:flex;align-items:center;gap:8px}.simItH b{flex:1;font-size:14px;color:var(--hd)}
+.simItI{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--card);color:var(--mut)}.simItI svg{width:15px;height:15px}
+.simX{width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--mut);border-radius:10px;cursor:pointer}.simX svg{width:16px;height:16px}
+.simItF{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:8px}
+.simItF label{font-size:11px;color:var(--mut);display:flex;flex-direction:column;gap:4px;min-width:0}
+.simItF input,.simItF select{height:42px;min-height:42px;max-height:42px;font-size:16px;padding-inline:10px}
+.simHint{display:block;margin-top:6px;font-size:12px;color:var(--mut)}
+.simAdd{display:flex;flex-wrap:wrap;gap:6px}
+.simAdd .chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer}
+.simAdd .chip svg{width:14px;height:14px}
+.simMais summary{font-size:13px;color:var(--mut);cursor:pointer}.simMais label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);margin-top:8px}
+.simRes{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.simV{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:14px}
+.simV svg{flex:none;width:20px;height:20px;margin-top:1px}.simV b{display:block;font-size:15px}.simV small{display:block;font-size:12.5px;margin-top:2px;opacity:.9;line-height:1.35}
+.simV small b{display:inline;font-size:inherit}.simV.bom{background:rgba(34,197,94,.10);color:#22c55e}.simV.bom small{color:var(--txt)}
+.simV.ruim{background:rgba(248,113,113,.10);color:#f87171}.simV.ruim small{color:var(--txt)}
+.simCmp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.simCmp small{display:block;font-size:11px;color:var(--mut);line-height:1.25}.simCmp b{display:block;font-size:14px;color:var(--hd);margin-top:3px;white-space:nowrap;overflow:hidden}
+.simVazio{margin:0;color:var(--mut)}
+@media(max-width:380px){.simCmp{grid-template-columns:1fr 1fr}.simFolga b{font-size:16px}}
 /* ===== v10.69: telas estreitas (iPhone 16 Pro = 402pt, SE/mini = 320-375pt) sem texto cortado ===== */
 @media(max-width:420px){
   .hB-a{gap:8px;padding:0 8px 0 7px}
@@ -1516,6 +1551,21 @@ html.claro .rfChip.warn{color:#b45309}
   .mtChips b{font-size:13px}
 }
 
+
+/* ===== v10.70: tema claro com contraste legível (WCAG AA) para verdes/vermelhos e etiquetas ===== */
+html.claro .pos{color:#15803d!important}
+html.claro .neg{color:#dc2626!important}
+html.claro .hB-hero .pos{color:#a3e635!important}html.claro .hB-hero .neg{color:#fda4af!important}
+html.claro .plPill.neg,html.claro .plPill.neg em{color:#b91c1c!important}
+html.claro .plPill.pos,html.claro .plPill.pos em{color:#15803d!important}
+html.claro .badge.ok{color:#047857}
+html.claro .wLink,html.claro .ptAdd{color:#15803d}
+html.claro .tkb.tk-fii{color:#047857;border-color:#6ee7b7}html.claro .tkb.tk-acao{color:#1d4ed8}
+html.claro .astTag{color:#4d7c0f}
+html.claro .cmpTop b{color:#15803d}html.claro .cmpLeg b{color:var(--txt)}
+html.claro .btn2.danger,html.claro .acts2 .btn2.danger{color:#be123c!important}html.claro .cmpCard .cmpTop b{color:#15803d!important}html.claro .hmHead h1 span{color:#15803d!important;-webkit-text-fill-color:#15803d}html.claro .lkOff{color:#b91c1c}
+html.claro .astFoot small .pos{color:#15803d}html.claro .astFoot small .neg{color:#dc2626}
+html.claro .simV.bom{color:#15803d}html.claro .simV.ruim{color:#b91c1c}
 /* ===== v10.69: tema Preto OLED — fundo #000 (pixel apagado no iPhone), superfícies quase pretas com fio de borda, sem brilho nem sombra ===== */
 html.preto{--bg:#000;--card:#0a0a0b;--card2:#121214;--txt:#ededef;--mut:#8b8b93;--hd:#fff;--line:#1c1c1f;--shadow:none;color-scheme:dark}
 html.preto,html.preto body{background:#000!important}
@@ -1580,7 +1630,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.69'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.70'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2915,14 +2965,47 @@ function fixaForm(id){
    entram: receitas previstas + receitas fixas que ainda não viraram lançamento.
    saem: despesas previstas (fora do cartão) + despesas fixas ainda não lançadas + compras no cartão no mês em que a fatura fecha.
    a simulação só existe nesta tela: nada é gravado. */
-let PLAN={n:6,renda:0,extra:0,corte:0};
+let PLAN={n:6,renda:0,extra:0,corte:0,dia:false,itens:[]};
+/* v10.70: itens da simulação "e se…". k = mês de início (0 = este mês, 1 = próximo…)
+   tipos: rmes (renda a mais por mês) · gmes (conta nova por mês) · parc (compra parcelada: total em n vezes) · gun (gasto único) · run (entrada única) */
+const SIM_TIPOS={rmes:{n:'Renda a mais por mês',s:1,ic:'up'},gmes:{n:'Conta nova por mês',s:-1,ic:'refresh'},parc:{n:'Compra parcelada',s:-1,ic:'card'},gun:{n:'Gasto único',s:-1,ic:'down'},run:{n:'Entrada única',s:1,ic:'plus'}};
+function simItemMes(it,k){
+  const v=cents(it.v||0);if(!v||k<(it.k||0))return 0;
+  const d=k-(it.k||0);
+  if(it.t==='rmes')return v;
+  if(it.t==='gmes')return -v;
+  if(it.t==='gun')return d===0?-v:0;
+  if(it.t==='run')return d===0?v:0;
+  if(it.t==='parc'){const n=Math.max(1,Math.min(48,Math.round(it.n||1)));if(d>=n)return 0;const base=Math.floor(v/n);return -(d===0?v-base*(n-1):base);}
+  return 0;
+}
+/* gasto do dia a dia: média mensal dos 3 últimos meses fechados, só despesas pagas que não são conta fixa
+   nem parcela (essas já estão na projeção). inclui o cartão (é dinheiro que vai sair na fatura). */
+function gastoDiaADia(){
+  return memo('gdd',()=>{
+    const h=new Date(),ms=[1,2,3].map(i=>isoDe(new Date(h.getFullYear(),h.getMonth()-i,1)).slice(0,7));
+    const prim=S.tx.reduce((a,t)=>t.data&&efetivo(t)&&(!a||t.data<a)?t.data:a,'');
+    const usa=ms.filter(m=>prim&&prim.slice(0,7)<=m);if(!usa.length)return {v:0,meses:0};
+    const nz=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+    const fixN=new Set((S.fixas||[]).filter(f=>f.tipo!=='receita').map(f=>nz(f.nome||f.descricao)).filter(Boolean));
+    let tot=0;S.tx.forEach(t=>{if(t.tipo!=='despesa'||!efetivo(t)||!t.data||t.fixaKey||(t.parcelas>1)||t.emp||fixN.has(nz(t.descricao)))return;if(usa.includes(t.data.slice(0,7)))tot+=cents(t.valor);});
+    return {v:Math.round(tot/usa.length)/100,meses:usa.length};
+  },true);
+}
+function temSimulacao(P){P=P||PLAN;return !!(P.renda||P.extra||P.corte||P.dia||(P.itens&&P.itens.some(i=>i.v>0)));}
+/* quanto dá pra assumir por mês (a partir do próximo) sem nenhum fim de mês ficar negativo, e quanto dá pra gastar hoje à vista */
+function folgaPlano(linhas){
+  const hoje=cents(saldoTotal());let mensal=Infinity,vista=hoje;
+  linhas.forEach((m,k)=>{const sc=Math.round(m.saldo*100);vista=Math.min(vista,sc);if(k>0)mensal=Math.min(mensal,Math.floor(sc/k));});
+  return {mensal:mensal===Infinity?0:Math.max(0,mensal)/100,vista:Math.max(0,vista)/100};
+}
 /* soma (em centavos) do que falta pagar das faturas fechadas com vencimento entre ini e fim */
 function faturasAPagar(ini,fim){
   let r=0;
   S.tx.forEach(t=>{if(!t.faturaKey)return;const rs=cents(restanteFatura(t));if(rs<=0)return;const v=venceFatura(t);if(v>=ini&&v<=fim)r+=rs;});
   return r;
 }
-function projetaMeses(n,sim){if(!sim||!Object.keys(sim).length)return memo('pm|'+n,()=>projetaMeses0(n),true);return projetaMeses0(n,sim);}
+function projetaMeses(n,sim){if(!sim||!temSimulacao(sim))return memo('pm|'+n,()=>projetaMeses0(n),true);return projetaMeses0(n,sim);}
 function projetaMeses0(n,sim){
   sim=sim||{};
   const h=new Date(),hj=hojeISO(),out=[];
@@ -2949,6 +3032,8 @@ function projetaMeses0(n,sim){
     // simulação vale a partir do próximo mês
     let sRec=0,sDes=0;
     if(k>0){sRec=cents(sim.renda||0);sDes=cents(sim.extra||0)-Math.round(desFixa*(Math.min(100,Math.max(0,sim.corte||0))/100));}
+    (sim.itens||[]).forEach(it=>{const x=simItemMes(it,k);if(x>0)sRec+=x;else sDes-=x;});
+    if(sim.dia){const g=cents(gastoDiaADia().v);if(k===0){const dm=new Date(h.getFullYear(),h.getMonth()+1,0).getDate();sDes+=Math.round(g*(dm-h.getDate())/dm);}else sDes+=g;}
     const entra=rec+sRec,sai=des+cart+sDes;
     saldo+=entra-sai;
     out.push({ym,entra:entra/100,sai:sai/100,cart:cart/100,saldo:saldo/100,rec:rec/100,des:des/100,desFixa:desFixa/100});
@@ -3063,7 +3148,7 @@ function alertaVermelhoHTML(){
     '<button class="btn2 sm" data-act="ir-cal">ver dia a dia</button>');
 }
 function viewPlan(){
-  const n=PLAN.n,base=projetaMeses(n),sim=projetaMeses(n,PLAN),temSim=!!(PLAN.renda||PLAN.extra||PLAN.corte);
+  const n=PLAN.n,base=projetaMeses(n),temSim=temSimulacao(),sim=temSim?projetaMeses(n,PLAN):base;
   const linhas=temSim?sim:base,hoje=saldoTotal();
   const temDados=(S.fixas||[]).length||S.tx.some(t=>t.status==='previsto')||base.some(m=>m.cart>0);
   const min=linhas.reduce((a,m)=>m.saldo<a.saldo?m:a,linhas[0]);
@@ -3090,15 +3175,7 @@ function viewPlan(){
     <div class="planHead"><span>mês</span><span>entra</span><span>sai</span><span>saldo no fim</span></div>
     ${linhas.map(m=>`<div class="planRow${m===min?' low':''}"><span>${nomeM(m.ym)}</span><span class="pos">${brl(m.entra)}</span><span class="neg">${brl(m.sai)}</span><span class="${m.saldo<0?'neg':'pos'}"><b>${brl(m.saldo)}</b><i class="planBar ${m.saldo<0?'n':''}" data-w="${(Math.abs(m.saldo)/mx*100).toFixed(1)}"></i></span></div>`).join('')}
   </div>
-  <div class="card">
-    <h4>Simular (não altera seus lançamentos)</h4>
-    <div class="planSim">
-      <label>Renda extra por mês (R$)<input inputmode="decimal" data-plan="renda" value="${PLAN.renda?num(PLAN.renda):''}" placeholder="0,00"></label>
-      <label>Gasto extra por mês (R$)<input inputmode="decimal" data-plan="extra" value="${PLAN.extra?num(PLAN.extra):''}" placeholder="0,00"></label>
-      <label>Cortar contas fixas (%)<input inputmode="decimal" data-plan="corte" value="${PLAN.corte||''}" placeholder="0"></label>
-    </div>
-    ${temSim?`<button class="btn2 sm" data-act="plan-limpa">limpar simulação</button>`:''}
-  </div>
+  ${simHTML(base,sim,temSim)}
   ${metas?`<div class="card"><h4>Metas no ritmo da projeção</h4>${metas}<p class="small" style="margin-top:10px">${sobraMed>0?'metas sem aporte definido usam a sobra média de '+brl(sobraMed)+' por mês.':'a projeção não deixa sobra no mês, então metas sem aporte definido não avançam. defina um aporte na meta ou teste cortes na simulação.'}</p></div>`:''}
   <details class="card planPremBox"><summary>Como a projeção é calculada</summary><ul class="planPrem">
     <li>Começa no saldo de hoje, que conta só os lançamentos pagos.</li>
@@ -3111,6 +3188,37 @@ function viewPlan(){
   </ul></details>`;
 }
 
+/* v10.70: simulador "e se…" — responde se cabe, quanto sobra de folga e o que muda */
+function simHTML(base,sim,temSim){
+  const nomeM=ym=>MESES[+ym.slice(5,7)-1]+'/'+ym.slice(2,4);
+  const g=gastoDiaADia(),fB=folgaPlano(base),fS=folgaPlano(sim);
+  const fimB=base[base.length-1],fimS=sim[sim.length-1],dif=fimS.saldo-fimB.saldo;
+  const negS=sim.find(m=>m.saldo<0),minS=sim.reduce((a,m)=>m.saldo<a.saldo?m:a,sim[0]);
+  const h=new Date(),mesesOpt=k=>Array.from({length:12},(_,i)=>`<option value="${i}"${i===k?' selected':''}>${i===0?'este mês':nomeM(isoDe(new Date(h.getFullYear(),h.getMonth()+i,1)).slice(0,7))}</option>`).join('');
+  const itens=(PLAN.itens||[]).map((it,i)=>{const T=SIM_TIPOS[it.t]||SIM_TIPOS.gmes;
+    const parcV=it.t==='parc'&&it.v>0?`<small class="simHint">${Math.max(1,Math.round(it.n||1))}x de ${brl(Math.ceil(it.v*100/Math.max(1,Math.round(it.n||1)))/100)}</small>`:'';
+    return `<div class="simIt ${T.s>0?'up':'dn'}"><div class="simItH"><span class="simItI">${I(T.ic)}</span><b>${T.n}</b><button class="simX" data-act="sim-del" data-id="${i}" aria-label="remover">${I('close')}</button></div>
+      <div class="simItF"><label>${it.t==='parc'?'valor total':'valor'}<input inputmode="decimal" data-sim="${i}|v" value="${it.v?num(it.v):''}" placeholder="0,00"></label>
+      ${it.t==='parc'?`<label>parcelas<input inputmode="numeric" data-sim="${i}|n" value="${it.n||''}" placeholder="10"></label>`:''}
+      <label>${it.t==='gun'||it.t==='run'?'quando':'a partir de'}<select data-sim="${i}|k">${mesesOpt(it.k||0)}</select></label></div>${parcV}</div>`;}).join('');
+  let falta=0;sim.forEach((m,k)=>{if(k>0&&m.saldo<0)falta=Math.max(falta,Math.ceil(-m.saldo*100/k)/100);});
+  const veredito=!temSim?'':negS?`<div class="simV ruim">${I('alert')}<div><b>Não cabe</b><small>fecha ${nomeM(negS.ym)} em <span class="nw">${brl(negS.saldo)}</span>${minS!==negS?` e chega a ${brl(minS.saldo)} em ${nomeM(minS.ym)}`:''}.${falta>0?` pra caber, faltam uns <b class="nw">${brl(falta)}</b> por mês (a mais de renda ou a menos de gasto).`:''}</small></div></div>`
+    :`<div class="simV bom">${I('check')}<div><b>Cabe no seu bolso</b><small>o mês mais apertado é ${nomeM(minS.ym)}, fechando com <span class="nw">${brl(minS.saldo)}</span></small></div></div>`;
+  return `<div class="card simCard">
+    <div class="simTop"><h4>E se…</h4><small>teste antes de decidir. nada aqui muda seus lançamentos.</small></div>
+    <div class="simFolga">
+      <div><small>folga por mês</small><b class="nw fit">${brl(fS.mensal)}</b><em>${temSim&&fS.mensal!==fB.mensal?'antes '+brl(fB.mensal):'cabe de conta nova sem ficar no vermelho'}</em></div>
+      <div><small>dá pra gastar hoje</small><b class="nw fit">${brl(fS.vista)}</b><em>${temSim&&fS.vista!==fB.vista?'antes '+brl(fB.vista):'à vista, sem zerar nenhum mês'}</em></div>
+    </div>
+    ${g.v>0?`<button class="simDia${PLAN.dia?' on':''}" data-act="sim-dia" aria-pressed="${PLAN.dia?'true':'false'}"><span class="simTg"><i></i></span><span><b>Contar os gastos do dia a dia</b><small>mercado, delivery, transporte… média de ${brl(g.v)}/mês ${g.meses===1?'no último mês':'nos últimos '+g.meses+' meses'}</small></span></button>`:''}
+    ${itens?`<div class="simLista">${itens}</div>`:''}
+    <div class="simAdd">${Object.entries(SIM_TIPOS).map(([k,T])=>`<button class="chip" data-act="sim-add" data-id="${k}">${I('plus')}${T.n.replace(' por mês','')}</button>`).join('')}</div>
+    <details class="simMais"${PLAN.corte?' open':''}><summary>cortar contas fixas</summary><label>reduzir todas as contas fixas em (%)<input inputmode="decimal" data-plan="corte" value="${PLAN.corte||''}" placeholder="0"></label></details>
+    ${temSim?`<div class="simRes">${veredito}
+      <div class="simCmp"><div><small>em ${nomeM(fimS.ym)} sem mudar nada</small><b class="nw">${brl(fimB.saldo)}</b></div><div><small>com a simulação</small><b class="nw ${fimS.saldo<0?'neg':''}">${brl(fimS.saldo)}</b></div><div><small>diferença</small><b class="nw ${dif<0?'neg':'pos'}">${dif>0?'+':''}${brl(dif)}</b></div></div>
+      <button class="btn2 sm" data-act="plan-limpa">limpar simulação</button></div>`:`<p class="small simVazio">toque numa opção acima: um aumento, uma assinatura, um celular em 12x, uma viagem… e veja na hora se cabe.</p>`}
+  </div>`;
+}
 /* ---------- relatório mensal ---------- */
 let REL={a:'',b:''};
 function mesNome(m){return MESES_LONGO[+m.slice(5,7)-1]+' de '+m.slice(0,4);}
@@ -5972,6 +6080,8 @@ function fiiForm(id,tipoPre){
       const temOps=f&&f.ops&&f.ops.length;
       const obj={tipo:tp,ticker,nome:b?b.n:(f&&f.nome)||'',cotas:temOps?f.cotas:cotas,preco,dpc,diaPag,pago:temOps?f.pago:pago,cotEm:(f&&f.preco===preco)?f.cotEm:'',cotFonte:(f&&f.preco===preco)?f.cotFonte:'manual'};
       if(f)Object.assign(f,obj);else S.fiis.push(Object.assign({id:uid()},obj));
+      /* v10.70: ação/FII/ETF/BDR salvo já busca a cotação da B3 na hora (o preço digitado vale só se a cotação falhar) */
+      if(tp!=='cripto'&&tp!=='rf'){localStorage.removeItem('gv-cot-ts');setTimeout(()=>atualizaCotacoes(true),50);}
     }
     salvar();render();toast('Ativo salvo');
   });
@@ -5998,12 +6108,24 @@ function fiiForm(id,tipoPre){
     lDpc.style.display=cri?'none':'';
     lDia.style.display=cri?'none':'';
     lPreco.style.display=cri?(precoOff?'':'none'):'';
-    lPreco.firstChild.textContent=cri?'Preço atual (R$), só se a cotação não carregar':'Preço por cota (R$)';
+    lPreco.firstChild.textContent=cri?'Preço atual (R$), só se a cotação não carregar':'Preço por cota (R$), atualiza sozinho pela B3';
     inpT.placeholder=cri?'BTC':'HGLG11';
     lTick.firstChild.textContent=cri?'Cripto (ex: BTC)':'Ticker (ex: HGLG11)';
     lCot.firstChild.textContent=cri?'Quantidade de moedas':'Quantidade';
     calc();
   };
+  /* v10.70: ao digitar o ticker de um ativo da B3, já preenche o preço com a cotação de agora */
+  let cotSeq=0;
+  const buscaCot=async()=>{
+    const tk=String(inpT.value||'').toUpperCase().trim();
+    if(selT.value==='cripto'||selT.value==='rf'||!/^[A-Z0-9]{4,7}$/.test(tk)||!sb)return;
+    const seq=++cotSeq,inpP=mf.querySelector('[name="preco"]');
+    try{const {data:o}=await sb.functions.invoke('cotacoes',{body:{tickers:[tk]}});
+      if(seq!==cotSeq||!o||!o.q||!o.q[tk])return;const q=o.q[tk];
+      if(inpP&&q.p>0){inpP.value=num(Math.round(q.p*100)/100);let ci=lPreco.querySelector('.cotInfo');if(!ci){ci=document.createElement('small');ci.className='cotInfo';lPreco.appendChild(ci);}ci.textContent='cotação de '+fmtHora(q.t||new Date().toISOString())+(q.nome?' · '+q.nome:'');}
+    }catch(e){}
+  };
+  inpT.addEventListener('change',buscaCot);inpT.addEventListener('blur',buscaCot);
   const calc=()=>{
     if(selT.value!=='cripto'){calcEl.style.display='none';return;}
     calcEl.style.display='';
@@ -6320,7 +6442,10 @@ const ACT={
   'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
   'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
   'ir-cal':()=>{CAL_M=0;go('plan');},
-  'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;render();},
+  'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;PLAN.dia=false;PLAN.itens=[];render();},
+  'sim-add':id=>{if(!SIM_TIPOS[id])return;if(PLAN.itens.length>=8){toast('até 8 itens na simulação');return;}PLAN.itens.push({t:id,v:0,n:id==='parc'?10:0,k:id==='gun'||id==='run'||id==='parc'?0:1});render();setTimeout(()=>{const ins=document.querySelectorAll('[data-sim$="|v"]');const el=ins[ins.length-1];if(el)el.focus();},60);},
+  'sim-del':id=>{PLAN.itens.splice(+id,1);render();},
+  'sim-dia':()=>{PLAN.dia=!PLAN.dia;render();},
   'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
   'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
   'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);atualizaCDI(true);},
@@ -6406,6 +6531,8 @@ document.addEventListener('change',e=>{
   if(t.dataset&&(t.dataset.filter==='relA'||t.dataset.filter==='relB')){REL[t.dataset.filter==='relA'?'a':'b']=t.value;render();return;}
   if(t.dataset&&t.dataset.filter){F[t.dataset.filter]=t.value;render();return;}
   if(t.dataset&&t.dataset.per){const k=t.dataset.per;if(k==='k'){const atual=periodo();PER.k=t.value;if(t.value==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}}else if(DATA_OK.test(t.value))PER[k]=t.value;salvaPer();render();return;}
+  if(t.dataset&&t.dataset.sim){const [i,k]=t.dataset.sim.split('|'),it=PLAN.itens[+i];if(!it)return;
+    if(k==='v')it.v=Math.max(0,Math.min(1e8,parseBR(t.value)||0));else if(k==='n')it.n=Math.max(1,Math.min(48,Math.round(parseBR(t.value)||1)));else if(k==='k')it.k=Math.max(0,Math.min(11,+t.value||0));render();return;}
   if(t.dataset&&t.dataset.plan){const k=t.dataset.plan;PLAN[k]=k==='n'?(+t.value||6):Math.max(k==='corte'?0:-1e9,Math.min(k==='corte'?100:1e9,parseBR(t.value)||0));render();return;}
   if(t.id==='imp'){
     const f=t.files[0];t.value='';if(!f)return;
@@ -6427,7 +6554,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={get S(){return S},set S(v){S=v},listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
