@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-gjWhjedvCQ7yuc2+GFIj04vIdMf+kiipWVWK7sgPDyw=' 'sha256-aJKeH5QdOF9MiWUhRRxJr34Ri8nKeWbFx4UytlElMRk=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-wOUrUKSP34ou01sJ6w+n1+4K9EkCp5YpvHLj31XKHJ8=' 'sha256-U/N7fWjy4AeqQxWWYSZkF+ix+7xfBzIXvjxXE2u6fzU=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1520,6 +1520,9 @@ html.claro .rfChip.warn{color:#b45309}
 .simCmp small{display:block;font-size:11px;color:var(--mut);line-height:1.25}.simCmp b{display:block;font-size:14px;color:var(--hd);margin-top:3px;white-space:nowrap;overflow:hidden}
 .simVazio{margin:0;color:var(--mut)}
 @media(max-width:380px){.simCmp{grid-template-columns:1fr 1fr}.simFolga b{font-size:16px}}
+.fxAtalho{display:flex;gap:6px;margin:-4px 0 6px}.fxAtalho .chip{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer}
+.fxAtalho .chip.on{background:var(--a1);border-color:var(--a1);color:#0b0c0f}
+.fxDica{display:block;font-size:12.5px;color:var(--mut);margin:0 0 12px;line-height:1.35}.fxDica:empty{display:none}
 /* ===== v10.69: telas estreitas (iPhone 16 Pro = 402pt, SE/mini = 320-375pt) sem texto cortado ===== */
 @media(max-width:420px){
   .hB-a{gap:8px;padding:0 8px 0 7px}
@@ -1630,7 +1633,7 @@ html.preto #toast{background:#111113;border-color:#232327;box-shadow:none}
 </div>
 
 <script>
-const GV_BUILD='10.70'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.71'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2559,6 +2562,8 @@ function ocorrenciasFixa(f,ini,fim){
   }
   return out;
 }
+/* v10.71: data da primeira cobrança de uma conta fixa antiga (sem f.inicio): a 1ª ocorrência a partir do cadastro */
+function primeiraFixa(f){const cr=ISO_RE.test(f.criadoEm||'')?f.criadoEm.slice(0,10):hojeISO();const o=ocorrenciasFixa(Object.assign({},f,{fim:''}),cr,addDias(cr,400))[0];return o?o.data:cr;}
 function dataDaChave(f,key){const p=key.split('|')[2]||'';if((f.freq||'mensal')!=='mensal'||p.length!==7)return '';const y=+p.slice(0,4),m=+p.slice(5,7)-1;return isoDe(new Date(y,m,Math.min(Math.max(1,f.dia||1),ultimoDia(y,m))));}
 function descFreq(f){const ate=f.fim&&ISO_RE.test(f.fim)?' até '+fmtData(f.fim):'';return descFreq0(f)+ate;}
 function descFreq0(f){const fr=f.freq||'mensal';if(fr==='diaria')return 'todo dia';if(fr==='quinzenal')return 'a cada 2 semanas';if(fr==='intervalo'){const r=regraIntervalo(f),U={dia:['dia','dias'],semana:['semana','semanas'],mes:['mês','meses']}[r.un];return r.n===1?(r.un==='semana'?'toda semana':r.un==='mes'?'todo mês':'todo dia'):'a cada '+r.n+' '+U[1];}if(fr==='semanal'){const d=DOW_L[+f.dow||0];return (d==='sábado'||d==='domingo'?'todo ':'toda ')+d;}if(fr==='anual')return 'todo ano em '+pad(f.dia||1)+'/'+pad(f.mes||1);return 'todo dia '+(f.dia||1);}
@@ -2915,7 +2920,7 @@ function fixaForm(id){
     {name:'freq',label:'Repete',type:'select',value:f?(f.freq||'mensal'):'mensal',options:[{v:'diaria',t:'todo dia'},{v:'semanal',t:'toda semana'},{v:'quinzenal',t:'a cada 2 semanas'},{v:'mensal',t:'todo mês'},{v:'anual',t:'todo ano'},{v:'intervalo',t:'personalizado (a cada…)'}]},
     {name:'n',label:'A cada',type:'number',min:1,max:365,value:f&&f.freq==='intervalo'?f.n||1:3},
     {name:'un',label:'Unidade',type:'select',value:f&&f.un||'dia',options:[{v:'dia',t:'dias'},{v:'semana',t:'semanas'},{v:'mes',t:'meses'}]},
-    {name:'inicio',label:'Primeira vez em',type:'date',value:f&&f.inicio||hojeISO()},
+    {name:'inicio',label:'Primeira cobrança',type:'date',value:f?(f.inicio||primeiraFixa(f)):hojeISO()},
     {name:'dia',label:'Dia (1 a 31)',type:'number',min:1,max:31,value:f?f.dia||'':''},
     {name:'dow',label:'Dia da semana',type:'select',value:f?String(f.dow||1):'1',options:DOW_L.map((d,i)=>({v:String(i),t:d}))},
     {name:'mes',label:'Mês',type:'select',value:f?String(f.mes||1):String(new Date().getMonth()+1),options:MESES_LONGO.map((m,i)=>({v:String(i+1),t:m}))},
@@ -2927,23 +2932,27 @@ function fixaForm(id){
     if(!nome)return 'Dê um nome à conta.';
     if(!(valor>0))return 'Informe o valor.';
     const porIntervalo=['diaria','quinzenal','intervalo'].includes(freq);
-    if(!porIntervalo&&freq!=='semanal'&&!(dia>=1&&dia<=31))return 'Dia entre 1 e 31.';
     const n=parseInt(v.n,10),inicio=String(v.inicio||''),fimR=String(v.fim||'');
+    if(!ISO_RE.test(inicio))return 'Escolha a data da primeira cobrança.';
     if(freq==='intervalo'&&!(n>=1&&n<=365))return 'Intervalo entre 1 e 365.';
-    if(porIntervalo&&!ISO_RE.test(inicio))return 'Informe a primeira data.';
     if(fimR&&!ISO_RE.test(fimR))return 'Data final inválida.';
-    if(fimR&&porIntervalo&&fimR<inicio)return 'A data final vem antes da primeira.';
+    if(fimR&&fimR<inicio)return 'A data final vem antes da primeira cobrança.';
     const obj={nome,valor,tipo:v.tipo==='receita'?'receita':'despesa',freq,categoria:v.categoria||S.cats[0],auto:!v.manual,fim:fimR};
     if(porIntervalo){obj.inicio=inicio;obj.dia=+inicio.slice(8,10);if(freq==='intervalo'){obj.n=n;obj.un=['dia','semana','mes'].includes(v.un)?v.un:'dia';}}
-    if(freq==='semanal'){obj.dow=parseInt(v.dow,10)||0;obj.dia=f&&f.dia||1;}else if(!porIntervalo)obj.dia=dia;
-    if(freq==='anual')obj.mes=parseInt(v.mes,10)||1;
+    /* v10.71: a data da primeira cobrança define o dia (mensal), o dia da semana (semanal) e dia+mês (anual).
+       se ela já passou, a conta entra agora em Despesas com essa data; se é no mês que vem, começa lá. */
+    obj.inicio=inicio;
+    if(freq==='semanal'){obj.dow=new Date(+inicio.slice(0,4),+inicio.slice(5,7)-1,+inicio.slice(8,10)).getDay();obj.dia=f&&f.dia||1;}
+    else if(!porIntervalo)obj.dia=+inicio.slice(8,10);
+    if(freq==='anual')obj.mes=+inicio.slice(5,7);
     if(f){
-      const mudouRegra=(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes)||(porIntervalo&&(f.inicio!==obj.inicio||(freq==='intervalo'&&(+f.n!==obj.n||f.un!==obj.un))))||(f.fim||'')!==fimR;
+      const inicioAnt=f.inicio||primeiraFixa(f),mudouInicio=inicioAnt!==inicio;
+      const mudouRegra=mudouInicio||(f.freq||'mensal')!==freq||(freq==='semanal'&&+f.dow!==obj.dow)||(freq==='anual'&&+f.mes!==obj.mes)||(porIntervalo&&(f.inicio!==obj.inicio||(freq==='intervalo'&&(+f.n!==obj.n||f.un!==obj.un))))||(f.fim||'')!==fimR;
       const valorAntigo=+f.valor||0;
       Object.assign(f,obj);
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
-      if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj;}
-    }else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:hojeISO()},obj));}
+      if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=mudouInicio?inicio:(f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj);}
+    }else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:inicio},obj));}
     if(f){
       /* v10.52: conta fixa manual ("confirmar manualmente") com valor editado: o previsto futuro que ainda
          tem o valor antigo acompanha a edição, sem mexer no que o usuário já confirmou */
@@ -2954,9 +2963,29 @@ function fixaForm(id){
     geraRecorrentes();salvar();render();toast('Conta fixa salva');
   });
   const mf=$('#mf'),q=n=>mf.querySelector('[name="'+n+'"]'),w=n=>q(n).closest('label');
-  const pinta=()=>{const fr=q('freq').value,pi=['diaria','quinzenal','intervalo'].includes(fr);w('dia').style.display=fr==='semanal'||pi?'none':'';w('dow').style.display=fr==='semanal'?'':'none';w('mes').style.display=fr==='anual'?'':'none';w('n').style.display=w('un').style.display=fr==='intervalo'?'':'none';w('inicio').style.display=pi?'':'none';};
-  q('freq').onchange=pinta;pinta();
-  q('tipo').onchange=()=>{const l=q('tipo').value==='receita'?CATS_RECEITA:S.cats;q('categoria').innerHTML=l.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');};
+  const li=w('inicio'),dica=document.createElement('small');dica.className='fxDica';
+  const atalhos=document.createElement('div');atalhos.className='fxAtalho';
+  atalhos.innerHTML='<button type="button" class="chip" data-fx="0">este mês</button><button type="button" class="chip" data-fx="1">próximo mês</button>';
+  li.after(atalhos);atalhos.after(dica);
+  const fmtD=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
+  const explica=()=>{
+    const d=q('inicio').value,hj=hojeISO(),rec=q('tipo').value==='receita',manual=q('manual')&&q('manual').checked;
+    li.firstChild.textContent=rec?'Primeiro recebimento':'Primeira cobrança';
+    if(!ISO_RE.test(d)){dica.textContent='';return;}
+    const ym=hj.slice(0,7),nome=rec?'receitas':'despesas';
+    atalhos.querySelectorAll('[data-fx]').forEach(b=>b.classList.toggle('on',(b.dataset.fx==='0'&&d.slice(0,7)===ym)||(b.dataset.fx==='1'&&d.slice(0,7)===isoDe(new Date(+hj.slice(0,4),+hj.slice(5,7),1)).slice(0,7))));
+    if(f&&d===(f.inicio||primeiraFixa(f))){dica.textContent='';return;}
+    if(d<=hj)dica.textContent=(d.slice(0,7)===ym?'já entra este mês em '+nome:'entra em '+nome)+', em '+fmtD(d)+(manual?', como prevista até você marcar como paga.':(rec?', como recebida.':', como paga.'));
+    else if(d.slice(0,7)===ym)dica.textContent='cobra este mês, em '+fmtD(d)+', e depois se repete.';
+    else dica.textContent='a primeira cobrança é em '+fmtD(d)+'. nada entra este mês.';
+    if(rec&&d>hj)dica.textContent=dica.textContent.replace('cobra','entra').replace('a primeira cobrança é','o primeiro recebimento é');
+  };
+  atalhos.addEventListener('click',e=>{const b=e.target.closest('[data-fx]');if(!b)return;
+    const hj=new Date(),cur=q('inicio').value,dia=ISO_RE.test(cur)?+cur.slice(8,10):hj.getDate(),k=+b.dataset.fx;
+    const y=hj.getFullYear(),m=hj.getMonth()+k;q('inicio').value=isoDe(new Date(y,m,Math.min(dia,ultimoDia(new Date(y,m,1).getFullYear(),new Date(y,m,1).getMonth()))));explica();});
+  const pinta=()=>{const fr=q('freq').value;w('dia').style.display='none';w('dow').style.display='none';w('mes').style.display='none';w('n').style.display=w('un').style.display=fr==='intervalo'?'':'none';explica();};
+  q('freq').onchange=pinta;q('inicio').addEventListener('change',explica);q('inicio').addEventListener('input',explica);if(q('manual'))q('manual').addEventListener('change',explica);pinta();
+  q('tipo').onchange=()=>{const l=q('tipo').value==='receita'?CATS_RECEITA:S.cats;q('categoria').innerHTML=l.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');explica();};
 }
 
 /* ---------- planejamento: projeção dos próximos meses ----------
