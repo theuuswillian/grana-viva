@@ -1418,6 +1418,54 @@ html.claro .hB-hero{box-shadow:0 22px 44px -26px rgba(15,23,42,.55)}
 .hB-var.up .i{color:#4ade80}.hB-var.dn .i{color:#fb7185}
 .hB-hero.hNeg{border-color:rgba(251,113,133,.22)!important}
 .hB-red{color:#fda4af!important}
+
+/* ===== v10.67: conta fixa sem borda dupla ===== */
+.fixas-card{border:1px solid var(--line)!important;background:var(--card)!important}
+.fixas-card::before{display:none!important}
+.fx-ic{background:color-mix(in srgb,var(--a1) 16%,transparent)!important;color:var(--a1)!important;box-shadow:none!important}
+.fx-ic .i{stroke:var(--a1)!important}
+.fx-ic.sm{background:var(--card2)!important;color:var(--mut)!important;border:1px solid var(--line)}
+.fx-ic.sm .i{stroke:var(--mut)!important}
+.fx-row.due{background:rgba(245,158,11,.07)!important;box-shadow:none!important;border:0!important;border-radius:12px;padding-left:10px}
+html.claro .fixas-card{background:#fff!important}
+/* ===== v10.67: barras semanais ===== */
+.hB-sem{margin:12px 0 10px}
+.hB-sem svg{display:block;width:100%;height:52px;overflow:visible}
+.hB-sem .be{fill:#4ade80;opacity:.45}.hB-sem .bs{fill:#fb7185;opacity:.45}
+.hB-sem .sg{cursor:pointer}
+.hB-sem .sg.cur .be,.hB-sem .sg.cur .bs,.hB-sem .sg.sel .be,.hB-sem .sg.sel .bs{opacity:1}
+.hB-sem:has(.sg.sel) .sg.cur:not(.sel) .be,.hB-sem:has(.sg.sel) .sg.cur:not(.sel) .bs{opacity:.45}
+.hB-semL{display:flex;gap:14px;align-items:center;margin-top:8px;font-size:12px;font-variant-numeric:tabular-nums}
+.hB-semL span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:rgba(255,255,255,.88);font-weight:600}
+.hB-semL span:first-child{flex:1;color:rgba(255,255,255,.5);font-weight:500}
+.hB-sem.vazio0{height:52px;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.12);border-radius:12px;font-size:12px;color:rgba(255,255,255,.45)}
+/* ===== v10.67: primeiros passos ===== */
+.pp-card{padding:16px!important}
+.pp-h{display:flex;justify-content:space-between;align-items:flex-start}
+.pp-h h4{margin:0 0 2px;font-size:16px}.pp-h small{color:var(--mut);font-size:12px}
+.pp-h .x{background:none;border:0;color:var(--mut);padding:4px;cursor:pointer}.pp-h .x .i{width:18px;height:18px}
+.pp-bar{height:4px;border-radius:4px;background:var(--card2);margin:10px 0 6px;overflow:hidden}.pp-bar i{display:block;height:100%;background:var(--a1);border-radius:4px;transition:width .3s}
+.pp-i{display:flex;align-items:center;gap:12px;width:100%;padding:10px 2px;background:none;border:0;border-top:1px solid var(--line);color:var(--txt);text-align:left;font:inherit;cursor:pointer}
+.pp-bar+.pp-i{border-top:0}
+.pp-ic{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--card2);color:var(--mut)}
+.pp-ic .i{width:17px;height:17px}
+.pp-t{flex:1;min-width:0}.pp-t b{display:block;font-size:14px;font-weight:600}.pp-t small{display:block;font-size:12px;color:var(--mut);margin-top:1px}
+.pp-ch{width:16px;height:16px;color:var(--mut)}
+.pp-i.ok{cursor:default}.pp-i.ok .pp-ic{background:color-mix(in srgb,var(--a1) 16%,transparent);color:var(--a1)}.pp-i.ok b{color:var(--mut);text-decoration:line-through;text-decoration-color:var(--line)}
+/* ===== v10.67: estados vazios ===== */
+.card.vz{text-align:center;padding:28px 20px!important}
+.vz-ic{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--a1) 14%,transparent);color:var(--a1)}
+.vz-ic .i{width:24px;height:24px}
+.card.vz b{display:block;font-size:16px;font-weight:650;color:var(--txt)}
+.card.vz p{margin:6px auto 0;max-width:300px;font-size:14px;line-height:1.5;color:var(--mut)}
+.vz-a{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+/* ===== v10.67: botões sólidos, sem degradê ===== */
+.btn{background:var(--a1)!important;color:#08110b!important;box-shadow:none!important}
+.btn:hover{filter:brightness(1.06)}
+.btn.perigo{background:#ef4444!important;color:#fff!important}
+.meta .acts2 .btn{background:var(--a1)!important;color:#08110b!important}
+.seg button.on{background:var(--a1)!important;color:#08110b!important}
+.lanc-lista .card.vz,.card .card.vz{background:transparent!important;border:0!important;box-shadow:none!important;padding:20px 8px!important}
 </style>
 <!-- utilitários Tailwind pré-compilados (tailwindcss 3.4, ver tailwind.config.js). antes: CDN JIT de ~400 KB no navegador -->
 <style id="tw">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.mb-0{margin-bottom:0}.mb-3{margin-bottom:.75rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-\[120px\]{height:120px}.h-full{height:100%}.\!w-full{width:100%!important}.w-2{width:.5rem}.w-full{width:100%}.\!max-w-md{max-width:28rem!important}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-5{gap:1.25rem}.overflow-hidden{overflow:hidden}.\!rounded-pierre{border-radius:24px!important}.rounded-full{border-radius:9999px}.rounded-pierre{border-radius:24px}.\!border-0{border-width:0!important}.border{border-width:1px}.border-t{border-top-width:1px}.border-\[var\(--line\)\]{border-color:var(--line)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#a3e635\]{--tw-bg-opacity:1;background-color:rgb(163 230 53/var(--tw-bg-opacity))}.bg-\[\#f87171\]{--tw-bg-opacity:1;background-color:rgb(248 113 113/var(--tw-bg-opacity))}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.\!bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}.\!from-pierre-card{--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!from-white{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important}.\!to-\[\#101012\]{--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important}.\!to-\[\#eef2fa\]{--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}.\!p-6{padding:1.5rem!important}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.pb-3{padding-bottom:.75rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.tracking-tight{letter-spacing:-.025em}.text-\[\#a3e635\]{--tw-text-opacity:1;color:rgb(163 230 53/var(--tw-text-opacity))}.text-\[var\(--mut\)\]{color:var(--mut)}.text-\[var\(--txt\)\]{color:var(--txt)}.\!shadow-none{--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}#modal .sheet{width:100%!important;max-width:28rem!important;border-radius:24px!important;border-width:0!important;--tw-gradient-from:#1a1a1e var(--tw-gradient-from-position)!important;--tw-gradient-to:rgba(26,26,30,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#101012 var(--tw-gradient-to-position)!important;padding:1.5rem!important;--tw-shadow:0 0 #0000!important;--tw-shadow-colored:0 0 #0000!important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)!important}#modal .sheet,html.claro #modal .sheet{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))!important}html.claro #modal .sheet{--tw-gradient-from:#fff var(--tw-gradient-from-position)!important;--tw-gradient-to:hsla(0,0%,100%,0) var(--tw-gradient-to-position)!important;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;--tw-gradient-to:#eef2fa var(--tw-gradient-to-position)!important}@media (min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}</style>
@@ -1463,7 +1511,7 @@ html.claro .hB-hero{box-shadow:0 22px 44px -26px rgba(15,23,42,.55)}
 </div>
 
 <script>
-const GV_BUILD='10.66'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.67'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3558,6 +3606,44 @@ ICONS.eye='<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 
 ICONS.eyeOff='<path d="M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.6 3.3M6.6 7.6C4 9.3 2.5 12 2.5 12S6 18 12 18c1.9 0 3.5-.6 4.9-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>';
 
 /* ---------- v10.35: novo topo da página inicial (cartão vibrante) ---------- */
+
+/* v10.67: barras semanais de entrou e saiu (8 semanas, segunda a domingo). mesma regra do saldo:
+   compra no cartão não conta no dia, só o pagamento da fatura; transferências ficam de fora */
+function semanasDados(n){
+  const hj=new Date(),h0=new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()),dow=(h0.getDay()+6)%7;
+  const seg=new Date(h0.getFullYear(),h0.getMonth(),h0.getDate()-dow-(n-1)*7);
+  const W=[];for(let i=0;i<n;i++){const a=new Date(seg.getFullYear(),seg.getMonth(),seg.getDate()+i*7),b=new Date(a.getFullYear(),a.getMonth(),a.getDate()+6);W.push({ini:isoDe(a),fim:isoDe(b),e:0,s:0});}
+  const iniI=W[0].ini,hjI=hojeISO();
+  S.tx.forEach(t=>{if(!t.data||t.data<iniI||t.data>hjI||t.tipo==='transf'||!efetivo(t))return;
+    const w=W.find(x=>t.data>=x.ini&&t.data<=x.fim);if(!w)return;
+    if(t.tipo==='receita')w.e+=cents(t.valor);else if(t.tipo==='despesa'&&!t.cartao)w.s+=cents(t.valor);});
+  return W;
+}
+function semanasHTML(){
+  const W=semanasDados(8),mx=Math.max(1,...W.map(w=>Math.max(w.e,w.s)));
+  if(!W.some(w=>w.e||w.s))return '<div class="hB-sem vazio0"><span>sem movimento nas últimas 8 semanas</span></div>';
+  const H=52,bw=7,gap=3,gw=bw*2+gap,step=300/8,hh=v=>v?Math.max(3,Math.round(v/mx*(H-4))):2;
+  const bars=W.map((w,i)=>{const x=i*step+(step-gw)/2,he=hh(w.e),hs=hh(w.s),cur=i===W.length-1;
+    return `<g class="sg${cur?' cur':''}" data-act="hm-sem" data-id="${i}"><rect x="${(i*step).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"/><rect class="be" x="${x.toFixed(1)}" y="${H-he}" width="${bw}" height="${he}" rx="2.5"/><rect class="bs" x="${(x+bw+gap).toFixed(1)}" y="${H-hs}" width="${bw}" height="${hs}" rx="2.5"/></g>`;}).join('');
+  return `<div class="hB-sem"><svg viewBox="0 0 300 ${H}" role="img" aria-label="entrou e saiu nas últimas 8 semanas">${bars}</svg><div class="hB-semL" id="hbSemL">${semLegenda(W,W.length-1)}</div></div>`;
+}
+function semLegenda(W,i){const w=W[i];const f=d=>d.slice(8,10)+'/'+d.slice(5,7);
+  return `<span>${i===W.length-1?'esta semana':f(w.ini)+' a '+f(w.fim)}</span><span><i class="hB-dot g"></i>${OCULTO?'•••':brl(w.e/100)}</span><span><i class="hB-dot r"></i>${OCULTO?'•••':brl(w.s/100)}</span>`;}
+/* v10.67: primeiros passos para conta nova */
+function primeirosPassosHTML(){
+  if(S.cfg.onbOk)return '';
+  const m=mesAtual(),P=[
+    ['bank','Adicione sua conta','o banco onde seu dinheiro fica','novo-banco',(S.bancos||[]).length>0],
+    ['plus','Registre um gasto ou receita','ou conecte o banco e importe sozinho','q-gasto',S.tx.length>0],
+    ['receipt','Cadastre uma conta fixa','aluguel, internet, salário','nova-fixa',(S.fixas||[]).length>0],
+    ['gauge','Defina um orçamento','um limite por categoria no mês','hm-go-orc',Object.values(limOrc(m)).some(v=>v>0)]];
+  const ok=P.filter(p=>p[4]).length;if(ok===P.length||S.tx.length>=30)return '';
+  return `<div class="card pp-card"><div class="pp-h"><div><h4>Comece por aqui</h4><small>${ok} de ${P.length} feitos</small></div><button class="x" data-act="pp-ok" aria-label="dispensar">${I('close')}</button></div>
+    <div class="pp-bar"><i style="width:${ok/P.length*100}%"></i></div>
+    ${P.map(([ic,t,d,act,f])=>`<button class="pp-i${f?' ok':''}" ${f?'disabled':`data-act="${act}"`}><span class="pp-ic">${I(f?'check':ic)}</span><span class="pp-t"><b>${t}</b><small>${d}</small></span>${f?'':I('chevR','pp-ch')}</button>`).join('')}</div>`;
+}
+/* v10.67: estado vazio com ícone, título, texto e ação */
+function vazioHTML(ic,tit,txt,acts){return `<div class="card vz"><span class="vz-ic">${I(ic)}</span><b>${tit}</b><p>${txt}</p>${acts?`<div class="vz-a">${acts}</div>`:''}</div>`;}
 function homeVar(){return 'b';}
 function serieSaldo(dias){
   const hj=new Date();const ini=new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()-dias+1);const iniISO=isoDe(ini);
@@ -3596,8 +3682,8 @@ function homeTopo(v,o){
     <div class="hB-blob b1"></div><div class="hB-blob b2"></div><div class="hB-noise"></div>
     <div class="hB-top">${saldo<0?'<span class="hB-brand hB-brandNeg"><i class="hB-led"></i>Saldo negativo</span>':`<span class="hB-brand">${I('wallet')}Saldo total</span>`}${eye}</div>
     <div class="hB-saldo nw fit${bp.s?' hB-saldoNeg':''}" aria-label="${OCULTO?'saldo oculto':(bp.s?'saldo negativo de ':'saldo de ')+brl(Math.abs(saldo))}"><span class="hB-cur">R$</span><span class="hB-num">${OCULTO?'•••••':bp.i+bp.d}</span></div>
-    <div class="hB-sub"><span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias</div>
-    <div class="hB-spark">${sparkSVG(ser,300,46,'hBs')}</div>
+    <div class="hB-sub">${Math.abs(var30)<0.005?'<span class="hB-var">sem variação</span> nos últimos 30 dias':`<span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias`}</div>
+    ${semanasHTML()}
     <div class="hB-strip">
       <div><small><i class="hB-dot g"></i>Entrou</small><b class="nw fit">${brl(rec)}</b></div>
       <div><small><i class="hB-dot r"></i>Saiu</small><b class="nw fit">${brl(des)}</b></div>
@@ -3605,7 +3691,7 @@ function homeTopo(v,o){
     </div>
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'||t==='orc'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  ${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${primeirosPassosHTML()}${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3754,7 +3840,7 @@ function viewLanc(){
     if(F.tipo==='receita')return `<div class="card lsum"><small>Recebido ${F.mes?'no mês':'no período'}</small><b class="pos">${brl(tr)}</b><p>${prvR?`+ ${brl(prvR)} previsto`:cnt}</p></div>`;
     if(F.tipo==='transf')return `<div class="card lsum"><small>Movimentado entre suas contas</small><b>${brl(somaC(ef.filter(t=>t.tipo==='transf'),t=>t.valor))}</b><p>${cnt} · não contam como gasto</p></div>`;
     return `<div class="card lsum lsum3"><div class="ls3top"><small>Saldo ${F.mes?'do mês':'do período'}</small><b class="${tr-td>=0?'pos':'neg'}">${brl(tr-td)}</b></div><div><small>Entrou</small><b class="pos">${brl(tr)}</b></div><div><small>Saiu</small><b class="neg">${brl(td)}</b></div>${tdCartao?`<p>+ ${brl(tdCartao)} em compras no cartão, que saem pela fatura</p>`:''}</div>`;})()}
-  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):'<p class="vazio">nenhum lançamento com esses filtros.</p>'}</div>
+  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):(S.tx.length?'<p class="vazio">nenhum lançamento com esses filtros.</p>':vazioHTML('report','Nenhum lançamento ainda','Registre seus gastos e receitas aqui, ou conecte o banco para importar sozinho.','<button class="btn sm" data-act="q-gasto">+ gasto</button><button class="btn2 sm" data-act="q-receita">+ receita</button>'))}</div>
   ${fixasCard()}`;
 }
 
@@ -4069,7 +4155,7 @@ function viewMetas(){
   <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
   ${ritmo}
   ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
-  ${S.metas.length?cards:'<div class="card"><p class="vazio">crie sua primeira meta, tipo reserva de emergência. dá pra definir um prazo e eu calculo quanto guardar por mês.</p></div>'}`;
+  ${S.metas.length?cards:vazioHTML('flag','Nenhuma meta ainda','Comece por uma reserva de emergência. Escolha um prazo e o app calcula quanto guardar por mês.','<button class="btn sm" data-act="nova-meta">+ meta</button>')}`;
 }
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
@@ -4299,7 +4385,7 @@ function viewCartoes(){
       <div class="bkMeta"><div><small>usado</small><b class="${tU>tL?'neg':''}">${brl(tU)}${tL>0?` <em>${Math.round(tU/tL*100)}%</em>`:''}</b></div><div><small>limite total</small><b>${brl(tL)}</b></div></div>
     </div>${CA.length?`<div class="cgrid">${lst}</div>`:'<div class="card"><p class="vazio">todos os cartões estão arquivados.</p></div>'}
     ${arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow"><div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:''}`
-    :'<div class="card"><p class="vazio">nenhum cartão cadastrado. adicione o primeiro e vincule as despesas no extrato.</p></div>'}`;
+    :vazioHTML('card','Nenhum cartão ainda','Adicione seu cartão de crédito para acompanhar a fatura, o limite e as parcelas.','<button class="btn sm" data-act="novo-cartao">+ cartão</button>')}`;
 }
 function viewBancos(){
   const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
@@ -4326,7 +4412,7 @@ function viewBancos(){
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div></div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
-    :'<div class="card"><p class="vazio">nenhuma conta cadastrada. adicione seus bancos pra ver o total.</p></div>'}`;
+    :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}`;
 }
 function cartaoForm(id){
   const c=id?S.cartoes.find(x=>x.id===id):null;
@@ -5771,6 +5857,9 @@ function txMenu(id){
 }
 const ACT={
   'fechar':closeModal,
+  'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
+  'pp-ok':()=>{S.cfg.onbOk=1;salvar();render();},
+  'hm-go-orc':()=>{go('orc');},
   'al-todas':()=>{const ids=[...document.querySelectorAll('.alItem:not(.lido)')].map(e=>e.dataset.aid);alMarca(ids,'l');abrirAlertas();toast('Todos os alertas marcados como lidos');},
   'hm-go':t=>go(t),
   'hm-per':k=>{const atual=periodo();PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
