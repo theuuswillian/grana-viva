@@ -27,14 +27,14 @@
     exportar:         { nivel: 0, nome: "Exportar e excluir seus dados" },
     planejamento:     { nivel: 1, nome: "Planejamento e projeções" },
     orcamentos:       { nivel: 1, nome: "Orçamentos por categoria" },
-    cartoes:          { nivel: 1, nome: "Cartões e faturas" },
+    cartoes:          { nivel: 0, nome: "Cartões e faturas" },
     relatorios:       { nivel: 1, nome: "Relatórios completos" },
     importar_extrato: { nivel: 1, nome: "Importar extrato (OFX/CSV)" },
     comprovantes:     { nivel: 1, nome: "Comprovantes anexados" },
     leitura_ia:       { nivel: 1, nome: "Ler comprovante ou frase com IA" },
     investimentos:    { nivel: 2, nome: "Investimentos (FIIs, renda fixa, cotações)" },
     patrimonio:       { nivel: 2, nome: "Patrimônio" },
-    metas:            { nivel: 2, nome: "Metas" },
+    metas:            { nivel: 1, nome: "Metas" },
     assistente:       { nivel: 2, nome: "Assistente com IA" }
   };
   // limites diários por nível (conferidos no servidor; 0 = não incluso no plano)
