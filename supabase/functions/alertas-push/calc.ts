@@ -153,7 +153,11 @@ export function orcamentos(D: Dados, hoje: string): { chave: string; txt: string
     if (cats && !cats.includes(cat)) continue; // o app só mostra as categorias que existem
     const lim = +orc[cat] || 0; if (lim <= 0) continue;
     let g = 0;
-    for (const t of D.tx) if (t.tipo === "despesa" && efetivoEm(t, hoje) && !t.faturaKey && t.categoria === cat && typeof t.data === "string" && t.data.startsWith(mes)) g += cents(t.valor);
+    // v10.81: lançamento dividido entre categorias conta só a parte desta categoria
+    for (const t of D.tx) if (t.tipo === "despesa" && efetivoEm(t, hoje) && !t.faturaKey && typeof t.data === "string" && t.data.startsWith(mes)) {
+      if (Array.isArray(t.split) && t.split.length >= 2) { for (const p of t.split) if (p && p.cat === cat) g += cents(p.v); }
+      else if (t.categoria === cat) g += cents(t.valor);
+    }
     const p = g / 100 / lim * 100;
     if (p >= 100) out.push({ chave: `orc|${cat}|${mes}|100`, txt: `Orçamento de ${cat} estourou · ${brl(g / 100)} de ${brl(lim)}`, cat, nivel: 100 });
     else if (p >= 80) out.push({ chave: `orc|${cat}|${mes}|80`, txt: `Orçamento de ${cat} em ${Math.floor(p)}% · ${brl(g / 100)} de ${brl(lim)}`, cat, nivel: 80 });
