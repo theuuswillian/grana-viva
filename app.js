@@ -93,6 +93,8 @@ ICONS_LU.search='<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>';ICON
 ICONS_LU.lu_lock_keyhole="<circle cx=\"12\" cy=\"16\" r=\"1\" /><rect x=\"3\" y=\"10\" width=\"18\" height=\"12\" rx=\"2\" /><path d=\"M7 10V7a5 5 0 0 1 10 0v3\" />";ICONS_LU.lu_scan_face="<path d=\"M3 7V5a2 2 0 0 1 2-2h2\" /><path d=\"M17 3h2a2 2 0 0 1 2 2v2\" /><path d=\"M21 17v2a2 2 0 0 1-2 2h-2\" /><path d=\"M7 21H5a2 2 0 0 1-2-2v-2\" /><path d=\"M8 14s1.5 2 4 2 4-2 4-2\" /><path d=\"M9 9h.01\" /><path d=\"M15 9h.01\" />";ICONS_LU.lu_key_round="<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />";ICONS_LU.lu_timer="<line x1=\"10\" x2=\"14\" y1=\"2\" y2=\"2\" /><line x1=\"12\" x2=\"15\" y1=\"14\" y2=\"11\" /><circle cx=\"12\" cy=\"14\" r=\"8\" />";
 ICONS_LU.lu_chart_candlestick="<path d=\"M9 5v4\" /><rect width=\"4\" height=\"6\" x=\"7\" y=\"9\" rx=\"1\" /><path d=\"M9 15v2\" /><path d=\"M17 3v2\" /><rect width=\"4\" height=\"8\" x=\"15\" y=\"5\" rx=\"1\" /><path d=\"M17 13v3\" /><path d=\"M3 3v16a2 2 0 0 0 2 2h16\" />";ICONS_LU.lu_download="<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />";ICONS_LU.lu_upload="<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />";
 Object.assign(ICONS,ICONS_LU);
+/* v10.86: arquivar (caixa de arquivo) */
+ICONS.arquivo='<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>';
 /* v10.81: ícones da divisão, do assistente e da exclusão de conta */
 Object.assign(ICONS,{split:'<path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.17-2.83L3 3"/><path d="m15 9 6-6"/>',
  chat:'<path d="M21 12a8 8 0 0 1-11.8 7L4 20.5l1.5-4.9A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
@@ -391,15 +393,34 @@ const SB_KEY='sb_publishable_hq7L3RL6Y-BE49SlgjqcTw_Sh-N9hJj';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
 let USER=null,syncT=null,syncBusy=false,syncPend=false;
 const TABELAS=['tx','fiis','metas','cartoes','bancos'];
+/* v10.86: indicador de sincronização. nuvem dentro de um anel, com o estado escrito no aria-label/title;
+   tocar mostra o detalhe (e a hora da última sincronização) */
+let SYNC_EST={k:'',det:'',em:0};
+const SYNC_SVG={
+  synced:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 10.9 1.06A3.9 3.9 0 0 1 17 18.2z"/><path class="sgM" d="M9.6 13.6l1.8 1.8 3.2-3.3"/>',
+  syncing:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 10.9 1.06A3.9 3.9 0 0 1 17 18.2z"/><path class="sgM" d="M12 16v-4.6M10 13.2l2-2 2 2"/>',
+  pend:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 10.9 1.06A3.9 3.9 0 0 1 17 18.2z"/><path class="sgM" d="M12 11.6v2.6l1.6 1"/>',
+  offline:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 2.7-3.7M12.4 4.9a5.6 5.6 0 0 1 5.1 5.6A3.9 3.9 0 0 1 19.7 17"/><path class="sgM" d="M4 4l16 16"/>'};
 function setSync(t){
   const el=document.getElementById('syncTxt');if(!el)return;
-  if(!t){el.className='syncPill';el.innerHTML='';return;}
+  if(!t){el.className='syncPill';el.innerHTML='';el.hidden=true;SYNC_EST={k:'',det:'',em:SYNC_EST.em};return;}
   let k,lab;
-  if(/offline/.test(t)){k='offline';lab='offline';}
-  else if(/pendente/.test(t)){k='offline';lab='pendente';}
-  else if(/sincronizando|carregando/.test(t)){k='syncing';lab='sincronizando…';}
-  else {k='synced';lab='sincronizado';}
-  el.className='syncPill '+k;el.innerHTML='<i></i>'+lab;el.title=lab;el.setAttribute('aria-label',lab);
+  if(/offline/.test(t)){k='offline';lab='offline, as mudanças ficam salvas neste aparelho';}
+  else if(/pendente/.test(t)){k='pend';lab='sincronização pendente, tenta de novo em instantes';}
+  else if(/sincronizando|carregando/.test(t)){k='syncing';lab='sincronizando com a nuvem';}
+  else {k='synced';lab='sincronizado com a nuvem';SYNC_EST.em=Date.now();}
+  SYNC_EST.k=k;SYNC_EST.det=t;el.hidden=false;
+  el.className='syncPill '+k;el.dataset.st=k;
+  el.innerHTML='<svg class="syncRing" viewBox="0 0 44 44" aria-hidden="true"><circle class="srT" cx="22" cy="22" r="19"/><circle class="srA" cx="22" cy="22" r="19" pathLength="100"/></svg><svg class="syncIc" viewBox="0 0 24 24" aria-hidden="true">'+SYNC_SVG[k]+'</svg><span class="sr">'+lab+'</span>';
+  el.title=lab.charAt(0).toUpperCase()+lab.slice(1);el.setAttribute('aria-label','status da sincronização: '+lab);
+}
+function syncDetalhe(){
+  const k=SYNC_EST.k;if(!k)return;
+  const hm=d=>{const x=new Date(d);return pad(x.getHours())+':'+pad(x.getMinutes());};
+  if(k==='synced')toast('Sincronizado'+(SYNC_EST.em?' às '+hm(SYNC_EST.em):''));
+  else if(k==='syncing')toast('Sincronizando com a nuvem…');
+  else if(k==='pend'){const m=/em (\d+)s/.exec(SYNC_EST.det);toast(m?'Pendente: tenta de novo em '+m[1]+'s':'Pendente: tenta ao voltar a conexão',true);}
+  else toast('Offline: salvo neste aparelho',true);
 }
 window.addEventListener('offline',()=>setSync('offline, salvo no aparelho'));
 window.addEventListener('online',()=>{if(USER)agendaSync();});
@@ -2425,7 +2446,7 @@ function voltaHTML(){const p=NAV_PILHA[NAV_PILHA.length-1];if(!p||p.tab===TAB&&T
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.matches&&e.target.matches('[role="button"][data-act]')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='catBusca'){const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const q=nz(e.target.value.trim());{const cl=e.target.closest('.card');const li=cl&&cl.querySelector('.catList');if(li)li.classList.toggle('busca',!!q);const mb=cl&&cl.querySelector('.catMaisBtn');if(mb)mb.hidden=!!q;}let n=0;document.querySelectorAll('.catRow').forEach(r=>{const ok=!q||nz(r.dataset.q).includes(q);r.hidden=!ok;if(ok)n++;});const v=document.querySelector('.catVazio');if(v)v.hidden=n>0;}});
 function render(){
-  $('#sub').textContent=DATA_HOJE();
+  {const dh=DATA_HOJE(),ix=dh.indexOf(' · ');$('#sub').innerHTML=ix>0?'<b>'+esc(dh.slice(0,ix))+'</b><span aria-hidden="true"> · </span>'+esc(dh.slice(ix+3)):esc(dh);}
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||/[?&]gvtest\b/.test(location.search))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
@@ -3549,27 +3570,72 @@ document.addEventListener('pointermove',e=>{
 },{passive:true});
 document.addEventListener('pointerout',e=>{if(TAB!=='cartoes'||Date.now()-CC_T.ori<1500)return;const el=e.target.closest&&e.target.closest('.gvc[data-tilt]');if(el&&!el.contains(e.relatedTarget))ccAgenda(0,0);},{passive:true});
 /* ---------- tela Cartões: carteira empilhada ---------- */
+/* v10.86: cor que representa o cartão fora dele (barra, legenda, realce). desenho quase preto vira a cor de destaque ou um cinza */
+function ccLum(h){const m=/^#?([0-9a-f]{6})$/i.exec(String(h||''));if(!m)return 0;const n=parseInt(m[1],16),f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);};return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255);}
+function ccTom(c){const d=ccVisual(c).d;const L=[d.g[1],d.ac,d.g[0]].filter(Boolean);return L.find(x=>ccLum(x)>.045)||'#9ca3af';}
+/* dias até a data (meia-noite local) */
+function diasAte(iso){const a=new Date(hojeISO()+'T00:00:00'),b=new Date(String(iso).slice(0,10)+'T00:00:00');return Math.round((b-a)/864e5);}
+function fechaChip(iso){const n=diasAte(iso);return n<=0?'fecha hoje':n===1?'fecha amanhã':'fecha em '+n+' dias';}
+/* anel pequeno: quanto da fatura já ocupa do limite */
+function anelFat(pct){const p=OCULTO?0:Math.max(0,Math.min(100,pct));
+  return `<span class="fatAnel${pct>80&&!OCULTO?' alerta':''}${pct>100&&!OCULTO?' over':''}" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="faT" cx="24" cy="24" r="20"/>${p>0?`<circle class="faA" cx="24" cy="24" r="20" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/>`:''}</svg><span class="faP">${OCULTO?'•••':Math.round(pct)+'%'}</span></span>`;}
+/* resumo da carteira: barra segmentada (cada cartão ocupa a fatia do seu limite e preenche o quanto usa) */
+function ccResumoDados(CA){
+  const L=CA.map(c=>({c,lim:Math.max(0,+c.limite||0),uso:usadoCartaoTotal(c),cor:ccTom(c)}));
+  const tL=L.reduce((a,x)=>a+x.lim,0),tU=L.reduce((a,x)=>a+x.uso,0);
+  /* dois cartões de cor parecida (ex. Inter e Itaú laranja): o seguinte fica um tom mais claro para a barra não virar um bloco só */
+  const hx=h=>{const n=parseInt(String(h).slice(1),16);return [n>>16&255,n>>8&255,n&255];},usados=[];
+  L.forEach(x=>{if(!/^#[0-9a-f]{6}$/i.test(x.cor))return;let c=hx(x.cor),k=0;
+    while(k<3&&usados.some(u=>Math.abs(u[0]-c[0])+Math.abs(u[1]-c[1])+Math.abs(u[2]-c[2])<90)){c=c.map(v=>Math.round(v+(255-v)*.38));k++;}
+    usados.push(c);x.cor='#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');});
+  const eq=100/(L.length||1);
+  L.forEach(x=>{x.w=OCULTO||tL<=0?eq:x.lim/tL*100;x.f=OCULTO?0:x.lim>0?Math.max(0,Math.min(100,x.uso/x.lim*100)):(x.uso>0?100:0);});
+  return {L,tL,tU};
+}
+function limCurto(v){if(OCULTO)return 'R$ •••';v=+v||0;return Math.abs(v)<1000?'R$ '+Math.round(v):brlK(v);}
+function ccResumoHTML(CA){
+  const {L,tL,tU}=ccResumoDados(CA),pct=tL>0?tU/tL*100:0,disp=tL-tU;
+  const lvl=pct>100?'over':pct>80?'alerta':pct>50?'meio':'ok';
+  return `<div class="card ccHero ccResumo">
+    <div class="crHd"><small>disponível nos cartões</small><span class="crN">${CA.length} cart${CA.length===1?'ão':'ões'}</span></div>
+    <div class="bkBig nw ${disp<0?'neg':''}">${brl(disp)}</div>
+    <div class="crBar" aria-hidden="true">${L.map(x=>`<span class="crSeg" data-id="${x.c.id}" data-p="${x.w.toFixed(3)}" style="flex:${x.w.toFixed(3)} 1 0;--c:${x.cor}"><i style="width:${x.f.toFixed(1)}%"></i></span>`).join('')}</div>
+    <ul class="crLeg" aria-label="uso do limite por cartão">${L.map(x=>`<li data-id="${x.c.id}"><span class="crDot" style="--c:${x.cor}" aria-hidden="true"></span><span class="crNm">${esc(x.c.nome||ccNomeCurto(x.c))}</span><span class="crV nw"><b class="${x.uso>x.lim?'neg':''}">${brl(x.uso)}</b><small> de ${limCurto(x.lim)}</small></span></li>`).join('')}</ul>
+    <div class="bkMeta crMeta"><div><small>usado</small><b class="nw ${tU>tL?'neg':''}">${brl(tU)}${tL>0&&!OCULTO?` <em class="crPct ${lvl}">${Math.round(pct)}%</em>`:''}</b></div><div><small>limite total</small><b class="nw">${brl(tL)}</b></div></div>
+  </div>`;
+}
 let CC_AT=(()=>{try{return localStorage.getItem('gv-cc-ativo')||'';}catch(e){return '';}})();
 function ccFatPend(c){
   return S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&restanteFatura(t)>0).sort((a,b)=>a.data.localeCompare(b.data))[0]||null;
 }
 function walDetHTML(c){
-  const u=usoCartao(c),d=ccVisual(c).d,usedT=usadoCartaoTotal(c),disp=c.limite-usedT,pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite;
-  const nomeBk=ccNomeCurto(c);
+  const u=usoCartao(c),usedT=usadoCartaoTotal(c),disp=c.limite-usedT,pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite;
+  const pctR=c.limite?usedT/c.limite*100:(usedT>0?100:0);
+  const nomeBk=ccNomeCurto(c),V=ccVisual(c).d,tom=ccTom(c);
   const fk='fat|'+c.id+'|'+fechamentoDe(c,u.ci.fim).fecha.slice(0,7);
   const pend=ccFatPend(c);
-  const tint=d.g[1],tink=d.ink;
-  return `<div class="walDet" style="--tint:${tint};--tint0:${d.g[0]};--tint2:${d.g[2]};--tink:${tink}">
+  const fecha=fmtDataCurta(u.ci.fim),vence=fmtDataCurta(isoDe(u.due)),dF=diasAte(u.ci.fim);
+  const vazio=!OCULTO&&!u.n&&Math.abs(u.used)<0.005;
+  const pF=c.limite?u.used/c.limite*100:0;
+  const nivel=over?'over':pctR>80?'alerta':'ok';
+  return `<div class="walDet" style="--tint:${tom};--tint0:${V.g[0]};--tint2:${V.g[2]};--tink:${V.ink};--tom:${tom}">
     <div class="walHd"><div class="walNm"><b>${esc(c.nome||nomeBk)}</b><small>${esc(nomeBk)}${c.bandeira&&CC_BAND_N[c.bandeira]?' · '+CC_BAND_N[c.bandeira]:''}${c.final?' · final '+esc(c.final):''}</small></div>
       <button type="button" class="walVira" data-act="cc-vira" data-id="${c.id}" aria-label="virar o cartão e ver limite, fechamento e vencimento">${I('ccVira')}<span>virar</span></button></div>
-    <div class="card walFat">
-      <div class="walFatTop"><small>fatura atual · fecha ${fmtDataCurta(u.ci.fim)} · vence ${fmtDataCurta(isoDe(u.due))}</small><b class="walFatV nw">${brl(u.used)}</b></div>
+    <div class="card walFat${vazio?' vazio':''}">
+      <div class="walFatHd"><span class="walFatLb">fatura atual</span><span class="walChips"><span class="ccChip${dF<=3?' quente':''}" title="fecha ${fecha}">${I('lu_clock')}${fechaChip(u.ci.fim)}</span><span class="ccChip sec">vence ${vence}</span></span></div>
+      ${vazio?`<div class="walVazio"><span class="walVzIc" aria-hidden="true">${I('check')}</span><div class="walVzTx"><b>Nenhuma compra neste ciclo</b><small>o que passar no cartão até ${fecha} entra nesta fatura, que vence ${vence}.</small></div></div>`
+      :`<div class="walFatMain"><div class="walFatNum"><b class="walFatV nw">${brl(u.used)}</b><small class="walFatSub">de um limite de ${brl(c.limite)}</small></div>${anelFat(pF)}</div>`}
       <p class="ccCiclo tap" data-act="fat-abre" data-id="${fk}" role="button" tabindex="0" aria-label="ver compras do ciclo aberto">ver compras do ciclo · ${u.n} lançamento${u.n===1?'':'s'}${I('chevR','tapCh')}</p>
       ${pend?`<div class="walPend"><div class="walPendTx"><span><b class="fatNm tap" data-act="fat-abre" data-id="${pend.id}" role="button" tabindex="0" aria-label="ver compras da fatura de ${nomeMesFat(pend.data)}">fatura de ${nomeMesFat(pend.data)}${I('chevR','tapCh')}</b>${faturaBadge(pend)}</span><small>vence ${fmtDataCurta(venceFatura(pend))}</small></div><button type="button" class="walPagar" data-act="pagar-fat" data-id="${pend.id}">${I('check')}<span>Pagar ${brl(restanteFatura(pend))}</span></button></div>`:''}
       ${faturasCartaoHTML(c,pend&&pend.id)}
     </div>
-    <div class="card walLim"><div class="row"><span>disponível</span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b></div><div class="bar walBar ${over?'over':''}"><i data-w="${OCULTO?0:pct.toFixed(1)}"></i></div><div class="row small"><span>${c.bancoData?'usado (banco, '+fmtData(c.bancoData).slice(0,5)+') ':'usado '}${brl(usedT)}</span><span>limite ${brl(c.limite)}</span></div>${custoAtrasoHTML(c)}</div>
-    <div class="acts2"><button class="btn2" data-act="edit-cartao" data-id="${c.id}">editar</button><button class="btn2" data-act="arq-cartao" data-id="${c.id}">arquivar</button><button class="btn2 danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div>
+    <div class="card walLim ${nivel}">
+      <div class="walLimHd"><span>disponível</span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b></div>
+      <div class="bar walBar ${over?'over':''} ${nivel}"><i data-w="${OCULTO?0:pct.toFixed(1)}"></i><span class="wbMk m50" aria-hidden="true"></span><span class="wbMk m80" aria-hidden="true"></span></div>
+      <div class="walLimGr"><span><small>${c.bancoData?'usado · banco '+fmtData(c.bancoData).slice(0,5):'usado'}</small><b class="nw">${brl(usedT)}</b></span><span class="wlPct"><small>uso</small><b class="nw ${nivel}">${OCULTO?'•••':Math.round(pctR)+'%'}</b></span><span><small>limite</small><b class="nw">${brl(c.limite)}</b></span></div>
+      ${custoAtrasoHTML(c)}
+    </div>
+    <div class="walActs" role="group" aria-label="ações do cartão ${esc(c.nome||nomeBk)}"><button type="button" class="walAct" data-act="edit-cartao" data-id="${c.id}">${I('edit')}<span>editar</span></button><button type="button" class="walAct" data-act="arq-cartao" data-id="${c.id}">${I('arquivo')}<span>arquivar</span></button><button type="button" class="walAct perigo" data-act="del-cartao" data-id="${c.id}">${I('trash')}<span>excluir</span></button></div>
   </div>`;
 }
 function walHTML(){
@@ -3577,7 +3643,7 @@ function walHTML(){
   const at=CA.find(c=>c.id===CC_AT)||CA[CA.length-1];CC_AT=at.id;
   const ord=CA.filter(c=>c!==at).concat([at]);
   const d=ccVisual(at).d;
-  return `<div class="walSec" id="walSec" style="--tint:${d.g[1]};--tint2:${d.g[2]}"><span class="walGlow" aria-hidden="true"></span>
+  return `<div class="walSec" id="walSec" style="--tint:${ccTom(at)};--tint2:${d.g[2]}"><span class="walGlow" aria-hidden="true"></span>
     <div class="wal${ord.length>1?'':' um'}" role="group" aria-label="carteira de cartões, ${ord.length} cart${ord.length===1?'ão':'ões'}">${ord.map(c=>{const on=c===at;const nm=c.nome||ccNomeCurto(c);
       return `<div class="walItem${on?' on':''}" data-id="${c.id}"><button type="button" class="walCard${on?' on':''}" data-act="cc-ativa" data-id="${c.id}" aria-label="${esc(on?nm+', em destaque. toque para virar e ver limite e fatura':nm+'. toque para trazer para a frente')}"${on?' aria-pressed="false"':''}>${cartaoHTML(c,{verso:on,tilt:on})}</button></div>`;}).join('')}</div>
     ${walDetHTML(at)}</div>`;
@@ -3625,10 +3691,7 @@ function viewCartoes(){
   return `
   <div class="head"><h2>Cartões</h2><button class="btn" data-act="novo-cartao">${I('plus')} novo</button></div>
   ${S.cartoes.length?`${CA.length?walHTML():'<div class="card"><p class="vazio">todos os cartões estão arquivados.</p></div>'}
-    ${CA.length>1?`<div class="card bkHero ccHero"><small>disponível nos cartões</small><div class="bkBig nw ${tL-tU<0?'neg':''}">${brl(tL-tU)}</div>
-      <div class="bar ccHBar"><i style="width:${OCULTO?0:tL>0?Math.min(100,tU/tL*100).toFixed(1):0}%;background:${tL>0&&tU/tL>.8?'#f43f5e':tL>0&&tU/tL>.5?'#f59e0b':'#4ade80'}"></i></div>
-      <div class="bkMeta"><div><small>usado</small><b class="${tU>tL?'neg':''}">${brl(tU)}${tL>0&&!OCULTO?` <em>${Math.round(tU/tL*100)}%</em>`:''}</b></div><div><small>limite total</small><b>${brl(tL)}</b></div></div>
-    </div>`:''}
+    ${CA.length?ccResumoHTML(CA):''}
     ${arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow">${cartaoMini(c,'arqMini')}<div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:''}`
     :vazioHTML('card','Nenhum cartão ainda','Adicione seu cartão de crédito para acompanhar a fatura, o limite e as parcelas.','<button class="btn sm" data-act="novo-cartao">+ cartão</button>')}`;
 }
@@ -6272,6 +6335,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#logoHome')){go('inicio');return;}
   if(e.target.closest('#btnMenu')){toggleSide(true);return;}
   if(e.target.closest('#btnBell')){abrirAlertas();return;}
+  if(e.target.closest('#syncTxt')){syncDetalhe();return;}
   if(e.target.id==='ov'||e.target.closest('#btnClose')){toggleSide(false);return;}
   const tb=e.target.closest('[data-tab]');
   if(tb){go(tb.dataset.tab);return;}
@@ -6322,7 +6386,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
