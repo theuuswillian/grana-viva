@@ -1,0 +1,77 @@
+/* GranaViva · páginas públicas (gerado por site.py). Mesmas cores e fonte do app. */
+@font-face{font-family:'Inter';font-weight:400;font-display:swap;src:url(../fonts/inter-400.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-weight:600;font-display:swap;src:url(../fonts/inter-600.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-weight:700;font-display:swap;src:url(../fonts/inter-700.woff2) format('woff2')}
+:root{--bg:#0a0a0c;--card:#1a1a1e;--card2:#101012;--txt:#e7e7ea;--mut:#9ca3af;--hd:#fff;--line:#26262c;--ac:#22c55e;--ac2:#8b5cf6}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow-wrap:break-word}
+a{color:var(--ac)}
+img{max-width:100%;height:auto}
+.pular{position:absolute;left:-999px;top:0;background:var(--ac);color:#000;padding:8px 12px;z-index:9}
+.pular:focus{left:8px}
+.lim{max-width:1080px;margin:0 auto;padding:0 20px}
+.topo{position:sticky;top:0;z-index:5;background:rgba(10,10,12,.92);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0)}
+.topoIn{display:flex;align-items:center;gap:16px;min-height:60px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.marca{display:flex;align-items:center;gap:8px;color:var(--hd);font-weight:700;text-decoration:none;font-size:17px}
+.marca img{border-radius:7px}
+.menu{display:flex;gap:4px 18px;flex-wrap:wrap;flex:1;justify-content:center}
+.menu a{color:var(--mut);text-decoration:none;font-size:14px;padding:6px 0}
+.menu a:hover,.menu a[aria-current=page]{color:var(--hd)}
+.btn{display:inline-block;border-radius:12px;padding:11px 18px;font-weight:600;text-decoration:none;font-size:15px;text-align:center;border:1px solid transparent}
+.btnP{background:var(--ac);color:#04130a}
+.btnS{background:var(--card);color:var(--hd);border-color:var(--line)}
+.topoBtn{padding:8px 14px;font-size:14px}
+@media (max-width:720px){.menu{order:3;flex-basis:100%;justify-content:flex-start;gap:4px 14px}.topoBtn{margin-left:auto}}
+.hero{padding:56px 0 24px;background:radial-gradient(700px 300px at 15% 0%,rgba(34,197,94,.14),transparent 70%),radial-gradient(600px 300px at 90% 10%,rgba(139,92,246,.12),transparent 70%)}
+.selo{display:inline-block;font-size:13px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 12px;margin:0 0 14px}
+h1{color:var(--hd);font-size:clamp(30px,6vw,52px);line-height:1.1;letter-spacing:-.02em;margin:0 0 14px}
+h2{color:var(--hd);font-size:clamp(22px,3.4vw,30px);line-height:1.2;letter-spacing:-.01em;margin:0 0 18px}
+h3{color:var(--hd);font-size:17px;margin:0 0 6px}
+.lead{font-size:clamp(17px,2.2vw,20px);color:var(--txt);max-width:62ch;margin:0 0 20px}
+.ctas{display:flex;gap:10px;flex-wrap:wrap}
+.mini,.nota{font-size:13px;color:var(--mut)}
+.cab{padding:48px 20px 8px}
+.bloco{padding-top:36px;padding-bottom:20px}
+.grade3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.item p{margin:0;color:var(--mut);font-size:15px}
+.tag{font-size:12px;font-weight:700;vertical-align:middle;border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px}
+.shot{margin:0;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px}
+.shot img{display:block;width:100%;border-radius:14px;aspect-ratio:402/800;object-fit:cover;object-position:top}
+.shot figcaption{font-size:13px;color:var(--mut);padding:8px 4px 2px}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:14px}
+.plano{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.plano.destaque{border-color:var(--ac)}
+.preco{font-size:32px;font-weight:700;color:var(--hd);margin:4px 0;font-variant-numeric:tabular-nums}
+.preco small{font-size:14px;font-weight:400;color:var(--mut);margin-left:4px}
+.pAnual{margin:0 0 6px;font-size:13px;color:var(--mut)}
+.checks{list-style:none;padding:0;margin:12px 0 0}
+.checks li{position:relative;padding-left:24px;margin:7px 0;font-size:15px}
+.checks li:before{content:"";position:absolute;left:3px;top:6px;width:10px;height:6px;border-left:2px solid var(--ac);border-bottom:2px solid var(--ac);transform:rotate(-45deg)}
+.aviso{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--ac2);border-radius:12px;padding:14px 16px;margin:16px 0 0;font-size:15px}
+.tabelaW{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.tabela{width:100%;border-collapse:collapse;font-size:14px;min-width:0}
+.tabela th,.tabela td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tabela thead th{color:var(--hd);background:var(--card)}
+.tabela thead small{display:block;font-weight:400;color:var(--mut);font-size:12px}
+.tabela td{text-align:center;white-space:nowrap}
+.tabela tbody th{font-weight:400}
+.sim{color:var(--ac);font-weight:600}.nao{color:var(--mut)}
+@media (max-width:520px){.tabela{font-size:13px}.tabela th,.tabela td{padding:8px 6px}.tabela thead small{font-size:11px}.tabela td{white-space:normal}}
+.lista{padding-left:20px}.lista li{margin:6px 0}
+.texto{max-width:760px}
+.legal h2{font-size:20px;margin-top:28px}
+.faq{max-width:780px}
+.faqI{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:0 0 10px}
+.faqI summary{cursor:pointer;font-weight:600;color:var(--hd);padding:12px 0;list-style-position:outside}
+.faqI p{margin:0 0 14px;color:var(--txt)}
+.final{text-align:center;padding-bottom:48px}
+.rodape{border-top:1px solid var(--line);margin-top:40px;padding:28px 0 calc(28px + env(safe-area-inset-bottom,0))}
+.rodIn{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
+.rodIn p{color:var(--mut);font-size:14px;margin:6px 0 0}
+.rodIn nav{display:flex;flex-wrap:wrap;gap:6px 18px;max-width:560px}
+.rodIn nav a{color:var(--mut);font-size:14px;text-decoration:none}
+.rodIn nav a:hover{color:var(--hd)}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:4px}
