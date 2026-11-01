@@ -10,7 +10,16 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-const LIMITE_DIA = 30, LIMITE_HORA = 15;
+const LIMITE_HORA = 15; // por dia: GVP.limite(nivel, "assistente_dia") (Pro: 30)
+// v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
+import "./planos.js";
+const GVP = (globalThis as any).GVP;
+async function planoDe(uid: string) {
+  const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+  if (error) throw error;
+  return GVP.efetivo(data);
+}
+
 
 // números escritos à brasileira ("R$ 1.234,56", "812,4", "25%", "2026") -> centavos
 function numeros(txt: string): number[] {
@@ -56,6 +65,10 @@ Deno.serve(async (req) => {
   const hist: { p: string; r: string }[] = (Array.isArray(body?.historico) ? body.historico : []).slice(-3)
     .map((h: any) => ({ p: String(h?.p || "").slice(0, 300), r: String(h?.r || "").slice(0, 600) }));
 
+  let ef: any;
+  try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
+  const LIMITE_DIA = GVP.limite(ef.nivel, "assistente_dia");
+  if (!GVP.pode(ef.nivel, "assistente") || LIMITE_DIA <= 0) return json({ erro: "O assistente com IA faz parte do plano Pro.", upgrade: true, recurso: "assistente" }, 402);
   const { data: okH } = await sb.rpc("rl_conta", { p_uid: uid, p_k: "assistente", p_lim: LIMITE_HORA, p_seg: 3600 });
   if (!okH) return json({ erro: "Muitas perguntas seguidas. Espere alguns minutos." }, 429);
   const dia = new Date().toISOString().slice(0, 10);
