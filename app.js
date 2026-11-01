@@ -2308,19 +2308,43 @@ function abreInvest(){
   box.innerHTML='<div class="sheet"><div class="sh-head"><h3>Investimentos</h3><button class="x" data-act="fechar" aria-label="fechar">'+I('close')+'</button></div><div class="qk-list">'+tps.map(([k,l,d])=>'<button class="qk-op" data-act="inv-tipo" data-id="'+k+'"><span class="qk-ic">'+I('chart')+'</span><span><b>'+l+'</b><small>'+d+'</small></span></button>').join('')+'</div></div>';
   box.classList.add('on');
 }
+/* v10.85: folha "Adicionar" com personalidade — bloco "com IA" (hero + dois cards) e "manual" (3 tiles com cor própria).
+   mesmos data-act de antes; o campo do hero é falso (decorativo) e troca de exemplo sozinho. */
+const QK_EX=['gastei 45 no iFood ontem…','uber 23,90 hoje no débito…','mercado 182 no cartão…','recebi 3.200 de salário…','farmácia 37,50 no pix…'];
+let QK_T=0;
 function abreRapido(){
-  const box=$('#modal');
-  box.innerHTML=`<div class="sheet">
+  const box=$('#modal');clearInterval(QK_T);
+  const mic='<span class="qkHeroIc" aria-hidden="true">'+I('mic')+'<svg class="qkSpk" viewBox="0 0 24 24"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg></span>';
+  const mini=(act,ic,t,s,d)=>`<button type="button" class="qkMini" data-act="${act}" style="--d:${d}"><span class="qkMiniIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small>${s}</small></button>`;
+  const tile=(act,k,ic,t,s,d)=>`<button type="button" class="qkT qkT-${k}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}"><span class="qkTIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small aria-hidden="true">${s}</small></button>`;
+  box.innerHTML=`<div class="sheet qk2">
     <div class="sh-head"><h3>Adicionar</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <div class="qk-list">
-      ${USER?`<button class="qk-op qk-ia" data-act="ia-frase"><span class="qk-ic">${I('sparkle')}</span><span><b>falar ou escrever</b><small>"gastei 45 no iFood ontem no cartão"</small></span></button>
-      <button class="qk-op qk-ia" data-act="ia-ler"><span class="qk-ic">${I('receipt')}</span><span><b>foto do comprovante</b><small>a IA lê valor, data e loja</small></span></button>`:''}
-      <button class="qk-op qk-ia" data-act="assist"><span class="qk-ic">${I('chat')}</span><span><b>perguntar ao assistente</b><small>"quanto gastei com alimentação?"</small></span></button>
-      <button class="qk-op" data-act="q-gasto"><span class="qk-ic">${I('down')}</span><span><b>gasto</b><small>despesa do dia a dia</small></span></button>
-      <button class="qk-op" data-act="q-receita"><span class="qk-ic">${I('up')}</span><span><b>receita</b><small>salário, freela, dividendos…</small></span></button>
-      <button class="qk-op" data-act="q-inv"><span class="qk-ic">${I('chart')}</span><span><b>investimentos</b><small>FII, ações, ETFs, BDRs e cripto</small></span></button>
+    <div class="qkSec" id="qkSecIA" style="--d:0"><svg class="qkSecIc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>com IA</div>
+    <div class="qkIA" role="group" aria-labelledby="qkSecIA">
+      ${USER?`<button type="button" class="qkHero" data-act="ia-frase" style="--d:1" aria-label="falar ou escrever: diga o gasto numa frase e a IA preenche o lançamento">
+        <span class="qkAur" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="qkHeroTop">${mic}<span class="qkHeroTx"><b>falar ou escrever</b><small>diga numa frase, a IA preenche</small></span></span>
+        <span class="qkFake" aria-hidden="true"><span class="qkPh">${QK_EX[0]}</span><span class="qkGo">${I('arrowUp')}</span></span>
+      </button>`:''}
+      <div class="qkDuo${USER?'':' so'}">
+        ${USER?mini('ia-ler','receipt','foto do comprovante','a IA lê valor, data e loja',2):''}
+        ${mini('assist','chat','perguntar ao assistente','“quanto gastei com alimentação?”',USER?3:1)}
+      </div>
+    </div>
+    <div class="qkSec" id="qkSecMan" style="--d:4">manual</div>
+    <div class="qkGrid" role="group" aria-labelledby="qkSecMan">
+      ${tile('q-gasto','g','down','gasto','o que sai',5)}
+      ${tile('q-receita','r','up','receita','o que entra',6)}
+      ${tile('q-inv','i','chart','investimentos','FII, ações, cripto',7)}
     </div></div>`;
   box.classList.add('on');
+  const sh=box.querySelector('.qk2');
+  /* toque: leve vibração (Android; o iOS ignora) */
+  sh.addEventListener('pointerdown',e=>{if(e.target.closest('.qkHero,.qkMini,.qkT'))vibra(8);});
+  /* exemplos no campo falso: troca a cada 2,8 s com fade; parado se o sistema pede menos movimento */
+  const ph=sh.querySelector('.qkPh');
+  if(ph&&ccMov()){let i=0;QK_T=setInterval(()=>{if(!document.contains(ph)){clearInterval(QK_T);return;}
+    ph.classList.add('out');setTimeout(()=>{i=(i+1)%QK_EX.length;ph.textContent=QK_EX[i];ph.classList.remove('out');},260);},2800);}
 }
 
 /* ---------- navegação e renderização ---------- */
@@ -3381,26 +3405,41 @@ const CC_DES={
 const CC_MK_TXT={inter:'inter',itau:'itaú',c6:'C6',bb:'BB',santander:'santander',bradesco:'bradesco',caixa:'CAIXA',picpay:'picpay',mercadopago:'mercado pago',neon:'neon',next:'next',pagbank:'pagbank'};
 const CC_BAND_N={mastercard:'Mastercard',visa:'Visa',elo:'Elo',amex:'American Express',hipercard:'Hipercard'};
 const ccNz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-/* visual automático: lê o banco e o nome do cartão */
+/* visual automático: lê o banco, o nome do cartão e a instituição (v10.85: normalizado, campo a campo)
+   normaliza: minúsculas, sem acento, pontuação vira espaço ("Nu Pagamentos S.A." -> "nu pagamentos s a").
+   o banco manda; depois o nome do cartão; depois a instituição/banco deduzido. "nu" e "dm" só como palavra. */
+const ccTk=s=>' '+ccNz(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
+const CC_GRP=[
+ ['dm',/ (dm|dm ?card|d m card|cartao dm|dmcard ?(visa|mastercard)?) /],
+ ['nubank',/ (nu|nubank|nu ?bank|nu ?pagamentos|nu ?financeira|roxinho|ultravioleta) /],
+ ['inter',/ (inter|banco inter|inter ?co|bancointer) /],
+ ['itau',/ (itau|itau ?unibanco|unibanco|personnalite|iti) /],
+ ['c6',/ (c6|c6 ?bank|c6bank|banco c6) /],
+ ['bb',/ (bb|banco do brasil|ourocard|ouro card) /],
+ ['santander',/ (santander) /],
+ ['bradesco',/ (bradesco|bradescard) /],
+ ['caixa',/ (caixa|cef|caixa economica( federal)?) /],
+ ['picpay',/ (pic ?pay) /],
+ ['mercadopago',/ (mercado ?pago|mercadopago) /],
+ ['neon',/ (neon) /],
+ ['next',/ (next|banco next) /],
+ ['pagbank',/ (pag ?bank|pag ?seguro) /]
+];
+function ccGrupo(s){const t=ccTk(s);if(t.length<3)return '';
+  /* o texto tem espaço nas pontas e as regex exigem espaço antes e depois: só palavra inteira */
+  for(const [g,re] of CC_GRP)if(re.test(t))return g;
+  return '';}
 function ccAuto(c){
-  const tx=ccNz((c.banco||'')+' '+(c.nome||'')),bk=bancoDoCartao(c),bn=ccNz(bk?bk.n:'');
-  const t=tx+' '+bn;
-  if(/\b(dm|dmcard|dm card|cartao dm)\b/.test(tx))return 'dm';
-  if(/ultravioleta/.test(t)||(/\buv\b/.test(tx)&&/nubank|\bnu\b/.test(t)))return 'nubank_uv';
-  if(/nubank|\bnu\b|roxinho/.test(t))return 'nubank';
-  if(/\binter\b|banco inter/.test(t))return /black|win|duo/.test(tx)?'inter_black':'inter';
-  if(/\bitau\b|unibanco|personnalite/.test(t))return /black|the one|personnalite/.test(tx)?'itau_black':'itau';
-  if(/\bc6\b/.test(t))return 'c6';
-  if(/banco do brasil|\bbb\b|ourocard/.test(t))return 'bb';
-  if(/santander/.test(t))return 'santander';
-  if(/bradesco/.test(t))return 'bradesco';
-  if(/caixa/.test(t))return 'caixa';
-  if(/picpay/.test(t))return 'picpay';
-  if(/mercado ?pago/.test(t))return 'mercadopago';
-  if(/\bneon\b/.test(t))return 'neon';
-  if(/\bnext\b/.test(t))return 'next';
-  if(/pagbank|pagseguro/.test(t))return 'pagbank';
-  return '';
+  if(!c)return '';
+  const bk=bancoDoCartao(c);
+  const campos=[c.banco,c.nome,c.instituicao,c.bancoAuto,bk?bk.n:''];
+  let g='';for(const f of campos){g=ccGrupo(f);if(g)break;}
+  if(!g)return '';
+  const tx=ccTk([c.banco,c.nome,c.instituicao].join(' '));
+  if(g==='nubank')return /ultravioleta| uv /.test(tx)?'nubank_uv':'nubank';
+  if(g==='inter')return / (black|win|duo) /.test(tx)?'inter_black':'inter';
+  if(g==='itau')return / (black|the one|personnalite) /.test(tx)?'itau_black':'itau';
+  return g;
 }
 function ccHex(h,f){const m=String(h).replace('#','');const n=m.length===3?m.split('').map(x=>x+x).join(''):m;let r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);
   const k=f>0?(x=>Math.round(x+(255-x)*f)):(x=>Math.round(x*(1+f)));return '#'+[k(r),k(g),k(b)].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');}
@@ -3409,9 +3448,13 @@ function ccVisual(c){
   const v=String(c.visual||'');
   const nomeBk=(()=>{const bk=bancoDoCartao(c);return bk?(NOME_CURTO[bk.n]||bk.n):(c.banco||'');})();
   const gen=(p,k,n)=>({k,d:{n,g:[ccHex(p[0],.12),p[0],p[1]],ink:p[2]||'#fff',tex:'fosco',mk:'txt',art:'guil',txt:nomeBk||c.nome||'cartão'}});
-  if(v.indexOf('cor:')===0||(!v&&c.corPropria)){const i=v?(parseInt(v.slice(4),10)||0):(c.cor||0);const p=CARD_COR[i%CARD_COR.length]||CARD_COR[0];return gen(p,'cor','Cor própria · '+p[2]);}
+  const corP=i=>{const p=CARD_COR[(i||0)%CARD_COR.length]||CARD_COR[0];return gen(p,'cor','Cor própria · '+p[2]);};
+  /* v10.85: cor própria só quando escolhida no campo Visual ("cor:N") */
+  if(v.indexOf('cor:')===0)return corP(parseInt(v.slice(4),10)||0);
   if(v&&CC_DES[v])return {k:v,d:CC_DES[v]};
+  /* sem visual (inclui cartões antigos com cor salva): o design do banco sempre que reconhecido */
   const a=ccAuto(c);if(a)return {k:a,d:CC_DES[a]};
+  if(c.corPropria)return corP(c.cor);
   const bk=bancoDoCartao(c),mc=bk&&CARD_MARCA[bk.n];
   if(mc)return gen(mc,'gen',nomeBk);
   return gen(CARD_COR[(c.cor||0)%CARD_COR.length]||CARD_COR[0],'gen','genérico');
@@ -3634,7 +3677,7 @@ function cartaoForm(id){
   const c=id?S.cartoes.find(x=>x.id===id):null;
   const bk=c&&bancoDoCartao(c);
   const bVal=bk?bk.n:(c&&ccAuto(c)==='dm'?'DM':'');
-  const visAt=c?(c.visual||(c.corPropria?'cor:'+((c.cor||0)%CARD_COR.length):'')):'';
+  const visAt=c?(c.visual||(c.corPropria&&!ccAuto(c)?'cor:'+((c.cor||0)%CARD_COR.length):'')):'';
   form(c?'Editar cartão':'Novo cartão',[
     {name:'nome',label:'Nome do cartão',value:c?c.nome:'',required:true,placeholder:'ex: Platinum'},
     {name:'banco',type:'bancoPick',value:bVal,outro:(c&&!bVal)?c.banco:'',extra:CC_EXTRA},
