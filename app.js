@@ -1780,13 +1780,16 @@ function comprometidaHTML(){
   const nomeM=ym=>MESES[+ym.slice(5,7)-1]+'/'+ym.slice(2,4);
   const p1=L[0],cor=p=>p==null?'var(--mut)':p>=90?'#f87171':p>=70?'#fbbf24':'#4ade80';
   const pico=L.reduce((a,m)=>(m.pct||0)>(a.pct||0)?m:a,L[0]);
+  /* v10.90: % acima de 999 vira "999+%" (renda quase zero gera números sem sentido) */
+  const pf=p=>p==null?'':p>999?'999+%':p+'%';
   const msg=p1.pct==null?'Cadastre o salário como conta fixa para ver quanto da renda já está comprometido.':
+    p1.pct>999?`Os compromissos de ${MESES_LONGO[+p1.ym.slice(5,7)-1]} (${brl(p1.tot)}) passam de 10 vezes a renda prevista (${brl(p1.renda)}). Confira o salário cadastrado.`:
     `${p1.pct}% da renda de ${MESES_LONGO[+p1.ym.slice(5,7)-1]} já tem destino. Sobram ${brl(Math.max(0,p1.renda-p1.tot))} livres${p1.estim?' (renda pela média dos últimos meses)':''}.`;
   return `<div class="card cmpCard"><h4>Renda comprometida</h4>
-    <div class="cmpTop"><b style="color:${cor(p1.pct)}">${p1.pct==null?'—':p1.pct+'%'}</b><p>${msg}</p></div>
-    <div class="cmpCols">${L.map(m=>{const h=Math.min(100,m.pct||0);return `<div class="cmpCol" title="${nomeM(m.ym)}"><small>${m.pct==null?'':m.pct+'%'}</small><div class="cmpBar"><i style="height:${h}%;background:${cor(m.pct)}"></i></div><span>${MESES[+m.ym.slice(5,7)-1]}</span></div>`;}).join('')}</div>
+    <div class="cmpTop"><b style="color:${cor(p1.pct)}">${p1.pct==null?'—':pf(p1.pct)}</b><p>${msg}</p></div>
+    <div class="cmpCols">${L.map(m=>{const h=Math.min(100,m.pct||0);return `<div class="cmpCol" title="${nomeM(m.ym)}"><small>${pf(m.pct)}</small><div class="cmpBar"><i style="height:${h}%;background:${cor(m.pct)}"></i></div><span>${MESES[+m.ym.slice(5,7)-1]}</span></div>`;}).join('')}</div>
     <div class="cmpLeg">${[['cartão',p1.cart],['contas fixas',p1.fixa],['outros previstos',p1.outros]].filter(x=>x[1]>0).map(x=>`<span>${x[0]} <b>${brl(x[1])}</b></span>`).join('')}</div>
-    ${pico!==p1&&(pico.pct||0)>=70?`<p class="small" style="margin:8px 0 0">${MESES_LONGO[+pico.ym.slice(5,7)-1]} é o mês mais apertado: ${pico.pct}% da renda.</p>`:''}
+    ${pico!==p1&&(pico.pct||0)>=70?`<p class="small" style="margin:8px 0 0">${MESES_LONGO[+pico.ym.slice(5,7)-1]} é o mês mais apertado: ${pf(pico.pct)} da renda.</p>`:''}
   </div>`;
 }
 function cdVal(v){const a=Math.abs(v),s=v<0?'−':'';return s+(a>=1e6?(a/1e6).toFixed(1).replace('.',',')+'M':a>=1e4?Math.round(a/1e3)+'k':a>=1e3?(a/1e3).toFixed(1).replace('.',',')+'k':Math.round(a));}
@@ -2388,7 +2391,16 @@ function applyCfg(){
   document.documentElement.style.setProperty('--a1',a);
   document.documentElement.style.setProperty('--a2',b);
 }
-function toggleSide(on){$('#side').classList.toggle('open',on);$('#ov').classList.toggle('on',on);}
+/* v10.90: fechar o menu sempre tira o fundo escuro/desfocado e qualquer estilo deixado pelo arrasto.
+   o fundo só pode ficar visível com o menu aberto (ovConfere roda em todo fim de toque, troca de aba, volta ao app...). */
+function toggleSide(on){on=!!on;const sd=$('#side'),ov=$('#ov');if(!sd||!ov)return;
+  sd.style.transition='';sd.style.transform='';ov.style.transition='';ov.style.opacity='';ov.style.pointerEvents='';ov.style.visibility='';
+  sd.classList.toggle('open',on);ov.classList.toggle('on',on);if(!on)ovConfere();}
+let OV_ARRASTA=false;
+function ovConfere(){const sd=$('#side'),ov=$('#ov');if(!sd||!ov||OV_ARRASTA)return;
+  if(sd.style.transform)sd.style.transform='';
+  if(!sd.classList.contains('open')){ov.classList.remove('on');['opacity','pointerEvents','transition','visibility'].forEach(k=>{if(ov.style[k])ov.style[k]='';});}
+  else if(!ov.classList.contains('on'))ov.classList.add('on');}
 let NAV_EXPLICITA=false;
 function gravaAba(t){try{localStorage.setItem('gv-tab',t);}catch(e){}try{sessionStorage.setItem('gv-tab',t);}catch(e){}}
 // restaura a aba salva (localStorage, fallback sessionStorage). não faz nada se o usuário já navegou nesta sessão.
@@ -2438,7 +2450,7 @@ function navRestaura(){
   go(p.tab);requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,p.y)));
   return true;
 }
-addEventListener('popstate',()=>{if(!navRestaura()&&$('#modal').classList.contains('on'))closeModal();});
+addEventListener('popstate',()=>{if($('#side').classList.contains('open'))toggleSide(false);if(!navRestaura()&&$('#modal').classList.contains('on'))closeModal();ovConfere();});
 ICONS.ccVira='<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/>';
 ICONS.info='<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>';
 ICONS.clock='<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
@@ -7099,17 +7111,22 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
     }
     return false;
   }
-  function pinta(p){const sd=$('#side'),ov=$('#ov');sd.style.transition='none';ov.style.transition='none';sd.style.transform='translateX('+((p-1)*102)+'%)';ov.style.pointerEvents='none';ov.style.opacity=String(p);ov.classList.add('on');}
-  function limpa(){const sd=$('#side'),ov=$('#ov');sd.style.transition='';sd.style.transform='';ov.style.transition='';ov.style.opacity='';ov.style.pointerEvents='';}
+  function pinta(p){OV_ARRASTA=true;const sd=$('#side'),ov=$('#ov');ov.style.visibility='visible';sd.style.transition='none';ov.style.transition='none';sd.style.transform='translateX('+((p-1)*102)+'%)';ov.style.pointerEvents='none';ov.style.opacity=String(p);ov.classList.add('on');}
+  function limpa(){OV_ARRASTA=false;const sd=$('#side'),ov=$('#ov');sd.style.transition='';sd.style.transform='';ov.style.transition='';ov.style.opacity='';ov.style.pointerEvents='';ov.style.visibility='';}
   /* v10.63: se o dedo começa num elemento que o render troca no meio do gesto, o touchend não sobe até o document
      e o menu ficava preso aberto pela metade. agora o fim também é ouvido no próprio alvo, e um gesto preso é desfeito. */
   function preso(){const sd=$('#side');return !!(sd&&sd.style.transform);}
-  function solta(){if(preso()){limpa();toggleSide($('#side').classList.contains('open'));}}
+  function solta(){if(preso()||OV_ARRASTA){limpa();toggleSide($('#side').classList.contains('open'));}else ovConfere();}
   let alvo=null,guarda=0;
   function ligaAlvo(el){if(alvo===el)return;desligaAlvo();alvo=el;if(!el)return;el.addEventListener('touchmove',mv,{passive:false});el.addEventListener('touchend',fimAlvo,{passive:true});el.addEventListener('touchcancel',fimAlvo,{passive:true});}
   function desligaAlvo(){if(!alvo)return;alvo.removeEventListener('touchmove',mv);alvo.removeEventListener('touchend',fimAlvo);alvo.removeEventListener('touchcancel',fimAlvo);alvo=null;}
   function fimAlvo(e){if(e.target&&e.target.isConnected)return;fim();} // ainda no DOM: o listener do document trata
-  document.addEventListener('visibilitychange',()=>{modo=null;solta();});
+  document.addEventListener('visibilitychange',()=>{modo=null;clearTimeout(guarda);desligaAlvo();solta();});
+  window.addEventListener('pageshow',()=>{modo=null;solta();});window.addEventListener('focus',()=>{if(modo!=='arrasta')solta();});
+  /* rede de segurança: mudou a classe do menu ou terminou a transição, confere o fundo */
+  try{new MutationObserver(()=>{if(modo!=='arrasta')setTimeout(ovConfere,0);}).observe($('#side'),{attributes:true,attributeFilter:['class']});}catch(e){}
+  $('#ov').addEventListener('transitionend',()=>{if(modo!=='arrasta')ovConfere();});
+  $('#side').addEventListener('transitionend',()=>{if(modo!=='arrasta')ovConfere();});
   window.addEventListener('resize',()=>{if(modo!=='arrasta')solta();});
   document.addEventListener('touchstart',e=>{
     if(modo!=='arrasta')solta();
@@ -7138,8 +7155,10 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
     const abre=abrindo?!(dx<-w*.35||v<-.5):(dx>w*.35||v>.5);
     limpa();toggleSide(abre);
   }
-  document.addEventListener('touchend',fim,{passive:true});
-  document.addEventListener('touchcancel',fim,{passive:true});
+  /* depois de qualquer fim de toque: se o gesto não está ativo, nada de fundo preso (iOS às vezes perde touchend/transitionend) */
+  let confT=0;function fimSeguro(){clearTimeout(confT);confT=setTimeout(()=>{if(modo!=='arrasta')solta();},420);}
+  document.addEventListener('touchend',e=>{fim(e);fimSeguro();},{passive:true});
+  document.addEventListener('touchcancel',e=>{fim(e);fimSeguro();},{passive:true});
 })();
 function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.classList.toggle('on',OCULTO);}
 pintaOlho();

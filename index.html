@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-V9uGe+COU3P7EnURjj5iGqUiTluCJXb9xH5GayPkzhw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-Y21TvdOePSHAKEedmeXkfG5P12FhwYFFS1ERfScDNBE=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -171,8 +171,8 @@ html.claro #ov{background:rgba(15,23,42,.25)}
 .ham{background:var(--card2);border:1px solid var(--line);color:var(--txt);width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-right:12px;flex-shrink:0}
 .ham .i{width:20px;height:20px}
 .tl{display:flex;align-items:center;min-width:0}
-#ov{position:fixed;inset:0;background:rgba(3,6,12,.55);backdrop-filter:blur(3px);z-index:70;opacity:0;pointer-events:none;transition:opacity .3s}
-#ov.on{opacity:1;pointer-events:auto}
+#ov{position:fixed;inset:0;background:rgba(3,6,12,.55);z-index:70;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility 0s linear .3s}
+#ov.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .3s,visibility 0s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:14px;margin-bottom:14px;max-width:100%;min-width:0}
 .cgrid .card{margin-bottom:0}
 .ccard{position:relative;width:100%;max-width:380px;aspect-ratio:1.586/1;border-radius:20px;padding:0;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 22px 40px -16px var(--c1),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.2);transform:perspective(900px) rotateX(12deg) rotateY(-10deg);transition:transform .6s cubic-bezier(.2,.8,.2,1);margin:4px 0 14px}
@@ -318,7 +318,7 @@ body:has(#auth.on) .fab{display:none!important}
 .rsG{margin:10px 0}.rsG .card{display:flex;flex-direction:column;gap:2px}.rsD{font-style:normal;font-size:12px;font-weight:700;color:var(--mut)}.rsD.pos{color:#4ade80}.rsD.neg{color:#f87171}
 .rsFr{display:grid;gap:6px;margin:6px 0 4px}.rsFr p{margin:0;font-size:14px;padding:9px 12px;border-radius:12px;background:rgba(163,230,53,.07)}
 .rsH{margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}.rsCat{margin-bottom:10px}.rsCt{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:5px}.rsCt span{flex:1;display:flex;align-items:center;gap:7px}.rsCat .bar{height:6px}
-.cmpCard h4{margin:0 0 10px}.cmpTop{display:flex;gap:14px;align-items:center}.cmpTop b{font-size:32px;font-weight:800;letter-spacing:-.02em;min-width:72px}.cmpTop p{margin:0;font-size:14px;line-height:1.4}
+.cmpCard h4{margin:0 0 10px}.cmpTop{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.cmpTop b{flex:0 0 auto;white-space:nowrap;font-size:clamp(28px,8.4vw,34px);line-height:1.05;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.cmpTop p{flex:1 1 168px;min-width:0;margin:0;font-size:14px;line-height:1.4;overflow-wrap:anywhere}
 .cmpCols{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:14px 0 8px}.cmpCol{display:flex;flex-direction:column;align-items:center;gap:4px}.cmpCol small{font-size:11px;color:var(--mut);height:13px}.cmpBar{width:100%;max-width:30px;height:70px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:flex-end;overflow:hidden}.cmpBar i{display:block;width:100%;border-radius:8px}.cmpCol span{font-size:11px;color:var(--mut)}
 .cmpLeg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--mut)}.cmpLeg b{color:var(--fg,#fff);font-weight:700}
 
@@ -1951,8 +1951,8 @@ html.preto .gvc-face{box-shadow:inset 0 0 0 .25cqw rgba(255,255,255,.09),inset 0
 .walSec{position:relative;isolation:isolate;margin-bottom:6px}
 .walGlow{position:absolute;left:0;right:0;top:-24px;height:300px;z-index:-1;pointer-events:none;background:radial-gradient(55% 50% at 50% 50%,var(--tint),transparent 72%);opacity:.32;filter:blur(18px);transition:background .5s}
 html.claro .walGlow{opacity:.2}html.preto .walGlow{opacity:.26}
-.wal{container:wal/inline-size;position:relative;margin:2px 0 16px;padding:0 2px}
-.walItem{position:relative;height:15.5cqw;will-change:transform}
+.wal{container:wal/inline-size;position:relative;margin:2px auto 16px;padding:0 2px;max-width:288px}
+.walItem{position:relative;height:14.5cqw;will-change:transform}
 .walItem.on{height:auto}
 .walCard{display:block;width:100%;padding:0;margin:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:3.7cqw;-webkit-tap-highlight-color:transparent;transition:transform .2s}
 .walItem:not(.on) .walCard:active{transform:translateY(-1.2cqw)}
@@ -2346,7 +2346,7 @@ html.preto .mtGw,html.preto .mtSim,html.preto .mtFr,html.preto .mtSrc,html.preto
 </div>
 
 <script>
-const GV_BUILD='10.89'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.90'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2367,8 +2367,8 @@ const GV_BUILD='10.89'; // versão publicada (./bump.sh troca aqui e no sw.js)
 })();
 </script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script src="planos.js?v=10.89"></script>
-<script src="app.js?v=10.89"></script>
+<script src="planos.js?v=10.90"></script>
+<script src="app.js?v=10.90"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
