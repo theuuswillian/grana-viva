@@ -1351,7 +1351,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no app, no dia do aporte de cada meta']];
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -1436,7 +1436,9 @@ function fixasCard(){
   }).join('');
   return `<div class="card fixas-card"><div class="fx-head"><span class="fx-ic">${I('receipt')}</span><div><h4>Contas fixas</h4><b class="fx-total">${brl(total)}<small> / mês</small></b>${entra>0?`<small class="fx-entra">entram ${brl(entra)} / mês</small>`:''}</div></div>${lst||'<p class="vazio">nenhuma conta fixa. cadastre aluguel, luz, internet ou o salário. elas entram sozinhas no extrato.</p>'}<button class="btn full" data-act="nova-fixa">+ conta fixa</button></div>`;
 }
-/* v10.46: assinaturas detectadas. olha as despesas dos últimos ~6 meses (banco, cartão e manuais), agrupa pelo estabelecimento
+/* v10.89: na tela chamam-se "cobranças recorrentes" (pegam também aluguel, mercado, luz). as chaves salvas continuam
+   as mesmas (f.assinatura, f.assinKey, cfg.assinIgnora, cfg.assinVisto), então nada muda nos dados.
+   v10.46: assinaturas detectadas. olha as despesas dos últimos ~6 meses (banco, cartão e manuais), agrupa pelo estabelecimento
    e acha cobranças mensais de valor parecido. as que você vira conta fixa ficam marcadas (assinatura:true) e entram no mesmo card. */
 const ASSIN_KW=/netflix|spotify|disney|hbo|\bmax\b|prime ?video|amazon ?prime|youtube|apple ?com|icloud|google ?one|google ?storage|deezer|globoplay|paramount|crunchyroll|chatgpt|openai|microsoft|office ?365|adobe|canva|smart ?fit|academia|gympass|wellhub|\bvivo\b|\bclaro\b|\btim\b|\boi\b|internet|assinatura|streaming/;
 const ASSIN_RUIDO=/\b(pg|pag|pagseguro|pagamento|pagto|mp|mercadopago|ifd|ifood|ec|dl|ebn|htm|www|com|br|net|ltda|me|sa|eireli|bill|compra|compras|debito|credito|pix|enviado|enviada|transferencia|no|na|via|nupay|int|internacional|digital|servicos|entretenimento|brasil|do|da|de)\b/g;
@@ -1535,14 +1537,14 @@ function assinHTML(){
   const C=detectaAssinaturas(),R=assinRastreadas();ASSIN_C=C;
   if(!C.length&&!R.length)return '';
   const mes=R.reduce((a,x)=>a+cents(mensalEq(x.f)),0)/100+C.reduce((a,c)=>a+cents(c.valorAtual),0)/100,n=C.length+R.length;
-  const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções de ${esc(nome)}">${I('more')}</button></div>`;
+  const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções da cobrança ${esc(nome)}">${I('more')}</button></div>`;
   const bdg=p=>p?`<span class="hvQ ${p>=10?'late':'soon'}">subiu ${p}%</span>`:'';
   const lin=R.map(x=>row(catIcon(x.f.categoria),corCat(x.f.categoria),x.f.nome,`dia ${x.f.dia} · conta fixa`,x.f.valor,bdg(x.subiu),'f:'+x.f.id))
     .concat(C.map(c=>row(catIcon(c.categoria),corCat(c.categoria),c.nome,`dia ${c.dia} · ${c.mesesVistos} meses seguidos`,c.valorAtual,bdg(c.aumento),'c:'+c.key)));
-  return `<div class="card hmAssin"><div class="hmH"><h4>assinaturas</h4><span class="hmSub">${n} · ${brl(mes)}/mês</span></div>
+  return `<div class="card hmAssin"><div class="hmH"><h4>cobranças recorrentes</h4><span class="hmSub">${n} · ${brl(mes)}/mês</span></div>
     <p class="asAno">${brl(Math.round(mes*1200)/100)} por ano</p>
     ${lin.slice(0,8).join('')}
-    ${lin.length>8?`<p class="hmNota">+${lin.length-8} ${lin.length-8>1?'assinaturas':'assinatura'}</p>`:''}
+    ${lin.length>8?`<p class="hmNota">+${lin.length-8} ${lin.length-8>1?'cobranças':'cobrança'}</p>`:''}
     ${C.length?'<p class="hmNota">detectadas pelas cobranças mensais. use o menu para virar conta fixa ou dispensar.</p>':''}
   </div>`;
 }
@@ -1550,8 +1552,8 @@ function assinMenu(id){
   id=String(id||'');const ehF=id.startsWith('f:'),v=id.slice(2);
   const f=ehF?(S.fixas||[]).find(x=>x.id===v):null,c=ehF?null:(ASSIN_C.find(x=>x.key===v)||detectaAssinaturas().find(x=>x.key===v));
   if(!f&&!c)return;
-  const ops=ehF?[['edit','Editar conta fixa',()=>fixaForm(f.id)],['close','Não é assinatura',()=>{delete f.assinatura;salvar();render();toast('Desmarcada como assinatura');}]]
-    :[['receipt','Virar conta fixa',()=>ACT['assin-fixa'](c.key)],['close','Não é assinatura',()=>ACT['assin-ignora'](c.key)]];
+  const ops=ehF?[['edit','Editar conta fixa',()=>fixaForm(f.id)],['close','Não é recorrente',()=>{delete f.assinatura;salvar();render();toast('Desmarcada como cobrança recorrente');}]]
+    :[['receipt','Virar conta fixa',()=>ACT['assin-fixa'](c.key)],['close','Não é recorrente',()=>ACT['assin-ignora'](c.key)]];
   const nome=f?f.nome:c.nome,cat=f?f.categoria:c.categoria,val=f?f.valor:c.valorAtual;
   const box=$('#modal');
   box.innerHTML=`<div class="sheet txSheet"><div class="txsHead"><span class="ic" style="color:${corCat(cat)}">${I(catIcon(cat))}</span><div><b>${esc(nome)}</b><small>${esc(cat)} · todo dia ${f?f.dia:c.dia}${c&&c.valorAnterior?' · antes '+brl(c.valorAnterior):''}</small></div><strong class="neg nw">${brl(val)}</strong></div>
@@ -1840,7 +1842,11 @@ function viewPlan(){
   const neg=linhas.find(m=>m.saldo<0);
   const mx=Math.max(1,...linhas.map(m=>Math.abs(m.saldo)));
   const nomeM=ym=>MESES[+ym.slice(5,7)-1]+'/'+ym.slice(2,4);
-  const sobraMed=linhas.length>1?(linhas[linhas.length-1].saldo-linhas[0].saldo)/(linhas.length-1):0;
+  /* v10.89: metas sem aporte definido usam o MESMO ritmo da aba Metas (ritmoMensal), dividido entre elas.
+     antes cada uma usava a sobra inteira da projeção, então duas metas "chegavam" juntas com o mesmo dinheiro */
+  const RM=ritmoMensal(base,linhas),ritmo=RM?Math.max(0,RM.media):0;
+  const nSemAp=(S.metas||[]).filter(m=>!(m.aporteMes>0)&&alvoMeta(m)>saldoMeta(m)).length;
+  const sobraMed=nSemAp?ritmo/nSemAp:0;
   /* v10.88: saldo e alvo das metas iguais aos da aba Metas (fontes, FIPE, IPCA). antes chamava mesesMeta(m) sem os argumentos
      e toda meta com aporte aparecia como "mais de 50 anos" */
   const metas=(S.metas||[]).map(m=>Object.assign({},m,{atual:saldoMeta(m),alvo:alvoMeta(m),_m:m})).filter(m=>m.alvo>m.atual).map(m=>{const falta=m.alvo-m.atual,pc=m.alvo>0?Math.min(100,m.atual/m.alvo*100):0;
@@ -1864,7 +1870,7 @@ function viewPlan(){
     ${linhas.map(m=>`<div class="planRow${m===min?' low':''}"><span>${nomeM(m.ym)}</span><span class="pos">${brl(m.entra)}</span><span class="neg">${brl(m.sai)}</span><span class="${m.saldo<0?'neg':'pos'}"><b>${brl(m.saldo)}</b><i class="planBar ${m.saldo<0?'n':''}" data-w="${(Math.abs(m.saldo)/mx*100).toFixed(1)}"></i></span></div>`).join('')}
   </div>
   ${simHTML(base,sim,temSim)}
-  ${metas?`<div class="card"><h4>Metas no ritmo da projeção</h4>${metas}<p class="small" style="margin-top:10px">${sobraMed>0?'metas sem aporte definido usam a sobra média de '+brl(sobraMed)+' por mês.':'a projeção não deixa sobra no mês, então metas sem aporte definido não avançam. defina um aporte na meta ou teste cortes na simulação.'}</p></div>`:''}
+  ${metas?`<div class="card"><h4>Metas no ritmo da projeção</h4>${metas}<p class="small" style="margin-top:10px">${!nSemAp?'cada meta usa o aporte por mês definido nela.':ritmo>0?'metas sem aporte definido dividem seu ritmo de economia de '+brl(ritmo)+' por mês'+(nSemAp>1?' ('+brl(sobraMed)+' para cada uma)':'')+'.':RM?'seu ritmo de economia está em '+brl(RM.media)+' por mês, então metas sem aporte definido não avançam. defina um aporte na meta ou teste cortes na simulação.':'ainda não há um mês fechado para medir seu ritmo de economia. defina um aporte na meta.'}</p></div>`:''}
   <details class="card planPremBox"><summary>Como a projeção é calculada</summary><ul class="planPrem">
     <li>Começa no saldo de hoje, que conta só os lançamentos pagos.</li>
     <li>As contas fixas e o salário se repetem como estão cadastrados.</li>
@@ -1880,6 +1886,7 @@ function viewPlan(){
 function simHTML(base,sim,temSim){
   const nomeM=ym=>MESES[+ym.slice(5,7)-1]+'/'+ym.slice(2,4);
   const g=gastoDiaADia(),fB=folgaPlano(base),fS=folgaPlano(sim);
+  const RB=ritmoMensal(),RS=temSim?ritmoMensal(base,sim):RB; // v10.89: mesmo número da aba Metas
   const fimB=base[base.length-1],fimS=sim[sim.length-1],dif=fimS.saldo-fimB.saldo;
   const negS=sim.find(m=>m.saldo<0),minS=sim.reduce((a,m)=>m.saldo<a.saldo?m:a,sim[0]);
   const h=new Date(),mesesOpt=k=>Array.from({length:12},(_,i)=>`<option value="${i}"${i===k?' selected':''}>${i===0?'este mês':nomeM(isoDe(new Date(h.getFullYear(),h.getMonth()+i,1)).slice(0,7))}</option>`).join('');
@@ -1895,7 +1902,7 @@ function simHTML(base,sim,temSim){
   return `<div class="card simCard">
     <div class="simTop"><h4>E se…</h4><small>teste antes de decidir. nada aqui muda seus lançamentos.</small></div>
     <div class="simFolga">
-      <div><small>folga por mês</small><b class="nw fit">${brl(fS.mensal)}</b><em>${temSim&&fS.mensal!==fB.mensal?'antes '+brl(fB.mensal):'cabe de conta nova sem ficar no vermelho'}</em></div>
+      <div class="simRit"><small>ritmo de economia</small><b class="nw fit${RS&&RS.media<0?' neg':''}">${RS?brl(RS.media):'—'}</b><em>${!RS?'sem mês fechado ainda':temSim&&RS.media!==RB.media?'por mês · antes '+brl(RB.media):'por mês, média de '+RS.n+' '+(RS.n>1?'meses fechados':'mês fechado')}</em></div>
       <div><small>dá pra gastar hoje</small><b class="nw fit">${brl(fS.vista)}</b><em>${temSim&&fS.vista!==fB.vista?'antes '+brl(fB.vista):'à vista, sem zerar nenhum mês'}</em></div>
     </div>
     ${g.v>0?`<button class="simDia${PLAN.dia?' on':''}" data-act="sim-dia" aria-pressed="${PLAN.dia?'true':'false'}"><span class="simTg"><i></i></span><span><b>Contar os gastos do dia a dia</b><small>mercado, delivery, transporte… média de ${brl(g.v)}/mês ${g.meses===1?'no último mês':'nos últimos '+g.meses+' meses'}</small></span></button>`:''}
@@ -2510,9 +2517,15 @@ function sparkSVG(vals){
 /* filtro de período do painel: um único intervalo para todos os blocos dependentes do período */
 const PER_OPS=[['mes','este mês'],['ant','mês anterior'],['3m','3 meses'],['6m','6 meses'],['12m','12 meses'],['custom','personalizado']];
 let PER=(()=>{try{const p=JSON.parse(localStorage.getItem('gv-per')||'null');if(p&&PER_OPS.some(o=>o[0]===p.k))return p;}catch(e){}return {k:'mes',ini:'',fim:''};})();
+/* v10.89: nos 3 primeiros dias do mês o "este mês" quase não tem nada e a Início mostrava cards zerados.
+   até o dia 3, "este mês" mostra o mês anterior (fechado), com aviso na tela. PER_ATUAL=1 (botão "ver <mês atual>")
+   volta para o mês corrente nesta sessão; a partir do dia 4 tudo volta ao normal sozinho. */
+let PER_ATUAL=0;
+function mesAntAuto(p){p=p||PER;return p.k==='mes'&&!PER_ATUAL&&new Date().getDate()<=3;}
 function periodo(p){
   p=p||PER;const h=new Date(),y=h.getFullYear(),m=h.getMonth();
   const fimMes=(yy,mm)=>isoDe(new Date(yy,mm+1,0)),iniMes=(yy,mm)=>isoDe(new Date(yy,mm,1));
+  if(mesAntAuto(p)){const d=new Date(y,m-1,1);return {ini:iniMes(y,m-1),fim:fimMes(y,m-1),label:MESES_LONGO[d.getMonth()]+' (mês anterior)',meses:1,auto:true};}
   if(p.k==='ant')return {ini:iniMes(y,m-1),fim:fimMes(y,m-1),label:'mês anterior',meses:1};
   const n={'3m':3,'6m':6,'12m':12}[p.k];
   if(n)return {ini:iniMes(y,m-n+1),fim:fimMes(y,m),label:'últimos '+n+' meses',meses:n};
@@ -2633,7 +2646,7 @@ function homeTopo(v,o){
   const {saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}=o;
   const ser=serieSaldo(30),var30=ser.length>1?ser[ser.length-1]-ser[0]:0;
   const bp=brlParts(saldo);
-  const mesAnt=MESES[+mesOff(1).slice(5,7)-1];
+  const mesAnt=MESES[+mesOff(per&&per.auto?2:1).slice(5,7)-1]; // v10.89: mês anterior automático compara com o mês antes dele
   const gastoPct=rec>0?Math.round(des/rec*100):null;
   const eye=`<button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button>`;
   const chips=`<div class="hPer" role="tablist">${PER_OPS.map(([k])=>`<button class="hPerC${PER.k===k?' on':''}" data-act="hm-per" data-id="${k}" role="tab" aria-selected="${PER.k===k}">${PER_CURTO[k]}</button>`).join('')}</div>${PER.k==='custom'?`<div class="perBar hPerCustom"><input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até"></div>`:''}`;
@@ -2658,25 +2671,29 @@ function homeTopo(v,o){
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'||t==='orc'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
   <button class="hB-ask" data-act="assist">${I('chat','hB-askI')}<span><b>Pergunte sobre seu dinheiro</b><small>quanto gastei, maior categoria, parcelas, metas</small></span>${I('chevR','hB-ch')}</button>
   ${primeirosPassosHTML()}${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  ${chips}
+  ${chips}${mesAntHTML(per)}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
     <div class="hB-row tap" data-act="nav-rel" role="button" tabindex="0" aria-label="ver relatório do mês"><div class="hB-rl"><span class="hB-ri g">${I('piggy')}</span><div><b>Você guardou</b><small>${pou===null?'sem receitas no período':(sal<0?'gastou mais do que entrou':'da renda do período')}</small></div></div><b class="hB-rv ${sal<0?'neg':'pos'}">${pou===null?'—':(OCULTO?'••%':pou+'%')}</b></div>
     <div class="hB-bar"><i class="g" style="width:${pc}%"></i><span style="left:20%"></span></div>
     <p class="hB-tip">${pou===null?'':pou>=20?'acima da meta de 20% recomendada':'meta recomendada: guardar 20% da renda'}</p>
-    <div class="hB-row tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hB-rl"><span class="hB-ri r">${I('arrowDown')}</span><div><b>Gastos vs ${MESES_LONGO[MESES.indexOf(mesAnt)]||mesAnt}</b><small>até o dia ${dia} · ${brlK(desAnt)} → ${brlK(des)}</small></div></div><b class="hB-rv ${dDes>0?'neg':'pos'}">${dDes===null?'—':(dDes>0?'+':dDes<0?'−':'')+Math.abs(dDes)+'%'}</b></div>
+    <div class="hB-row tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hB-rl"><span class="hB-ri r">${I('arrowDown')}</span><div><b>Gastos vs ${MESES_LONGO[MESES.indexOf(mesAnt)]||mesAnt}</b><small>${per&&per.auto?'mês inteiro':'até o dia '+dia} · ${brlK(desAnt)} → ${brlK(des)}</small></div></div><b class="hB-rv ${dDes>0?'neg':'pos'}">${dDes===null?'—':(dDes>0?'+':dDes<0?'−':'')+Math.abs(dDes)+'%'}</b></div>
     <div class="hB-bar two"><i class="m" style="width:${Math.round(desAnt/Math.max(des,desAnt,1)*100)}%"></i><i class="r" style="width:${Math.round(des/Math.max(des,desAnt,1)*100)}%"></i></div>
   </div>`;
 }
+function mesAntHTML(per){
+  if(!per||!per.auto)return '';const h=new Date(),at=MESES_LONGO[h.getMonth()],an=MESES_LONGO[new Date(h.getFullYear(),h.getMonth()-1,1).getMonth()];
+  return `<div class="card mesAnt" role="status">${I('calendar')}<span><b>Mostrando ${an}, o mês anterior.</b><small>${at.charAt(0).toUpperCase()+at.slice(1)} começou há pouco. Até o dia 3 a Início mostra o mês fechado.</small></span><button type="button" class="btn2 sm" data-act="per-atual">ver ${at}</button></div>`;
+}
 function viewInicio(){
-  const per=periodo(),pl=per.label,ehMes=PER.k==='mes';
+  const per=periodo(),pl=per.label,ehMes=PER.k==='mes'&&!per.auto;
   const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa'),sal=(cents(rec)-cents(des))/100;
   const sl=despesasPorCat(per),tot=sl.reduce((a,s)=>a+s.v,0);
   const p=proximoPag(),pv=previsaoMes();
   const hoje=new Date(),dia=hoje.getDate();
   /* comparação justa no mês corrente: até o mesmo dia do mês anterior */
-  const desAnt=ehMes?despAte(mesOff(1),dia):0;
-  const dDes=ehMes&&desAnt?Math.round((des-desAnt)/desAnt*100):null;
+  const desAnt=ehMes?despAte(mesOff(1),dia):per.auto?somaMes(mesOff(2),'despesa'):0;
+  const dDes=(ehMes||per.auto)&&desAnt?Math.round((des-desAnt)/desAnt*100):null;
   const pou=rec>0?Math.round(sal/rec*100):null;
   const mxF=Math.max(rec,des,1);
   const tile=(cls,ic,lb,val,sub)=>`<div class="rsT ${cls}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b>${sub}</div>`;
@@ -2701,6 +2718,7 @@ function viewInicio(){
     <div class="carteiraGrid"><div class="cw"><small>patrimônio investido</small><b>${brl(patr)}</b></div><div class="cw"><small>dividendo mensal estimado</small><b class="pos">${brl(dm)}</b></div><div class="cw cw-full"><small>próximo pagamento</small><b>${p?esc(p.f.ticker)+' em '+fmtDate(p.date):'sem data'}</b></div></div></div>`:'';
   const HV=homeVar();
   const TOPO=HV?homeTopo(HV,{saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}):null;
+  const avisoMesAnt=mesAntHTML(per);
   return `
   <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
   ${TOPO!==null?TOPO+'<!--':''}<div class="hmHero ${saldo<0?'neg':''}">
@@ -2710,7 +2728,7 @@ function viewInicio(){
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
   ${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  <div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
+  ${avisoMesAnt}<div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
     ${tile('rec','arrowUp','receitas',brl(rec),'<span class="rsD">entradas pagas</span>')}
@@ -3014,9 +3032,8 @@ function viewFii(){
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados</small></div>`:''}
     ${barra}
   </div>
-  ${temRV?`<div class="grid2 wKpi">
+  ${temRV?`<div class="wKpi">
     <div class="card mini"><small>renda mensal estimada</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>
-    <div class="card mini wMeta"><small>meta de cotas</small><b>${num(ct).replace(/,00$/,'')}<em> / ${meta}</em></b><div class="wBar"><i style="width:${pct}%"></i></div><button class="wLink" data-act="meta-fii">editar meta</button></div>
   </div>`:''}
   ${p?`<div class="card cd wNext"><div><small>próximo pagamento</small><b>${esc(p.f.ticker)} · ${fmtDate(p.date)}</b></div><div id="cd" class="countdown" data-date="${p.date.getTime()}"></div></div>`
      :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
@@ -3125,6 +3142,22 @@ function ritmoEconomia(){
   if(!ms.length)return null;
   const tot=ms.reduce((a,m)=>a+cents(resumoMes(m).sal),0)/100;
   return {media:tot/ms.length,n:ms.length,ult:resumoMes(mesOff(1)).sal,mesUlt:mesOff(1)};
+}
+/* v10.89: UM número só para "quanto sobra por mês", usado na aba Metas ("seu ritmo de economia") e no Planejamento
+   (bloco "E se…" e "Metas no ritmo da projeção"). Antes eram dois números que não batiam:
+   - Metas: média do que sobrou (receitas − despesas pagas) nos últimos 3 meses fechados com movimento;
+   - Planejamento ("folga por mês"): o menor (saldo projetado no fim do mês k ÷ k). Esse dividia o dinheiro que JÁ está
+     na conta pelos meses (R$ 9 mil parados viravam "R$ 3 mil por mês" em 3 meses) e só enxergava contas fixas e
+     previstos, sem mercado, delivery e o resto do dia a dia que ainda não foi lançado. Ele dizia quanto dá para
+     gastar a mais até zerar, não quanto você consegue guardar todo mês.
+   Ficou o primeiro método: é dinheiro que de fato sobrou, com todos os gastos reais. Transferências (inclusive o
+   "guardei" das metas) não entram em receitas/despesas, então guardar não derruba o próprio ritmo.
+   Com simulação no Planejamento, soma o efeito médio por mês do que foi simulado: (fim simulado − fim sem simulação) ÷ meses. */
+function ritmoMensal(base,sim){
+  const R=ritmoEconomia();if(!R)return null;
+  let adj=0;
+  if(base&&sim&&sim!==base&&base.length&&sim.length===base.length)adj=(cents(sim[sim.length-1].saldo)-cents(base[base.length-1].saldo))/base.length/100;
+  return Object.assign({},R,{base:R.media,adj:c2(adj),media:c2(R.media+adj)});
 }
 /* meses até o prazo contando o mês atual: prazo neste mês = 1; vencido só quando o prazo é antes do mês atual (<= 0) */
 function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())*12+(+ym.slice(5,7)-1-h.getMonth())+1;}
@@ -5863,7 +5896,7 @@ function mtFontesChips(m,max){
   return `<div class="mtFt" aria-label="fontes da meta">${L.map(x=>`<span class="mtF ${x.g}" style="--fc:${MT_COR[x.g]||'#64748b'}"><i></i>${esc(x.t)}</span>`).join('')}</div>`;
 }
 function viewMetas(){
-  const R=ritmoEconomia();
+  const R=ritmoMensal(); // v10.89: o mesmo número do Planejamento
   if((S.metas||[]).some(m=>m.fipe&&m.fipe.chk!==hojeISO()))setTimeout(()=>fipeAtualiza().catch(()=>{}),0);
   const SD={};S.metas.forEach(m=>{SD[m.id]=saldoMeta(m);});
   const at=m=>SD[m.id],alvoDe=m=>alvoMeta(m);
@@ -5924,7 +5957,7 @@ function viewMetas(){
   const tAlvo=S.metas.reduce((a,m)=>a+alvoDe(m),0),tAt=S.metas.reduce((a,m)=>a+at(m),0);
   const ritmo=R?`<div class="card mtRitmo"><div class="hmH"><h4>seu ritmo de economia</h4>${I('piggy')}</div>
     <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
-    <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}.</p>
+    <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}. é o mesmo número do Planejamento.</p>
     ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
   return `
   <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
@@ -6169,6 +6202,7 @@ function metaManualIgual(l,d,usados){
 /* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
 function mtAvisos(){
   const out=[],hj=new Date(),dia=hj.getDate(),ym=mesAtual();
+  if(!pode('metas'))return out; // v10.89: metas são do Plus; no Grátis o lembrete não aparece (antes aparecia com a aba bloqueada)
   (S.metas||[]).forEach(m=>{if(!(m.aporteMes>0)||!(m.diaAporte>0))return;const alvo=alvoMeta(m);if(saldoMeta(m)>=alvo&&alvo>0)return;
     const dd=Math.min(m.diaAporte,new Date(hj.getFullYear(),hj.getMonth()+1,0).getDate());if(dia<dd)return;
     const feito=(m.aportes||[]).filter(a=>a.d&&a.d.slice(0,7)===ym).reduce((s,a)=>s+cents(a.v),0);if(feito>=cents(m.aporteMes))return;
@@ -6514,7 +6548,8 @@ const ACT={
   'alertas-ver':()=>abrirAlertas(),
   'al-todas':()=>{const ids=[...document.querySelectorAll('.alItem:not(.lido)')].map(e=>e.dataset.aid);alMarca(ids,'l');abrirAlertas();toast('Todos os alertas marcados como lidos');},
   'hm-go':t=>go(t),
-  'hm-per':k=>{const atual=periodo();PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
+  'per-atual':()=>{PER_ATUAL=1;render();},
+  'hm-per':k=>{const atual=periodo();if(k==='mes'&&PER.k==='mes'&&mesAntAuto())PER_ATUAL=1;PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
   'novo-tx':()=>novoTx(),
   'push-on':()=>ativarPush(),
   'push-off':()=>desativarPush(),
@@ -6671,7 +6706,7 @@ const ACT={
   'assin-fixa':key=>{const c=detectaAssinaturas().find(x=>x.key===key);if(!c)return;if(!S.fixas)S.fixas=[];
     S.fixas.push({id:uid(),criadoEm:hojeISO(),nome:c.nome,valor:c2(c.valorAtual),dia:Math.max(1,Math.min(31,c.dia||1)),categoria:c.categoria||'Outros',tipo:'despesa',freq:'mensal',auto:false,fim:'',assinatura:true,assinKey:c.key});
     geraRecorrentes();salvar();render();toast(c.nome+' agora é conta fixa');},
-  'assin-ignora':key=>{if(!key)return;S.cfg.assinIgnora=(S.cfg.assinIgnora||[]).filter(x=>x!==key).concat(key).slice(-300);salvar();render();toast('Não vai mais aparecer como assinatura');},
+  'assin-ignora':key=>{if(!key)return;S.cfg.assinIgnora=(S.cfg.assinIgnora||[]).filter(x=>x!==key).concat(key).slice(-300);salvar();render();toast('Não vai mais aparecer como cobrança recorrente');},
   'assin-atualiza':id=>{const r=assinRastreadas().find(x=>x.f.id===id);if(!r||!r.t)return;r.f.valor=c2(r.t.valor);if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[r.k]=r.t.data.slice(0,7);geraRecorrentes();salvar();render();toast('Valor de '+r.f.nome+' atualizado para '+brl(r.f.valor));},
   'assin-visto':v=>{v=String(v||'');const i=v.lastIndexOf('|');if(i<1)return;if(!S.cfg.assinVisto)S.cfg.assinVisto={};S.cfg.assinVisto[v.slice(0,i)]=v.slice(i+1);salvar();render();},
   'plan-n':id=>{PLAN.n=+id||6;render();},
@@ -6805,7 +6840,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 

@@ -6,7 +6,7 @@ import sys,os,json,shutil,subprocess
 REF='hydvhpfpvhopetqqjido'
 RAIZ=os.path.dirname(os.path.abspath(__file__))
 FN=os.path.join(RAIZ,'supabase','functions')
-COPIAS={'assistente':['planos.js'],'ler-comprovante':['planos.js'],
+COPIAS={'assistente':['planos.js'],'alertas-push':['planos.js'],'ler-comprovante':['planos.js'],
         'assinatura':['planos.js','mercadopago.ts'],
         'pagamento-webhook':['planos.js','mercadopago.ts','webhook-nucleo.ts'],
         'minha-conta':['mercadopago.ts']}
