@@ -270,6 +270,8 @@ function sanea(d){
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
+  /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
+  o.metas=saneaAlocacoes(o.metas.map(m=>{const x=Object.assign({},m);['ativos','planos','aportes','diaAporte','cripMax','ipca','alvoBase','alvoEm','baseEm','baseN','apDest','apConta','apFonte','criadoEm','fipe'].forEach(k=>delete x[k]);return Object.assign(x,saneaMetaExtra(m));}));
   o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:'',visual:/^(cor:\d{1,2}|[a-z][a-z0-9_]{1,24})$/.test(String(c.visual||''))?String(c.visual):'',bandeira:['mastercard','visa','elo','amex','hipercard'].includes(c.bandeira)?c.bandeira:''}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',saldoFecha:!!b.saldoFecha,principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
   o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:'',forma:['dinheiro','pix','boleto','cartao'].includes(f.forma)?f.forma:'',conta:f.conta?sid(f.conta):'',cartao:f.cartao?sid(f.cartao):'',pagoCom:['dinheiro','cartao','conta'].includes(f.pagoCom)?f.pagoCom:'',criadoEm:isoTsOk(f.criadoEm)}));
@@ -1316,6 +1318,7 @@ function listaAlertas(completo){
       if(p>=90)out.push({id:'lm|'+c.id+'|'+m+'|'+(p>=100?2:1),k:p>=100?'venc':'aviso',h:`${I('card')} cartão <b>${esc(c.nome)}</b> com ${Math.round(p)}% do limite usado · livre ${brl(Math.max(0,c.limite-u))}`});});
   }
   try{out.push(...empAvisos(AD));}catch(e){}
+  try{if(notifOn('metas'))out.push(...mtAvisos().map(a=>({id:a.id,k:a.k,h:a.h})));}catch(e){} // v10.87: dia de guardar
   try{out.push(...assinAvisos());}catch(e){}
   /* v10.66: cada alerta tem id estável; quem não tem ganha um pelo texto. excluídos somem, lidos ficam apagados */
   const est=alEst();
@@ -1341,7 +1344,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber']];
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no app, no dia do aporte de cada meta']];
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -2398,7 +2401,7 @@ function go(t){
   TAB=t;NAV_EXPLICITA=true;
   gravaAba(t);
   if(t==='fii'){atualizaCotacoes();atualizaCripto();atualizaCDI();}
-  if(t==='metas'&&(S.metas||[]).some(m=>m.cdi))atualizaCDI().then(()=>{if(TAB==='metas')render();}).catch(()=>{});
+  if(t==='metas'&&(S.metas||[]).some(m=>m.cdi||m.ipca))atualizaCDI().then(()=>{if(TAB==='metas')render();}).catch(()=>{});
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   toggleSide(false);
   render();window.scrollTo(0,0);
@@ -2453,6 +2456,7 @@ function render(){
   const v=$('#view');
   if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(v.contains(ch.canvas))ch.destroy();}catch(e){}}); // v10.51: gráficos da tela antiga não ficam presos na memória
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
+  if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
   const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
   try{v.innerHTML=bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
@@ -2662,6 +2666,7 @@ function homeTopo(v,o){
     <div class="hB-tap tap" data-act="nav-contas" role="button" tabindex="0" aria-label="ver suas contas"><div class="hB-saldo nw fit${bp.s?' hB-saldoNeg':''}" aria-label="${OCULTO?'saldo oculto':(bp.s?'saldo negativo de ':'saldo de ')+brl(Math.abs(saldo))}"><span class="hB-cur">R$</span><span class="hB-num">${OCULTO?'•••••':bp.i+bp.d}</span></div>
     <div class="hB-sub">${Math.abs(var30)<0.005?'<span class="hB-var">sem variação</span> nos últimos 30 dias':`<span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias`}</div>
     ${I('chevR','hB-tapCh')}</div>
+    ${(()=>{const r=mtReservado();return r>0?`<button type="button" class="hB-mt" data-act="hm-go" data-id="metas" aria-label="${OCULTO?'valor oculto':brl(r)} reservado em metas, abrir metas">${I('piggy')}<span><b class="nw">${brl(r)}</b> reservado em metas</span>${I('chevR')}</button>`:'';})()}
     ${semanasHTML()}
     <div class="hB-strip">
       <div class="tap" data-act="nav-rec" role="button" tabindex="0" aria-label="ver receitas · ${esc(pl)}"><small><i class="hB-dot g"></i>Entrou</small><b class="nw fit">${brl(rec)}</b></div>
@@ -3055,9 +3060,9 @@ function patLiquido(){
   const inv=patrimonio(),bens=(S.bens||[]).reduce((a,b)=>a+cents(b.valor),0)/100;
   const cartoes=S.cartoes.reduce((a,c)=>a+cents(usadoCartaoTotal(c)),0)/100;
   const dividas=(S.passivos||[]).reduce((a,p)=>a+cents(p.saldo),0)/100;
-  const rec=empAbertoTotal();
-  const ativos=(cents(Math.max(0,contas))+cents(inv)+cents(bens)+cents(rec))/100,passivos=(cents(cartoes)+cents(dividas)+cents(Math.max(0,-contas)))/100;
-  return {contas,inv,bens,rec,cartoes,dividas,ativos,passivos,liq:(cents(ativos)-cents(passivos))/100};
+  const rec=empAbertoTotal(),mts=mtReservado(); // v10.87: o que saiu das contas para metas (guardei) continua no patrimônio
+  const ativos=(cents(Math.max(0,contas))+cents(inv)+cents(bens)+cents(rec)+cents(mts))/100,passivos=(cents(cartoes)+cents(dividas)+cents(Math.max(0,-contas)))/100;
+  const r={contas,inv,bens,rec,cartoes,dividas,ativos,passivos,liq:(cents(ativos)-cents(passivos))/100};if(mts>0)r.metas=mts;return r;
 }
 function fotoPat(){
   if(!S.patHist)S.patHist={};
@@ -3145,65 +3150,6 @@ function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())
 const META_COR=[['#22c55e','#0ea5e9'],['#8b5cf6','#ec4899'],['#f59e0b','#ef4444'],['#06b6d4','#6366f1'],['#10b981','#84cc16']];
 function brlK(v){if(OCULTO)return 'R$ •••';v=+v||0;const a=Math.abs(v),sg=v<0?'-':'';if(a<1000)return brl(v);const f=(x,u)=>sg+'R$ '+String(x>=100?Math.round(x):Math.round(x*10)/10).replace('.',',')+' '+u;if(a<999500)return f(a/1e3,'mil');if(a<999500000)return f(a/1e6,'mi');return f(a/1e9,'bi');}
 function metaIcone(n){const x=norm(n||'');const L=[[/aposent|previd|velhice|futuro/,'aposentadoria'],[/carro|moto|veic|automo/,'carro'],[/casa|apart|imovel|terreno|entrada|reforma/,'casa'],[/viag|ferias|mala|intercambio/,'mala'],[/estud|faculd|curso|educa|pos/,'educacao'],[/reserva|emergenc|seguran/,'piggy'],[/casament|presente|aniver|natal/,'presente'],[/celular|iphone|notebook|computador|pc|laptop|tv/,'laptop'],[/saude|cirurg|dente|tratament/,'saude'],[/pet|cachorro|gato/,'pet'],[/divida|quitar|emprest/,'receipt'],[/invest|acoes|fii|cripto/,'chart']];const h=L.find(([re])=>re.test(x));return h?h[1]:'flag';}
-function viewMetas(){
-  const R=ritmoEconomia();
-  /* metas com prazo reservam o que precisam por mês; o resto do ritmo se divide entre as sem prazo */
-  const abertas=S.metas.filter(m=>m.atual<m.alvo);
-  const reserva=abertas.filter(m=>m.prazo&&mesesAte(m.prazo)>0).reduce((a,m)=>a+pmtMeta(m.atual,m.alvo,mesesAte(m.prazo),taxaMesMeta(m)),0);
-  const semPrazo=abertas.filter(m=>!m.prazo).length;
-  const livre=R?Math.max(0,R.media-reserva):0,ativas=Math.max(1,semPrazo);
-  const porMeta=semPrazo?livre/semPrazo:0;
-  const cards=S.metas.map((m,i)=>{
-    const pct=m.alvo?Math.min(100,m.atual/m.alvo*100):0,falta=Math.max(0,m.alvo-m.atual);
-    const ic=metaIcone(m.nome),pal=META_COR[i%META_COR.length];
-    const R2=26,C2=2*Math.PI*R2,off=C2*(1-pct/100);
-    let chips=[],st='',nota='';
-    if(falta<=0){st='<span class="mtSt ok">'+I('star')+'<span>meta&nbsp;batida</span></span>';}
-    else if(m.prazo){const n=mesesAte(m.prazo);
-      if(n<=0){st='<span class="mtSt late">'+I('alert')+'<span>prazo&nbsp;vencido</span></span>';chips=[['faltam',brlK(falta)],['prazo',mesCurto(m.prazo)]];}
-      else{const r=taxaMesMeta(m),pm=pmtMeta(m.atual,m.alvo,n,r),ok=m.aporteMes?m.aporteMes>=pm-0.005:(R&&R.media>=reserva);
-        if(r){const jur=Math.max(0,m.alvo-m.atual-pm*n);nota=`rendendo ${String(m.pctCdi||100).replace('.',',')}% do CDI (${cdiAnoAtual().toFixed(2).replace('.',',')}% ao ano), os juros cobrem ${brl(jur)} da meta.`;}
-        else if(m.cdi)nota='buscando a taxa do CDI para incluir os juros.';st=R?`<span class="mtSt ${ok?'ok':'warn'}">${I(ok?'flag':'alert')}<span>${ok?'no&nbsp;ritmo':'acima&nbsp;do&nbsp;ritmo'}</span></span>`:'';
-        chips=[['faltam',brlK(falta)],['guardar/mês',brl(pm)],['prazo',mesCurto(m.prazo),n+(n>1?' meses':' mês')]];
-        if(m.aporteMes&&!ok)nota=`guardando ${brl(m.aporteMes)}/mês não chega no prazo. `+(nota||'');
-        else if(!m.aporteMes&&R&&!ok)nota=`seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas. `+(nota||'');}
-    }else if(m.aporteMes>0||porMeta>0||taxaMesMeta(m)&&m.atual>0){const pmM=m.aporteMes>0?m.aporteMes:porMeta,r=taxaMesMeta(m),n=mesesMeta(m.atual,m.alvo,pmM,r);
-      if(!isFinite(n)||n>600)chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)]];
-      else{const dt=mesAdd(mesOff(0),n);
-      chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];}
-      const nSem=r&&isFinite(n)?mesesMeta(m.atual,m.alvo,pmM,0):0;
-      nota=m.aporteMes?'':semPrazo>1?`ritmo = sua sobra média dividida entre ${semPrazo} metas sem prazo.`:reserva>0?'ritmo = o que sobra depois das metas com prazo.':'ritmo = sua sobra média por mês.';
-      if(r&&isFinite(n)&&isFinite(nSem)&&nSem>n)nota=(nota?nota+' ':'')+`com ${String(m.pctCdi||100).replace('.',',')}% do CDI chega ${nSem-n} ${nSem-n>1?'meses':'mês'} antes.`;
-      else if(m.cdi&&!r)nota=(nota?nota+' ':'')+'buscando a taxa do CDI para incluir os juros.';
-    }else chips=[['faltam',brlK(falta)]];
-    return `<div class="card meta mtx hov" style="--m1:${pal[0]};--m2:${pal[1]}">
-      <div class="mtHd">
-        <span class="mtIc">${I(ic)}</span>
-        <div class="mtNm"><b>${esc(m.nome)}</b><small>${m.prazo?'até '+mesCurto(m.prazo):'sem prazo'}${m.cdi?' · '+String(m.pctCdi||100).replace('.',',')+'% do CDI':''}</small></div>
-        <div class="mtRing"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R2}" class="rb"/><circle cx="32" cy="32" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span>${pct>0&&pct<1?'<1':Math.round(pct)}%</span></div>
-      </div>
-      <div class="mtVal"><b class="nw">${brl(m.atual)}</b><span>de ${brl(m.alvo)}</span>${st}</div>
-      <div class="bar mtBar"><i data-w="${pct}"></i></div>
-      ${chips.length?`<div class="mtChips">${chips.map(([k,v,e])=>`<span><small>${k}</small><b class="nw fit">${v}</b>${e?`<em>${e}</em>`:''}</span>`).join('')}</div>`:''}
-      ${nota?`<p class="mtNota">${I('gauge')}${nota}</p>`:''}
-      <div class="mtActs">
-        <button class="btn mtAp" data-act="aporte" data-id="${m.id}">${I('plus')}aporte</button>
-        <button class="mtB" data-act="edit-meta" data-id="${m.id}" aria-label="editar meta">${I('edit')}</button>
-        <button class="mtB del" data-act="del-meta" data-id="${m.id}" aria-label="excluir meta">${I('trash')}</button>
-      </div>
-    </div>`;
-  }).join('');
-  const tAlvo=S.metas.reduce((a,m)=>a+m.alvo,0),tAt=S.metas.reduce((a,m)=>a+m.atual,0);
-  const ritmo=R?`<div class="card mtRitmo"><div class="hmH"><h4>seu ritmo de economia</h4>${I('piggy')}</div>
-    <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
-    <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}.</p>
-    ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
-  return `
-  <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
-  ${ritmo}
-  ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
-  ${S.metas.length?cards:vazioHTML('flag','Nenhuma meta ainda','Comece por uma reserva de emergência. Escolha um prazo e o app calcula quanto guardar por mês.','<button class="btn sm" data-act="nova-meta">+ meta</button>')}`;
-}
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
@@ -3834,6 +3780,7 @@ function campoHTML(c){
     return `<div class="bkPick"><input type="hidden" name="${c.name}" value="${esc(c.value||'')}"><span class="bkPickLbl">Banco ou instituição</span><div class="bkList" role="listbox" aria-label="lista de bancos">${opts}<button type="button" class="bkOpt bkOther${c.outro?' on':''}" aria-selected="${!!c.outro}" data-n="" data-c="" data-l="" data-t=""><span class="bo-logo bo-plain"><span class="bl-ini">+</span></span><span class="bo-txt"><b>outra instituição</b><small>digitar o nome</small></span></button></div><label class="bkOutro" style="${c.outro?'':'display:none'}">Nome da instituição<input name="nomeLivre" value="${esc(c.outro||'')}" placeholder="ex: cooperativa X" autocomplete="off"></label></div>`;
   }
   if(c.type==='seg')return segHTML(c);
+  if(c.type==='html')return c.html||''; // v10.87: bloco montado pela tela (ex.: seletor da FIPE)
   if(c.type==='checkbox')return `<label class="ckrow"><input type="checkbox" name="${c.name}" value="1" ${c.value?'checked':''}><span>${esc(c.label)}</span></label>`;
   if(c.type==='select')return `<label>${esc(c.label)}<select name="${c.name}">${c.options.map(o=>`<option value="${esc(o.v)}" ${String(o.v)===String(c.value)?'selected':''}>${esc(o.t)}</option>`).join('')}</select></label>`;
   const attrs=[
@@ -4226,18 +4173,21 @@ function montaImport(){
     const n=norm(l.desc);let ign='';
     /* v10.79: empréstimo ou devolução lançado à mão que o banco trouxe agora: liga um ao outro em vez de duplicar */
     const vm=!dup&&ehConta&&!l.propria&&!l.transf?empManualIgual(l,d,usados):null;
+    /* v10.87: aporte de meta lançado à mão (guardei, saindo desta conta) */
+    const vmt=!dup&&!vm&&ehConta&&!l.transf?metaManualIgual(l,d,usados):null;l.vincMeta=vmt?vmt.id:'';if(vmt)usados.add(vmt.id);
     l.vinc=vm?vm.id:'';if(vm)usados.add(vm.id);
     /* v10.80: receita prevista que o banco trouxe: casa pela data de RECEBIMENTO (até 3 dias), nunca pelo dia trabalhado.
        vira recebida com a data e o id do banco, sem lançar de novo */
-    const pv=!dup&&!vm&&ehConta&&l.valor>0&&!l.propria&&!l.transf?prevReceitaIgual(l,d,usados):null;
+    const pv=!dup&&!vm&&!vmt&&ehConta&&l.valor>0&&!l.propria&&!l.transf?prevReceitaIgual(l,d,usados):null;
     l.vincPrev=pv?pv.id:'';if(pv)usados.add(pv.id);
     /* v10.79: Pix com o nome de quem te deve (entrada até o que falta) ou de quem já pegou emprestado (saída) */
-    const es=!dup&&!vm&&ehConta&&!l.propria&&!l.transf?empCasa(l.desc,Math.abs(l.valor),l.data,l.valor>0?'in':'out'):null;
+    const es=!dup&&!vm&&!vmt&&ehConta&&!l.propria&&!l.transf?empCasa(l.desc,Math.abs(l.valor),l.data,l.valor>0?'in':'out'):null;
     if(!es||l.empSug!==es.id)l.empOk=false;l.empSug=es?es.id:'';
     const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     if(dup||dupT)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup)ign='já está no app';
     else if(pv)ign='é a receita prevista '+(nomeTx(pv).n||pv.descricao||pv.categoria).slice(0,40)+' (recebe '+fmtDataCurta(pv.data)+') · fica marcada como recebida';
+    else if(vmt)ign='já lançado como guardado na meta '+((S.metas.find(x=>x.id===vmt.meta)||{}).nome||'').slice(0,30)+' · fica ligado ao do banco';
     else if(vm)ign='já lançado como '+(vm.empDir==='in'?'devolução de ':'empréstimo para ')+primeiroNome(empNome(vm.emp))+' · fica ligado ao do banco';
     else if(dupT)ign='já lançado como transferência';
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
@@ -4245,7 +4195,7 @@ function montaImport(){
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT||!!vm||!!pv;if(vm||pv)l.on=false;
+    l.ign=ign;l.dup=dup||dupT||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -4281,6 +4231,7 @@ function confirmaImport(){
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
     if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
@@ -4760,7 +4711,7 @@ function empManualIgual(l,d,usados){
    saída numa conta sua + entrada noutra conta sua, mesmo valor, até 2 dias de diferença = provável transferência.
    juntar transforma o par num só lançamento tipo transf (não conta como receita nem despesa). */
 function ladoConc(t){
-  if(t.emp)return null;
+  if(t.emp||t.meta)return null;
   if(t.faturaKey||t.cartao||!efetivo(t)||!t.data)return null;
   if(t.tipo==='despesa'&&t.conta)return {s:'out',b:t.conta};
   if(t.tipo==='receita'&&t.conta)return {s:'in',b:t.conta};
@@ -5489,11 +5440,13 @@ async function bcbSerie(cod,ini,fim){
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi);
-  if(!rfs.length&&!mCdi)return;
-  const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
+  if(!rfs.length&&!mCdi&&!mIpca)return;
+  const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');if(mIpca)usa.add('ipca');
+  /* v10.87: a caixinha da meta rende desde a base e cada aporte; o alvo com IPCA corrige desde alvoEm */
+  const mDt={cdi:(S.metas||[]).filter(m=>m.cdi).flatMap(m=>[m.baseEm].concat((m.aportes||[]).map(a=>a.d))).filter(Boolean),ipca:(S.metas||[]).filter(m=>m.ipca&&m.alvoEm).map(m=>m.alvoEm+'-01')};
   const c=cdiCache();c.sel=c.sel||{};c.ipca=c.ipca||{};c.tr=c.tr||{};c.emX=c.emX||{};const hj=hojeISO();
-  const iniDe=ks=>{const ds=rfs.filter(f=>ks.includes(rfIdxOf(f))).flatMap(f=>rfAportes(f).map(a=>a.d)).sort();return ds[0]||isoDe(new Date(Date.now()-12*864e5));};
+  const iniDe=ks=>{const ds=rfs.filter(f=>ks.includes(rfIdxOf(f))).flatMap(f=>rfAportes(f).map(a=>a.d)).concat(ks.includes('cdi')?mDt.cdi:[],ks.includes('ipca')?mDt.ipca:[]).sort();return ds[0]||isoDe(new Date(Date.now()-12*864e5));};
   const ultS=Object.keys(c.s).sort().pop()||'';
   let ok=true;const pede=[];
   if(usa.has('cdi')||usa.has('cdimais')){const ini=iniDe(['cdi','cdimais']);
@@ -5771,41 +5724,522 @@ function pmtMeta(at,alvo,n,r){if(n<=0)return Math.max(0,alvo-at);if(!r)return Ma
 /* em quantos meses chega guardando 'pm' por mês */
 function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.ceil((alvo-at)/pm-1e-9):Infinity;
   if(pm<=0&&at<=0)return Infinity;const n=Math.log((alvo*r+pm)/(at*r+pm))/Math.log(1+r);return isFinite(n)&&n>0?Math.ceil(n-1e-9):Infinity;}
+/* ===== v10.87: metas como cofre =====
+   Uma meta junta dinheiro de várias fontes:
+   - caixinha da meta (m.atual, com m.cdi/m.pctCdi): o que já existia. m.atual continua sendo o principal guardado,
+     então aparelhos antigos e metas antigas mostram exatamente o mesmo valor;
+   - ativos de Investimentos (m.ativos: {fid,pct,desde,reinv}): a meta "é dona" de pct% do valor de mercado do ativo.
+     A soma do mesmo ativo entre todas as metas nunca passa de 100%;
+   - ativos a comprar (m.planos: {id,tipo,nome,valor}): planejados, ainda sem posição (não somam no saldo).
+   Saldo = caixinha (+ rendimento do CDI das partes com data) + Σ(valor de mercado × pct) + proventos reinvestidos.
+   Alvo: valor fixo, fixo corrigido pelo IPCA (SGS 433) ou um veículo da tabela FIPE (m.fipe, guarda o último valor).
+   Aporte ("guardei"): vira histórico (m.aportes) e, quando sai de uma conta, um lançamento tipo transf (t.meta) que
+   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Um Pix do banco igual (Pluggy) é ligado, não duplicado. */
+const MT_VOL={BTC:.55,ETH:.7,SOL:.9,XRP:.85,BNB:.65,ADA:.85,DOGE:1,LINK:.9,USDT:.03,USDC:.03}; // volatilidade anual de referência (aprox. histórica)
+const MT_COR={caixa:'#22c55e',rf:'#0ea5e9',fii:'#a78bfa',acao:'#f59e0b',cripto:'#f97316',plano:'#94a3b8'};
+const MT_GL={caixa:'caixinha',rf:'renda fixa',fii:'FII',acao:'ações',cripto:'cripto',plano:'a comprar'};
+function mtGrupo(f){const t=typeof f==='string'?f:tipoOf(f);return t==='rf'?'rf':t==='cripto'?'cripto':t==='fii'?'fii':'acao';}
+function mtProFontes(){return pode('investimentos');}
+function mtAtivos(m){return (m.ativos||[]).map(a=>({a,f:S.fiis.find(x=>x.id===a.fid)})).filter(x=>x.f&&x.a.pct>0);}
+/* quanto do ativo já está em metas (opcional: sem contar uma meta) */
+function mtAlocado(fid,exceto){return (S.metas||[]).reduce((s,m)=>m.id===exceto?s:s+(m.ativos||[]).filter(a=>a.fid===fid).reduce((q,a)=>q+(+a.pct||0),0),0);}
+function mtValorAtivo(f){return (+f.cotas||0)*(+f.preco||0);}
+function mtCusto(f){const v=mtValorAtivo(f);return f.pago>0?+f.pago:v;}
+function mtProventos(f,desde){return (f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&(!desde||o.data>=desde)).reduce((s,o)=>s+(+o.valor||0),0);}
+/* caixinha: principal (m.atual) e o rendimento do CDI das partes com data (base desde m.baseEm, cada aporte desde o seu dia).
+   meta antiga sem baseEm e sem aportes: rendimento 0, igual a antes. */
+function mtCaixa(m){
+  const pri=Math.max(0,+m.atual||0);if(!m.cdi||!pri)return {pri,rend:0,base:pri,partes:[]};
+  const ap=(m.aportes||[]).slice(Math.max(0,m.baseN|0)).filter(a=>a.fonte==='manual'&&a.v>0&&a.d);
+  const soma=ap.reduce((s,a)=>s+a.v,0),base=Math.max(0,pri-soma),pc=+m.pctCdi||100,hj=hojeISO();
+  const partes=[];if(base>0)partes.push({v:base,d:m.baseEm||''});ap.forEach(a=>partes.push({v:a.v,d:a.d}));
+  let rend=0;partes.forEach(p=>{if(!p.d||p.d>=hj)return;const r=rfCresce(p.v,p.d,'cdi',pc,hj);rend+=Math.max(0,r.v-p.v);});
+  return {pri,rend:c2(rend),base,partes};
+}
+function mtSaldoD(m){
+  const cx=mtCaixa(m);let ativos=0,custo=0,rfG=0,varG=0,prov=0,cripto=0;
+  mtAtivos(m).forEach(({a,f})=>{const k=a.pct/100,v=mtValorAtivo(f)*k,c=mtCusto(f)*k,g=mtGrupo(f);
+    ativos+=v;custo+=c;if(g==='rf')rfG+=v-c;else varG+=v-c;if(g==='cripto')cripto+=v;
+    if(a.reinv&&(g==='fii'||g==='acao'))prov+=mtProventos(f,a.desde)*k;});
+  const total=c2(cx.pri+cx.rend+ativos+prov);
+  return {total,caixa:c2(cx.pri+cx.rend),cx,ativos:c2(ativos),voce:c2(cx.pri+custo),cdi:c2(cx.rend+rfG),prov:c2(prov),varia:c2(varG),cripto:c2(cripto)};
+}
+function saldoMeta(m){return mtSaldoD(m).total;}
+/* alvo: FIPE (último valor salvo), fixo corrigido pelo IPCA (meses publicados desde alvoEm) ou fixo */
+function mtIpcaFator(desde){const I=(cdiCache().ipca)||{};let f=1;Object.keys(I).sort().forEach(k=>{if(k>=desde)f*=1+I[k]/100;});return f;}
+function alvoMeta(m){
+  if(m.fipe&&m.fipe.v>0)return +m.fipe.v;
+  if(m.ipca&&m.alvoBase>0&&m.alvoEm)return c2(m.alvoBase*mtIpcaFator(m.alvoEm));
+  return +m.alvo||0;
+}
+/* tem algo do modelo novo? (meta antiga continua no cálculo antigo, idêntico) */
+function mtNova(m){return !!((m.ativos&&m.ativos.length)||(m.planos&&m.planos.length)||m.fipe||m.ipca||(m.aportes&&m.aportes.length)||m.baseEm);}
+/* dinheiro que saiu das contas para metas (lançamentos t.meta) e ainda está lá, com o rendimento proporcional */
+function mtReservado(){
+  let s=0;(S.metas||[]).forEach(m=>{const tx=S.tx.filter(t=>t.meta===m.id&&t.tipo==='transf'&&efetivo(t));if(!tx.length)return;
+    const v=tx.reduce((a,t)=>a+cents(t.valor),0)/100,cx=mtCaixa(m),fr=cx.pri>0?Math.min(1,v/cx.pri):0;s+=Math.min(v,cx.pri)+cx.rend*fr;});
+  return c2(s);
+}
+/* sequência de meses cumpridos (Σ aportes no mês ≥ aporte do mês, ou algum aporte quando não há valor definido) */
+function mtStreak(m){
+  const ap=(m.aportes||[]).filter(a=>a.v>0&&a.d);if(!ap.length)return {n:0,mesOk:false};
+  const por={};ap.forEach(a=>{const k=a.d.slice(0,7);por[k]=(por[k]||0)+cents(a.v);});
+  const ok=k=>(por[k]||0)>0&&(!(m.aporteMes>0)||por[k]>=cents(m.aporteMes));
+  const ini=Object.keys(por).sort()[0];let k=mesAtual(),n=0;const mesOk=ok(k);if(!mesOk)k=mesAdd(k,-1);
+  while(k>=ini&&ok(k)){n++;k=mesAdd(k,-1);}
+  return {n,mesOk};
+}
+/* dia sugerido: o da maior receita fixa (salário), senão 5 */
+function mtDiaSugerido(){const r=(S.fixas||[]).filter(f=>f.tipo==='receita'&&f.freq==='mensal').sort((a,b)=>b.valor-a.valor)[0];return r?r.dia:5;}
+/* ---------- previsão ----------
+   mês a mês, aporte no fim do mês. Componentes:
+   caixinha: CDI × % (IR regressivo sobre o ganho de cada parte pela idade); renda fixa: taxa anual do produto (IR se o produto tem);
+   FII/ações: preço parado, proventos pelo DY médio (dpc/preço) reinvestidos quando "reinv" (isentos); cripto: 0% esperado,
+   com faixa de ±1 desvio pela volatilidade anual. Linha "só aportes" = saldo de hoje + aportes. */
+function mtTaxaRF(f){const a=rfIdxOf(f)==='fixo'?0:rfAnual(f);const t=a>0?a:cdiAnoAtual();return t>0?Math.pow(1+t/100,1/12)-1:0;}
+function mtComp(m){
+  const cx=mtCaixa(m),hj=hojeISO(),C=[];
+  const rC=taxaMesMeta(m);
+  if(cx.pri>0||!mtAtivos(m).length){
+    if(cx.partes.length&&m.cdi)cx.partes.forEach((p,i)=>{const rd=p.d&&p.d<hj?rfCresce(p.v,p.d,'cdi',+m.pctCdi||100,hj).v:p.v;C.push({id:'manual',v:rd,pri:p.v,r:rC,ir:true,d0:p.d?Math.max(0,diasEntre(p.d,hj)):0,g:'caixa'});});
+    else C.push({id:'manual',v:cx.pri,pri:cx.pri,r:rC,ir:!!m.cdi,d0:0,g:'caixa'});
+  }
+  mtAtivos(m).forEach(({a,f})=>{const k=a.pct/100,g=mtGrupo(f),v=mtValorAtivo(f)*k,P=RF_PROD[rfProdOf(f)]||{};
+    if(g==='rf')C.push({id:f.id,v,pri:mtCusto(f)*k,r:mtTaxaRF(f),ir:!!P.ir,d0:f.aplicEm?Math.max(0,diasEntre(f.aplicEm,hj)):0,g});
+    else if(g==='cripto')C.push({id:f.id,v,pri:v,r:0,ir:false,d0:0,g,vol:MT_VOL[String(f.ticker||'').toUpperCase()]||.85});
+    else{const y=f.preco>0&&f.dpc>0?f.dpc/f.preco:0;C.push({id:f.id,v,pri:v,r:a.reinv?y:0,ir:false,d0:0,g});}
+  });
+  return C;
+}
+function mtIR(c,vk,dias){if(!c.ir)return vk;const g=vk-c.pri;return g>0?vk-g*IR_RF(dias)/100:vk;}
+function mtProj(m,extra,N){
+  const C=mtComp(m),P=Math.max(0,(+m.aporteMes||0)+(+extra||0)),alvo=alvoMeta(m);
+  const dest=C.find(c=>c.id===(m.apDest||'manual'))||C.find(c=>c.id==='manual')||{r:taxaMesMeta(m),ir:!!m.cdi};
+  const SD0=mtSaldoD(m),S0=SD0.total,provHoje=SD0.prov;N=N||600;
+  const L1=[S0],L2=[S0],lo=[S0],hi=[S0];let k0=S0>=alvo&&alvo>0?0:-1;
+  for(let k=1;k<=N;k++){
+    let t=0,cU=0,cD=0;
+    C.forEach(c=>{const vk=c.v*Math.pow(1+c.r,k);t+=mtIR(c,vk,c.d0+Math.round(k*30.4375));
+      if(c.vol){const s=c.vol*Math.sqrt(k/12);cU+=c.v*(Math.exp(s)-1);cD+=c.v*(1-Math.exp(-s));}});
+    for(let j=1;j<=k;j++){const vk=P*Math.pow(1+(dest.r||0),k-j);t+=dest.ir?mtIR({ir:1,pri:P},vk,Math.round((k-j)*30.4375)):vk;}
+    t+=provHoje; // proventos reinvestidos já recebidos: entram parados
+    L1.push(S0+P*k);L2.push(t);lo.push(t-cD);hi.push(t+cU);
+    if(k0<0&&alvo>0&&t>=alvo-0.005)k0=k;
+    if(k0>=0&&k>=Math.max(k0+2,12)&&!(m.prazo&&k<mesesAte(m.prazo)+1))break;
+  }
+  return {L1,L2,lo,hi,k:k0,P,alvo,S0};
+}
+/* quando chega (mês YYYY-MM) ou '' */
+function mtChega(m,extra){const p=mtProj(m,extra);return p.k>=0?mesAdd(mesAtual(),p.k):'';}
+function mtMesTxt(ym){return ym?MESES[+ym.slice(5,7)-1]+'/'+ym.slice(0,4):'';}
+/* cripto acima do limite com o prazo (ou a chegada prevista) a menos de 12 meses */
+function mtRisco(m){
+  const D=mtSaldoD(m);if(!(D.total>0)||!(D.cripto>0))return null;
+  const lim=(m.cripMax>0?m.cripMax:20),pc=D.cripto/D.total*100;if(pc<=lim+0.05)return null;
+  const ch=m.prazo||mtChega(m),n=ch?mesesAte(ch):99;
+  return {pc,lim,n,mover:c2(D.cripto-D.total*lim/100),perto:n<=12};
+}
+/* ---------- FIPE (parallelum v2, v1 como reserva) ---------- */
+const FIPE_V2='https://fipe.parallelum.com.br/api/v2/',FIPE_V1='https://parallelum.com.br/fipe/api/v1/';
+const FIPE_TP={cars:['Carro','carros'],motorcycles:['Moto','motos'],trucks:['Caminhão','caminhoes']};
+const FIPE_MEM={};
+async function fipeJson(url){const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),9000);
+  try{const r=await fetch(url,{signal:ctl.signal});if(!r.ok)throw new Error('http '+r.status);const j=await r.json();if(j&&j.error)throw new Error(String(j.error));return j;}finally{clearTimeout(to);}}
+/* lista de marcas, modelos ou anos: [{c,n}] */
+async function fipeLista(tp,marca,modelo){
+  const k=[tp,marca||'',modelo||''].join('|');if(FIPE_MEM[k])return FIPE_MEM[k];
+  const v1=FIPE_TP[tp][1],nr=L=>(Array.isArray(L)?L:[]).map(x=>({c:String(x.code!=null?x.code:x.codigo).replace(/[^\w.-]/g,'').slice(0,20),n:String(x.name!=null?x.name:x.nome).slice(0,90)})).filter(x=>x.c&&x.n);
+  let L;
+  try{L=await fipeJson(FIPE_V2+tp+'/brands'+(marca?'/'+marca+'/models'+(modelo?'/'+modelo+'/years':''):''));}
+  catch(e){const j=await fipeJson(FIPE_V1+v1+'/marcas'+(marca?'/'+marca+'/modelos'+(modelo?'/'+modelo+'/anos':''):''));L=marca&&!modelo?j.modelos:j;}
+  return FIPE_MEM[k]=nr(L);
+}
+async function fipePreco(fp){
+  let j,v,ref,cod;
+  try{j=await fipeJson(FIPE_V2+fp.tp+'/brands/'+fp.b.c+'/models/'+fp.mo.c+'/years/'+fp.a.c);v=numExt(j.price);ref=j.referenceMonth;cod=j.codeFipe;}
+  catch(e){j=await fipeJson(FIPE_V1+FIPE_TP[fp.tp][1]+'/marcas/'+fp.b.c+'/modelos/'+fp.mo.c+'/anos/'+fp.a.c);v=numExt(j.Valor);ref=j.MesReferencia;cod=j.CodigoFipe;}
+  if(!(v>0))throw new Error('sem preço');
+  return {v:c2(v),ref:String(ref||'').slice(0,30),cod:String(cod||'').replace(/[^\d-]/g,'').slice(0,12)};
+}
+/* atualiza o valor das metas FIPE no máximo uma vez por dia; falhou = continua com o último valor salvo */
+let FIPE_RODANDO=false;
+async function fipeAtualiza(forca){
+  if(FIPE_RODANDO||!navigator.onLine)return false;const hj=hojeISO(),L=(S.metas||[]).filter(m=>m.fipe&&m.fipe.b&&(forca||m.fipe.chk!==hj));
+  if(!L.length)return false;FIPE_RODANDO=true;let mud=false;
+  try{for(const m of L){try{const r=await fipePreco(m.fipe);const f=m.fipe;
+      if(r.v!==f.v){f.hist=(f.hist||[]).concat([[hj,r.v]]).slice(-24);}
+      f.v=r.v;f.ref=r.ref;if(r.cod)f.cod=r.cod;f.chk=hj;f.erro='';m.alvo=r.v;mud=true;}
+    catch(e){m.fipe.chk=hj;m.fipe.erro='1';mud=true;}}}
+  finally{FIPE_RODANDO=false;}
+  if(mud){salvar();if(TAB==='metas')render();}
+  return mud;
+}
+function fipeVar(m){const f=m.fipe;if(!f||!(f.v0>0)||!(f.v>0))return null;const d=c2(f.v-f.v0);return Math.abs(d)<0.5?null:{d,desde:f.em0};}
+/* ---------- tela ---------- */
+function mtFontesChips(m,max){
+  const out=[];const cx=mtCaixa(m);
+  if(cx.pri>0||m.cdi||!(m.ativos||[]).length)out.push({g:'caixa',t:m.cdi?'caixinha '+String(m.pctCdi||100).replace('.',',')+'% CDI':'caixinha'});
+  mtAtivos(m).forEach(({a,f})=>out.push({g:mtGrupo(f),t:(f.ticker||f.nome||'ativo').slice(0,14)+' '+String(c2(a.pct)).replace('.',',')+'%'}));
+  (m.planos||[]).forEach(p=>out.push({g:'plano',t:'a comprar · '+(p.nome||'ativo').slice(0,14)}));
+  const L=max&&out.length>max?out.slice(0,max).concat([{g:'mais',t:'+'+(out.length-max)}]):out;
+  return `<div class="mtFt" aria-label="fontes da meta">${L.map(x=>`<span class="mtF ${x.g}" style="--fc:${MT_COR[x.g]||'#64748b'}"><i></i>${esc(x.t)}</span>`).join('')}</div>`;
+}
+function viewMetas(){
+  const R=ritmoEconomia();
+  if((S.metas||[]).some(m=>m.fipe&&m.fipe.chk!==hojeISO()))setTimeout(()=>fipeAtualiza().catch(()=>{}),0);
+  const SD={};S.metas.forEach(m=>{SD[m.id]=saldoMeta(m);});
+  const at=m=>SD[m.id],alvoDe=m=>alvoMeta(m);
+  /* metas com prazo reservam o que precisam por mês; o resto do ritmo se divide entre as sem prazo */
+  const abertas=S.metas.filter(m=>at(m)<alvoDe(m));
+  const reserva=abertas.filter(m=>m.prazo&&mesesAte(m.prazo)>0).reduce((a,m)=>a+pmtMeta(at(m),alvoDe(m),mesesAte(m.prazo),taxaMesMeta(m)),0);
+  const semPrazo=abertas.filter(m=>!m.prazo).length;
+  const livre=R?Math.max(0,R.media-reserva):0;
+  const porMeta=semPrazo?livre/semPrazo:0;
+  const cards=S.metas.map((m,i)=>{
+    const sA=at(m),alvo=alvoDe(m),nova=mtNova(m);
+    const pct=alvo?Math.min(100,sA/alvo*100):0,falta=Math.max(0,alvo-sA);
+    const ic=metaIcone(m.nome),pal=META_COR[i%META_COR.length];
+    const R2=26,C2=2*Math.PI*R2,off=C2*(1-pct/100);
+    let chips=[],st='',nota='';
+    if(falta<=0){st='<span class="mtSt ok">'+I('star')+'<span>meta&nbsp;batida</span></span>';}
+    else if(m.prazo){const n=mesesAte(m.prazo);
+      if(n<=0){st='<span class="mtSt late">'+I('alert')+'<span>prazo&nbsp;vencido</span></span>';chips=[['faltam',brlK(falta)],['prazo',mesCurto(m.prazo)]];}
+      else{const r=taxaMesMeta(m),pm=pmtMeta(sA,alvo,n,r),ok=m.aporteMes?m.aporteMes>=pm-0.005:(R&&R.media>=reserva);
+        if(r){const jur=Math.max(0,alvo-sA-pm*n);nota=`rendendo ${String(m.pctCdi||100).replace('.',',')}% do CDI (${cdiAnoAtual().toFixed(2).replace('.',',')}% ao ano), os juros cobrem ${brl(jur)} da meta.`;}
+        else if(m.cdi)nota='buscando a taxa do CDI para incluir os juros.';st=R?`<span class="mtSt ${ok?'ok':'warn'}">${I(ok?'flag':'alert')}<span>${ok?'no&nbsp;ritmo':'acima&nbsp;do&nbsp;ritmo'}</span></span>`:'';
+        chips=[['faltam',brlK(falta)],['guardar/mês',pm>=1000?brlK(pm):brl(pm)],['prazo',mesCurto(m.prazo),n+(n>1?' meses':' mês')]]; // v10.87: valor longo não corta mais (R$ 3.727,…)
+        if(m.aporteMes&&!ok)nota=`guardando ${brl(m.aporteMes)}/mês não chega no prazo. `+(nota||'');
+        else if(!m.aporteMes&&R&&!ok)nota=`seu ritmo hoje é ${brl(Math.max(0,R.media))}/mês para todas as metas. `+(nota||'');}
+    }else if(nova&&(m.aporteMes>0||mtAtivos(m).length)){const ch=mtChega(m);
+      chips=[['faltam',brlK(falta)],['guardar/mês',brlK(m.aporteMes||0)]];if(ch)chips.push(['previsão',mtMesTxt(ch),'em '+(()=>{const n=mesesAte(ch)-1;return n>=24?Math.round(n/12)+' anos':Math.max(1,n)+(n>1?' meses':' mês');})()]);
+    }else if(m.aporteMes>0||porMeta>0||taxaMesMeta(m)&&sA>0){const pmM=m.aporteMes>0?m.aporteMes:porMeta,r=taxaMesMeta(m),n=mesesMeta(sA,alvo,pmM,r);
+      if(!isFinite(n)||n>600)chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)]];
+      else{const dt=mesAdd(mesOff(0),n);
+      chips=[['faltam',brlK(falta)],[m.aporteMes?'guardar/mês':'ritmo/mês',brlK(pmM)],['previsão',mesCurto(dt),'em '+(n>=24?Math.round(n/12)+' anos':n+(n>1?' meses':' mês'))]];}
+      const nSem=r&&isFinite(n)?mesesMeta(sA,alvo,pmM,0):0;
+      nota=m.aporteMes?'':semPrazo>1?`ritmo = sua sobra média dividida entre ${semPrazo} metas sem prazo.`:reserva>0?'ritmo = o que sobra depois das metas com prazo.':'ritmo = sua sobra média por mês.';
+      if(r&&isFinite(n)&&isFinite(nSem)&&nSem>n)nota=(nota?nota+' ':'')+`com ${String(m.pctCdi||100).replace('.',',')}% do CDI chega ${nSem-n} ${nSem-n>1?'meses':'mês'} antes.`;
+      else if(m.cdi&&!r)nota=(nota?nota+' ':'')+'buscando a taxa do CDI para incluir os juros.';
+    }else chips=[['faltam',brlK(falta)]];
+    const rk=nova?mtRisco(m):null,sq=nova?mtStreak(m):{n:0},fv=fipeVar(m);
+    if(rk&&rk.perto)nota=`${Math.round(rk.pc)}% em cripto e faltam ${rk.n} ${rk.n>1?'meses':'mês'}. Abra a meta para ver a sugestão.`+(nota?' '+nota:'');
+    else if(fv)nota=`${m.fipe.mo?'o '+(metaIcone(m.nome)==='carro'?'carro':'veículo'):'o alvo'} ${fv.d>0?'subiu':'caiu'} ${brl(Math.abs(fv.d))} desde ${fmtDataCurta(fv.desde)}.`+(nota?' '+nota:'');
+    return `<div class="card meta mtx hov${nova?' mtNovo':''}" style="--m1:${pal[0]};--m2:${pal[1]}">
+      <div class="mtHd tap" data-act="meta-abre" data-id="${m.id}" role="button" tabindex="0" aria-label="abrir meta ${esc(m.nome)}">
+        <span class="mtIc">${I(ic)}</span>
+        <div class="mtNm"><b>${esc(m.nome)}</b><small>${m.prazo?'até '+mesCurto(m.prazo):'sem prazo'}${m.cdi&&!nova?' · '+String(m.pctCdi||100).replace('.',',')+'% do CDI':''}${m.fipe?' · FIPE':m.ipca?' · corrigido pelo IPCA':''}${sq.n>1?' · '+sq.n+' meses seguidos':''}</small></div>
+        <div class="mtRing"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R2}" class="rb"/><circle cx="32" cy="32" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span>${pct>0&&pct<1?'<1':Math.round(pct)}%</span></div>
+      </div>
+      <div class="mtVal"><b class="nw">${brl(sA)}</b><span>de ${brl(alvo)}</span>${st}</div>
+      <div class="bar mtBar"><i data-w="${pct}"></i></div>
+      ${nova?mtFontesChips(m,4):''}
+      ${chips.length?`<div class="mtChips">${chips.map(([k,v,e])=>`<span><small>${k}</small><b class="nw fit">${v}</b>${e?`<em>${e}</em>`:''}</span>`).join('')}</div>`:''}
+      ${nota?`<p class="mtNota${rk&&rk.perto?' warn':''}">${I(rk&&rk.perto?'alert':'gauge')}${nota}</p>`:''}
+      <div class="mtActs">
+        <button class="btn mtAp" data-act="aporte" data-id="${m.id}">${I('plus')}guardei</button>
+        <button class="mtB" data-act="meta-abre" data-id="${m.id}" aria-label="ver detalhes da meta">${I('chart')}</button>
+        <button class="mtB" data-act="edit-meta" data-id="${m.id}" aria-label="editar meta">${I('edit')}</button>
+        <button class="mtB del" data-act="del-meta" data-id="${m.id}" aria-label="excluir meta">${I('trash')}</button>
+      </div>
+    </div>`;
+  }).join('');
+  const tAlvo=S.metas.reduce((a,m)=>a+alvoDe(m),0),tAt=S.metas.reduce((a,m)=>a+at(m),0);
+  const ritmo=R?`<div class="card mtRitmo"><div class="hmH"><h4>seu ritmo de economia</h4>${I('piggy')}</div>
+    <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
+    <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}.</p>
+    ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
+  return `
+  <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  ${ritmo}
+  ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
+  ${S.metas.length?cards:vazioHTML('flag','Nenhuma meta ainda','Comece por uma reserva de emergência. Escolha um prazo e o app calcula quanto guardar por mês.','<button class="btn sm" data-act="nova-meta">+ meta</button>')}`;
+}
+/* gráfico da previsão (SVG, sem biblioteca): faixa da cripto, só aportes (tracejada), com rendimento e o alvo */
+function mtGraficoSVG(p,prazoK){
+  const n=Math.min(p.L2.length-1,Math.max(12,p.k>=0?p.k+2:Math.min(p.L2.length-1,120)));
+  const W=340,H=170,pl=6,pr=6,pt=10,pb=22;
+  const vals=[].concat(p.hi.slice(0,n+1),p.L1.slice(0,n+1),[p.alvo]);const mx=Math.max(1,...vals)*1.06,mn=0;
+  const X=i=>pl+(W-pl-pr)*i/Math.max(1,n),Y=v=>pt+(H-pt-pb)*(1-(v-mn)/(mx-mn));
+  const ln=A=>A.slice(0,n+1).map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');
+  const temBanda=p.hi.some((v,i)=>i<=n&&v-p.lo[i]>0.5);
+  const banda=temBanda?'M'+p.hi.slice(0,n+1).map((v,i)=>X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('L')+'L'+p.lo.slice(0,n+1).map((v,i)=>[i,v]).reverse().map(([i,v])=>X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('L')+'Z':'';
+  const ticks=[0,Math.round(n/2),n].map(i=>`<text x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':i===n?'end':'middle'}">${mtMesTxt(mesAdd(mesAtual(),i))}</text>`).join('');
+  const kx=p.k>=0&&p.k<=n?`<line class="gK" x1="${X(p.k).toFixed(1)}" x2="${X(p.k).toFixed(1)}" y1="${pt}" y2="${H-pb}"/><circle class="gKp" cx="${X(p.k).toFixed(1)}" cy="${Y(p.L2[p.k]).toFixed(1)}" r="4"/>`:'';
+  const pz=prazoK>0&&prazoK<=n?`<line class="gP" x1="${X(prazoK).toFixed(1)}" x2="${X(prazoK).toFixed(1)}" y1="${pt}" y2="${H-pb}"/>`:'';
+  return `<svg class="mtG" viewBox="0 0 ${W} ${H}" role="img" aria-label="previsão da meta: ${p.k>=0?'chega em '+mtMesTxt(mesAdd(mesAtual(),p.k)):'não chega no horizonte do gráfico'}">
+    ${banda?`<path class="gB" d="${banda}"/>`:''}
+    <line class="gA" x1="${pl}" x2="${W-pr}" y1="${Y(p.alvo).toFixed(1)}" y2="${Y(p.alvo).toFixed(1)}"/>
+    ${pz}<path class="g1" d="${ln(p.L1)}"/><path class="g2" d="${ln(p.L2)}"/>${kx}${ticks}</svg>`;
+}
+function abreMeta(id){
+  const m=S.metas.find(x=>x.id===id);if(!m)return;
+  const D=mtSaldoD(m),alvo=alvoMeta(m),pct=alvo?Math.min(100,D.total/alvo*100):0,box=$('#modal');
+  const p=mtProj(m,0),pk=m.prazo?mesesAte(m.prazo)-1:0,ch=p.k>=0?mesAdd(mesAtual(),p.k):'';
+  const rk=mtRisco(m),sq=mtStreak(m),fv=fipeVar(m),pro=mtProFontes();
+  const R2=44,C2=2*Math.PI*R2,off=C2*(1-pct/100),i=S.metas.indexOf(m),pal=META_COR[i%META_COR.length];
+  const dec=[['voce','de você',D.voce,'#22c55e'],['cdi','rendimento (CDI/renda fixa)',D.cdi,'#0ea5e9'],['prov','proventos',D.prov,'#a78bfa'],['varia','variação dos ativos',D.varia,D.varia<0?'#f87171':'#f59e0b']].filter(x=>Math.abs(x[2])>=0.005||x[0]==='voce');
+  const pos=dec.reduce((s,x)=>s+Math.max(0,x[2]),0)||1;
+  const fonteL=[];
+  if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
+  mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(f.ticker||f.nome||'ativo')}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+  (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(pl.nome||'ativo')}</b><small>a comprar · ${MT_GL[mtGrupo(pl.tipo)]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
+  const hist=(m.aportes||[]).slice().reverse().slice(0,24);
+  const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
+    return `<div class="mtAh"><div><b>${fmtDataCurta(a.d)}</b><small>${f?'em '+esc(f.ticker||f.nome):'caixinha'}${b?' · saiu de '+esc(b.nome):''}</small></div><b class="nw pos">+ ${brl(a.v)}</b><button class="mtB sm" data-act="meta-ap-del" data-id="${m.id}|${a.id}" aria-label="desfazer aporte de ${fmtDataCurta(a.d)}">${I('trash')}</button></div>`;}).join('');
+  const simMax=Math.max(500,Math.round((m.aporteMes||0)/50)*50);
+  box.innerHTML=`<div class="sheet mtSheet" role="dialog" aria-modal="true" aria-label="${esc(m.nome)}" style="--m1:${pal[0]};--m2:${pal[1]}"><div class="sh-head"><h3>${esc(m.nome)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <div class="mtHero">
+      <div class="mtRingL"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${R2}" class="rb"/><circle cx="50" cy="50" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span class="mtRingI">${I(metaIcone(m.nome))}<b>${pct>0&&pct<1?'<1':Math.round(pct)}%</b></span></div>
+      <div class="mtHv"><small>guardado</small><b class="nw">${brl(D.total)}</b><span>de ${brl(alvo)}${m.fipe?' · FIPE':m.ipca?' · com IPCA':''}</span>
+        ${ch?`<em class="mtCh">${I('flag')}chega em ${mtMesTxt(ch)}</em>`:p.P>0||D.total>0?'<em class="mtCh off">sem data com o ritmo atual</em>':''}</div>
+    </div>
+    ${m.fipe?`<p class="mtFipe">${I('carro')}<span><b>${esc(m.fipe.mo&&m.fipe.mo.n||'')}</b> ${esc(m.fipe.a&&m.fipe.a.n||'')}${m.fipe.cod?' · FIPE '+esc(m.fipe.cod):''}<br><small>${m.fipe.ref?'referência '+esc(m.fipe.ref):''}${m.fipe.erro?' · sem conexão com a FIPE, usando o último valor salvo':''}${fv?' · '+(fv.d>0?'subiu ':'caiu ')+brl(Math.abs(fv.d))+' desde '+fmtDataCurta(fv.desde):''}</small></span></p>`:''}
+    ${rk&&rk.perto?`<div class="mtRisk">${I('alert')}<span><b>${Math.round(rk.pc)}% da meta está em cripto</b> (limite ${rk.lim}%) e faltam ${rk.n} ${rk.n>1?'meses':'mês'}. Uma queda agora atrasa a meta. Sugestão: migrar cerca de ${brl(rk.mover)} para algo que rende pelo CDI.</span></div>`:rk?`<p class="mtNota">${I('gauge')}${Math.round(rk.pc)}% em cripto, acima do seu limite de ${rk.lim}%. Com o prazo longe, o risco é menor.</p>`:''}
+    <div class="mtBt"><button class="btn" data-act="aporte" data-id="${m.id}">${I('plus')}guardei</button><button class="btn2" data-act="meta-fontes" data-id="${m.id}">${I('link')}fontes</button></div>
+    <h4 class="rsH">previsão</h4>
+    <div class="mtGw" id="mtGw">${mtGraficoSVG(p,pk)}</div>
+    <div class="mtLeg"><span><i class="l2"></i>com rendimento</span><span><i class="l1"></i>só aportes</span>${p.hi.some((v,j)=>v-p.lo[j]>0.5)?'<span><i class="lb"></i>faixa da cripto</span>':''}<span><i class="la"></i>alvo</span></div>
+    <div class="mtSim"><label for="mtSimR"><span>simular a mais por mês</span><b id="mtSimV">+ ${OCULTO?'R$ •••':brl(0)}</b></label><input type="range" id="mtSimR" min="0" max="${simMax}" step="50" value="0" aria-describedby="mtSimT"><p id="mtSimT" class="small">${p.P>0?'guardando '+brl(p.P)+'/mês':'sem aporte mensal definido'}${ch?' chega em '+mtMesTxt(ch):''}.</p></div>
+    <p class="small mtPrem">Caixinha pelo CDI de hoje, já sem o IR regressivo; FIIs e ações com o preço parado e os proventos pelo DY médio (isentos); cripto com 0% esperado e a faixa de um desvio da volatilidade. Estimativa, não garantia.</p>
+    <h4 class="rsH">de onde veio</h4>
+    <div class="mtDec" role="img" aria-label="decomposição do saldo: ${dec.map(x=>x[1]+' '+brl(x[2])).join(', ')}">${dec.filter(x=>x[2]>0).map(x=>`<i style="width:${(x[2]/pos*100).toFixed(2)}%;background:${x[3]}"></i>`).join('')}</div>
+    <div class="mtDecL">${dec.map(x=>`<span><i style="background:${x[3]}"></i>${x[1]}<b class="nw">${x[2]<0?'− ':''}${brl(Math.abs(x[2]))}</b></span>`).join('')}</div>
+    <h4 class="rsH">fontes</h4>
+    <div class="mtFl">${fonteL.join('')||'<p class="small">nenhuma fonte ainda.</p>'}</div>
+    ${!pro&&!(m.ativos||[]).length?`<p class="small mtLock">${I('lock')}Ligar FIIs, cripto e renda fixa à meta faz parte do Pro.</p>`:''}
+    <h4 class="rsH">aportes${sq.n?` <span class="mtStk">${I('lu_flame')}${sq.n} ${sq.n>1?'meses seguidos':'mês'}</span>`:''}</h4>
+    <p class="small">${m.aporteMes>0?'combinado: '+brl(m.aporteMes)+' por mês'+(m.diaAporte?', todo dia '+m.diaAporte:'')+'. '+(sq.mesOk?'este mês já foi.':'este mês ainda não.'):'defina um valor por mês em editar para acompanhar a sequência.'}</p>
+    ${ap||'<p class="small">nenhum aporte registrado ainda. toque em guardei quando separar o dinheiro.</p>'}
+    <div class="row mtRod"><button class="btn2 sm" data-act="edit-meta" data-id="${m.id}">${I('edit')}editar</button><button class="btn2 sm danger" data-act="del-meta" data-id="${m.id}">${I('trash')}excluir</button></div>
+  </div>`;
+  box.classList.add('on');
+  const r=$('#mtSimR');if(r)r.oninput=()=>{const x=+r.value||0,q=mtProj(m,x),c=q.k>=0?mesAdd(mesAtual(),q.k):'';
+    $('#mtSimV').textContent='+ '+(OCULTO?'R$ •••':brl(x));
+    $('#mtSimT').textContent=x?(c?'+'+brl(x)+'/mês: chega em '+mtMesTxt(c)+(ch&&c<ch?', '+(mesesAte(ch)-mesesAte(c))+' '+((mesesAte(ch)-mesesAte(c))>1?'meses':'mês')+' antes':''):'+'+brl(x)+'/mês: ainda não chega no horizonte'):(p.P>0?'guardando '+brl(p.P)+'/mês':'sem aporte mensal definido')+(ch?' chega em '+mtMesTxt(ch):'')+'.';
+    $('#mtGw').innerHTML=mtGraficoSVG(q,pk);};
+}
+/* ---------- formulário da meta ---------- */
 function metaForm(id){
-  const m=id?S.metas.find(x=>x.id===id):null;
+  const m=id?S.metas.find(x=>x.id===id):null,pro=mtProFontes()||!!(m&&m.cdi);
+  const fp=m&&m.fipe?m.fipe:null;
   form(m?'Editar meta':'Nova meta',[
     {name:'nome',label:'Nome da meta',value:m?m.nome:'',required:true,placeholder:'ex: reserva de emergência'},
-    {name:'alvo',label:'Valor alvo (R$)',value:m?num(m.alvo):'',required:true,inputmode:'decimal',placeholder:'0,00'},
-    {name:'atual',label:'Já guardado (R$)',value:m?num(m.atual):'0,00',inputmode:'decimal'},
+    {name:'alvoTipo',label:'Alvo',type:'seg',value:fp?'fipe':'fixo',options:[{v:'fixo',t:'Valor fixo',d:'eu digito'},{v:'fipe',t:'Tabela FIPE',d:'carro, moto'}]},
+    {name:'alvo',label:'Valor alvo (R$)',value:m?num(m.ipca&&m.alvoBase>0?m.alvoBase:m.alvo):'',required:!fp,inputmode:'decimal',placeholder:'0,00'},
+    {name:'ipca',label:'Corrigir o alvo pela inflação (IPCA)',type:'checkbox',value:m?!!m.ipca:false},
+    {name:'fipe',type:'hidden',value:fp?JSON.stringify({tp:fp.tp,b:fp.b,mo:fp.mo,a:fp.a,v:fp.v,ref:fp.ref,cod:fp.cod}):''},
+    {name:'fipeBox',type:'html',html:`<div class="mtFipeF" id="mtFipeF"${fp?'':' hidden'}>
+      <label>Tipo<select id="fpTp">${Object.keys(FIPE_TP).map(k=>`<option value="${k}" ${fp&&fp.tp===k?'selected':''}>${FIPE_TP[k][0]}</option>`).join('')}</select></label>
+      <label>Marca<select id="fpB" disabled><option>${fp?esc(fp.b.n):'carregando…'}</option></select></label>
+      <label>Modelo<input id="fpMf" placeholder="filtrar modelo" autocomplete="off" disabled><select id="fpMo" disabled><option>${fp?esc(fp.mo.n):'escolha a marca'}</option></select></label>
+      <label>Ano<select id="fpA" disabled><option>${fp?esc(fp.a.n):'escolha o modelo'}</option></select></label>
+      <p class="small" id="fpV">${fp?'valor salvo: '+brl(fp.v)+(fp.ref?' ('+esc(fp.ref)+')':''):'escolha o veículo para buscar o preço.'}</p></div>`},
+    {name:'atual',label:'Já guardado na caixinha da meta (R$)',value:m?num(m.atual):'0,00',inputmode:'decimal'},
     {name:'prazo',label:'Quero chegar até (opcional)',type:'month',value:m&&m.prazo||''},
     {name:'aporteMes',label:'Quanto pretendo guardar por mês (opcional)',value:m&&m.aporteMes?num(m.aporteMes):'',inputmode:'decimal',placeholder:'em branco = uso sua sobra média'},
-    {name:'cdi',label:'O dinheiro desta meta rende pelo CDI',type:'checkbox',value:m?!!m.cdi:false},
-    {name:'pctCdi',label:'Quantos % do CDI (ex: 100)',value:m&&m.pctCdi?String(m.pctCdi).replace('.',','):'100',inputmode:'decimal'}
+    {name:'diaAporte',label:'Dia de guardar (lembrete no app)',type:'select',value:m&&m.diaAporte?m.diaAporte:(m?'':mtDiaSugerido()),options:[{v:'',t:'sem lembrete'}].concat(Array.from({length:28},(_,k)=>({v:k+1,t:'dia '+(k+1)+(k+1===mtDiaSugerido()&&(S.fixas||[]).some(f=>f.tipo==='receita')?' (dia do salário)':'')})))},
+    pro?{name:'cdi',label:'O dinheiro desta meta rende pelo CDI',type:'checkbox',value:m?!!m.cdi:false}:{name:'cdi',type:'hidden',value:''},
+    pro?{name:'pctCdi',label:'Quantos % do CDI (ex: 100)',value:m&&m.pctCdi?String(m.pctCdi).replace('.',','):'100',inputmode:'decimal'}:{name:'pctCdi',type:'hidden',value:'100'},
+    {name:'cripMax',label:'Limite de cripto nesta meta (%)',value:String(m&&m.cripMax>0?m.cripMax:20),inputmode:'numeric'}
   ],v=>{
-    const nome=String(v.nome).trim(),alvo=parseBR(v.alvo),atual=parseBR(v.atual);
+    const nome=String(v.nome).trim(),atual=parseBR(v.atual);let alvo=parseBR(v.alvo);
     if(!nome)return 'Dê um nome à meta.';
+    let fipe=null;
+    if(v.alvoTipo==='fipe'){try{fipe=JSON.parse(v.fipe||'null');}catch(e){fipe=null;}
+      if(!fipe||!(fipe.v>0)||!fipe.b||!fipe.mo||!fipe.a)return 'Escolha o veículo na tabela FIPE (marca, modelo e ano).';alvo=c2(fipe.v);}
     if(!(alvo>0))return 'Informe o valor alvo.';
-    if(atual<0)return 'Valor guardado inválido.';
+    if(!(atual>=0))return 'Valor guardado inválido.';
     const prazo=/^\d{4}-\d{2}$/.test(String(v.prazo||''))?String(v.prazo):'';
     const ap=String(v.aporteMes||'').trim()?parseBR(v.aporteMes):0;
     if(!(ap>=0))return 'Valor por mês inválido.';
     const cdi=!!v.cdi,pc=String(v.pctCdi||'').trim()?parseBR(v.pctCdi):100;
     if(cdi&&!(pc>0&&pc<=300))return 'Informe o % do CDI entre 1 e 300.';
-    const obj={nome,alvo,atual,prazo,aporteMes:c2(ap),cdi,pctCdi:cdi?c2(pc):0};
-    if(m)Object.assign(m,obj);else S.metas.push(Object.assign({id:uid()},obj));
-    salvar();render();toast('Meta salva');if(cdi)atualizaCDI();
+    const cm=String(v.cripMax||'').trim()?parseBR(v.cripMax):20;if(!(cm>=0&&cm<=100))return 'Limite de cripto entre 0 e 100%.';
+    const dia=parseInt(v.diaAporte,10)||0;
+    const obj={nome,alvo,atual:c2(atual),prazo,aporteMes:c2(ap),cdi,pctCdi:cdi?c2(pc):0};
+    const alvoMudou=!m||c2(m.ipca&&m.alvoBase>0?m.alvoBase:m.alvo)!==c2(alvo);
+    const extras={};
+    if(dia||(m&&m.diaAporte))extras.diaAporte=dia;
+    if(cm!==20||(m&&m.cripMax))extras.cripMax=c2(cm);
+    if(v.ipca&&!fipe){extras.ipca=true;extras.alvoBase=c2(alvo);extras.alvoEm=alvoMudou||!(m&&m.alvoEm)?mesAtual():m.alvoEm;}else if(m&&m.ipca){extras.ipca=false;extras.alvoBase=0;extras.alvoEm='';}
+    if(fipe){const hj=hojeISO(),mesmo=m&&m.fipe&&m.fipe.a&&m.fipe.mo&&m.fipe.a.c===fipe.a.c&&m.fipe.mo.c===fipe.mo.c&&m.fipe.b.c===fipe.b.c;
+      extras.fipe=mesmo?Object.assign({},m.fipe):{tp:FIPE_TP[fipe.tp]?fipe.tp:'cars',b:fipe.b,mo:fipe.mo,a:fipe.a,v:c2(fipe.v),ref:String(fipe.ref||'').slice(0,30),cod:String(fipe.cod||'').slice(0,12),chk:hj,em:hj,v0:c2(fipe.v),em0:hj,hist:[[hj,c2(fipe.v)]]};}
+    else if(m&&m.fipe)extras.fipe=null;
+    /* "já guardado" mudou: a base da caixinha passa a render a partir de hoje (aportes anteriores entram na base) */
+    if(!m||c2(m.atual)!==c2(atual)){if(atual>0){extras.baseEm=hojeISO();extras.baseN=m?(m.aportes||[]).length:0;}else{extras.baseEm='';extras.baseN=m?(m.aportes||[]).length:0;}}
+    const novo=Object.assign(obj,extras);
+    if(novo.fipe===null)delete novo.fipe;
+    if(m){Object.assign(m,novo);if(extras.fipe===null)delete m.fipe;}
+    else S.metas.push(Object.assign({id:uid(),criadoEm:hojeISO()},novo));
+    salvar();render();toast('Meta salva');if(cdi||extras.ipca)atualizaCDI();
   });
+  /* liga o seletor da FIPE */
+  const mf=$('#mf'),box=$('#mtFipeF');if(!mf||!box)return;
+  const alvoL=mf.querySelector('[name="alvo"]').closest('label'),ipcaL=mf.querySelector('[name="ipca"]').closest('label');
+  const segs=mf.querySelectorAll('[name="alvoTipo"]');
+  const tB=$('#fpTp'),sB=$('#fpB'),sMo=$('#fpMo'),fMo=$('#fpMf'),sA=$('#fpA'),out=$('#fpV'),J=mf.querySelector('[name="fipe"]');
+  let MODS=[],carregou=false;
+  const opt=(L,ph)=>`<option value="">${ph}</option>`+L.map(x=>`<option value="${esc(x.c)}">${esc(x.n)}</option>`).join('');
+  const falha=()=>{out.textContent=J.value?'sem conexão com a FIPE agora. o último valor salvo continua valendo.':'não consegui falar com a tabela FIPE agora. tente de novo em instantes ou use um valor fixo.';};
+  const marcas=async()=>{sB.disabled=true;sB.innerHTML='<option>carregando…</option>';try{const L=await fipeLista(tB.value);sB.innerHTML=opt(L,'escolha a marca');sB.disabled=false;}catch(e){sB.innerHTML='<option>indisponível</option>';falha();}};
+  const pintaMods=()=>{const q=norm(fMo.value);sMo.innerHTML=opt(MODS.filter(x=>!q||norm(x.n).includes(q)).slice(0,400),MODS.length?'escolha o modelo':'—');};
+  tB.onchange=()=>{J.value='';sMo.disabled=sA.disabled=fMo.disabled=true;marcas();};
+  sB.onchange=async()=>{J.value='';sA.disabled=true;sA.innerHTML='<option>escolha o modelo</option>';if(!sB.value)return;sMo.disabled=true;sMo.innerHTML='<option>carregando…</option>';
+    try{MODS=await fipeLista(tB.value,sB.value);fMo.disabled=false;fMo.value='';pintaMods();sMo.disabled=false;}catch(e){sMo.innerHTML='<option>indisponível</option>';falha();}};
+  fMo.oninput=pintaMods;
+  sMo.onchange=async()=>{J.value='';if(!sMo.value)return;sA.disabled=true;sA.innerHTML='<option>carregando…</option>';
+    try{const L=await fipeLista(tB.value,sB.value,sMo.value);sA.innerHTML=opt(L,'escolha o ano');sA.disabled=false;}catch(e){sA.innerHTML='<option>indisponível</option>';falha();}};
+  sA.onchange=async()=>{J.value='';if(!sA.value)return;out.textContent='buscando o preço…';
+    const fp={tp:tB.value,b:{c:sB.value,n:sB.selectedOptions[0].textContent},mo:{c:sMo.value,n:sMo.selectedOptions[0].textContent},a:{c:sA.value,n:sA.selectedOptions[0].textContent}};
+    try{const r=await fipePreco(fp);Object.assign(fp,r);J.value=JSON.stringify(fp);out.innerHTML='<b>'+brl(r.v)+'</b> na tabela FIPE'+(r.ref?' ('+esc(r.ref)+')':'');}catch(e){falha();}};
+  const modo=()=>{const fi=[...segs].some(s=>s.checked&&s.value==='fipe');box.hidden=!fi;alvoL.hidden=fi;ipcaL.hidden=fi;
+    if(fi&&!carregou){carregou=true;marcas();}};
+  segs.forEach(s=>s.addEventListener('change',modo));modo();
 }
+/* ---------- fontes da meta (ativos e a comprar) ---------- */
+function metaFontes(id){
+  const m=S.metas.find(x=>x.id===id);if(!m)return;
+  if(!mtProFontes()&&!(m.ativos||[]).length){abrePlanos('investimentos');return;}
+  const box=$('#modal');
+  const lin=f=>{const a=(m.ativos||[]).find(x=>x.fid===f.id),out=mtAlocado(f.id,m.id),livre=Math.max(0,100-out),g=mtGrupo(f);
+    return `<div class="mtSrc" data-fid="${esc(f.id)}"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span>
+      <div class="mtSrcT"><b>${esc(f.ticker||f.nome||'ativo')}</b><small>${MT_GL[g]} · ${brl(mtValorAtivo(f))}${out>0?' · '+String(c2(out)).replace('.',',')+'% em outras metas':''}${f.pluggyInv?' · do banco':''}</small>
+      ${(g==='fii'||g==='acao')?`<label class="ckrow sm"><input type="checkbox" data-reinv="${esc(f.id)}" ${a&&a.reinv?'checked':''}><span>proventos reinvestem na meta</span></label>`:''}</div>
+      <label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?c2(a.pct):''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(f.ticker||f.nome)} para a meta (até ${livre}%)"><span>%</span></label></div>`;};
+  const L=S.fiis.slice().sort((a,b)=>mtValorAtivo(b)-mtValorAtivo(a));
+  box.innerHTML=`<div class="sheet mtSheet" role="dialog" aria-modal="true" aria-label="Fontes da meta"><div class="sh-head"><h3>Fontes · ${esc(m.nome)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">Escolha quanto de cada investimento pertence a esta meta. O saldo da meta usa o valor de mercado de hoje. Um ativo pode ser dividido entre metas até 100%.</p>
+    <div class="mtSrcL">${L.length?L.map(lin).join(''):'<p class="small">Você ainda não tem investimentos cadastrados. Adicione em Investimentos ou planeje abaixo um ativo a comprar.</p>'}</div>
+    <h4 class="rsH">a comprar</h4>
+    <div id="mtPl">${(m.planos||[]).map(p=>`<div class="mtSrc plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtSrcT"><b>${esc(p.nome)}</b><small>${MT_GL[mtGrupo(p.tipo)]}${p.valor>0?' · pretende '+brl(p.valor):''}</small></div><button type="button" class="mtB sm del" data-pldel="${esc(p.id)}" aria-label="remover ${esc(p.nome)}">${I('trash')}</button></div>`).join('')}</div>
+    <div class="mtPlF"><select id="mtPlT" aria-label="tipo do ativo a comprar"><option value="fii">FII</option><option value="acao">Ação/ETF</option><option value="rf">Renda fixa</option><option value="cripto">Cripto</option></select><input id="mtPlN" maxlength="30" placeholder="ex: HGLG11" aria-label="nome do ativo a comprar"><input id="mtPlV" inputmode="decimal" placeholder="R$ (opcional)" aria-label="valor que pretende investir"><button type="button" class="btn2 sm" id="mtPlAdd">${I('plus')}</button></div>
+    <button class="btn full" id="mtSrcOk">Salvar fontes</button></div>`;
+  box.classList.add('on');
+  const planos=(m.planos||[]).slice();
+  box.querySelectorAll('[data-pldel]').forEach(b=>b.onclick=()=>{const i=planos.findIndex(p=>p.id===b.dataset.pldel);if(i>=0)planos.splice(i,1);b.closest('.mtSrc').remove();});
+  $('#mtPlAdd').onclick=()=>{const n=$('#mtPlN').value.trim().slice(0,30);if(!n){toast('Dê um nome ao ativo a comprar.',true);return;}
+    const v=$('#mtPlV').value.trim()?parseBR($('#mtPlV').value):0,t=$('#mtPlT').value,p={id:uid(),tipo:t,nome:n,valor:v>0?c2(v):0};planos.push(p);
+    $('#mtPl').insertAdjacentHTML('beforeend',`<div class="mtSrc plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtSrcT"><b>${esc(n)}</b><small>${MT_GL[mtGrupo(t)]}${p.valor?' · pretende '+brl(p.valor):''}</small></div></div>`);
+    $('#mtPlN').value='';$('#mtPlV').value='';};
+  $('#mtSrcOk').onclick=()=>{
+    const novos=[],hj=hojeISO();let erro='';
+    box.querySelectorAll('[data-pct]').forEach(inp=>{const fid=inp.dataset.pct,v=String(inp.value).trim()?parseBR(String(inp.value)):0;if(!v)return;
+      const f=S.fiis.find(x=>x.id===fid),livre=Math.max(0,100-mtAlocado(fid,m.id));
+      if(!(v>0&&v<=100)){erro='Use um % entre 0 e 100.';return;}
+      if(v>livre+1e-9){erro=(f&&(f.ticker||f.nome)||'ativo')+': só '+String(c2(livre)).replace('.',',')+'% estão livres (o resto já está em outras metas).';return;}
+      const ant=(m.ativos||[]).find(a=>a.fid===fid),ri=box.querySelector('[data-reinv="'+fid+'"]');
+      novos.push({fid,pct:c2(v),desde:ant&&ant.desde||hj,reinv:!!(ri&&ri.checked)});});
+    if(erro){toast(erro,true);return;}
+    m.ativos=novos;m.planos=planos;
+    if(m.apDest&&m.apDest!=='manual'&&!novos.some(a=>a.fid===m.apDest))m.apDest='manual';
+    salvar();toast('Fontes salvas');abreMeta(m.id);render();
+  };
+}
+/* ---------- guardei: registra o aporte ---------- */
+let MT_VOLTA=null; // aberto a partir da folha da meta: volta para ela depois de salvar
 function aporte(id){
   const m=S.metas.find(x=>x.id===id);if(!m)return;
-  form('Aporte em '+m.nome,[
-    {name:'valor',label:'Valor do aporte (R$)',value:'',required:true,inputmode:'decimal',placeholder:'0,00'}
+  const fontes=[{v:'manual',t:'Caixinha da meta'}].concat(mtAtivos(m).map(({f})=>({v:f.id,t:'Comprei mais '+(f.ticker||f.nome||'do ativo')})));
+  const contas=[{v:'',t:'Não saiu de uma conta (só registrar)'}].concat(bancosAtivos().map(b=>({v:b.id,t:'Saiu de '+b.nome})));
+  const sq=mtStreak(m);
+  form('Guardei para '+m.nome,[
+    {name:'valor',label:'Valor do aporte (R$)',value:m.aporteMes>0?num(m.aporteMes):'',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'data',label:'Quando',type:'date',value:hojeISO(),required:true},
+    fontes.length>1?{name:'fonte',label:'Para onde foi',type:'select',value:m.apFonte&&fontes.some(f=>f.v===m.apFonte)?m.apFonte:'manual',options:fontes}:{name:'fonte',type:'hidden',value:'manual'},
+    contas.length>1?{name:'conta',label:'De onde saiu',type:'select',value:m.apConta&&contas.some(c=>c.v===m.apConta)?m.apConta:'',options:contas}:{name:'conta',type:'hidden',value:''}
   ],v=>{
-    const n=parseBR(v.valor);
+    const n=c2(parseBR(v.valor));
     if(!(n>0))return 'Informe um valor maior que zero.';
-    m.atual+=n;salvar();render();toast('Aporte registrado');
+    const d=DATA_OK.test(String(v.data||''))?String(v.data).slice(0,10):hojeISO();
+    const fonte=v.fonte&&v.fonte!=='manual'&&mtAtivos(m).some(x=>x.f.id===v.fonte)?v.fonte:'manual';
+    const conta=v.conta&&S.bancos.some(b=>b.id===v.conta)?v.conta:'';
+    const a={id:uid(),d,v:n,fonte,conta:conta||'',tx:''};
+    if(fonte==='manual'){m.atual=c2((+m.atual||0)+n);
+      if(conta){a.tx=mtLancaAporte(m,n,d,conta);}}
+    m.aportes=(m.aportes||[]).concat([a]).slice(-600);m.apConta=conta;m.apFonte=fonte;
+    salvar();render();if(MT_VOLTA===m.id)setTimeout(()=>{if(!$('#modal').classList.contains('on'))abreMeta(m.id);},0);
+    const s2=mtStreak(m);
+    toast(fonte!=='manual'?'Aporte registrado. Lance a compra em Investimentos se ainda não lançou.':s2.n>sq.n&&s2.n>1?'Guardado. '+s2.n+' meses seguidos':'Aporte registrado');
   });
 }
+/* sai da conta como transferência para a meta. Se o banco (Pluggy) já trouxe a saída igual, ela vira o aporte (não duplica). */
+function mtLancaAporte(m,n,d,conta){
+  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+    ((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))).sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
+  if(ig){ig.metaOrig={tipo:ig.tipo,categoria:ig.categoria,conta:ig.conta||'',forma:ig.forma||''};
+    Object.assign(ig,{tipo:'transf',de:'b:'+conta,para:'',meta:m.id,categoria:'Meta',conta:'',forma:'',cartao:''});delete ig.rev;return ig.id;}
+  const t={id:uid(),tipo:'transf',valor:n,data:d,de:'b:'+conta,para:'',meta:m.id,categoria:'Meta',descricao:'Guardei para '+m.nome,status:'pago'};
+  S.tx.push(t);return t.id;
+}
+/* desfaz um aporte: tira da caixinha e remove (ou devolve ao original do banco) o lançamento */
+function mtApDel(m,apId){
+  const L=m.aportes||[],i=L.findIndex(a=>a.id===apId);if(i<0)return false;const a=L[i];
+  if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));
+  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.pluggyId&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
+  L.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;return true;
+}
+/* lançamento de meta excluído em Lançamentos: o aporte sai do histórico e da caixinha */
+function mtTxSaiu(t){const m=(S.metas||[]).find(x=>x.id===t.meta);if(!m)return;const a=(m.aportes||[]).find(x=>x.tx===t.id);if(!a)return;
+  const i=m.aportes.indexOf(a);if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));m.aportes.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;}
+/* extrato/Pluggy: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
+function metaManualIgual(l,d,usados){
+  if(!(l.valor<0))return null;const v=cents(Math.abs(l.valor));
+  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.pluggyId&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
+}
+/* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
+function mtAvisos(){
+  const out=[],hj=new Date(),dia=hj.getDate(),ym=mesAtual();
+  (S.metas||[]).forEach(m=>{if(!(m.aporteMes>0)||!(m.diaAporte>0))return;const alvo=alvoMeta(m);if(saldoMeta(m)>=alvo&&alvo>0)return;
+    const dd=Math.min(m.diaAporte,new Date(hj.getFullYear(),hj.getMonth()+1,0).getDate());if(dia<dd)return;
+    const feito=(m.aportes||[]).filter(a=>a.d&&a.d.slice(0,7)===ym).reduce((s,a)=>s+cents(a.v),0);if(feito>=cents(m.aporteMes))return;
+    out.push({id:'mt|'+m.id+'|'+ym,k:'aviso',m,h:`${I('piggy')} dia de guardar para <b>${esc(m.nome)}</b> · ${brl(Math.max(0,m.aporteMes-feito/100))}${dia>dd?' (era dia '+dd+')':''}`});});
+  return out;
+}
+let MT_NOTIF_T=null;
+function mtLembra(){
+  if(!S||!S.cfg||!notifOn('metas'))return;const L=mtAvisos();if(!L.length)return;const hj=hojeISO(),av=Object.assign({},S.cfg.mtAv||{});
+  const novos=L.filter(a=>av[a.m.id]!==hj);if(!novos.length)return;
+  novos.forEach(a=>{av[a.m.id]=hj;});S.cfg.mtAv=av;
+  clearTimeout(MT_NOTIF_T);MT_NOTIF_T=setTimeout(()=>{const a=novos[0],txt='Dia de guardar '+(OCULTO?'':brl(a.m.aporteMes)+' ')+'para '+a.m.nome;toast(txt);
+    try{if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(r=>{if(r)r.showNotification('GranaViva',{body:S.cfg.pushDiscreto!==false?'Hoje é dia de guardar para uma meta.':txt,tag:'gv-meta-'+a.m.id,icon:'icons/icon-192.png'});}).catch(()=>{});}catch(e){}
+    try{atualizaSino();}catch(e){}},3200);
+  try{gravaLocal();}catch(e){}
+}
+/* sanea: campos novos da meta, vindos de backup, nuvem ou arquivo editado */
+function saneaMetaExtra(m,ids){
+  const o={};const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
+  const ISO=x=>{const t=String(x||'');return DATA_OK.test(t)&&dataOk(t.slice(0,4),t.slice(5,7),t.slice(8,10))?t.slice(0,10):'';};
+  const idv=x=>{const t=String(x==null?'':x);return t&&ID_OK.test(t)?t:'';}; // id inválido vira vazio (não um id novo que não aponta para nada)
+  const vistos=new Set();
+  o.ativos=arr(m.ativos).slice(0,60).map(a=>({fid:idv(a.fid),pct:Math.min(100,Math.max(0,c2(a.pct))),desde:ISO(a.desde),reinv:!!a.reinv})).filter(a=>a.fid&&a.pct>0&&!vistos.has(a.fid)&&vistos.add(a.fid));
+  o.planos=arr(m.planos).slice(0,30).map(p=>({id:sid(p.id),tipo:['fii','acao','rf','cripto'].includes(p.tipo)?p.tipo:'fii',nome:str(p.nome,30).trim()||'ativo',valor:Math.max(0,c2(p.valor))}));
+  o.aportes=arr(m.aportes).slice(-600).map(a=>({id:sid(a.id),d:ISO(a.d),v:Math.max(0,c2(a.v)),fonte:a.fonte&&a.fonte!=='manual'?idv(a.fonte)||'manual':'manual',conta:idv(a.conta),tx:idv(a.tx)})).filter(a=>a.d&&a.v>0);
+  {const d=parseInt(m.diaAporte,10);o.diaAporte=d>=1&&d<=28?d:0;}
+  o.cripMax=Math.max(0,Math.min(100,c2(m.cripMax)));
+  o.ipca=!!m.ipca;o.alvoBase=Math.max(0,c2(m.alvoBase));o.alvoEm=ymOk(m.alvoEm);if(!o.ipca||!o.alvoEm||!(o.alvoBase>0)){o.ipca=false;o.alvoBase=0;o.alvoEm='';}
+  o.baseEm=ISO(m.baseEm);o.baseN=Math.max(0,Math.min(o.aportes.length,parseInt(m.baseN,10)||0));
+  o.apDest=m.apDest&&m.apDest!=='manual'?idv(m.apDest)||'manual':'manual';o.apConta=idv(m.apConta);o.apFonte=m.apFonte&&m.apFonte!=='manual'?idv(m.apFonte)||'manual':'manual';
+  o.criadoEm=ISO(m.criadoEm);
+  const F=m.fipe;
+  if(F&&typeof F==='object'&&F.b&&F.mo&&F.a){const cn=x=>({c:str(x&&x.c,20).replace(/[^\w.-]/g,''),n:str(x&&x.n,90)});
+    const fp={tp:FIPE_TP[F.tp]?F.tp:'cars',b:cn(F.b),mo:cn(F.mo),a:cn(F.a),v:Math.max(0,c2(F.v)),ref:str(F.ref,30),cod:str(F.cod,12).replace(/[^\d-]/g,''),chk:ISO(F.chk),em:ISO(F.em),v0:Math.max(0,c2(F.v0)),em0:ISO(F.em0),erro:F.erro?'1':'',
+      hist:arr(Array.isArray(F.hist)?F.hist.filter(Array.isArray).map(h=>({d:h[0],v:h[1]})):[]).slice(-24).map(h=>[ISO(h.d),Math.max(0,c2(h.v))]).filter(h=>h[0]&&h[1]>0)};
+    if(fp.b.c&&fp.mo.c&&fp.a.c&&fp.v>0)o.fipe=fp;}
+  /* limpa o que é vazio para a meta antiga continuar igual */
+  ['ativos','planos','aportes'].forEach(k=>{if(!o[k].length)delete o[k];});
+  ['diaAporte','cripMax','alvoBase','baseN'].forEach(k=>{if(!o[k])delete o[k];});
+  ['alvoEm','baseEm','apConta','criadoEm'].forEach(k=>{if(!o[k])delete o[k];});
+  if(!o.ipca)delete o.ipca;if(o.apDest==='manual')delete o.apDest;if(o.apFonte==='manual')delete o.apFonte;
+  return o;
+}
+/* soma das alocações de um mesmo ativo entre metas: corta o excesso (na ordem das metas) para nunca passar de 100% */
+function saneaAlocacoes(metas){
+  const usado={};metas.forEach(m=>{if(!m.ativos)return;m.ativos=m.ativos.map(a=>{const u=usado[a.fid]||0,p=Math.max(0,Math.min(a.pct,c2(100-u)));usado[a.fid]=u+p;return Object.assign({},a,{pct:p});}).filter(a=>a.pct>0);if(!m.ativos.length)delete m.ativos;});
+  return metas;
+}
+
 function catForm(id){
   const edit=id||null;
   const cur=edit||'';
@@ -5950,8 +6384,11 @@ function fatosAssistente(pergunta){
       por_mes:Object.fromEntries(Object.keys(pm).sort().slice(0,6).map(m=>[mesRot(m),FB(pm[m]/100)])),
       maiores_compras:Object.values(gr).sort((a,b)=>b.c-a.c).slice(0,5).map(g=>({compra:g.d.slice(0,40),parcelas_restantes:g.n,falta_pagar:FB(g.c/100)}))}:'sem_dados (nenhuma parcela de cartão a vencer depois de hoje)';}
   if(quer(/meta|objetivo|guardar|juntar|falta para|quanto falta/)){algum=true;
-    F.metas=S.metas.length?S.metas.slice(0,8).map(m=>{const falta=Math.max(0,cents(m.alvo)-cents(m.atual))/100,o={meta:m.nome,alvo:FB(m.alvo),guardado:FB(m.atual),falta:FB(falta)};
-      if(m.prazo){o.prazo=mesRot(m.prazo);const n=mesesAte(m.prazo);if(falta>0&&n>0)o.guardar_por_mes_ate_o_prazo=FB(c2(pmtMeta(m.atual,m.alvo,n,taxaMesMeta(m))));if(n<=0&&falta>0)o.situacao='prazo vencido';}
+    F.metas=S.metas.length?S.metas.slice(0,8).map(m=>{const D=mtSaldoD(m),al=alvoMeta(m),falta=Math.max(0,cents(al)-cents(D.total))/100,o={meta:m.nome,alvo:FB(al),guardado:FB(D.total),falta:FB(falta)};
+      /* v10.87: fontes da meta */
+      if(mtNova(m)){o.fontes=[].concat(D.caixa>0||m.cdi?[{fonte:'caixinha'+(m.cdi?' '+(m.pctCdi||100)+'% do CDI':''),valor:FB(D.caixa)}]:[],mtAtivos(m).map(({a,f})=>({fonte:(f.ticker||f.nome||'ativo')+' ('+MT_GL[mtGrupo(f)]+')',percentual_da_posicao:a.pct,valor:FB(mtValorAtivo(f)*a.pct/100)})),(m.planos||[]).map(p=>({fonte:p.nome+' (a comprar)'})));
+        o.de_onde_veio={voce:FB(D.voce),rendimento:FB(D.cdi),proventos:FB(D.prov),variacao_dos_ativos:FB(D.varia)};if(m.aporteMes>0)o.aporte_mensal=FB(m.aporteMes);const ch=mtChega(m);if(ch)o.previsao_de_chegada=mesRot(ch);if(m.fipe)o.alvo_tabela_fipe=(m.fipe.mo&&m.fipe.mo.n||'')+' '+(m.fipe.a&&m.fipe.a.n||'');const rk=mtRisco(m);if(rk)o.cripto_acima_do_limite=Math.round(rk.pc)+'% (limite '+rk.lim+'%)';}
+      if(m.prazo){o.prazo=mesRot(m.prazo);const n=mesesAte(m.prazo);if(falta>0&&n>0)o.guardar_por_mes_ate_o_prazo=FB(c2(pmtMeta(D.total,al,n,taxaMesMeta(m))));if(n<=0&&falta>0)o.situacao='prazo vencido';}
       if(falta<=0)o.situacao='meta atingida';return o;}):'sem_dados (nenhuma meta cadastrada)';}
   if(quer(/provento|dividendo|rendimento|jcp|juros sobre capital/)){algum=true;
     const y=P.ano||hj.slice(0,4),pa={};let tot=0;
@@ -6176,7 +6613,7 @@ const ACT={
     const apaga=L=>{const ids=new Set(L.map(x=>x.id));removeArquivos(anexosDe(L));S.tx=S.tx.filter(x=>!ids.has(x.id));geraRecorrentes();salvar();render();toast(pl(L.length)+' excluída'+(L.length>1?'s':''));};
     if(!fe)return confirma({titulo:'Excluir compra parcelada?',texto:'Isso exclui '+(rest.length>1?'as ':'a ')+pl(rest.length)+' de "'+nm+'".',ok:'Excluir parcelas',perigo:true},()=>apaga(rest));
     if(!fu.length)return confirma({titulo:'Excluir compra parcelada?',texto:'As '+pl(rest.length)+' de "'+nm+'" já estão em faturas fechadas. Fatura paga continua com o pagamento; a sobra aparece como pago a mais.',ok:'Excluir todas',perigo:true},()=>apaga(rest));
-    return confirma({titulo:'Excluir compra parcelada?',texto:'"'+nm+'": '+pl(fu.length)+' por vir e '+pl(fe)+' em fatura já fechada. O mais seguro é excluir só as futuras.',ok:'Só as futuras ('+fu.length+')',alt:'Todas, até as fechadas ('+rest.length+')',altPerigo:true,altCb:()=>apaga(rest)},()=>apaga(fu));}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';if(t)removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
+    return confirma({titulo:'Excluir compra parcelada?',texto:'"'+nm+'": '+pl(fu.length)+' por vir e '+pl(fe)+' em fatura já fechada. O mais seguro é excluir só as futuras.',ok:'Só as futuras ('+fu.length+')',alt:'Todas, até as fechadas ('+rest.length+')',altPerigo:true,altCb:()=>apaga(rest)},()=>apaga(fu));}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';if(t&&t.meta)mtTxSaiu(t);if(t)removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
   'mais-lista':()=>{const y=scrollY;LIM_LISTA+=50;render();scrollTo(0,y);},
   'tag-filtro':g=>{F.tag=F.tag===g?'':g;render();},
@@ -6206,8 +6643,11 @@ const ACT={
   'novo-pas':()=>pasForm(),'edit-pas':id=>pasForm(id),
   'del-pas':id=>confirma({titulo:'Excluir dívida?',texto:'Ela sai do patrimônio.',ok:'Excluir',perigo:true},()=>{S.passivos=(S.passivos||[]).filter(x=>x.id!==id);salvar();render();toast('Dívida excluída');}),
   'edit-meta':id=>metaForm(id),
-  'aporte':id=>aporte(id),
-  'del-meta':id=>confirma({titulo:'Excluir meta?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{S.metas=S.metas.filter(x=>x.id!==id);salvar();render();toast('Meta excluída');}),
+  'aporte':id=>{const v=!!$('#modal .mtSheet');aporte(id);MT_VOLTA=v?id:null;},
+  'meta-abre':id=>abreMeta(id),
+  'meta-fontes':id=>metaFontes(id),
+  'meta-ap-del':k=>{const [mid,aid]=String(k).split('|'),m=S.metas.find(x=>x.id===mid);if(!m)return;confirma({titulo:'Desfazer este aporte?',texto:'O valor sai da meta'+((m.aportes||[]).some(a=>a.id===aid&&a.tx)?' e o lançamento de saída da conta é desfeito.':'.'),ok:'Desfazer',perigo:true},()=>{if(mtApDel(m,aid)){salvar();render();abreMeta(m.id);toast('Aporte desfeito');}});},
+  'del-meta':id=>confirma({titulo:'Excluir meta?',texto:'Essa ação não pode ser desfeita.'+(S.tx.some(t=>t.meta===id)?' As saídas de "guardei" continuam em Lançamentos como transferência.':''),ok:'Excluir',perigo:true},()=>{S.metas=S.metas.filter(x=>x.id!==id);salvar();render();toast('Meta excluída');}),
   'lock-pin':()=>lockCfg()?lockPedeAtual('Digite o PIN atual',lockNovoPin):lockNovoPin(),
   'lock-off':()=>lockPedeAtual('Digite o PIN para desativar',()=>{lockSalva(null);lockFecha();render();toast('Bloqueio desativado');}),
   'lock-bio':()=>{const c=lockCfg();if(!c)return;if(c.bio){c.bio=null;lockSalva(c);lkBioGuarda(null);render();toast('Face ID desativado');}else lockBioAtiva();},
@@ -6386,7 +6826,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
