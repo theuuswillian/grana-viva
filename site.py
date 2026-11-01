@@ -54,9 +54,9 @@ def pagina(arq, titulo, descricao, corpo, atual=None):
 def card_plano(id, destaque=False):
     p = PL[id]
     itens = {
-        'gratis': ['Lançamentos manuais de receitas e despesas', 'Contas e bancos, com transferências', 'Categorias personalizadas', 'Início com o resumo do mês', 'Alertas de vencimento no celular', 'Exportar e excluir seus dados'],
-        'plus': ['Tudo do Grátis', 'Planejamento e projeção de saldo', 'Orçamentos por categoria', 'Cartões, faturas e parcelas', 'Relatórios completos e resumo do mês', 'Importar extrato OFX/CSV e anexar comprovantes', f'Lançar com IA ({LIM[1]["leitura_ia_dia"]} por dia)'],
-        'pro': ['Tudo do Plus', 'Investimentos: FIIs, renda fixa pelo CDI e cotações', 'Patrimônio líquido mês a mês', 'Metas com ritmo e rendimento pelo CDI', f'Assistente com IA ({LIM[2]["assistente_dia"]} perguntas por dia)', f'Lançar com IA ({LIM[2]["leitura_ia_dia"]} por dia)'],
+        'gratis': ['Lançamentos manuais de receitas e despesas', 'Contas e bancos, com transferências', 'Categorias personalizadas', 'Cartões, faturas e parcelas', 'Início com o resumo do mês', 'Alertas de vencimento no celular', 'Exportar e excluir seus dados'],
+        'plus': ['Tudo do Grátis', 'Planejamento e projeção de saldo', 'Orçamentos por categoria', 'Metas com ritmo e rendimento pelo CDI', 'Relatórios completos e resumo do mês', 'Importar extrato OFX/CSV e anexar comprovantes', f'Lançar com IA ({LIM[1]["leitura_ia_dia"]} por dia)'],
+        'pro': ['Tudo do Plus', 'Investimentos: FIIs, renda fixa pelo CDI e cotações', 'Patrimônio líquido mês a mês', f'Assistente com IA ({LIM[2]["assistente_dia"]} perguntas por dia)', f'Lançar com IA ({LIM[2]["leitura_ia_dia"]} por dia)'],
     }[id]
     preco = 'R$ 0' if id == 'gratis' else brl(p['preco'])
     sufixo = 'para sempre' if id == 'gratis' else '/mês'
@@ -202,7 +202,7 @@ def sobre():
     return pagina('sobre.html', 'Sobre · GranaViva', 'Quem faz o GranaViva e no que acreditamos.', corpo, 'sobre.html')
 
 FAQ = [
-    ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas, categorias, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, cartões, relatórios, investimentos, metas e IA.'),
+    ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, relatórios, metas, investimentos e IA.'),
     ('O que acontece depois dos 14 dias de teste?', 'Sua conta passa para o Grátis automaticamente. Nada é cobrado e nada do que você registrou é apagado. Os recursos pagos ficam escondidos e voltam se você assinar.'),
     ('Já posso assinar?', 'Ainda não. Os pagamentos estão sendo preparados e serão feitos pelo Mercado Pago. Enquanto isso, o botão de assinar aparece como "Pagamento em breve".'),
     ('Como cancelo a assinatura?', 'Em Ajustes, no app. O acesso continua até o fim do período já pago e você não é cobrado de novo.'),
