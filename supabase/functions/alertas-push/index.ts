@@ -2,13 +2,18 @@
 // - chamada diária pelo pg_cron às 12:00 UTC (9h de Brasília, cabeçalho x-cron-secret): confere faturas, contas fixas,
 //   previstos, empréstimos e orçamentos de quem ativou notificações e manda um push por aparelho.
 //   v10.79: aos domingos manda também o resumo da semana (entrou, saiu, o que vence em 7 dias, a receber de empréstimos).
+//   v10.89: lembrete do "dia de guardar" das metas com o app fechado (Ajustes › Notificações › "Dia de guardar no aparelho",
+//   padrão ligado; desligar "Dia de guardar" também para). só para quem tem Metas no plano (Plus ou Pro). um por meta por mês (push_log).
 // - {dry:true} com o segredo do cron: calcula tudo e devolve o que seria enviado, sem mandar push e sem gravar push_log.
 //   {hoje:'AAAA-MM-DD'} junto com dry simula outro dia (para conferir o resumo de domingo).
 // - chamada pelo app com o login do usuário e {teste:true}: manda uma notificação de teste.
 // verify_jwt desligado: a função confere o segredo do cron ou o token do usuário por conta própria.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { alertas, orcamentos, resumoSemana, textoSemana, discretoOn, semValores, diaSemana, ISO_RE } from "./calc.ts";
+import { alertas, orcamentos, resumoSemana, textoSemana, discretoOn, semValores, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
+// v10.89: plano da pessoa (metas são do Plus). planos.js é cópia gerada do /planos.js da raiz por deploy-fn.py.
+import "./planos.js";
+const GVP = (globalThis as any).GVP;
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT") || "mailto:contato@granaviva.app", Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
@@ -61,10 +66,11 @@ Deno.serve(async (req) => {
   let enviados = 0, usuarios = 0;
   const simulado: any[] = [];
   for (const uid of Object.keys(porUser)) {
-    const [t, c, s] = await Promise.all([
+    const [t, c, s, mt] = await Promise.all([
       sb.from("tx").select("data").eq("user_id", uid),
       sb.from("cartoes").select("data").eq("user_id", uid),
       sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
+      sb.from("metas").select("data").eq("user_id", uid),
     ]);
     const cfg = s.data?.data || {};
     const D = { tx: (t.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), cartoes: (c.data || []).map((r: any) => r.data).filter(Boolean), cfg };
@@ -87,6 +93,20 @@ Deno.serve(async (req) => {
       const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).eq("chave", chave);
       if (!ja?.length) { const r = resumoSemana(D, hoje, hoje); const tx = textoSemana(r, discreto); sem = { chave, r, payload: { title: tx.title, body: tx.body, url: "./?semana=" + hoje, tag: "gv-sem-" + hoje } }; }
     }
+    // v10.89: dia de guardar. só com as duas chaves ligadas (padrão: ligadas) e com Metas no plano
+    let gd: { chaves: string[]; payload: any } | null = null;
+    if (on("guardar") && on("metas")) {
+      const L0 = guardar((mt.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), hoje);
+      if (L0.length) {
+        const { data: a } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+        if (GVP.pode(GVP.efetivo(a).nivel, "metas")) {
+          const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", L0.map((x) => x.chave));
+          const feitos = new Set((ja || []).map((r: any) => r.chave));
+          const L = L0.filter((x) => !feitos.has(x.chave));
+          if (L.length) { const tx = textoGuardar(L, discreto); gd = { chaves: L.map((x) => x.chave), payload: { title: tx.title, body: tx.body, url: "./?alertas=1", tag: L.length === 1 ? "gv-meta-" + L[0].id : "gv-metas-" + hoje } }; }
+        }
+      }
+    }
     /* resumo diário: toda manhã, mesmo sem alerta ("Nada vence hoje."). no domingo com resumo da semana, ele já cobre isso */
     const resumo = cfg?.cfg?.resumoDiario !== false && on("resumo");
     let diario: any = null;
@@ -96,13 +116,18 @@ Deno.serve(async (req) => {
       const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
       diario = { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje };
     }
-    if (!diario && !sem) continue;
+    if (!diario && !sem && !gd) continue;
     usuarios++;
-    if (dry) { simulado.push({ usuario: uid.slice(0, 8), aparelhos: porUser[uid].length, discreto, diario, semana: sem && { payload: sem.payload, numeros: { ...sem.r, venc: sem.r.venc.length } }, orcNovos: novos.map((o) => o.chave) }); continue; }
+    if (dry) { simulado.push({ usuario: uid.slice(0, 8), aparelhos: porUser[uid].length, discreto, diario, semana: sem && { payload: sem.payload, numeros: { ...sem.r, venc: sem.r.venc.length } }, orcNovos: novos.map((o) => o.chave), guardar: gd }); continue; }
     if (diario) {
       const n = await enviar(porUser[uid], diario);
       enviados += n;
       if (n && novos.length) await sb.from("push_log").upsert(novos.map((o) => ({ user_id: uid, chave: o.chave })));
+    }
+    if (gd) {
+      const n = await enviar(porUser[uid], gd.payload);
+      enviados += n;
+      if (n) await sb.from("push_log").upsert(gd.chaves.map((chave) => ({ user_id: uid, chave })));
     }
     if (sem) {
       const n = await enviar(porUser[uid], sem.payload);

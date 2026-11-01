@@ -229,3 +229,31 @@ export function alertas(D: Dados, hoje: string): string[] {
 // notificações discretas (padrão): sem valores na tela bloqueada
 export const discretoOn = (cfg: any) => (cfg?.cfg?.pushDiscreto ?? cfg?.pushDiscreto) !== false;
 export const semValores = (t: string) => t.replace(/\s*·\s*(falta\s*)?R\$\s?-?\d[\d.,]*/g, "").replace(/\s*(de|em)?\s*R\$\s?-?\d[\d.,]*/g, "").replace(/\s·\s*$/, "").trim();
+
+// ---------- v10.89: dia de guardar (metas). mesma regra de mtAvisos no app:
+// meta com aporte por mês e dia de guardar; a partir do dia (1 a 28) e enquanto o que foi guardado no mês < aporte do mês.
+// a chave do push_log (mt|meta|AAAA-MM) faz o aviso sair uma vez por meta por mês, no primeiro dia em que o cron roda
+// a partir do dia de guardar (se o aparelho perdeu o dia, sai no seguinte).
+// meta já batida: aqui só dá para conferir a caixinha (m.atual) contra o alvo/FIPE salvo; ativos ligados à meta não
+// entram (o servidor não tem cotações). no pior caso avisa uma meta que já bateu pelos investimentos.
+export function guardar(metas: any[], hoje: string): { chave: string; txt: string; nome: string; falta: number; id: string }[] {
+  const out: { chave: string; txt: string; nome: string; falta: number; id: string }[] = [];
+  const ym = hoje.slice(0, 7), dia = +hoje.slice(8, 10);
+  for (const m of Array.isArray(metas) ? metas : []) {
+    if (!m || typeof m !== "object" || typeof m.id !== "string") continue;
+    const ap = cents(m.aporteMes), dd = parseInt(m.diaAporte, 10);
+    if (!(ap > 0) || !(dd >= 1 && dd <= 28) || dia < dd) continue;
+    const alvo = m.fipe && +m.fipe.v > 0 ? cents(m.fipe.v) : cents(m.alvo);
+    if (alvo > 0 && cents(m.atual) >= alvo) continue;
+    const feito = (Array.isArray(m.aportes) ? m.aportes : []).filter((a: any) => a && typeof a.d === "string" && a.d.slice(0, 7) === ym).reduce((s: number, a: any) => s + cents(a.v), 0);
+    if (feito >= ap) continue;
+    const nome = String(m.nome || "meta").slice(0, 40), falta = (ap - feito) / 100;
+    out.push({ chave: `mt|${m.id}|${ym}`, id: m.id, nome, falta, txt: `Dia de guardar ${brl(falta)} para ${nome}` + (dia > dd ? ` (era dia ${dd})` : "") });
+  }
+  return out;
+}
+export function textoGuardar(L: { nome: string; txt: string }[], discreto: boolean) {
+  const title = "GranaViva · dia de guardar";
+  if (discreto) return { title, body: L.length === 1 ? "Hoje é dia de guardar para uma meta. Toque para ver." : `Hoje é dia de guardar para ${L.length} metas. Toque para ver.` };
+  return { title, body: L.slice(0, 4).map((x) => x.txt).join("\n") + (L.length > 4 ? `\n+${L.length - 4} no app` : "") };
+}
