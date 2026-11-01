@@ -107,7 +107,9 @@ const EMO_RE=/\p{Extended_Pictographic}|\u21A9/u;
 function catIcon(c){return (S.catIcons&&S.catIcons[c])||CAT_ICON[c]||'outros';}
 function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){if(n&&EMO2LU[n])n=EMO2LU[n];if(n&&!ICONS[n]&&EMO_RE.test(n))return '<span class="i emo '+(c||'')+'" aria-hidden="true">'+n+'</span>';return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
-const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
+/* v10.84: cada logo com o próprio id do degradê (o mesmo id em 3 lugares é inválido e some quando o primeiro está escondido) */
+let LOGO_N=0;
+const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
 const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
 /* ---------- v10.82: planos (Grátis, Plus, Pro) ----------
    A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
@@ -257,15 +259,18 @@ function sid(v){const x=String(v==null?'':v);return ID_OK.test(x)?x:uidS();}
 function uidS(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function str(v,max){return String(v==null?'':v).slice(0,max||200);}
 function dia31(v){const d=parseInt(v,10);return d>=1&&d<=31?d:0;}
+/* v10.84: backup antigo/editado à mão: prazo da meta como número (202612) e criadoEm como número quebravam a tela (ym.slice / cr.slice) */
+function ymOk(v){if(v==null||v==='')return '';const t=String(v).trim();let m=t.match(/^(\d{4})-(\d{1,2})/)||t.match(/^(\d{4})(\d{2})$/);if(!m)return '';const y=+m[1],mm=+m[2];return y>=1990&&y<=2200&&mm>=1&&mm<=12?y+'-'+String(mm).padStart(2,'0'):'';}
+function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&isFinite(v)){const d=new Date(v<1e11?v*1000:v);return isNaN(d)?undefined:d.toISOString();}const t=String(v);return /^\d{4}-\d{2}-\d{2}/.test(t)?t.slice(0,40):undefined;}
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
-  o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi)))}));
-  o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:''}));
+  o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
+  o.cartoes=arr(o.cartoes).map(c=>Object.assign({},c,{id:sid(c.id),nome:str(c.nome,60),banco:str(c.banco,60),final:str(c.final,4).replace(/\D/g,''),limite:Math.max(0,c2(c.limite)),fechamento:dia31(c.fechamento)||1,vencimento:dia31(c.vencimento)||1,cor:Math.max(0,parseInt(c.cor,10)||0),rotativo:pct(c.rotativo,30),multaPct:pct(c.multaPct,10),moraPct:pct(c.moraPct,10),arq:!!c.arq,arqEm:DATA_OK.test(String(c.arqEm))?c.arqEm:'',visual:/^(cor:\d{1,2}|[a-z][a-z0-9_]{1,24})$/.test(String(c.visual||''))?String(c.visual):'',bandeira:['mastercard','visa','elo','amex','hipercard'].includes(c.bandeira)?c.bandeira:''}));
   o.bancos=arr(o.bancos).map(b=>Object.assign({},b,{id:sid(b.id),nome:str(b.nome,80),codigo:str(b.codigo,5).replace(/\D/g,''),logo:/^https:\/\//.test(String(b.logo||''))?str(b.logo,300):'',tipo:str(b.tipo,40),saldo:c2(b.saldo),saldoData:DATA_OK.test(String(b.saldoData))?b.saldoData:'',saldoFecha:!!b.saldoFecha,principal:!!b.principal&&!b.arq,arq:!!b.arq,arqEm:DATA_OK.test(String(b.arqEm))?b.arqEm:''}));
-  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:'',forma:['dinheiro','pix','boleto','cartao'].includes(f.forma)?f.forma:'',conta:f.conta?sid(f.conta):'',cartao:f.cartao?sid(f.cartao):'',pagoCom:['dinheiro','cartao','conta'].includes(f.pagoCom)?f.pagoCom:''}));
+  o.fixas=arr(o.fixas).map(f=>Object.assign({},f,{id:sid(f.id),nome:str(f.nome,80),valor:c2(Math.abs(n0(f.valor))),dia:dia31(f.dia)||1,categoria:str(f.categoria,60)||'Outros',tipo:f.tipo==='receita'?'receita':'despesa',freq:FREQS.includes(f.freq)?f.freq:'mensal',dow:Math.max(0,Math.min(6,parseInt(f.dow,10)||0)),mes:Math.max(1,Math.min(12,parseInt(f.mes,10)||1)),auto:f.auto!==false,n:Math.max(1,Math.min(365,parseInt(f.n,10)||1)),un:['dia','semana','mes'].includes(f.un)?f.un:'dia',inicio:ISO_RE.test(f.inicio||'')?f.inicio:'',fim:ISO_RE.test(f.fim||'')?f.fim:'',forma:['dinheiro','pix','boleto','cartao'].includes(f.forma)?f.forma:'',conta:f.conta?sid(f.conta):'',cartao:f.cartao?sid(f.cartao):'',pagoCom:['dinheiro','cartao','conta'].includes(f.pagoCom)?f.pagoCom:'',criadoEm:isoTsOk(f.criadoEm)}));
   // patrimônio: bens, dívidas e fotografia mensal
   const BEM_T=['imovel','veiculo','outro'],PAS_T=['emprestimo','financiamento','divida','outro'];
   o.bens=arr(o.bens).map(b=>({id:sid(b.id),nome:str(b.nome,80),tipo:BEM_T.includes(b.tipo)?b.tipo:'outro',valor:Math.max(0,c2(b.valor))})).filter(b=>b.nome);
@@ -2383,6 +2388,7 @@ function navRestaura(){
   return true;
 }
 addEventListener('popstate',()=>{if(!navRestaura()&&$('#modal').classList.contains('on'))closeModal();});
+ICONS.ccVira='<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/>';
 ICONS.info='<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>';
 ICONS.clock='<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
 ICONS.handCoins='<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>';
@@ -2428,6 +2434,7 @@ const VIEWS={
   inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
 };
 const AFTER={
+  cartoes:()=>{ccIniciaTilt();ccPinta();},
   inicio:()=>{
     drawSpark();setTimeout(()=>{const sc=$('#cSpark');if(sc&&sc._ch)sc._ch.resize();},80);
     const bc=$('#cBar'),dc=$('#cDonut');
@@ -3046,7 +3053,7 @@ function viewPat(){
   <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você tem</span><button class="ptAdd" data-act="novo-bem">+ bem</button></div>
     ${itA('chart','#a3e635','Investimentos',P.inv)}${itA('wallet','#22d3ee',S.bancos.length?'Contas':'Saldo',Math.max(0,P.contas))}${itA('casa','#a78bfa','Bens',P.bens)}${P.rec>0?itA('handCoins','#fbbf24','A receber (empréstimos)',P.rec):''}</div>
   <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você deve</span><button class="ptAdd" data-act="novo-pas">+ dívida</button></div>
-    ${itP('card','#f87171','Cartões','faturas e parcelas a vencer',P.cartoes)}${itP('receipt','#fb923c','Dívidas e empréstimos',parcelas?'parcelas: '+brl(parcelas)+'/mês':'',P.dividas)}${P.contas<0?itP('bank','#f43f5e','Contas no negativo','',-P.contas):''}</div>
+    ${itP('card','#f87171','Cartões','faturas e parcelas a vencer',P.cartoes).replace(/<span class="ptIc" style="--c:#f87171">[\s\S]*?<\/span>/,m=>cartoesAtivos().length?'<span class="ptIc ptCc" aria-hidden="true">'+cartoesAtivos().slice(0,2).map(c=>cartaoMini(c)).join('')+'</span>':m)}${itP('receipt','#fb923c','Dívidas e empréstimos',parcelas?'parcelas: '+brl(parcelas)+'/mês':'',P.dividas)}${P.contas<0?itP('bank','#f43f5e','Contas no negativo','',-P.contas):''}</div>
   ${evo?`<div class="card"><h4 style="margin:0 0 10px">Evolução do patrimônio líquido</h4>${evo}</div>`:''}
   <div class="head" style="margin-top:8px"><h3 style="margin:0">Bens</h3><button class="btn2" data-act="novo-bem">+ bem</button></div>
   ${bens||'<div class="card"><p class="vazio">imóvel, carro ou outro bem que entra no patrimônio.</p></div>'}
@@ -3341,61 +3348,245 @@ function custoAtrasoHTML(c){
   return `<p class="small encAviso">${txt}</p>`;
 }
 function nomeMesFat(d){const m=+String(d).slice(5,7),y=String(d).slice(0,4);return (MESES[m-1]||'')+'/'+y.slice(2);}
-function faturasCartaoHTML(c){
-  const fs=S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0).sort((a,b)=>b.data.localeCompare(a.data));
+function faturasCartaoHTML(c,excl){
+  const fs=S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&t.id!==excl).sort((a,b)=>b.data.localeCompare(a.data));
   const mostrar=fs.filter(t=>statusFatura(t)!=='paga').concat(fs.filter(t=>statusFatura(t)==='paga').slice(0,2)).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,4);
   if(!mostrar.length)return '';
   return '<div class="fatList"><small class="fatTit">faturas</small>'+mostrar.map(t=>`<div class="row fatRow"><span class="fatNm tap" data-act="fat-abre" data-id="${t.id}" role="button" tabindex="0" aria-label="ver compras da fatura de ${nomeMesFat(t.data)}"><b>${nomeMesFat(t.data)}${I('chevR','tapCh')}</b><small>vence ${fmtData(venceFatura(t)).slice(0,5)}</small></span><span class="row" style="gap:6px"><b>${brl(t.valor)}</b>${faturaBadge(t)}${restanteFatura(t)>0?`<button class="btn2 sm" data-act="pagar-fat" data-id="${t.id}">pagar</button>`:''}</span></div>`).join('')+'</div>';
 }
+/* ---------- v10.81: cartão com o visual do cartão físico do banco ----------
+   tudo desenhado em CSS/SVG próprio (nada de imagem dos bancos). proporção ISO 85,6 × 54 mm.
+   g: gradiente (claro, meio, escuro) · ink: cor do texto · ac: cor de destaque · tex: fosco | metal | carbono
+   mk: marca discreta do cartão (wordmark simples) · art: desenho de fundo · grp: banco (para as variantes) */
+const CC_DES={
+ nubank:{n:'Nubank roxo',grp:'nubank',g:['#a24bf2','#820ad1','#5c0b9c'],ink:'#fff',tex:'fosco',mk:'nu'},
+ nubank_uv:{n:'Ultravioleta preto',grp:'nubank',g:['#34343a','#1b1b1f','#08080a'],ink:'#e4e4ea',tex:'metal',mk:'nu',art:'uv'},
+ dm:{n:'DM azul',grp:'dm',g:['#3d4cf5','#2532d8','#1a1fa6'],ink:'#fff',ac:'#5ce1e6',tex:'fosco',mk:'dm',art:'dm'},
+ inter:{n:'Inter laranja',grp:'inter',g:['#ffa040','#ff7a00','#e05200'],ink:'#fff',tex:'fosco',mk:'inter',art:'onda'},
+ inter_black:{n:'Inter Black',grp:'inter',g:['#33302d','#1a1817','#070707'],ink:'#f2ede6',ac:'#ff7a00',tex:'metal',mk:'inter',art:'linhaAc'},
+ itau:{n:'Itaú laranja',grp:'itau',g:['#ff9a33','#ec7000','#bf4f00'],ink:'#fff',tex:'fosco',mk:'itau',art:'onda'},
+ itau_black:{n:'Itaú preto',grp:'itau',g:['#2f3136','#18191c','#060607'],ink:'#ecedf0',ac:'#ec7000',tex:'metal',mk:'itau',art:'linhaAc'},
+ c6:{n:'C6 carbono',grp:'c6',g:['#3b3b3f','#202023','#0b0b0c'],ink:'#e8e8ea',tex:'carbono',mk:'c6'},
+ c6_grafite:{n:'C6 grafite',grp:'c6',g:['#5b5d63','#3a3c41','#1f2024'],ink:'#f1f1f3',tex:'metal',mk:'c6'},
+ bb:{n:'BB azul',grp:'bb',g:['#2563d6','#0b3fa3','#05286b'],ink:'#fff',ac:'#fcfc30',tex:'fosco',mk:'bb',art:'bb'},
+ santander:{n:'Santander vermelho',grp:'santander',g:['#ff3b30','#e30000','#9e0000'],ink:'#fff',tex:'fosco',mk:'santander',art:'curva'},
+ bradesco:{n:'Bradesco vermelho',grp:'bradesco',g:['#f0325a','#cc092f','#78051e'],ink:'#fff',tex:'fosco',mk:'bradesco',art:'curva'},
+ caixa:{n:'Caixa azul',grp:'caixa',g:['#1a7fd4','#005ca9','#00386e'],ink:'#fff',ac:'#f39200',tex:'fosco',mk:'caixa',art:'caixa'},
+ picpay:{n:'PicPay verde',grp:'picpay',g:['#22c773','#0fa75c','#06733f'],ink:'#fff',tex:'fosco',mk:'picpay',art:'circ'},
+ mercadopago:{n:'Mercado Pago azul',grp:'mercadopago',g:['#1aa8e8','#0086cf','#00559a'],ink:'#fff',tex:'fosco',mk:'mercadopago',art:'onda'},
+ neon:{n:'Neon',grp:'neon',g:['#0fb4e6','#0577d1','#0a3fb4'],ink:'#fff',tex:'fosco',mk:'neon',art:'circ'},
+ next:{n:'Next preto e verde',grp:'next',g:['#242424','#121212','#030303'],ink:'#f4f4f4',ac:'#00e17c',tex:'fosco',mk:'next',art:'brilhoAc'},
+ pagbank:{n:'PagBank verde',grp:'pagbank',g:['#1fbf95','#0e9a80','#086656'],ink:'#fff',ac:'#ffd21f',tex:'fosco',mk:'pagbank',art:'linhaAc'}
+};
+const CC_MK_TXT={inter:'inter',itau:'itaú',c6:'C6',bb:'BB',santander:'santander',bradesco:'bradesco',caixa:'CAIXA',picpay:'picpay',mercadopago:'mercado pago',neon:'neon',next:'next',pagbank:'pagbank'};
+const CC_BAND_N={mastercard:'Mastercard',visa:'Visa',elo:'Elo',amex:'American Express',hipercard:'Hipercard'};
+const ccNz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+/* visual automático: lê o banco e o nome do cartão */
+function ccAuto(c){
+  const tx=ccNz((c.banco||'')+' '+(c.nome||'')),bk=bancoDoCartao(c),bn=ccNz(bk?bk.n:'');
+  const t=tx+' '+bn;
+  if(/\b(dm|dmcard|dm card|cartao dm)\b/.test(tx))return 'dm';
+  if(/ultravioleta/.test(t)||(/\buv\b/.test(tx)&&/nubank|\bnu\b/.test(t)))return 'nubank_uv';
+  if(/nubank|\bnu\b|roxinho/.test(t))return 'nubank';
+  if(/\binter\b|banco inter/.test(t))return /black|win|duo/.test(tx)?'inter_black':'inter';
+  if(/\bitau\b|unibanco|personnalite/.test(t))return /black|the one|personnalite/.test(tx)?'itau_black':'itau';
+  if(/\bc6\b/.test(t))return 'c6';
+  if(/banco do brasil|\bbb\b|ourocard/.test(t))return 'bb';
+  if(/santander/.test(t))return 'santander';
+  if(/bradesco/.test(t))return 'bradesco';
+  if(/caixa/.test(t))return 'caixa';
+  if(/picpay/.test(t))return 'picpay';
+  if(/mercado ?pago/.test(t))return 'mercadopago';
+  if(/\bneon\b/.test(t))return 'neon';
+  if(/\bnext\b/.test(t))return 'next';
+  if(/pagbank|pagseguro/.test(t))return 'pagbank';
+  return '';
+}
+function ccHex(h,f){const m=String(h).replace('#','');const n=m.length===3?m.split('').map(x=>x+x).join(''):m;let r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);
+  const k=f>0?(x=>Math.round(x+(255-x)*f)):(x=>Math.round(x*(1+f)));return '#'+[k(r),k(g),k(b)].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');}
+/* visual em uso: o escolhido no cartão, senão o automático pelo banco, senão o genérico com a cor */
+function ccVisual(c){
+  const v=String(c.visual||'');
+  const nomeBk=(()=>{const bk=bancoDoCartao(c);return bk?(NOME_CURTO[bk.n]||bk.n):(c.banco||'');})();
+  const gen=(p,k,n)=>({k,d:{n,g:[ccHex(p[0],.12),p[0],p[1]],ink:p[2]||'#fff',tex:'fosco',mk:'txt',art:'guil',txt:nomeBk||c.nome||'cartão'}});
+  if(v.indexOf('cor:')===0||(!v&&c.corPropria)){const i=v?(parseInt(v.slice(4),10)||0):(c.cor||0);const p=CARD_COR[i%CARD_COR.length]||CARD_COR[0];return gen(p,'cor','Cor própria · '+p[2]);}
+  if(v&&CC_DES[v])return {k:v,d:CC_DES[v]};
+  const a=ccAuto(c);if(a)return {k:a,d:CC_DES[a]};
+  const bk=bancoDoCartao(c),mc=bk&&CARD_MARCA[bk.n];
+  if(mc)return gen(mc,'gen',nomeBk);
+  return gen(CARD_COR[(c.cor||0)%CARD_COR.length]||CARD_COR[0],'gen','genérico');
+}
+/* marcas das bandeiras: desenho simples e nítido em SVG */
+function ccBand(m){
+  if(m==='mastercard')return '<svg class="gvc-band mc" viewBox="0 0 50 31" role="img" aria-label="Mastercard"><circle cx="15.5" cy="15.5" r="15.5" fill="#eb001b"/><circle cx="34.5" cy="15.5" r="15.5" fill="#f79e1b"/><path d="M25 3.2a15.5 15.5 0 0 1 0 24.6a15.5 15.5 0 0 1 0-24.6z" fill="#ff5f00"/></svg>';
+  if(m==='visa')return '<svg class="gvc-band visa" viewBox="0 0 64 22" role="img" aria-label="Visa"><text x="32" y="19" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="800" font-style="italic" font-size="22.5" letter-spacing="-.4" fill="currentColor">VISA</text></svg>';
+  if(m==='elo')return '<svg class="gvc-band elo" viewBox="0 0 54 24" role="img" aria-label="Elo"><circle cx="6" cy="5" r="3.6" fill="#ffcb05"/><circle cx="6" cy="12" r="3.6" fill="#00a4e0"/><circle cx="6" cy="19" r="3.6" fill="#ef4123"/><text x="33" y="19" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="700" font-size="20" fill="currentColor">elo</text></svg>';
+  if(m==='amex')return '<svg class="gvc-band amex" viewBox="0 0 52 30" role="img" aria-label="American Express"><rect width="52" height="30" rx="4" fill="#2e77bc"/><text x="26" y="20" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="800" font-size="12.5" letter-spacing=".6" fill="#fff">AMEX</text></svg>';
+  if(m==='hipercard')return '<svg class="gvc-band hiper" viewBox="0 0 70 26" role="img" aria-label="Hipercard"><rect width="70" height="26" rx="5" fill="#b3131b"/><text x="35" y="17.5" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="700" font-style="italic" font-size="12.5" fill="#fff">Hipercard</text></svg>';
+  return '';
+}
+/* marca discreta do cartão (só um wordmark simples, como no cartão de verdade) */
+function ccMarca(d){
+  if(d.mk==='nu')return '<svg class="gvc-mk gvc-mk-nu" viewBox="0 0 64 36" aria-hidden="true"><path d="M5 34V17.5a10 10 0 0 1 20 0V34M36 2v16.5a10 10 0 0 0 20 0V2" fill="none" stroke="currentColor" stroke-width="7"/></svg>';
+  if(d.mk==='dm')return '<svg class="gvc-mk gvc-mk-dm" viewBox="0 0 60 44" aria-hidden="true"><text x="30" y="25" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="700" font-size="29" letter-spacing="-1.2" fill="currentColor">dm</text><path d="M14 33q16 11 32 0" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round"/></svg>';
+  if(d.mk==='txt')return '<span class="gvc-mk gvc-wm gvc-wm-txt">'+esc(String(d.txt||'').slice(0,22))+'</span>';
+  return '<span class="gvc-mk gvc-wm gvc-wm-'+d.mk+'">'+esc(CC_MK_TXT[d.mk]||'')+'</span>';
+}
+/* desenho de fundo, no sistema de coordenadas do cartão (856 × 540 = décimos de mm) */
+let CC_UID=0;
+function ccArte(d){
+  const a=d.art,ac=d.ac||'#fff';let s='';
+  if(a==='dm'){const gi='gvcDm'+(++CC_UID);s=`<defs><linearGradient id="${gi}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${ac}" stop-opacity=".78"/><stop offset=".5" stop-color="#8ef0f2"/><stop offset="1" stop-color="${ac}" stop-opacity=".78"/></linearGradient></defs><path d="M502 258q96 64 192 0" fill="none" stroke="#000" stroke-opacity=".14" stroke-width="24" stroke-linecap="round" transform="translate(0 5)"/><path d="M502 258q96 64 192 0" fill="none" stroke="url(#${gi})" stroke-width="22" stroke-linecap="round"/>`;}
+  else if(a==='uv')s='<circle cx="860" cy="-40" r="330" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="2"/><circle cx="860" cy="-40" r="300" fill="none" stroke="#b46cff" stroke-opacity=".08" stroke-width="2"/>';
+  else if(a==='onda')s='<path d="M-20 410C180 330 360 470 560 400S820 300 880 330V560H-20Z" fill="#fff" fill-opacity=".07"/><path d="M-20 470C200 400 380 520 600 455S830 380 880 400V560H-20Z" fill="#000" fill-opacity=".06"/>';
+  else if(a==='curva')s='<path d="M520 -20C700 120 760 330 900 420V-20Z" fill="#fff" fill-opacity=".08"/><path d="M640 -20C760 110 800 260 900 330V-20Z" fill="#fff" fill-opacity=".06"/>';
+  else if(a==='bb')s=`<path d="M856 300C700 330 600 420 560 560H620C660 450 750 375 856 352Z" fill="${ac}" fill-opacity=".92"/><path d="M856 380C760 400 690 470 670 560H700C720 485 785 425 856 410Z" fill="${ac}" fill-opacity=".5"/>`;
+  else if(a==='caixa')s=`<path d="M650 -10H720L520 550H450Z" fill="#fff" fill-opacity=".08"/><path d="M745 -10H800L600 550H545Z" fill="${ac}" fill-opacity=".9"/>`;
+  else if(a==='circ')s='<circle cx="760" cy="80" r="250" fill="#fff" fill-opacity=".08"/><circle cx="760" cy="80" r="160" fill="#fff" fill-opacity=".06"/>';
+  else if(a==='brilhoAc')s=`<circle cx="840" cy="560" r="300" fill="${ac}" fill-opacity=".14"/><circle cx="840" cy="560" r="170" fill="${ac}" fill-opacity=".14"/>`;
+  else if(a==='linhaAc')s=`<path d="M0 500L856 300" stroke="${ac}" stroke-opacity=".7" stroke-width="3"/><path d="M0 520L856 320" stroke="${ac}" stroke-opacity=".25" stroke-width="2"/>`;
+  else if(a==='guil'){for(let r=150;r<=520;r+=26){const x0=(780-Math.sqrt(r*r-400)).toFixed(1),y1=(560-Math.sqrt(r*r-5776)).toFixed(1);s+=`<path d="M${x0} 540A${r} ${r} 0 0 1 856 ${y1}" fill="none" stroke="#fff" stroke-opacity="${(.075-(r-150)/9000).toFixed(3)}" stroke-width="1.6"/>`;}}
+  return s?'<svg class="gvc-art" viewBox="0 0 856 540" preserveAspectRatio="none" aria-hidden="true">'+s+'</svg>':'';
+}
+const CC_CHIP='<span class="gvc-chip" aria-hidden="true"><svg viewBox="0 0 64 48"><path d="M0 16.5h19M0 31.5h19M45 16.5h19M45 31.5h19M19 0v48M45 0v48M19 24h26M32 0v10M32 38v10" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="24" y="10" width="16" height="28" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>';
+const CC_NFC='<svg class="gvc-nfc" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 8.2a6 6 0 0 1 0 7.6M11 5.8a10 10 0 0 1 0 12.4M14.5 3.4a14 14 0 0 1 0 17.2M18 1.4a17.5 17.5 0 0 1 0 21.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+function ccNomeCurto(c){const bk=bancoDoCartao(c);if(ccAuto(c)==='dm')return 'DM';return bk?(NOME_CURTO[bk.n]||bk.n):(c.banco||c.nome||'Cartão');}
+function ccRotulo(c){return 'Cartão '+(c.nome||ccNomeCurto(c))+(c.bandeira&&CC_BAND_N[c.bandeira]?', '+CC_BAND_N[c.bandeira]:'')+(c.final?', final '+c.final:'');}
+/* o cartão. o: {verso:true} desenha o verso (limite, fechamento, vencimento, fatura); {mini:true} versão pequena; {tilt:true} acompanha a inclinação */
+function cartaoHTML(c,o){
+  o=o||{};const V=ccVisual(c),d=V.d,g=d.g;
+  const st=`--g0:${g[0]};--g1:${g[1]};--g2:${g[2]};--ink:${d.ink};--ac:${d.ac||d.ink}`;
+  const fin=String(c.final||'').replace(/\D/g,'').slice(-4);
+  const frente=`<span class="gvc-face gvc-front"><span class="gvc-tex"></span>${ccArte(d)}${ccMarca(d)}${CC_CHIP}${CC_NFC}<span class="gvc-num" aria-hidden="true"><i>••••</i>${fin?' '+esc(fin):''}</span>${ccBand(c.bandeira)}<span class="gvc-shine" aria-hidden="true"></span></span>`;
+  let verso='';
+  if(o.verso){
+    const u=usoCartao(c),usedT=usadoCartaoTotal(c),pct=c.limite?Math.min(100,usedT/c.limite*100):0,disp=c.limite-usedT,over=usedT>c.limite;
+    const atual=u.used;
+    verso=`<span class="gvc-face gvc-back" aria-hidden="true"><span class="gvc-tex"></span><span class="gvc-mag"></span>
+      <span class="gvc-bk">
+        <span class="gvc-bkR"><span>limite usado</span><b class="nw">${brl(usedT)}</b></span>
+        <span class="gvc-bar${over?' over':''}"><i style="width:${OCULTO?0:pct.toFixed(1)}%"></i></span>
+        <span class="gvc-bkR gvc-bkS"><span>disponível <b class="nw">${brl(disp)}</b></span><span>${OCULTO?'••':Math.round(pct)}% de ${brl(c.limite)}</span></span>
+        <span class="gvc-bkG"><span><small>fecha</small><b>dia ${c.fechamento}</b></span><span><small>vence</small><b>dia ${c.vencimento}</b></span><span><small>fatura atual</small><b class="nw">${brl(atual)}</b></span></span>
+      </span><span class="gvc-shine"></span></span>`;
+  }
+  return `<span class="gvc gvc-k-${V.k} gvc-t-${d.tex||'fosco'}${o.mini?' gvc-mini':''}${o.cls?' '+o.cls:''}" style="${st}"${o.tilt?' data-tilt="1"':''} data-cc="${esc(c.id||'')}"${o.mini?' aria-hidden="true"':' role="img" aria-label="'+esc(ccRotulo(c))+'"'}><span class="gvc-in">${frente}${verso}</span></span>`;
+}
+function cartaoMini(c,cls){return '<span class="gvcMini '+(cls||'')+'">'+cartaoHTML(c,{mini:true})+'</span>';}
+/* ---------- brilho que acompanha o aparelho (ou o dedo) ---------- */
+const CC_T={on:false,raf:0,x:0,y:0,b0:null,ori:0};
+function ccMov(){try{return !matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return true;}}
+function ccPinta(){CC_T.raf=0;document.querySelectorAll('.gvc[data-tilt]').forEach(e=>{e.style.setProperty('--tx',CC_T.x.toFixed(3));e.style.setProperty('--ty',CC_T.y.toFixed(3));});}
+function ccAgenda(x,y){CC_T.x=Math.max(-1,Math.min(1,x));CC_T.y=Math.max(-1,Math.min(1,y));if(!CC_T.raf)CC_T.raf=requestAnimationFrame(ccPinta);}
+function ccOri(e){
+  if(e.gamma==null||e.beta==null||TAB!=='cartoes')return;
+  if(CC_T.b0==null)CC_T.b0=e.beta;CC_T.b0+=(e.beta-CC_T.b0)*.02; // devagar, a posição em que a pessoa segura vira o "zero"
+  CC_T.ori=Date.now();ccAgenda(e.gamma/28,(e.beta-CC_T.b0)/28);
+}
+function ccLigaOri(){if(CC_T.on||!ccMov())return;CC_T.on=true;addEventListener('deviceorientation',ccOri,{passive:true});}
+/* no iOS a permissão só pode ser pedida num toque da pessoa */
+function ccPedeOri(){
+  const D=window.DeviceOrientationEvent;if(!D||!ccMov()||CC_T.on)return;
+  if(typeof D.requestPermission==='function'){
+    let st='';try{st=localStorage.getItem('gv-tilt')||'';}catch(e){}
+    if(st==='nao')return;
+    try{D.requestPermission().then(r=>{try{localStorage.setItem('gv-tilt',r==='granted'?'ok':'nao');}catch(e){}if(r==='granted')ccLigaOri();}).catch(()=>{});}catch(e){}
+  }else ccLigaOri();
+}
+function ccIniciaTilt(){
+  const D=window.DeviceOrientationEvent;if(!D||!ccMov())return;
+  if(typeof D.requestPermission!=='function')ccLigaOri();
+  else{let st='';try{st=localStorage.getItem('gv-tilt')||'';}catch(e){}if(st==='ok')ccLigaOri();}
+}
+/* sem sensor (ou sem permissão): o brilho segue o dedo / o mouse */
+document.addEventListener('pointermove',e=>{
+  if(TAB!=='cartoes'||!ccMov()||Date.now()-CC_T.ori<1500)return;
+  const el=e.target.closest&&e.target.closest('.gvc[data-tilt]');if(!el)return;
+  const r=el.getBoundingClientRect();ccAgenda(((e.clientX-r.left)/r.width-.5)*2,((e.clientY-r.top)/r.height-.5)*2);
+},{passive:true});
+document.addEventListener('pointerout',e=>{if(TAB!=='cartoes'||Date.now()-CC_T.ori<1500)return;const el=e.target.closest&&e.target.closest('.gvc[data-tilt]');if(el&&!el.contains(e.relatedTarget))ccAgenda(0,0);},{passive:true});
+/* ---------- tela Cartões: carteira empilhada ---------- */
+let CC_AT=(()=>{try{return localStorage.getItem('gv-cc-ativo')||'';}catch(e){return '';}})();
+function ccFatPend(c){
+  return S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&restanteFatura(t)>0).sort((a,b)=>a.data.localeCompare(b.data))[0]||null;
+}
+function walDetHTML(c){
+  const u=usoCartao(c),d=ccVisual(c).d,usedT=usadoCartaoTotal(c),disp=c.limite-usedT,pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite;
+  const nomeBk=ccNomeCurto(c);
+  const fk='fat|'+c.id+'|'+fechamentoDe(c,u.ci.fim).fecha.slice(0,7);
+  const pend=ccFatPend(c);
+  const tint=d.g[1],tink=d.ink;
+  return `<div class="walDet" style="--tint:${tint};--tint0:${d.g[0]};--tint2:${d.g[2]};--tink:${tink}">
+    <div class="walHd"><div class="walNm"><b>${esc(c.nome||nomeBk)}</b><small>${esc(nomeBk)}${c.bandeira&&CC_BAND_N[c.bandeira]?' · '+CC_BAND_N[c.bandeira]:''}${c.final?' · final '+esc(c.final):''}</small></div>
+      <button type="button" class="walVira" data-act="cc-vira" data-id="${c.id}" aria-label="virar o cartão e ver limite, fechamento e vencimento">${I('ccVira')}<span>virar</span></button></div>
+    <div class="card walFat">
+      <div class="walFatTop"><small>fatura atual · fecha ${fmtDataCurta(u.ci.fim)} · vence ${fmtDataCurta(isoDe(u.due))}</small><b class="walFatV nw">${brl(u.used)}</b></div>
+      <p class="ccCiclo tap" data-act="fat-abre" data-id="${fk}" role="button" tabindex="0" aria-label="ver compras do ciclo aberto">ver compras do ciclo · ${u.n} lançamento${u.n===1?'':'s'}${I('chevR','tapCh')}</p>
+      ${pend?`<div class="walPend"><div class="walPendTx"><span><b class="fatNm tap" data-act="fat-abre" data-id="${pend.id}" role="button" tabindex="0" aria-label="ver compras da fatura de ${nomeMesFat(pend.data)}">fatura de ${nomeMesFat(pend.data)}${I('chevR','tapCh')}</b>${faturaBadge(pend)}</span><small>vence ${fmtDataCurta(venceFatura(pend))}</small></div><button type="button" class="walPagar" data-act="pagar-fat" data-id="${pend.id}">${I('check')}<span>Pagar ${brl(restanteFatura(pend))}</span></button></div>`:''}
+      ${faturasCartaoHTML(c,pend&&pend.id)}
+    </div>
+    <div class="card walLim"><div class="row"><span>disponível</span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b></div><div class="bar walBar ${over?'over':''}"><i data-w="${OCULTO?0:pct.toFixed(1)}"></i></div><div class="row small"><span>${c.bancoData?'usado (banco, '+fmtData(c.bancoData).slice(0,5)+') ':'usado '}${brl(usedT)}</span><span>limite ${brl(c.limite)}</span></div>${custoAtrasoHTML(c)}</div>
+    <div class="acts2"><button class="btn2" data-act="edit-cartao" data-id="${c.id}">editar</button><button class="btn2" data-act="arq-cartao" data-id="${c.id}">arquivar</button><button class="btn2 danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div>
+  </div>`;
+}
+function walHTML(){
+  const CA=cartoesAtivos();if(!CA.length)return '';
+  const at=CA.find(c=>c.id===CC_AT)||CA[CA.length-1];CC_AT=at.id;
+  const ord=CA.filter(c=>c!==at).concat([at]);
+  const d=ccVisual(at).d;
+  return `<div class="walSec" id="walSec" style="--tint:${d.g[1]};--tint2:${d.g[2]}"><span class="walGlow" aria-hidden="true"></span>
+    <div class="wal${ord.length>1?'':' um'}" role="group" aria-label="carteira de cartões, ${ord.length} cart${ord.length===1?'ão':'ões'}">${ord.map(c=>{const on=c===at;const nm=c.nome||ccNomeCurto(c);
+      return `<div class="walItem${on?' on':''}" data-id="${c.id}"><button type="button" class="walCard${on?' on':''}" data-act="cc-ativa" data-id="${c.id}" aria-label="${esc(on?nm+', em destaque. toque para virar e ver limite e fatura':nm+'. toque para trazer para a frente')}"${on?' aria-pressed="false"':''}>${cartaoHTML(c,{verso:on,tilt:on})}</button></div>`;}).join('')}</div>
+    ${walDetHTML(at)}</div>`;
+}
+/* troca o cartão da frente sem redesenhar a tela toda, com animação (FLIP) */
+function walRedesenha(){
+  const sec=$('#walSec');if(!sec){render();return;}
+  const antes={};sec.querySelectorAll('.walItem').forEach(e=>{antes[e.dataset.id]=e.getBoundingClientRect().top;});
+  const tmp=document.createElement('div');tmp.innerHTML=walHTML();const novo=tmp.firstElementChild;sec.replaceWith(novo);
+  novo.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
+  if(ccMov())novo.querySelectorAll('.walItem').forEach(e=>{const a=antes[e.dataset.id];if(a==null)return;const dy=a-e.getBoundingClientRect().top;if(Math.abs(dy)<1)return;
+    e.style.transition='none';e.style.transform='translateY('+dy+'px)';void e.offsetWidth;e.style.transition='transform .5s cubic-bezier(.2,.8,.2,1)';e.style.transform='';
+    setTimeout(()=>{e.style.transition='';},560);});
+  const det=novo.querySelector('.walDet');if(det&&ccMov()){det.classList.add('entra');}
+  ccPinta();
+}
+function ccAtiva(id){
+  ccPedeOri();
+  if(id===CC_AT){ccVira(id);return;}
+  if(!cartoesAtivos().some(c=>c.id===id))return;
+  CC_AT=id;try{localStorage.setItem('gv-cc-ativo',id);}catch(e){}
+  walRedesenha();
+  const b=document.querySelector('.walCard.on');if(b)b.focus({preventScroll:true});
+}
+function ccVira(id){
+  const b=document.querySelector('.walCard.on[data-id="'+id+'"]');if(!b)return;
+  const g=b.querySelector('.gvc'),v=!g.classList.contains('virado');
+  g.classList.toggle('virado',v);b.setAttribute('aria-pressed',v?'true':'false');
+  const fr=g.querySelector('.gvc-front'),bk=g.querySelector('.gvc-back');if(bk)bk.setAttribute('aria-hidden',v?'false':'true');if(fr)fr.setAttribute('aria-hidden',v?'true':'false');
+  const vb=document.querySelector('.walVira');if(vb)vb.classList.toggle('on',v);
+}
+/* toque longo no cartão da frente vira o cartão */
+(()=>{let lp=null,dis=false;
+  document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('.walCard.on');if(!b)return;dis=false;lp={x:e.clientX,y:e.clientY,t:setTimeout(()=>{lp=null;dis=true;ccVira(b.dataset.id);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}},480)};},{passive:true});
+  const solta=()=>{if(lp){clearTimeout(lp.t);lp=null;}};
+  document.addEventListener('pointermove',e=>{if(lp&&(Math.abs(e.clientX-lp.x)>8||Math.abs(e.clientY-lp.y)>8))solta();},{passive:true});
+  document.addEventListener('pointerup',solta,{passive:true});document.addEventListener('pointercancel',solta,{passive:true});
+  document.addEventListener('click',e=>{if(dis&&e.target.closest&&e.target.closest('.walCard')){dis=false;e.stopPropagation();e.preventDefault();}},true);
+  document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.walCard'))e.preventDefault();});
+})();
 function viewCartoes(){
   const CA=cartoesAtivos(),arqC=S.cartoes.filter(c=>c.arq);
   const tL=CA.reduce((a,c)=>a+c.limite,0);
-  const us=CA.map(c=>usoCartao(c));
   const tU=CA.reduce((a,c)=>a+usadoCartaoTotal(c),0);
-  const lst=CA.map((c,i)=>{
-    const u=us[i],bk=bancoDoCartao(c),mc=bk&&!c.corPropria?CARD_MARCA[bk.n]:null;
-    const pal=mc||CARD_COR[c.cor%CARD_COR.length]||CARD_COR[0];
-    const usedT=usadoCartaoTotal(c);
-    const pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite,disp=c.limite-usedT;
-    const nomeBk=bk?(NOME_CURTO[bk.n]||bk.n):(c.banco||'');
-    const nivel=String(c.nome||'').toLowerCase().replace(String(nomeBk).toLowerCase(),'').trim()||'crédito';
-    const lg=bk&&bk.d?bancoLogoHTML(bancoLogo(bk.d),bk.n,'cc-lg',bancoLogo2(bk.d)):'';
-    return `<div class="card hov fat-card ccx" style="--c1:${pal[0]};--c2:${pal[1]};--cf:${mc?pal[2]:'#fff'}">
-      <div class="ccTop">
-        <div class="ccMini" aria-hidden="true">
-          <div class="ccm-h">${lg}<span>${esc(nomeBk||'Cartão')}</span></div>
-          <span class="ccm-chip"></span>
-          <div class="ccm-f"><span>•• ${esc(c.final||'••••')}</span>${marcaSVG(c.bandeira)}</div>
-        </div>
-        <div class="ccHd">
-          <b>${esc(nomeBk||c.nome)}</b>
-          <small>${esc(nivel)}${c.final?' · final '+esc(c.final):''}</small>
-          <span class="ccLim">limite <b>${brl(c.limite)}</b></span>
-        </div>
-      </div>
-      <div class="ccUso">
-        <div class="row"><span>${c.bancoData?'usado (banco, '+fmtData(c.bancoData).slice(0,5)+')':'usado'}</span><b class="${over?'neg':''}">${brl(usedT)}</b></div>
-        <div class="bar ${over?'over':''}"><i data-w="${pct}"></i></div>
-        <div class="row"><span>disponível <b class="${disp<0?'neg':'pos'}">${brl(disp)}</b></span><span>${Math.round(pct)}% do limite</span></div>
-      </div>
-      <div class="ccDias">
-        <span><small>fecha</small><b>dia ${c.fechamento}</b></span>
-        <span><small>vence</small><b>dia ${c.vencimento}</b></span>
-        <span><small>próxima fatura</small><b>${fmtDate(u.due)}</b></span>
-      </div>
-      <p class="ccCiclo tap" data-act="fat-abre" data-id="fat|${c.id}|${fechamentoDe(c,u.ci.fim).fecha.slice(0,7)}" role="button" tabindex="0" aria-label="ver compras do ciclo aberto">ciclo ${fmtData(u.ci.ini).slice(0,5)} a ${fmtData(u.ci.fim).slice(0,5)} · ${u.n} lançamento${u.n===1?'':'s'}${I('chevR','tapCh')}</p>
-      ${faturasCartaoHTML(c)}
-      ${custoAtrasoHTML(c)}
-      <div class="acts2"><button class="btn2" data-act="edit-cartao" data-id="${c.id}">editar</button><button class="btn2" data-act="arq-cartao" data-id="${c.id}">arquivar</button><button class="btn2 danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div>
-    </div>`;
-  }).join('');
   return `
   <div class="head"><h2>Cartões</h2><button class="btn" data-act="novo-cartao">${I('plus')} novo</button></div>
-  ${S.cartoes.length?`<div class="card bkHero ccHero"><small>disponível nos cartões</small><div class="bkBig nw ${tL-tU<0?'neg':''}">${brl(tL-tU)}</div>
-      <div class="bar ccHBar"><i style="width:${tL>0?Math.min(100,tU/tL*100).toFixed(1):0}%;background:${tL>0&&tU/tL>.8?'#f43f5e':tL>0&&tU/tL>.5?'#f59e0b':'#4ade80'}"></i></div>
-      <div class="bkMeta"><div><small>usado</small><b class="${tU>tL?'neg':''}">${brl(tU)}${tL>0?` <em>${Math.round(tU/tL*100)}%</em>`:''}</b></div><div><small>limite total</small><b>${brl(tL)}</b></div></div>
-    </div>${CA.length?`<div class="cgrid">${lst}</div>`:'<div class="card"><p class="vazio">todos os cartões estão arquivados.</p></div>'}
-    ${arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow"><div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:''}`
+  ${S.cartoes.length?`${CA.length?walHTML():'<div class="card"><p class="vazio">todos os cartões estão arquivados.</p></div>'}
+    ${CA.length>1?`<div class="card bkHero ccHero"><small>disponível nos cartões</small><div class="bkBig nw ${tL-tU<0?'neg':''}">${brl(tL-tU)}</div>
+      <div class="bar ccHBar"><i style="width:${OCULTO?0:tL>0?Math.min(100,tU/tL*100).toFixed(1):0}%;background:${tL>0&&tU/tL>.8?'#f43f5e':tL>0&&tU/tL>.5?'#f59e0b':'#4ade80'}"></i></div>
+      <div class="bkMeta"><div><small>usado</small><b class="${tU>tL?'neg':''}">${brl(tU)}${tL>0&&!OCULTO?` <em>${Math.round(tU/tL*100)}%</em>`:''}</b></div><div><small>limite total</small><b>${brl(tL)}</b></div></div>
+    </div>`:''}
+    ${arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow">${cartaoMini(c,'arqMini')}<div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:''}`
     :vazioHTML('card','Nenhum cartão ainda','Adicione seu cartão de crédito para acompanhar a fatura, o limite e as parcelas.','<button class="btn sm" data-act="novo-cartao">+ cartão</button>')}`;
 }
 function viewBancos(){
@@ -3425,17 +3616,34 @@ function viewBancos(){
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
     :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}`;
 }
+/* v10.81: DM (emissora de cartões de loja) não é banco, mas aparece na escolha do cartão */
+const CC_EXTRA=[{c:'',n:'DM',d:'',t:'',sub:'cartão de loja · DMCard'}];
+function ccOpcoesVisual(t,atual){
+  const auto=ccAuto(Object.assign({},t,{visual:''}));
+  const nomeAuto=auto?CC_DES[auto].n:'genérico, na cor do banco';
+  const op=(v,tx)=>`<option value="${esc(v)}" ${v===atual?'selected':''}>${esc(tx)}</option>`;
+  const ks=Object.keys(CC_DES),grp=auto?CC_DES[auto].grp:'';
+  const doBanco=grp?ks.filter(k=>CC_DES[k].grp===grp):[];
+  const outros=ks.filter(k=>!doBanco.includes(k));
+  return op('','Automático pelo banco · '+nomeAuto)
+    +(doBanco.length?`<optgroup label="variantes do banco">${doBanco.map(k=>op(k,CC_DES[k].n)).join('')}</optgroup>`:'')
+    +`<optgroup label="outros visuais">${outros.map(k=>op(k,CC_DES[k].n)).join('')}</optgroup>`
+    +`<optgroup label="cor própria">${CARD_COR.map((x,i)=>op('cor:'+i,'Cor própria · '+x[2])).join('')}</optgroup>`;
+}
 function cartaoForm(id){
   const c=id?S.cartoes.find(x=>x.id===id):null;
+  const bk=c&&bancoDoCartao(c);
+  const bVal=bk?bk.n:(c&&ccAuto(c)==='dm'?'DM':'');
+  const visAt=c?(c.visual||(c.corPropria?'cor:'+((c.cor||0)%CARD_COR.length):'')):'';
   form(c?'Editar cartão':'Novo cartão',[
     {name:'nome',label:'Nome do cartão',value:c?c.nome:'',required:true,placeholder:'ex: Platinum'},
-    {name:'banco',type:'bancoPick',value:(c&&bancoDoCartao(c))?bancoDoCartao(c).n:'',outro:(c&&!bancoDoCartao(c))?c.banco:''},
+    {name:'banco',type:'bancoPick',value:bVal,outro:(c&&!bVal)?c.banco:'',extra:CC_EXTRA},
     {name:'bandeira',label:'Bandeira',type:'select',value:c?c.bandeira||'':'',options:BANDEIRAS},
+    {name:'visual',label:'Visual',type:'select',value:visAt,options:[{v:visAt,t:''}]},
     {name:'limite',label:'Limite (R$)',value:c?num(c.limite):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'final',label:'Últimos 4 dígitos (opcional)',value:c?c.final:'',inputmode:'numeric',placeholder:'0000'},
     {name:'fechamento',label:'Dia de fechamento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.fechamento:''},
     {name:'vencimento',label:'Dia de vencimento (1 a 31)',type:'number',min:1,max:31,required:true,value:c?c.vencimento:''},
-    {name:'cor',label:'Cor do cartão',type:'select',value:c&&c.corPropria?c.cor:'m',options:[{v:'m',t:'cor do banco'}].concat(CARD_COR.map((x,i)=>({v:i,t:x[2]})))},
     {name:'rotativo',label:'Juros do rotativo (% ao mês, opcional)',value:c&&c.rotativo?num(c.rotativo):'',inputmode:'decimal',placeholder:'ex: 14,5'},
     {name:'multaPct',label:'Multa por atraso (%)',value:c?num(c.multaPct||2):'2',inputmode:'decimal'},
     {name:'moraPct',label:'Juros de mora (% ao mês)',value:c?num(c.moraPct||1):'1',inputmode:'decimal'}
@@ -3448,9 +3656,34 @@ function cartaoForm(id){
     const rot=parseBR(v.rotativo||''),mu=parseBR(v.multaPct||''),mo=parseBR(v.moraPct||'');
     if(rot>30)return 'Rotativo acima de 30% ao mês? Confira a taxa.';
     if(mu>10||mo>10)return 'Multa e mora costumam ser 2% e 1%. Confira.';
-    const obj={nome,banco:String(v.banco).trim(),bandeira:String(v.bandeira||''),corPropria:v.cor!=='m',limite,final:fin,fechamento:fech,vencimento:venc,cor:v.cor==='m'?0:(parseInt(v.cor,10)||0),rotativo:pct(rot,30),multaPct:pct(mu,10),moraPct:pct(mo,10)};
+    const lv=(document.querySelector('#mf [name="nomeLivre"]')||{}).value||'';
+    const banco=String(v.banco||lv).trim().slice(0,60);
+    const vis=String(v.visual||''),ehCor=vis.indexOf('cor:')===0;
+    const obj={nome,banco,bandeira:String(v.bandeira||''),visual:/^(cor:\d{1,2}|[a-z][a-z0-9_]{1,24})$/.test(vis)?vis:'',corPropria:ehCor,limite,final:fin,fechamento:fech,vencimento:venc,cor:ehCor?(parseInt(vis.slice(4),10)||0):(c&&!c.corPropria?c.cor||0:0),rotativo:pct(rot,30),multaPct:pct(mu,10),moraPct:pct(mo,10)};
     if(c)Object.assign(c,obj);else S.cartoes.push(Object.assign({id:uid()},obj));
+    if(!c)CC_AT=S.cartoes[S.cartoes.length-1].id;
     geraRecorrentes();salvar();render();toast('Cartão salvo');
+  });
+  const mf=$('#mf');if(!mf)return;
+  const q=n=>mf.querySelector('[name="'+n+'"]');
+  const selV=q('visual');
+  const prev=document.createElement('div');prev.className='ccPrev';prev.setAttribute('aria-live','polite');mf.insertBefore(prev,mf.firstChild);
+  const tmp=()=>({id:'ccprev',nome:q('nome').value,banco:q('banco').value||(q('nomeLivre')?q('nomeLivre').value:''),bandeira:q('bandeira').value,final:String(q('final').value||'').replace(/\D/g,'').slice(-4),visual:selV.value,limite:0,fechamento:1,vencimento:1});
+  const opcoes=()=>{const at=selV.value;selV.innerHTML=ccOpcoesVisual(tmp(),at);if(selV.value!==at)selV.value='';};
+  const pinta=()=>{prev.innerHTML=cartaoHTML(tmp(),{cls:'gvc-prev'});};
+  selV.innerHTML=ccOpcoesVisual(tmp(),visAt);pinta();
+  ['nome','nomeLivre','final'].forEach(n=>{const e=q(n);if(e)e.addEventListener('input',()=>{if(n!=='final')opcoes();pinta();});});
+  ['bandeira','visual'].forEach(n=>q(n).addEventListener('change',pinta));
+  /* escolha do banco (antes, no cartão, o toque na lista não marcava nada) */
+  const bl=mf.querySelector('.bkList');
+  if(bl)bl.addEventListener('click',e=>{
+    const o=e.target.closest('.bkOpt');if(!o)return;
+    bl.querySelectorAll('.bkOpt').forEach(x=>{const on=x===o;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on));});
+    const other=o.classList.contains('bkOther');
+    q('banco').value=other?'':o.dataset.n;
+    mf.querySelector('.bkOutro').style.display=other?'':'none';
+    if(other)setTimeout(()=>{const i=q('nomeLivre');if(i)i.focus();},30);
+    opcoes();pinta();
   });
 }
 function bancoForm(id){
@@ -3491,7 +3724,7 @@ function bancoForm(id){
 function campoHTML(c){
   if(c.type==='hidden')return `<input type="hidden" name="${c.name}" value="${esc(c.value==null?'':c.value)}">`;
   if(c.type==='bancoPick'){
-    const opts=BANCOS_BR.map(b=>{const sel=c.value===b.n;const lg=bancoLogo(b.d);return `<button type="button" class="bkOpt${sel?' on':''}" aria-selected="${sel}" data-n="${esc(b.n)}" data-c="${esc(b.c)}" data-l="${esc(lg)}" data-t="${esc(b.t||'')}" title="${esc(b.n)}">${bancoLogoHTML(lg,b.n,'bo-logo',bancoLogo2(b.d))}<span class="bo-txt"><b>${esc(b.n)}</b><small>${b.c?'código '+esc(b.c):'sem código'}</small></span></button>`;}).join('');
+    const opts=(c.extra||[]).concat(BANCOS_BR).map(b=>{const sel=c.value===b.n;const lg=bancoLogo(b.d);return `<button type="button" class="bkOpt${sel?' on':''}" aria-selected="${sel}" data-n="${esc(b.n)}" data-c="${esc(b.c)}" data-l="${esc(lg)}" data-t="${esc(b.t||'')}" title="${esc(b.n)}">${bancoLogoHTML(lg,b.n,'bo-logo',bancoLogo2(b.d))}<span class="bo-txt"><b>${esc(b.n)}</b><small>${b.sub?esc(b.sub):b.c?'código '+esc(b.c):'sem código'}</small></span></button>`;}).join('');
     return `<div class="bkPick"><input type="hidden" name="${c.name}" value="${esc(c.value||'')}"><span class="bkPickLbl">Banco ou instituição</span><div class="bkList" role="listbox" aria-label="lista de bancos">${opts}<button type="button" class="bkOpt bkOther${c.outro?' on':''}" aria-selected="${!!c.outro}" data-n="" data-c="" data-l="" data-t=""><span class="bo-logo bo-plain"><span class="bl-ini">+</span></span><span class="bo-txt"><b>outra instituição</b><small>digitar o nome</small></span></button></div><label class="bkOutro" style="${c.outro?'':'display:none'}">Nome da instituição<input name="nomeLivre" value="${esc(c.outro||'')}" placeholder="ex: cooperativa X" autocomplete="off"></label></div>`;
   }
   if(c.type==='seg')return segHTML(c);
@@ -3596,6 +3829,8 @@ function lerCSV(txt){
   const h=splitCSV(ls[0],sep).map(norm);
   const idx=re=>h.findIndex(x=>re.test(x));
   const iD=idx(/^(data|date|dt)/),iV=idx(/^(valor|amount|value|quantia)/),iDesc=idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento)/),iId=idx(/^(identificador|id|fitid)$/);
+  /* v10.84: a planilha do próprio app tem "Dia trabalhado" (dd/mm/aaaa ou ISO); sem a coluna, segue como antes */
+  const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/);
   if(iD<0||iV<0)return {linhas:[],cartao:false,erro:'Não encontrei as colunas de data e valor no CSV.'};
   // Nubank cartão (date,title,amount): compras vêm positivas
   const cartao=h[iD]==='date'&&h[iV]==='amount'&&h[iDesc]==='title';
@@ -3603,7 +3838,7 @@ function lerCSV(txt){
   ls.slice(1).forEach(l=>{const c=splitCSV(l,sep);const data=dataExt(c[iD]);let valor=numExt(c[iV]);
     if(!data||isNaN(valor))return;if(cartao)valor=-valor;
     /* v10.52: fitid vem do arquivo: só caracteres seguros (senão vira id novo na importação) */
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):''});});
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):''});});
   return {linhas:out,cartao};
 }
 const REGRAS_CAT=[
@@ -3917,7 +4152,7 @@ function montaImport(){
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
-      <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
+      <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.trab&&l.valor>0?' · trabalhado '+fmtDataCurta(l.trab):''}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
     <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
@@ -3939,7 +4174,7 @@ function confirmaImport(){
   let n=0,lig=0,rcb=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
     if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
@@ -3951,6 +4186,7 @@ function confirmaImport(){
     if(l.empSug&&l.empOk&&!l.propria&&!l.transf&&!ehCartao&&empPorId(l.empSug)){const dir=l.valor>0?'in':'out';
       t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:alvo};Object.assign(t,{tipo:'transf',emp:l.empSug,empDir:dir,categoria:'Empréstimo',de:dir==='out'?d:'',para:dir==='in'?d:'',conta:'',forma:'',cartao:''});delete t.rev;}
     else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
+    if(l.trab&&t.tipo==='receita'&&ISO_RE.test(l.trab))t.trab=l.trab; // v10.84: dia trabalhado vindo da planilha
     S.tx.push(t);n++;});
   if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
     if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
@@ -4269,7 +4505,7 @@ function abreFatura(ref){
   const pg=ft?pagsFatura(ft):[];
   const box=$('#modal');
   box.innerHTML=`<div class="sheet fatSheet" role="dialog" aria-modal="true" aria-label="Fatura ${esc(c.nome)}"><div class="sh-head"><h3>Fatura ${esc(c.nome)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <div class="fatHero"><small>${ft?nomeMesL(pt[2]):'ciclo aberto'} · ${fecha?(ft?'fechou ':'fecha ')+fmtDataCurta(fecha):''}${vence?' · vence '+fmtDataCurta(vence):''}</small><b>${brl(ft?ft.valor:tot)}</b>${ft?faturaBadge(ft):'<span class="badge mut">ainda pode mudar</span>'}</div>
+    <div class="fatHero comCc">${cartaoMini(c)}<div class="fatHeroTx"><small>${ft?nomeMesL(pt[2]):'ciclo aberto'} · ${fecha?(ft?'fechou ':'fecha ')+fmtDataCurta(fecha):''}${vence?' · vence '+fmtDataCurta(vence):''}</small><b>${brl(ft?ft.valor:tot)}</b>${ft?faturaBadge(ft):'<span class="badge mut">ainda pode mudar</span>'}</div></div>
     ${ft&&pg.length?`<div class="fatPagos"><h4 class="rsH">pagamentos</h4>${pg.map(p=>`<div class="row fatPg"><span>${p.data?fmtDataCurta(p.data):'sem data'}${p.conta?' · '+esc((S.bancos.find(b=>b.id===p.conta)||{}).nome||'conta'):''}</span><b>${brl(p.valor)}</b></div>`).join('')}<div class="row fatPg"><span>falta pagar</span><b>${brl(restanteFatura(ft))}</b></div></div>`:''}
     ${ft&&restanteFatura(ft)>0?`<button class="btn full" data-act="pagar-fat" data-id="${ft.id}">${I('check')} pagar ${brl(restanteFatura(ft))}</button>`:''}
     <h4 class="rsH">compras (${compras.length}) · ${brl(tot)}</h4>
@@ -4839,6 +5075,15 @@ function novoTx(id,tipoPre,base){
   selP.onchange=pintaK;
   selF.onchange=pintaK;
   pintaK();
+  /* v10.81: o cartão escolhido aparece como o cartão de verdade (miniatura); o select continua por trás */
+  {const KS=cartoesAtivos(P&&P.cartao);if(KS.length){
+    const pk=document.createElement('div');pk.className='ccPick';pk.setAttribute('role','radiogroup');pk.setAttribute('aria-label','qual cartão');
+    pk.innerHTML=KS.map(c=>`<button type="button" class="ccPickB" role="radio" aria-checked="false" data-k="${c.id}" aria-label="${esc(c.nome+(c.final?' final '+c.final:''))}">${cartaoMini(c)}<span class="ccPickN">${esc(c.nome)}</span></button>`).join('');
+    selK.classList.add('ccPickSel');selK.setAttribute('tabindex','-1');selK.setAttribute('aria-hidden','true');wK.appendChild(pk);
+    const marca=()=>pk.querySelectorAll('.ccPickB').forEach(b=>{const on=b.dataset.k===selK.value;b.setAttribute('aria-checked',on?'true':'false');b.tabIndex=on||(!selK.value&&b===pk.firstElementChild)?0:-1;});
+    pk.addEventListener('click',e=>{const b=e.target.closest('.ccPickB');if(!b)return;e.preventDefault();selK.value=b.dataset.k;selK.dispatchEvent(new Event('change',{bubbles:true}));marca();});
+    pk.addEventListener('keydown',e=>{if(!/^Arrow(Left|Right|Up|Down)$/.test(e.key))return;const L=[...pk.querySelectorAll('.ccPickB')];let i=L.indexOf(document.activeElement);if(i<0)return;e.preventDefault();i=(i+(/Right|Down/.test(e.key)?1:-1)+L.length)%L.length;L[i].focus();L[i].click();});
+    selK.addEventListener('change',marca);marca();}}
   /* situação: data futura sugere "previsto" (até a pessoa escolher); no cartão não se aplica */
   const selS=mf.querySelector('select[name="status"]'),wS=selS.closest('label'),inD=mf.querySelector('input[name="data"]');let stMexeu=!!t;
   selS.addEventListener('change',()=>{stMexeu=true;});
@@ -5791,6 +6036,8 @@ const ACT={
   'emp-ant-ign':id=>{S.cfg.empAntIgn=(S.cfg.empAntIgn||[]).concat(id).slice(-200);salvar();render();},
   'emp-sug-out':id=>{const [tid,eid]=String(id).split('~');const t=S.tx.find(x=>x.id===tid);if(t&&empPorId(eid))aplicaEmp(t,eid,'out');if($('#modal').classList.contains('on')&&$('.revSheet'))abreRevisar();},
   'fat-abre':id=>abreFatura(id),
+  'cc-ativa':id=>ccAtiva(id),
+  'cc-vira':id=>{ccPedeOri();ccVira(id);},
   'prev-abre':()=>abrePrevisao(),
   'nav-contas':()=>navega('bancos'),
   'nav-rec':()=>navLanc('receita'),
@@ -6032,12 +6279,12 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
 $('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+n.l+'</span></button>').join('');
-$('#logo').innerHTML=LOGO;
+$('#logo').innerHTML=logoSVG();
 $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));
 /* app instalável: service worker só em https (GitHub Pages) ou localhost */
@@ -6116,7 +6363,7 @@ function lockTela(o){
   LK.o=o;LK.buf='';
   const el=$('#lock');
   el.innerHTML=`<div class="lkBox">
-    <div class="ahead">${LOGO}<h1>GranaViva</h1></div>
+    <div class="ahead">${logoSVG()}<h1>GranaViva</h1></div>
     <p class="lkTit">${esc(o.titulo)}</p><p class="lkSub" id="lkSub">${esc(o.sub||'')}</p>
     ${o.bio?`<button type="button" class="lkBioBig" data-k="bio">${I('faceid')}<span>Desbloquear com Face ID</span></button>`:''}
     <div class="lkDots" id="lkDots">${'<i></i>'.repeat(o.len)}</div>
@@ -6335,8 +6582,8 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
 })();
 function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.classList.toggle('on',OCULTO);}
 pintaOlho();
-$('#aLogo').innerHTML=LOGO;
-$('#topMark').innerHTML=LOGO;
+$('#aLogo').innerHTML=logoSVG();
+$('#topMark').innerHTML=logoSVG();
 $('#icMail').innerHTML=I('mail');
 $('#icLock').innerHTML=I('lock');
 let aMode='in';
