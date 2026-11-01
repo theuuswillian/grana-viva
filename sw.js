@@ -2,9 +2,9 @@
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v10.81'; // troque junto com GV_BUILD no index.html (./bump.sh)
+const V='gv-v10.82'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
-const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js','./app.js?v=10.81'];
+const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js','./app.js?v=10.82','./planos.js?v=10.82'];
 self.addEventListener('install',e=>{
   e.waitUntil((async()=>{const c=await caches.open(V);await c.addAll(PRE);
     await self.skipWaiting();})());
@@ -15,7 +15,10 @@ self.addEventListener('activate',e=>{
 self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;
   const u=new URL(r.url);
-  if(r.mode==='navigate'&&u.origin===location.origin){
+  /* v10.82: só a página do app (start_url "./" e index.html) usa a cópia salva. As páginas públicas (site/) vão sempre à rede,
+     senão quem tem o app instalado veria o app no lugar delas. */
+  const ehApp=u.pathname===BASE||u.pathname===BASE+'index.html';
+  if(r.mode==='navigate'&&u.origin===location.origin&&ehApp){
     /* v10.77: abre na hora com a cópia salva e busca a versão nova em segundo plano (antes esperava a rede até 4 s).
        Cada publicação troca o sw.js; o service worker novo baixa a página nova e o app avisa "nova versão pronta". */
     e.respondWith((async()=>{
@@ -26,7 +29,7 @@ self.addEventListener('fetch',e=>{
     })());
     return;
   }
-  const estatico=u.origin===location.origin&&(/\/(fonts|icons|vendor|logos)\//.test(u.pathname)||(/\/app\.js$/.test(u.pathname)&&u.search)); // v10.75: app.js?v=10.81versão nunca muda: cópia salva primeiro
+  const estatico=u.origin===location.origin&&(/\/(fonts|icons|vendor|logos)\//.test(u.pathname)||(/\/(app|planos)\.js$/.test(u.pathname)&&u.search)); // v10.75: app.js?v=10.82versão nunca muda: cópia salva primeiro
   if(estatico){
     e.respondWith((async()=>{const c=await caches.open(V);const hit=await c.match(r.url);if(hit)return hit;
       const res=await fetch(r);if(res.ok&&(res.type==='basic'||res.type==='cors'))c.put(r.url,res.clone());return res;})());

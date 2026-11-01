@@ -109,6 +109,139 @@ function catCor(c){return (S.catCores&&S.catCores[c])||null;}
 function I(n,c){if(n&&EMO2LU[n])n=EMO2LU[n];if(n&&!ICONS[n]&&EMO_RE.test(n))return '<span class="i emo '+(c||'')+'" aria-hidden="true">'+n+'</span>';return '<svg class="i '+(c||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>';}
 const LOGO='<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="gLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#gLogo)" fill-opacity=".16" stroke="url(#gLogo)" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#gLogo)"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#gLogo)" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';
 const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+/* ---------- v10.82: planos (Grátis, Plus, Pro) ----------
+   A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
+   O plano é lido UMA vez por login da tabela assinaturas (a pessoa só lê a própria linha; só o servidor escreve).
+   Aqui o plano só decide o que aparece; os limites de IA são conferidos de novo no servidor.
+   Sem conseguir ler o plano (sem rede, primeira vez): usa a última cópia; sem cópia, nada é bloqueado. */
+const TAB_RECURSO={orc:'orcamentos',fii:'investimentos',metas:'metas',pat:'patrimonio',plan:'planejamento',cartoes:'cartoes',rel:'relatorios'};
+const ACT_RECURSO={'ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
+let PLANO_ROW,PLANO_LIDO=false,PLANO_PAG=null;
+function planoChave(){return 'gv-plano:'+(USER&&USER.id||'');}
+function planoAgora(){if(!PLANO_LIDO||!window.GVP)return null;return GVP.efetivo(PLANO_ROW,Date.now());}
+function pode(rec){const p=planoAgora();if(!p)return true;return GVP.pode(p.nivel,rec);}
+function planoZera(){PLANO_ROW=undefined;PLANO_LIDO=false;PLANO_PAG=null;pintaNavPlano();}
+function planoAplica(row){PLANO_ROW=row||null;PLANO_LIDO=true;pintaNavPlano();}
+async function carregaPlano(){
+  if(!USER||!window.GVP)return;
+  const uid=USER.id;
+  try{const c=JSON.parse(localStorage.getItem(planoChave())||'null');if(c&&c.uid===uid&&!PLANO_LIDO)planoAplica(c.row);}catch(e){}
+  try{
+    const {data,error}=await sb.from('assinaturas').select('plano,status,periodo_fim,provedor').eq('user_id',uid).maybeSingle();
+    if(error)throw error;
+    if(!USER||USER.id!==uid)return;
+    const antes=JSON.stringify(planoAgora());planoAplica(data||null);
+    try{localStorage.setItem(planoChave(),JSON.stringify({uid,row:data||null,em:Date.now()}));}catch(e){}
+    if(JSON.stringify(planoAgora())!==antes)render();
+  }catch(e){/* mantém a cópia (ou tudo liberado) */}
+}
+function pintaNavPlano(){
+  document.querySelectorAll('.sb-item[data-tab]').forEach(b=>{
+    const rec=TAB_RECURSO[b.dataset.tab];let tag=b.querySelector('.sbPlano');
+    const bloq=rec&&!pode(rec);
+    if(bloq&&!tag){tag=document.createElement('span');tag.className='sbPlano';b.appendChild(tag);}
+    if(tag){if(bloq)tag.textContent=GVP.PLANOS[GVP.planoMinimo(rec)].nome;else tag.remove();}
+  });
+}
+const REC_TXT={
+  planejamento:['Planejamento','Veja seu saldo nos próximos meses, simule cortes e rendas extras e acompanhe o saldo dia a dia.'],
+  orcamentos:['Orçamentos','Defina limites por categoria, acompanhe o mês e receba aviso em 80% e 100%.'],
+  cartoes:['Cartões e faturas','Faturas abertas e fechadas, parcelas a vencer, limite usado e custo de atraso.'],
+  relatorios:['Relatório completo','Comparação com o mês anterior, ritmo de gastos, variação por categoria e resumo do mês.'],
+  importar_extrato:['Importar extrato','Traga o extrato OFX ou CSV do seu banco, com categorias sugeridas e sem duplicar.'],
+  comprovantes:['Comprovantes','Guarde fotos e PDFs dos comprovantes junto de cada lançamento.'],
+  leitura_ia:['Lançar com IA','Tire foto do comprovante ou diga o gasto em uma frase e o lançamento vem preenchido para você conferir.'],
+  investimentos:['Investimentos','FIIs, renda fixa pelo CDI, cotações da B3 e proventos.'],
+  patrimonio:['Patrimônio','Seu patrimônio líquido: contas, investimentos e bens menos dívidas, mês a mês.'],
+  metas:['Metas','Metas com ritmo mensal, previsão e rendimento pelo CDI.'],
+  assistente:['Assistente','Pergunte sobre o seu dinheiro e receba respostas conferidas com os seus lançamentos.']
+};
+function viewBloqueio(rec){
+  const pm=GVP.planoMinimo(rec),P=GVP.PLANOS[pm],t=REC_TXT[rec]||[GVP.RECURSOS[rec].nome,''];
+  const p=planoAgora();
+  return `<div class="head"><h2>${esc(TAB_NOME[TAB]||t[0])}</h2></div>
+  <div class="card plBloq">
+    <span class="plBloqI">${I('lock')}</span>
+    <h3>${esc(t[0])} faz parte do plano ${esc(P.nome)}</h3>
+    <p>${esc(t[1])}</p>
+    ${p&&p.contratado&&p.status==='teste'?'<p class="plNota">Seu teste do Pro terminou. Seus dados continuam guardados e voltam a aparecer quando você assinar.</p>':'<p class="plNota">Seus dados continuam guardados. Nada é apagado.</p>'}
+    <button class="btn" data-act="planos" data-id="${esc(rec)}">Ver planos</button>
+  </div>`;
+}
+function abreUpgrade(rec){abrePlanos(rec);}
+function planoStatusTxt(p){
+  if(!p)return 'Carregando seu plano…';
+  if(p.fundador)return 'Conta fundadora: acesso completo, sem data de fim.';
+  if(p.emTeste)return 'Teste grátis do Pro: '+(p.diasRestantes<=1?'termina hoje.':'faltam '+p.diasRestantes+' dias.');
+  if(p.status==='cancelado'&&p.nivel>0)return 'Assinatura cancelada. Acesso até '+fmtDate(new Date(p.ate))+'.';
+  if(p.status==='ativo'&&p.nivel>0)return 'Assinatura ativa'+(p.ate?', renova até '+fmtDate(new Date(p.ate)):'')+'.';
+  if(p.status==='inadimplente')return 'Pagamento não aprovado. Você está no Grátis até regularizar.';
+  return 'Você está no plano Grátis.';
+}
+function cardPlanoCfg(){
+  if(!USER||!window.GVP)return '';
+  const p=planoAgora();const nome=p?GVP.PLANOS[p.plano].nome:'…';
+  return `<div class="card plCard"><div class="plTop"><div><h4>Seu plano</h4><b class="plNome">${esc(nome)}${p&&p.fundador?' <span class="plTag">fundador</span>':p&&p.emTeste?' <span class="plTag">teste</span>':''}</b></div>
+    <button class="btn2 sm" data-act="planos">Ver planos</button></div><p class="plSt">${esc(planoStatusTxt(p))}</p>
+    ${PLANO_ROW&&PLANO_ROW.status==='ativo'&&PLANO_ROW.provedor==='mercadopago'?'<button class="btn2 sm danger plCanc" data-act="ass-cancelar">Cancelar assinatura</button>':''}</div>`;
+}
+const PL_LISTA=[['gratis',['Lançamentos manuais','Contas e bancos','Categorias','Início com resumo do mês','Alertas de vencimento']],
+  ['plus',['Tudo do Grátis','Planejamento e projeções','Orçamentos por categoria','Cartões e faturas','Relatórios completos','Importar extrato e anexar comprovantes','Lançar com IA (15 por dia)']],
+  ['pro',['Tudo do Plus','Investimentos e patrimônio','Metas com CDI','Assistente com IA (30 perguntas por dia)','Lançar com IA (40 por dia)']]];
+function abrePlanos(rec){
+  const box=$('#modal');const p=planoAgora();const atual=p?p.plano:null;
+  const pm=rec?GVP.planoMinimo(rec):null;
+  const pag=PLANO_PAG;
+  const botao=id=>{
+    if(id==='gratis')return atual==='gratis'?'<span class="plAtual">seu plano</span>':'';
+    if(p&&p.fundador)return '<span class="plAtual">incluso na sua conta</span>';
+    if(atual===id&&p&&p.status==='ativo')return '<span class="plAtual">seu plano</span>';
+    if(pag===true)return `<button class="btn full" data-act="assinar" data-id="${id}">Assinar ${esc(GVP.PLANOS[id].nome)}</button>`;
+    return `<button class="btn full" disabled aria-disabled="true">${pag===null?'Verificando…':'Pagamento em breve'}</button>`;
+  };
+  box.innerHTML=`<div class="sheet plSheet" role="dialog" aria-label="Planos"><div class="sh-head"><h3>Planos</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    ${rec&&REC_TXT[rec]?`<p class="plMot">${esc(REC_TXT[rec][0])} está no plano ${esc(GVP.PLANOS[pm].nome)}.</p>`:''}
+    ${p?`<p class="plMot2">${esc(planoStatusTxt(p))}</p>`:''}
+    <div class="plGrade">${PL_LISTA.map(([id,itens])=>{const P=GVP.PLANOS[id];const destaque=(pm||'pro')===id;
+      return `<div class="plOp${destaque?' on':''}"><div class="plOpH"><b>${esc(P.nome)}</b>${atual===id?'<span class="plTag">atual</span>':''}</div>
+      <div class="plPreco">${id==='gratis'?'R$ 0':esc(P.rotulo.replace('/mês',''))}<small>${id==='gratis'?'para sempre':'/mês'}</small></div>
+      ${id==='pro'?`<p class="plAnual">ou ${esc(GVP.PLANOS.pro_anual.rotulo)} (2 meses grátis)</p>`:''}
+      <ul>${itens.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
+      ${botao(id)}${id==='pro'&&pag===true&&!(p&&p.fundador)?`<button class="btn2 full plAnBtn" data-act="assinar" data-id="pro_anual">Assinar Pro anual</button>`:''}</div>`;}).join('')}</div>
+    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui com Pix ou cartão pelo Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
+  </div>`;
+  box.classList.add('on');
+  if(PLANO_PAG===null&&USER)verificaPagamento().then(()=>{if($('#modal .plSheet'))abrePlanos(rec);});
+}
+async function verificaPagamento(){
+  try{const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'status'}});PLANO_PAG=!error&&o&&o.pagamento===true;
+    if(o&&o.assinatura!==undefined){planoAplica(o.assinatura);}
+  }catch(e){PLANO_PAG=false;}
+  return PLANO_PAG;
+}
+async function assinar(plano){
+  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
+  try{
+    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano}});
+    let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
+    if(emBreve){PLANO_PAG=false;abrePlanos();toast('Pagamento em breve');return;}
+    if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
+    const u=new URL(o.url);if(!/(^|\.)mercadopago\.com(\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
+    location.href=u.href;
+  }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
+}
+/* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o webhook confirmar; aqui só relemos a tabela por 1 minuto */
+function retornoAssinatura(){
+  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;
+  try{history.replaceState(null,'',location.pathname);}catch(e){}
+  toast('Recebemos sua volta do pagamento. Confirmando…');
+  let n=0;const tic=async()=>{n++;const antes=JSON.stringify(PLANO_ROW);await carregaPlano();
+    if(JSON.stringify(PLANO_ROW)!==antes&&PLANO_ROW&&PLANO_ROW.status==='ativo'){toast('Plano '+GVP.PLANOS[GVP.idBase(PLANO_ROW.plano)].nome+' ativado. Obrigado!');render();return;}
+    if(n<12)setTimeout(tic,5000);else toast('O pagamento ainda está sendo confirmado. O plano muda sozinho quando o Mercado Pago aprovar.');};
+  setTimeout(tic,1500);
+}
+
 const FREQS=['diaria','semanal','quinzenal','mensal','anual','intervalo'],ISO_RE=/^\d{4}-\d{2}-\d{2}$/;
 function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},bens:[],passivos:[],patHist:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],emprestimos:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 /* saneamento: tudo que vem do aparelho, da nuvem ou de um backup passa por aqui.
@@ -2269,10 +2402,11 @@ function render(){
   const v=$('#view');
   if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(v.contains(ch.canvas))ch.destroy();}catch(e){}}); // v10.51: gráficos da tela antiga não ficam presos na memória
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
-  try{v.innerHTML=VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
+  const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
+  try{v.innerHTML=bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
   v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
   requestAnimationFrame(()=>{
-    if(AFTER[TAB])AFTER[TAB]();
+    if(!bloq&&AFTER[TAB])AFTER[TAB]();
     if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
@@ -3022,6 +3156,7 @@ function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
   <div class="head"><h2>Ajustes</h2></div>
+  ${cardPlanoCfg()}
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
@@ -3070,6 +3205,8 @@ function viewCfg(){
     <div class="lkList">
       <button class="lkRow" data-act="lg-dados"><span class="lkRi">${I('lu_download')}</span><span class="lkRt"><b>Exportar meus dados</b><small>arquivo completo (JSON) e planilha dos lançamentos (CSV)</small></span><span class="lkCh">${I('chevR')}</span></button>
       ${USER?`<button class="lkRow perigo" data-act="lg-excluir"><span class="lkRi">${I('userX')}</span><span class="lkRt"><b>Excluir minha conta</b><small>apaga a conta e todos os dados, para sempre</small></span><span class="lkCh">${I('chevR')}</span></button>`:''}
+      <a class="lkRow" href="site/privacidade.html" target="_blank" rel="noopener"><span class="lkRi">${I('shield')}</span><span class="lkRt"><b>Política de privacidade</b><small>quais dados guardamos, com quem e por quanto tempo</small></span><span class="lkCh">${I('chevR')}</span></a>
+      <a class="lkRow" href="site/termos.html" target="_blank" rel="noopener"><span class="lkRi">${I('list')}</span><span class="lkRt"><b>Termos de uso</b><small>planos, pagamento e cancelamento</small></span><span class="lkCh">${I('chevR')}</span></a>
     </div>
   </div>
   <p class="rod">GranaViva v${GV_BUILD} · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
@@ -5740,6 +5877,11 @@ const ACT={
   'lg-csv':()=>{if(!S.tx.length){toast('Nenhum lançamento para exportar.',true);return;}baixaArquivo('granaviva-lancamentos-'+hojeISO()+'.csv',csvLancTodos(),'text/csv;charset=utf-8');toast(S.tx.length+' lançamentos na planilha');},
   'lg-excluir':()=>excluirConta(),
   'assist':()=>abreAssistente(),
+  'planos':rec=>abrePlanos(rec||''),
+  'assinar':id=>assinar(id),
+  'ass-cancelar':()=>confirma({titulo:'Cancelar a assinatura?',texto:'As próximas cobranças param. Seu acesso continua até o fim do período já pago e nada é apagado.',ok:'Cancelar assinatura',perigo:true},async()=>{
+    try{const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'cancelar'}});let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}
+      if(error||!o||!o.ok)throw new Error(m||'não consegui cancelar agora');toast(o.aviso||'Cancelamento enviado');setTimeout(()=>carregaPlano(),4000);}catch(e){toast(e.message,true);}}),
   'q-gasto':()=>novoTx(undefined,'despesa'),
   'q-receita':()=>novoTx(undefined,'receita'),
   'q-inv':()=>abreInvest(),
@@ -5846,6 +5988,8 @@ document.addEventListener('click',e=>{
   if(e.target.id==='modal'){closeModal();return;}
   const t=e.target.closest('[data-act]');
   if(!t)return;
+  const rq=ACT_RECURSO[t.dataset.act]; // v10.82: recurso de outro plano abre a tela de planos
+  if(rq&&!pode(rq)){abrePlanos(rq);return;}
   const fn=ACT[t.dataset.act];
   if(fn)fn(t.dataset.id);
 });
@@ -5888,7 +6032,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -6282,19 +6426,7 @@ $('#aForgot').addEventListener('click',async ()=>{
     toast('enviamos um link pro seu email');
   }catch(err){$('#aErr').textContent=erroTraduzido(err&&err.message)||'não deu pra enviar o link agora';}
 });
-$('#aTermos').addEventListener('click',()=>{
-  const box=$('#modal');
-  box.innerHTML=`<div class="sheet cfSheet"><div class="sh-head"><h3>Termos e privacidade</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <div class="cfTxt">
-      <p>Seus lançamentos, cartões, contas, fundos e metas ficam guardados na sua conta, num banco de dados do Supabase (serviço de nuvem) e também numa cópia local neste aparelho.</p>
-      <p>Cada conta só acessa os próprios dados, por regras de segurança do banco de dados (RLS).</p>
-      <p>Não vendemos nem alugamos seus dados. O app só se conecta ao seu banco se você ativar a conexão bancária (opcional, feita pela Pluggy), e você pode desligá-la quando quiser.</p>
-      <p>Quando você usa a leitura de comprovante ou o lançamento por frase, a foto, o PDF ou o texto são enviados à IA do Google (Gemini) apenas para montar o lançamento.</p>
-      <p>Você pode exportar um backup (JSON) e apagar tudo a qualquer momento em Ajustes.</p>
-      <p>Ao criar uma conta, você concorda com este texto.</p>
-    </div></div>`;
-  box.style.zIndex='310';box.classList.add('on');
-});
+/* v10.82: 'Termos e privacidade' virou links para site/termos.html e site/privacidade.html (index.html) */
 function pedeNovaSenha(){
   form('Nova senha',[{name:'p',label:'Nova senha (mín. 8 caracteres)',type:'password',required:true}],v=>{
     const p=String(v.p);
@@ -6326,6 +6458,7 @@ async function entraComSessao(sess){
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
       const pend=await leTalvezCifrado('gv-pend');
@@ -6375,7 +6508,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       /* v10.52: sessão expirada (não foi um sair de propósito) com edições ainda não enviadas:
          guarda uma cópia local e devolve no próximo login da mesma conta, em vez de apagar sem aviso */
       if(!saiuDeProposito&&USER&&temPendencia()){try{gravaCifrado('gv-pend',JSON.stringify({dono:USER.id,S:sanea(S)}));}catch(e){}}
-      USER=null;pintaUsuario();setSync('');
+      USER=null;planoZera();pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
     }
@@ -6391,6 +6524,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
       const pend=await leTalvezCifrado('gv-pend');
