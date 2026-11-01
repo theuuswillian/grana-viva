@@ -172,7 +172,6 @@ function viewBloqueio(rec){
     <button class="btn" data-act="planos" data-id="${esc(rec)}">Ver planos</button>
   </div>`;
 }
-function abreUpgrade(rec){abrePlanos(rec);}
 function planoStatusTxt(p){
   if(!p)return 'Carregando seu plano…';
   if(p.fundador)return 'Conta fundadora: acesso completo, sem data de fim.';
@@ -1271,7 +1270,15 @@ function geraRecorrentes(){
   });
   return mudou;
 }
-function alertasHTML(){return listaAlertas(false).map(a=>`<div class="card aviso-card${a.k==='venc'?' venc':''}">${a.h}</div>`).join('');}
+/* v10.88: a Início mostra no máximo 4 alertas. com 3+ faturas vencidas sem pagamento (ex.: histórico importado), elas viram
+   um resumo só; o sino continua com a lista completa. antes eram dezenas de cards e a Início passava de 8.000 px */
+function alertasHTML(){
+  const L=listaAlertas(false),fv=L.filter(a=>/^fv\|/.test(a.id));let out=L;
+  if(fv.length>2){const ids=new Set(fv.map(a=>a.id.slice(3))),F=S.tx.filter(t=>ids.has(t.id)),tot=F.reduce((s,t)=>s+cents(restanteFatura(t)),0)/100,nc=new Set(F.map(t=>String(t.faturaKey).split('|')[1])).size;
+    out=[{k:'venc',h:`${I('alert')} <b>${fv.length} faturas vencidas</b> sem pagamento registrado ${nc>1?'em '+nc+' cartões':'no cartão'} · ${brl(tot)} <button class="btn2 sm" data-act="alertas-ver">ver</button>`}].concat(L.filter(a=>!/^fv\|/.test(a.id)));}
+  const MAX=4,mais=out.length-MAX;
+  return out.slice(0,MAX).map(a=>`<div class="card aviso-card${a.k==='venc'?' venc':''}">${a.h}</div>`).join('')+(mais>0?`<button type="button" class="card alMais" data-act="alertas-ver">${I('alert')}<span>mais ${mais} ${mais>1?'alertas':'alerta'} no sino</span>${I('chevR')}</button>`:'');
+}
 /* completo=true também traz orçamentos e limite do cartão (vão no sino; no início já há o card de orçamentos) */
 function avisoDias(){const n=+(S.cfg&&S.cfg.avisoDias);return [0,1,2,3,5,7].includes(n)?n:3;}
 function listaAlertas(completo){
@@ -1834,8 +1841,11 @@ function viewPlan(){
   const mx=Math.max(1,...linhas.map(m=>Math.abs(m.saldo)));
   const nomeM=ym=>MESES[+ym.slice(5,7)-1]+'/'+ym.slice(2,4);
   const sobraMed=linhas.length>1?(linhas[linhas.length-1].saldo-linhas[0].saldo)/(linhas.length-1):0;
-  const metas=(S.metas||[]).filter(m=>m.alvo>m.atual).map(m=>{const falta=m.alvo-m.atual,pc=m.alvo>0?Math.min(100,m.atual/m.alvo*100):0;const meses=m.aporteMes>0?mesesMeta(m):sobraMed>0?Math.ceil(falta/sobraMed):0;
-    return `<div class="pmMeta"><div class="pmTop"><b>${esc(m.nome)}</b><span class="${meses?'':'pmSem'}">${meses?(meses>600?'mais de 50 anos':'~'+(meses>=24?Math.round(meses/12)+' anos':meses+' meses')):'sem sobra pra guardar'}</span></div><div class="bar"><i style="width:${pc.toFixed(1)}%"></i></div><small>${brl(m.atual)} de ${brl(m.alvo)} · faltam ${brl(falta)}${m.aporteMes>0?' · aporte '+brl(m.aporteMes)+'/mês':''}</small></div>`;}).join('');
+  /* v10.88: saldo e alvo das metas iguais aos da aba Metas (fontes, FIPE, IPCA). antes chamava mesesMeta(m) sem os argumentos
+     e toda meta com aporte aparecia como "mais de 50 anos" */
+  const metas=(S.metas||[]).map(m=>Object.assign({},m,{atual:saldoMeta(m),alvo:alvoMeta(m),_m:m})).filter(m=>m.alvo>m.atual).map(m=>{const falta=m.alvo-m.atual,pc=m.alvo>0?Math.min(100,m.atual/m.alvo*100):0;
+    const meses=m.aporteMes>0?(mtNova(m._m)?(()=>{const p=mtProj(m._m);return p.k>0?p.k:p.k===0?1:Infinity;})():mesesMeta(m.atual,m.alvo,m.aporteMes,taxaMesMeta(m._m))):sobraMed>0?Math.ceil(falta/sobraMed):0;
+    return `<div class="pmMeta"><div class="pmTop"><b>${esc(m.nome)}</b><span class="${meses?'':'pmSem'}">${meses?(meses>600||!isFinite(meses)?'mais de 50 anos':'~'+(meses>=24?Math.round(meses/12)+' anos':meses+' meses')):'sem sobra pra guardar'}</span></div><div class="bar"><i style="width:${pc.toFixed(1)}%"></i></div><small>${brl(m.atual)} de ${brl(m.alvo)} · faltam ${brl(falta)}${m.aporteMes>0?' · aporte '+brl(m.aporteMes)+'/mês':''}</small></div>`;}).join('');
   const fim=linhas[linhas.length-1];
   return `
   <div class="head"><h2>Planejamento</h2></div>
@@ -1899,6 +1909,8 @@ function simHTML(base,sim,temSim){
 }
 /* ---------- relatório mensal ---------- */
 let REL={a:'',b:''};
+/* v10.88: sem mês escolhido, o relatório abre no mês atual; no começo do mês sem nada lançado, abre no último mês fechado (antes: mês vazio, tudo -100%) */
+function relMesA(){if(REL.a)return REL.a;const r=resumoMes(mesOff(0));return r.rec||r.des?mesOff(0):mesOff(1);}
 function mesNome(m){return MESES_LONGO[+m.slice(5,7)-1]+' de '+m.slice(0,4);}
 function resumoMes(m){const r=somaMes(m,'receita'),d=somaMes(m,'despesa');return {rec:r,des:d,sal:(cents(r)-cents(d))/100};}
 /* juros + multas pagos e descontos obtidos num mês (lançamentos efetivos) */
@@ -1954,7 +1966,7 @@ function relDiasInfo(m){const v=relDias(m),hoje=new Date(),atual=m===mesOff(0),f
     proj=Math.max(0,tot-fxAte/100)/ate*v.length+fx/100;}
   return {v,ate,tot,media:ate?tot/ate:0,maxD:mi+1,maxV:mv,sem,proj,atual};}
 function mesAdd(m,k){const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,1);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
-function relShift(k,n){const cur=REL[k]||(k==='a'?mesOff(0):mesOff(1));REL[k]=mesAdd(cur,n);if(k==='a')REL.b=mesAdd(REL.a,-1);render();}
+function relShift(k,n){const cur=REL[k]||(k==='a'?relMesA():mesAdd(relMesA(),-1));REL[k]=mesAdd(cur,n);if(k==='a')REL.b=mesAdd(REL.a,-1);render();}
 function calGrid(m){
   const y=+m.slice(0,4),mo=+m.slice(5,7)-1,hoje=new Date();
   const ini=new Date(y,mo,1).getDay(),n=new Date(y,mo+1,0).getDate();
@@ -1966,7 +1978,7 @@ function calGrid(m){
   return h;
 }
 function viewRel(){
-  const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
+  const a=relMesA(),b=REL.b||mesAdd(a,-1);
   const ra=resumoMes(a),rb=resumoMes(b);
   const top=m=>{const L=despesasPorCat(m),T=L.reduce((t,x)=>t+x.v,0)||1,mx=(L[0]&&L[0].v)||1;return L.slice(0,5).map(s=>`<div class="tcRow"><div class="tcTop"><span class="tcN"><i class="dot" style="background:${s.color}"></i><span>${esc(s.l)}</span></span><span class="tcV">${brl(s.v)}</span></div><div class="tcBar"><i style="width:${(s.v/mx*100).toFixed(1)}%;background:${s.color}"></i></div><span class="tcP">${Math.round(s.v/T*100)}% do mês</span></div>`).join('')||'<p class="vazio">sem despesas</p>';};
   const cel=(v,c)=>`<b class="nw ${c}">${brl(v)}</b>`;
@@ -2048,7 +2060,7 @@ function drawRelDia(c,p){
   [1,8,15,22,v.length].forEach(d=>ctx.fillText(d,(d-1)*gw+gw/2,h-5));
 }
 function drawRel(c,p){
-  const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
+  const a=relMesA(),b=REL.b||mesAdd(a,-1);
   const cats=relCats(a,b).slice(0,6);
   const {ctx,w,h}=fitCanvas(c,260);
   const max=Math.max(1,...cats.flatMap(x=>[x.va,x.vb]));
@@ -2113,7 +2125,7 @@ function txPlanilha(){
   toast(lista.length+' lançamentos na planilha.');
 }
 function relCSV(){
-  const a=REL.a||mesOff(0),b=REL.b||mesOff(1);
+  const a=relMesA(),b=REL.b||mesAdd(a,-1);
   const L=[['mes','receitas','despesas','saldo']];
   const dec=v=>v.toFixed(2).replace('.',',');
   [a,b].forEach(m=>{const r=resumoMes(m);L.push([m,dec(r.rec),dec(r.des),dec(r.sal)]);});
@@ -2309,21 +2321,6 @@ function historico(fid){
   </div>`;
   box.classList.add('on');
 }
-function aporteFii(){
-  if(!S.fiis.length){toast('cadastre um fundo primeiro');fiiForm();return;}
-  form('Aporte em FII',[
-    {name:'fundo',label:'Fundo',type:'select',value:S.fiis[0].id,options:S.fiis.map(f=>({v:f.id,t:f.ticker}))},
-    {name:'cotas',label:'Cotas compradas',required:true,inputmode:'decimal',placeholder:'0'},
-    {name:'preco',label:'Preço pago por cota (R$)',required:true,inputmode:'decimal',placeholder:'0,00'}
-  ],v=>{
-    const f=S.fiis.find(x=>x.id===v.fundo);if(!f)return 'Escolha um fundo.';
-    const q=parseBR(v.cotas),p=parseBR(v.preco);
-    if(!(q>0))return 'Informe a quantidade de cotas.';
-    if(!(p>0))return 'Informe o preço pago.';
-    f.cotas+=q;f.preco=p;
-    salvar();render();toast('Aporte registrado');
-  });
-}
 
 /* ---------- adicionar rápido (FAB) ---------- */
 function abreInvest(){
@@ -2374,7 +2371,6 @@ function abreRapido(){
 /* ---------- navegação e renderização ---------- */
 let TAB='inicio';
 const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
-const MESES_NOME=()=>{const d=new Date();return MESES_LONGO[d.getMonth()]+' de '+d.getFullYear();};
 const DATA_HOJE=()=>{const d=new Date();if(innerWidth<=360)return ['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+' · '+d.getDate()+' '+MESES[d.getMonth()];return ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][d.getDay()]+' · '+d.getDate()+' de '+MESES_LONGO[d.getMonth()];}; // v10.74: curta em telas bem estreitas
 
 function applyCfg(){
@@ -2533,14 +2529,6 @@ function sparkPer(per){
   for(let i=0;i<800;i++){const k=isoDe(d);if(k>ate)break;acc+=mp[k]||0;out.push(acc/100);lab.push(fmtData(k));d.setDate(d.getDate()+1);}
   return {vals:out,lab};
 }
-function sparkMes(m){
-  const y=+m.slice(0,4),mo=+m.slice(5,7)-1,dias=new Date(y,mo+1,0).getDate(),arr=[];
-  for(let d=1;d<=dias;d++){const k=m+'-'+String(d).padStart(2,'0');arr.push(S.tx.filter(t=>efetivo(t)&&t.tipo==='despesa'&&!t.cartao&&t.data===k).reduce((a,t)=>a+t.valor,0));}
-  let acc=0;return arr.map(v=>acc+=v);
-}
-const PC='rounded-pierre border border-[var(--line)] bg-[var(--card)] p-5 mb-3';
-const PL='text-xs font-medium text-[var(--mut)]';
-const PD='mt-2 text-xs text-[var(--mut)]';
 const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
 function drawSpark(){
   const c=$('#cSpark');if(!c||typeof Chart==='undefined')return;
@@ -2574,13 +2562,6 @@ function previsaoMes(){
   const hoje=cents(saldoTotal());
   const emp=empPrevistos(fim).reduce((a,x)=>a+cents(x.valor),0); // v10.78: devolução combinada até o fim do mês
   return {hoje:hoje/100,rec:rec/100,des:des/100,cart:cart/100,emp:emp/100,fim:(hoje+rec+emp-des-cart)/100,tem:!!(rec||des||cart||emp)};
-}
-function previsaoHTML(){
-  const p=previsaoMes();if(!p.tem)return '';
-  const it=(l,v,c)=>v?`<div class="flex justify-between text-sm text-[var(--mut)]"><span>${l}</span><span class="${c}">${c==='pos'?'+':'−'} ${brl(v)}</span></div>`:'';
-  return `<div class="${PC} prevCard"><p class="${PL}">Previsão para o fim do mês</p><div class="pv ${p.fim<0?'neg':'pos'} mt-2">${brl(p.fim)}</div>
-    <div class="mt-3 grid gap-1.5">${it('a receber',p.rec,'pos')}${it('a pagar',p.des,'neg')}${it('cartão a pagar este mês',p.cart,'neg')}</div>
-    <p class="${PD}">saldo de hoje mais o que está previsto até o fim do mês. é uma estimativa, não garantia.</p></div>`;
 }
 ICONS.inbox='<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Z"/>';
 if(!ICONS.check)ICONS.check='<path d="m5 12.5 4.5 4.5L19 7.5"/>';
@@ -3226,14 +3207,6 @@ function bancoDoCartao(c){
   return b||null;
 }
 const NOME_CURTO={'Itaú Unibanco':'Itaú','Caixa Econômica Federal':'Caixa','Banco Inter':'Inter','Banco C6':'C6 Bank','BRB Banco de Brasília':'BRB','XP Investimentos':'XP'};
-function marcaSVG(m){
-  if(m==='mastercard')return '<svg viewBox="0 0 40 24" class="cc-mk" aria-label="Mastercard"><circle cx="14" cy="12" r="10" fill="#eb001b"/><circle cx="26" cy="12" r="10" fill="#f79e1b"/><path d="M20 4a10 10 0 0 1 0 16a10 10 0 0 1 0-16z" fill="#ff5f00"/></svg>';
-  if(m==='visa')return '<span class="cc-mkt visa">VISA</span>';
-  if(m==='elo')return '<span class="cc-mkt">elo</span>';
-  if(m==='amex')return '<span class="cc-mkt amex">AMEX</span>';
-  if(m==='hipercard')return '<span class="cc-mkt">Hipercard</span>';
-  return '';
-}
 const CARD_COR=[['#22c55e','#0f766e','Verde'],['#8b5cf6','#312e81','Violeta'],['#06b6d4','#1e3a8a','Azul'],['#ec4899','#7e1d6b','Rosa'],['#f59e0b','#9a3412','Âmbar']];
 const BANCO_TIPOS=['Conta corrente','Poupança','Carteira digital','Investimentos','Dinheiro','Outros'];
 /* bancos e instituições brasileiros: c = código de compensação (compe), d = domínio para a logo, t = tipo sugerido */
@@ -3663,7 +3636,7 @@ function viewBancos(){
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} conta</button></div>
   <div class="bkActs">${S.cfg.pluggyOn?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
   ${S.bancos.length?(()=>{const st=saldoTotal(),sc=(cents(st)-cents(total))/100;return `<div class="card bkHero${total<0?' bkNeg':''}"><small>total em bancos</small><div class="bkBig nw">${total<0?'−':''}${brl(Math.abs(total))}</div>${total<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}
-    <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div></div></div>`;})()+`
+    <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
     :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}`;
@@ -3884,6 +3857,7 @@ function lerCSV(txt){
   const iD=idx(/^(data|date|dt)/),iV=idx(/^(valor|amount|value|quantia)/),iDesc=idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento)/),iId=idx(/^(identificador|id|fitid)$/);
   /* v10.84: a planilha do próprio app tem "Dia trabalhado" (dd/mm/aaaa ou ISO); sem a coluna, segue como antes */
   const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/);
+  const iTipo=idx(/^tipo$/); // v10.88: planilha do próprio app traz o tipo (transferência, empréstimo...)
   if(iD<0||iV<0)return {linhas:[],cartao:false,erro:'Não encontrei as colunas de data e valor no CSV.'};
   // Nubank cartão (date,title,amount): compras vêm positivas
   const cartao=h[iD]==='date'&&h[iV]==='amount'&&h[iDesc]==='title';
@@ -3891,7 +3865,7 @@ function lerCSV(txt){
   ls.slice(1).forEach(l=>{const c=splitCSV(l,sep);const data=dataExt(c[iD]);let valor=numExt(c[iV]);
     if(!data||isNaN(valor))return;if(cartao)valor=-valor;
     /* v10.52: fitid vem do arquivo: só caracteres seguros (senão vira id novo na importação) */
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):''});});
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
   return {linhas:out,cartao};
 }
 const REGRAS_CAT=[
@@ -4184,8 +4158,13 @@ function montaImport(){
     const es=!dup&&!vm&&!vmt&&ehConta&&!l.propria&&!l.transf?empCasa(l.desc,Math.abs(l.valor),l.data,l.valor>0?'in':'out'):null;
     if(!es||l.empSug!==es.id)l.empOk=false;l.empSug=es?es.id:'';
     const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
-    if(dup||dupT)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
-    if(dup)ign='já está no app';
+    /* v10.88: planilha do próprio app importada de volta: fatura e transferência/empréstimo que já estão no app não entram de novo
+       (antes as faturas viravam despesas duplicadas e a transferência virava receita) */
+    const trPlan=!IMP.banco&&/transfer|emprest|devolu/.test(l.tipoPlan||'');
+    const dupPlan=!dup&&!IMP.banco&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
+    if(dup||dupT||dupPlan)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
+    if(dup||dupPlan)ign='já está no app';
+    else if(trPlan)ign='transferência ou empréstimo na planilha · confira antes de importar';
     else if(pv)ign='é a receita prevista '+(nomeTx(pv).n||pv.descricao||pv.categoria).slice(0,40)+' (recebe '+fmtDataCurta(pv.data)+') · fica marcada como recebida';
     else if(vmt)ign='já lançado como guardado na meta '+((S.metas.find(x=>x.id===vmt.meta)||{}).nome||'').slice(0,30)+' · fica ligado ao do banco';
     else if(vm)ign='já lançado como '+(vm.empDir==='in'?'devolução de ':'empréstimo para ')+primeiroNome(empNome(vm.emp))+' · fica ligado ao do banco';
@@ -4195,7 +4174,7 @@ function montaImport(){
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
+    l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -5474,7 +5453,6 @@ async function atualizaCDI(forca){
   if(rfRecalc(c)){salvar();if(TAB==='fii'||TAB==='dash'||TAB==='pat'||TAB==='inicio')render();}
   else if(TAB==='fii'&&(forca||pede.length||ant!==CDI.ult))render();
 }
-function liquidoRF(f){const P=rfPosicao(f);return P.liq==null?null:{dias:P.dias,aliq:P.aliq,iof:P.iof,ir:P.ir,liq:P.liq};}
 /* formulário */
 function rfForm(f){
   const prod0=f?rfProdOf(f):'caixinha',idx0=f?rfIdxOf(f):RF_PROD[prod0].idx[0],A=f?rfAportes(f):[],um=A.length<=1;
@@ -6533,6 +6511,7 @@ const ACT={
   'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
   'pp-ok':()=>{S.cfg.onbOk=1;salvar();render();},
   'hm-go-orc':()=>{go('orc');},
+  'alertas-ver':()=>abrirAlertas(),
   'al-todas':()=>{const ids=[...document.querySelectorAll('.alItem:not(.lido)')].map(e=>e.dataset.aid);alMarca(ids,'l');abrirAlertas();toast('Todos os alertas marcados como lidos');},
   'hm-go':t=>go(t),
   'hm-per':k=>{const atual=periodo();PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
@@ -6826,7 +6805,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,somaMes,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,projetaMeses,brlK,nomeTx,txLinhasPlanilha,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,filtrados,F,patLiquido,fotoPat,limOrc,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},projetaMeses,somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,ocorrenciasFixa,previsaoMes,listaAlertas,despesasPorCat,saldoBanco,saldoTotal,somaMes,usadoCartaoTotal,sanea,resumoMes,divMensal,patrimonio,get S(){return S;},set S(v){S=v;},ACT,txMenu,closeModal,applyCfg,render,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 

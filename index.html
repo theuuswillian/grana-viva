@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-tLNg+lF8q0mMyhBY5coYM1sxSBtkg8g9rnaYRZrRUpI=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-/OVVwQD20QeMPFvYVcBRL0CfyXPFf4vhguCCOiA99no=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2187,6 +2187,8 @@ html.claro .walAct.perigo .i,html.claro .walAct.perigo:hover{color:#dc2626}
 .crV{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}.crV b{font-weight:650;color:var(--hd)}.crV small{font-size:12.5px;color:var(--mut)}
 .crMeta{margin-top:14px!important}
 .crMeta b{font-size:17px;font-variant-numeric:tabular-nums}
+.crMeta b{white-space:normal;overflow:visible} .crMeta .crPct{display:inline-block;white-space:nowrap} /* v10.88: o % do uso não corta mais ("1,…") */
+.alMais{display:flex;align-items:center;gap:10px;width:100%;font:inherit;font-size:14px;font-weight:600;color:var(--txt);text-align:left;cursor:pointer;padding:12px 16px}.alMais .i{width:16px;height:16px;flex:none}.alMais>.i:first-child{color:#fbbf24}.alMais span{flex:1}
 .crPct{font-style:normal;font-size:12px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:4px;vertical-align:2px;color:#4ade80;background:rgba(74,222,128,.12)}
 .crPct.meio{color:#a3e635;background:rgba(163,230,53,.12)}.crPct.alerta{color:#fbbf24;background:rgba(245,158,11,.14)}.crPct.over{color:#fb7185;background:rgba(244,63,94,.14)}
 html.claro .ccChip:not(.sec):not(.quente){color:color-mix(in srgb,var(--tom) 80%,#000)}
@@ -2342,7 +2344,7 @@ html.preto .mtGw,html.preto .mtSim,html.preto .mtFr,html.preto .mtSrc,html.preto
 </div>
 
 <script>
-const GV_BUILD='10.87'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.88'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2363,8 +2365,8 @@ const GV_BUILD='10.87'; // versão publicada (./bump.sh troca aqui e no sw.js)
 })();
 </script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script src="planos.js?v=10.87"></script>
-<script src="app.js?v=10.87"></script>
+<script src="planos.js?v=10.88"></script>
+<script src="app.js?v=10.88"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
