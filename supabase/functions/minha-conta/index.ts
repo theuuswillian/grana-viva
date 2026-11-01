@@ -2,6 +2,7 @@
 // Chamada pelo app com o login do usuário. Usa a service role só aqui no servidor e sempre com o id
 // tirado do token (nunca do corpo do pedido): ninguém consegue exportar ou apagar a conta de outra pessoa.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import * as MP from "./mercadopago.ts"; // v10.82: cópia gerada de ../_shared (deploy-fn.py)
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const ORIGENS = ["https://theuuswillian.github.io"];
 const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
@@ -10,7 +11,7 @@ const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Or
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 
 // todas as tabelas com dados da pessoa (todas têm user_id). manter em dia ao criar tabela nova.
-const TABELAS = ["tx", "fiis", "metas", "cartoes", "bancos", "settings", "push_subs", "push_log", "ia_uso", "rl_uso", "pluggy_cfg", "pluggy_tx", "pluggy_acc"];
+const TABELAS = ["tx", "fiis", "metas", "cartoes", "bancos", "settings", "push_subs", "push_log", "ia_uso", "rl_uso", "pluggy_cfg", "pluggy_tx", "pluggy_acc", "assinaturas", "pagamento_eventos"]; // v10.82: + plano e avisos de pagamento
 const BUCKET = "comprovantes";
 // colunas que nunca saem no arquivo (segredos de acesso, já criptografados no banco)
 const OCULTAR: Record<string, string[]> = { pluggy_cfg: ["client_secret", "api_key", "webhook_secret"], push_subs: ["p256dh", "auth"] };
@@ -83,6 +84,16 @@ Deno.serve(async (req) => {
     const { data: ok } = await sb.rpc("rl_conta", { p_uid: uid, p_k: "conta:excluir", p_lim: 3, p_seg: 3600 });
     if (!ok) return json({ erro: "Muitas tentativas. Tente de novo em uma hora." }, 429);
     const rel: Record<string, number> = {};
+    // v10.82: assinatura paga ativa no Mercado Pago é cancelada antes (senão o MP continuaria cobrando)
+    try {
+      const { data: a } = await sb.from("assinaturas").select("provedor,provedor_assinatura_id,status").eq("user_id", uid).maybeSingle();
+      const tk = Deno.env.get("MP_ACCESS_TOKEN");
+      if (a?.provedor === "mercadopago" && a.provedor_assinatura_id && a.status !== "cancelado") {
+        if (!tk) return json({ erro: "Sua assinatura paga precisa ser cancelada antes. Fale com o suporte." }, 409);
+        await MP.cancela(a.provedor_assinatura_id, tk);
+        rel.assinatura_cancelada = 1;
+      }
+    } catch (e) { console.log("excluir: cancela assinatura", uid, String(e)); return json({ erro: "não consegui cancelar sua assinatura agora. Tente de novo em instantes." }, 502); }
     try {
       // 1) comprovantes no Storage
       const arqs = await arquivos(uid);
