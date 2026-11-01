@@ -7,7 +7,16 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-const LIMITE_DIA = 40;
+// v10.82: limite diário vem do plano: GVP.limite(nivel, "leitura_ia_dia") (Plus 15, Pro 40, Grátis 0)
+// v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
+import "./planos.js";
+const GVP = (globalThis as any).GVP;
+async function planoDe(uid: string) {
+  const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+  if (error) throw error;
+  return GVP.efetivo(data);
+}
+
 const MIMES = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
 
 Deno.serve(async (req) => {
@@ -32,7 +41,11 @@ Deno.serve(async (req) => {
   // limite diário por usuário
   const dia = new Date().toISOString().slice(0, 10);
   // v10.54: conta e confere numa só operação no banco (duas leituras ao mesmo tempo não passam do limite)
-  const { data: ok, error: ue } = await sb.rpc("ia_conta", { p_uid: uid, p_dia: dia, p_lim: LIMITE_DIA });
+  let ef: any;
+  try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
+  const LIMITE_DIA = GVP.limite(ef.nivel, "leitura_ia_dia");
+  if (!GVP.pode(ef.nivel, "leitura_ia") || LIMITE_DIA <= 0) return json({ erro: "A leitura com IA faz parte dos planos Plus e Pro.", upgrade: true, recurso: "leitura_ia" }, 402);
+  const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: dia, p_k: "leitura", p_lim: LIMITE_DIA });
   if (ue) return json({ erro: "não foi possível conferir o limite agora" }, 503);
   if (!ok) return json({ erro: "Você chegou ao limite de " + LIMITE_DIA + " leituras por dia. Amanhã libera de novo." }, 429);
 
