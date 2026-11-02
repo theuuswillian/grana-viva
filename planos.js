@@ -2,8 +2,9 @@
    Este arquivo é usado igual por:
    - o app (index.html carrega planos.js?v=versão) para mostrar e bloquear telas;
    - as páginas públicas (gerador site.py lê os preços e a tabela daqui);
-   - as funções do Supabase (assistente, ler-comprovante, assinatura, pagamento-webhook), que recebem uma CÓPIA
-     gerada por deploy-fn.py (supabase/functions/<nome>/planos.js). O teste t82 confere que as cópias são idênticas.
+   - as funções do Supabase (alertas-push, assistente, ler-comprovante, assinatura, pagamento-webhook), que importam
+     supabase/functions/_shared/planos.js: UMA cópia gerada deste arquivo por deploy-fn.py (v10.93). deploy-fn.py recusa
+     publicar se ela estiver diferente, e os testes t82/t93 conferem.
    Quem decide o plano de verdade é o servidor (tabela assinaturas, escrita só pelo webhook de pagamento).
    O app só lê o plano para esconder/mostrar telas; os limites de IA são conferidos de novo no servidor. */
 (function (g) {
