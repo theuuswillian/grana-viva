@@ -3,10 +3,11 @@
 // verify_jwt desligado (o Mercado Pago não manda login); a segurança é: assinatura conferida quando vem + consulta à API do MP
 // com o token do servidor + eventos já processados guardados em pagamento_eventos.
 // Secrets: MP_ACCESS_TOKEN (obrigatório para funcionar), MP_WEBHOOK_SECRET (opcional; confere x-signature quando vier).
-// mercadopago.ts, webhook-nucleo.ts e planos.js são cópias geradas por deploy-fn.py (fonte: ../_shared e /planos.js).
+// v10.93: mercadopago.ts, webhook-nucleo.ts e planos.js vêm de ../_shared (planos.js de lá é gerado de /planos.js por deploy-fn.py).
 import { createClient } from "npm:@supabase/supabase-js@2";
-import "./planos.js";
-import { processaWebhook, type DB } from "./webhook-nucleo.ts";
+import "../_shared/planos.js";
+import { processaWebhook, type DB } from "../_shared/webhook-nucleo.ts";
+import { registraErro } from "../_shared/erros.ts";
 const GVP = (globalThis as any).GVP;
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -39,9 +40,11 @@ Deno.serve(async (req) => {
       db, PLANOS: GVP.PLANOS, efetivo: GVP.efetivo,
       env: { MP_ACCESS_TOKEN: Deno.env.get("MP_ACCESS_TOKEN") || undefined, MP_WEBHOOK_SECRET: Deno.env.get("MP_WEBHOOK_SECRET") || undefined },
       log: (...a) => console.log("pagamento-webhook", ...a),
+      erro: (etapa, e) => registraErro(sb, "pagamento-webhook", etapa, e),
     });
   } catch (e) {
     console.log("pagamento-webhook erro", String(e));
+    await registraErro(sb, "pagamento-webhook", "interno", e);
     return new Response(JSON.stringify({ erro: "erro interno" }), { status: 500, headers: { "content-type": "application/json" } });
   }
 });
