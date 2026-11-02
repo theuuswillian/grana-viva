@@ -12,7 +12,7 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { alertas, orcamentos, resumoSemana, textoSemana, discretoOn, semValores, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
 // v10.89: plano da pessoa (metas são do Plus). planos.js é cópia gerada do /planos.js da raiz por deploy-fn.py.
-import "./planos.js";
+import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
