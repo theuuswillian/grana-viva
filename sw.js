@@ -2,9 +2,9 @@
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v10.90'; // troque junto com GV_BUILD no index.html (./bump.sh)
+const V='gv-v10.91'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
-const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js','./app.js?v=10.90','./planos.js?v=10.90'];
+const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js','./app.js?v=10.91','./planos.js?v=10.91'];
 self.addEventListener('install',e=>{
   e.waitUntil((async()=>{const c=await caches.open(V);await c.addAll(PRE);
     await self.skipWaiting();})());
@@ -29,7 +29,7 @@ self.addEventListener('fetch',e=>{
     })());
     return;
   }
-  const estatico=u.origin===location.origin&&(/\/(fonts|icons|vendor|logos)\//.test(u.pathname)||(/\/(app|planos)\.js$/.test(u.pathname)&&u.search)); // v10.75: app.js?v=10.90versão nunca muda: cópia salva primeiro
+  const estatico=u.origin===location.origin&&(/\/(fonts|icons|vendor|logos)\//.test(u.pathname)||(/\/(app|planos)\.js$/.test(u.pathname)&&u.search)); // v10.75: app.js?v=10.91versão nunca muda: cópia salva primeiro
   if(estatico){
     e.respondWith((async()=>{const c=await caches.open(V);const hit=await c.match(r.url);if(hit)return hit;
       const res=await fetch(r);if(res.ok&&(res.type==='basic'||res.type==='cors'))c.put(r.url,res.clone());return res;})());

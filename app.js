@@ -112,7 +112,7 @@ function I(n,c){if(n&&EMO2LU[n])n=EMO2LU[n];if(n&&!ICONS[n]&&EMO_RE.test(n))retu
 /* v10.84: cada logo com o próprio id do degradê (o mesmo id em 3 lugares é inválido e some quando o primeiro está escondido) */
 let LOGO_N=0;
 const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
-const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos em FIIs',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
 /* ---------- v10.82: planos (Grátis, Plus, Pro) ----------
    A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
    O plano é lido UMA vez por login da tabela assinaturas (a pessoa só lê a própria linha; só o servidor escreve).
@@ -356,7 +356,7 @@ function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;}
 async function leTalvezCifrado(chave){const raw=localStorage.getItem(chave);if(!raw)return null;return JSON.parse(raw.indexOf(CR_PFX)===0?await crDecifra(raw):raw);}
 function gravaLocal(){
   if(!CR_OK)return; // ainda abrindo a cópia cifrada: não sobrescreve com dados vazios
-  try{localStorage.setItem('gv-ui',JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent}));}catch(e){}
+  try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde;localStorage.setItem('gv-ui',JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]}));}catch(e){}
   gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
 }
 function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'||u.tema==='preto'?u.tema:'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
@@ -1020,6 +1020,7 @@ function filtrados(){
 /* ---------- animação e gráficos (canvas puro) ---------- */
 let animTok=0;
 function animar(dur,fn){
+  if(RENDER_QUIETO){++animTok;fn(1);return;} // v10.91: redesenho silencioso não reanima os gráficos
   const my=++animTok,t0=performance.now();
   const step=t=>{
     if(my!==animTok)return;
@@ -2257,11 +2258,11 @@ function contaCampo(tipo){
   const pr=(S.bancos.find(b=>b.principal)||bancosAtivos()[0]||{}).id||'';
   return tipo==='compra'?{name:'conta',label:'Pago com a conta',type:'select',value:pr,options:[{v:'',t:'não descontar de nenhuma conta'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))}:{name:'conta',label:'Lançar como receita na conta',type:'select',value:pr,options:[{v:'',t:'não lançar no fluxo de caixa'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))};
 }
-function opForm(fid,tipo){
+function opForm(fid,tipo,deCard){
   const f=S.fiis.find(x=>x.id===fid);if(!f)return;
-  const cri=tipoOf(f)==='cripto';
+  const cri=tipoOf(f)==='cripto',esp=tipo==='provento'&&f.dpc>0&&f.cotas>0?c2(f.cotas*f.dpc):0;
   const campos=tipo==='provento'?[
-    {name:'valor',label:'Valor recebido (R$)',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'valor',label:'Valor recebido (R$)',value:esp?num(esp):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'data',label:'Data',type:'date',value:hojeISO(),required:true},
     contaCampo()
   ]:[
@@ -2298,8 +2299,14 @@ function opForm(fid,tipo){
     if(tipo==='compra'&&v.conta&&S.bancos.some(b=>b.id===v.conta))op.conta=v.conta;
     f.ops.push(op);aplicaOps(f);
     if(tipo!=='provento'&&f.cotFonte!=='brapi'&&!cri){f.preco=op.preco;f.cotFonte='manual';f.cotEm='';}
-    salvar();render();setTimeout(()=>historico(fid),30);toast(OP_L[tipo]+' registrada');
+    salvar();render();if(!deCard)setTimeout(()=>historico(fid),30);toast(tipo==='provento'?'Provento de '+f.ticker+' registrado'+(op.tx?' · entrou na conta':''):OP_L[tipo]+' registrada');
   });
+  /* v10.91: provento com cabeçalho do ativo e a conta do valor esperado */
+  if(tipo==='provento'){const mf=$('#mf');if(!mf)return;mf.closest('.sheet').classList.add('pvSheet');
+    const pp=proxPags(45).find(q=>q.f===f);
+    mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
+    const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar provento';
+    const sc=mf.querySelector('[name="conta"]');if(sc&&sc.closest('label')&&sc.closest('label').firstChild)sc.closest('label').firstChild.textContent='Entrou na conta (vira receita)';}
 }
 function delOp(fid,oid){
   const f=S.fiis.find(x=>x.id===fid);if(!f)return;
@@ -2384,6 +2391,8 @@ const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:'',ini:'',fim:'',perL:'',
 const DATA_HOJE=()=>{const d=new Date();if(innerWidth<=360)return ['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+' · '+d.getDate()+' '+MESES[d.getMonth()];return ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][d.getDay()]+' · '+d.getDate()+' de '+MESES_LONGO[d.getMonth()];}; // v10.74: curta em telas bem estreitas
 
 function applyCfg(){
+  {const k=S.cfg.tema+'|'+S.cfg.accent;if(window.__gvCfgK&&window.__gvCfgK!==k)REND.html=null;window.__gvCfgK=k; // v10.91: tema novo redesenha os gráficos com as cores certas
+   try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}} // e o próximo boot já pinta no tema certo
   document.documentElement.classList.toggle('claro',S.cfg.tema==='claro');
   document.documentElement.classList.toggle('preto',S.cfg.tema==='preto');
   {const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content',S.cfg.tema==='preto'?'#000000':S.cfg.tema==='claro'?'#f2f5fb':'#0b0f1a');}
@@ -2424,7 +2433,7 @@ function go(t){
 /* ---------- v10.78: cards que levam ao lugar certo ----------
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
-const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes'};
+const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos em FIIs',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes'};
 const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
@@ -2463,20 +2472,48 @@ function voltaHTML(){const p=NAV_PILHA[NAV_PILHA.length-1];if(!p||p.tab===TAB&&T
 /* teclado: elementos role=button com data-act respondem a Enter e espaço */
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.matches&&e.target.matches('[role="button"][data-act]')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='catBusca'){const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const q=nz(e.target.value.trim());{const cl=e.target.closest('.card');const li=cl&&cl.querySelector('.catList');if(li)li.classList.toggle('busca',!!q);const mb=cl&&cl.querySelector('.catMaisBtn');if(mb)mb.hidden=!!q;}let n=0;document.querySelectorAll('.catRow').forEach(r=>{const ok=!q||nz(r.dataset.q).includes(q);r.hidden=!ok;if(ok)n++;});const v=document.querySelector('.catVazio');if(v)v.hidden=n>0;}});
+/* v10.91: estado do último desenho da tela (para não redesenhar o que não mudou) */
+let REND={tab:null,bloq:null,html:null},RENDER_QUIETO=false;
+function mataGraficos(root){if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(root.contains(ch.canvas))ch.destroy();}catch(e){}});} // v10.51: gráficos da tela antiga não ficam presos na memória
+function gvFilhos(html){const t=document.createElement('template');t.innerHTML=html;return [...t.content.childNodes].filter(n=>n.nodeType===1||(n.nodeType===3&&n.textContent.trim()));}
+/* troca só os filhos de primeiro nível que mudaram; false = estrutura diferente (o chamador troca tudo) */
+function morphView(v,antHtml,html){
+  const a=gvFilhos(antHtml),b=gvFilhos(html),cur=[...v.childNodes].filter(n=>n.nodeType===1||(n.nodeType===3&&n.textContent.trim()));
+  if(a.length!==b.length||cur.length!==a.length)return false;
+  const ser=n=>n.nodeType===1?n.outerHTML:n.textContent;
+  for(let i=0;i<b.length;i++){if(ser(a[i])===ser(b[i]))continue;mataGraficos(cur[i]);cur[i].replaceWith(b[i]);}
+  return true;
+}
 function render(){
   {const dh=DATA_HOJE(),ix=dh.indexOf(' · ');$('#sub').innerHTML=ix>0?'<b>'+esc(dh.slice(0,ix))+'</b><span aria-hidden="true"> · </span>'+esc(dh.slice(ix+3)):esc(dh);}
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||/[?&]gvtest\b/.test(location.search))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
   const v=$('#view');
-  if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(v.contains(ch.canvas))ch.destroy();}catch(e){}}); // v10.51: gráficos da tela antiga não ficam presos na memória
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
   if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
   const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
-  try{v.innerHTML=bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
-  v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
+  let html;try{html=bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
+  /* v10.91: sem "piscar". a mesma tela redesenhada (sync, cotações, CDI, volta ao app) só troca o que mudou:
+     HTML igual = nada é tocado (nem os nós, nem a rolagem, nem os gráficos); HTML diferente = troca só os blocos
+     de primeiro nível que mudaram, sem a animação de entrada e mantendo a rolagem. a animação fica só para troca de aba. */
+  const mesma=REND.tab===TAB&&REND.bloq===bloq&&REND.html!=null&&v.childElementCount>0;
+  if(mesma&&html===REND.html){MEMO=null;try{cabeNum(v);}catch(e){}return;}
+  const ant=REND.html;REND={tab:TAB,bloq,html};
+  if(mesma){
+    const y=window.scrollY;RENDER_QUIETO=true;
+    if(!morphView(v,ant,html)){mataGraficos(v);v.innerHTML=html;}
+    v.classList.remove('fade');
+    if(Math.abs(window.scrollY-y)>1)window.scrollTo(0,y);
+  }else{
+    RENDER_QUIETO=false;mataGraficos(v);v.innerHTML=html;
+    v.classList.remove('fade');void v.offsetWidth;v.classList.add('fade');
+  }
+  const quieto=RENDER_QUIETO;
   requestAnimationFrame(()=>{
+    RENDER_QUIETO=quieto;
     if(!bloq&&AFTER[TAB])AFTER[TAB]();
+    RENDER_QUIETO=false;
     if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
@@ -2558,14 +2595,16 @@ const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
 function drawSpark(){
   const c=$('#cSpark');if(!c||typeof Chart==='undefined')return;
   const sp=sparkPer(periodo()),vals=sp.vals;if(!vals.length)return;
+  const chave=JSON.stringify([sp.lab,vals]);
+  if(c._ch&&c._chK===chave&&Chart.getChart&&Chart.getChart(c)===c._ch)return; // v10.91: mesmo gráfico, não redesenha
   if(c._ch)c._ch.destroy();
-  const last=vals.length-1;
+  const last=vals.length-1;c._chK=chave;
   c._ch=new Chart(c,{type:'line',data:{labels:sp.lab,datasets:[{
     data:vals,borderColor:'#a3e635',borderWidth:2,fill:true,tension:.35,
     backgroundColor:(ctx)=>{const ch=ctx.chart,ar=ch.chartArea;if(!ar)return 'rgba(163,230,53,.2)';const g=ch.ctx.createLinearGradient(0,ar.top,0,ar.bottom);g.addColorStop(0,'rgba(163,230,53,.35)');g.addColorStop(1,'rgba(163,230,53,0)');return g;},
     pointRadius:ctx=>ctx.dataIndex===last?5:0,pointHoverRadius:5,
     pointBackgroundColor:'#a3e635',pointBorderColor:'#0a0a0c',pointBorderWidth:2
-  }]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+  }]},options:{responsive:true,maintainAspectRatio:false,animation:RENDER_QUIETO?false:{duration:600},
     plugins:{legend:{display:false},tooltip:{callbacks:{title:x=>x[0].label,label:x=>brl(x.parsed.y)}}},
     scales:{x:{display:false},y:{display:false,beginAtZero:true}}}});
 }
@@ -2983,6 +3022,40 @@ function viewOrc(){
 }
 
 const TCOR={fii:'#a3e635',acao:'#60a5fa',etf:'#f59e0b',bdr:'#f472b6',rf:'#34d399',cripto:'#fb923c'};
+/* v10.91: próximos proventos. card com o selo do ativo, a data com dia da semana, o valor esperado
+   (cotas × último provento por cota, quando conhecido), anel de progresso até a data e a lista dos próximos pagamentos. */
+function proxPags(dias){
+  const now=new Date(),h0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),lim=new Date(h0.getTime()+(dias||45)*864e5),out=[];
+  S.fiis.forEach(f=>{if(!(f.diaPag>0))return;
+    for(let k=0;k<3;k++){const y=h0.getFullYear(),mo=h0.getMonth()+k,last=new Date(y,mo+1,0).getDate(),d=new Date(y,mo,Math.min(f.diaPag,last));
+      if(d<h0)continue;if(d>lim)break;const pl=new Date(y,mo,0).getDate(),ant=new Date(y,mo-1,Math.min(f.diaPag,pl));
+      out.push({f,date:d,ant,valor:f.dpc>0&&f.cotas>0?c2(f.cotas*f.dpc):0});break;}});
+  return out.sort((a,b)=>a.date-b.date||String(a.f.ticker).localeCompare(String(b.f.ticker)));
+}
+const FMT_DIA_SEM=new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long'}),FMT_DIA_CURTO=new Intl.DateTimeFormat('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+function diasTxt(n){return n<=0?'hoje':n===1?'amanhã':'em '+n+' dias';}
+function provCardHTML(p){
+  const L=proxPags(45),x=L.find(q=>q.f===p.f&&+q.date===+p.date)||{f:p.f,date:p.date,valor:p.f.dpc>0&&p.f.cotas>0?c2(p.f.cotas*p.f.dpc):0,ant:new Date(p.date.getFullYear(),p.date.getMonth()-1,p.date.getDate())};
+  const now=new Date(),h0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),n=Math.round((x.date-h0)/864e5);
+  const per=Math.max(1,Math.round((x.date-x.ant)/864e5)),pr=Math.max(0.04,Math.min(1,1-n/per)),C=2*Math.PI*30;
+  const t=tipoOf(x.f),mesmoDia=L.filter(q=>+q.date===+x.date),totDia=mesmoDia.reduce((a,q)=>a+cents(q.valor),0)/100;
+  const mesFim=new Date(h0.getFullYear(),h0.getMonth()+1,0),mesL=L.filter(q=>q.date<=mesFim),totMes=mesL.reduce((a,q)=>a+cents(q.valor),0)/100;
+  const dsem=FMT_DIA_SEM.format(x.date);
+  const rows=L.slice(0,8).map(q=>{const nn=Math.round((q.date-h0)/864e5);return `<div class="pvRow${q===x?' on':''}">${assetIco(q.f.ticker,tipoOf(q.f))}<span class="pvRN"><b>${esc(q.f.ticker)}</b><small>${esc(FMT_DIA_CURTO.format(q.date).replace(/\./g,'').replace(',',' ·'))} · ${diasTxt(nn)}</small></span><span class="pvRV">${q.valor>0?`<b>${brl(q.valor)}</b><small>${num(q.f.cotas).replace(/,00$/,'')} × ${brl(q.f.dpc)}</small>`:'<small>valor por cota não informado</small>'}</span><button class="pvRec" data-act="prov-receber" data-id="${q.f.id}" aria-label="registrar provento recebido de ${esc(q.f.ticker)}">${I('arrowDown')}</button></div>`;}).join('');
+  return `<div class="card pvCard" style="--tc:${TCOR[t]||'var(--a1)'}">
+    <div class="pvHead"><small>próximo provento</small>${totMes>0?`<span class="pvMes">${MESES_LONGO[h0.getMonth()].toLowerCase()} · ${brl(totMes)}</span>`:''}</div>
+    <div class="pvMain">
+      <div class="pvRing" role="img" aria-label="${diasTxt(n)}"><svg viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" class="pvRBg"/><circle cx="36" cy="36" r="30" class="pvRFg" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${C.toFixed(2)}" data-off="${(C*(1-pr)).toFixed(2)}"/></svg><span class="pvRIn">${n<=0?'<b>hoje</b>':`<b>${n}</b><small>${n===1?'dia':'dias'}</small>`}</span></div>
+      <div class="pvInfo">
+        <div class="pvTk">${assetIco(x.f.ticker,t)}<b>${esc(x.f.ticker)}</b>${mesmoDia.length>1?`<span class="pvMais">+${mesmoDia.length-1}</span>`:''}</div>
+        <p class="pvData">${esc(dsem)}</p>
+        <p class="pvVal">${x.valor>0?`<b>${brl(mesmoDia.length>1?totDia:x.valor)}</b><small>esperado${mesmoDia.length>1?' no dia':''}</small>`:'<small>informe o provento por cota para ver o valor</small>'}</p>
+      </div>
+    </div>
+    <div class="pvCd"><span>${I('clock')}${diasTxt(n)}</span><span id="cd" class="pvCdT" data-date="${x.date.getTime()}"></span></div>
+    ${L.length>1?`<div class="pvList"><h4>próximos pagamentos</h4>${rows}</div>`:`<div class="pvList pvList1">${rows}</div>`}
+  </div>`;
+}
 function viewFii(){
   const pat=patrimonio(),dm=divMensal(),ct=cotasTotal(),meta=S.metaFii||100;
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
@@ -3037,7 +3110,7 @@ function viewFii(){
   const tabs=`<div class="seg ftabs">${TIPOS.filter(t=>t.k==='todos'||usados.has(t.k)||FTAB===t.k).map(t=>`<button data-act="ftab" data-id="${t.k}" class="${FTAB===t.k?'on':''}">${t.l}</button>`).join('')}</div>`;
   const cotAuto=COT.st==='auto';
   return `
-  <div class="head"><h2>Carteira</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
+  <div class="head fiiHead"><h2><span class="hLong">Investimentos em FIIs</span><span class="hCurto" aria-hidden="true">Invest. em FIIs</span></h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
     <div class="wTot">${brl(pat)}</div>
@@ -3047,7 +3120,7 @@ function viewFii(){
   ${temRV?`<div class="wKpi">
     <div class="card mini"><small>renda mensal estimada</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>
   </div>`:''}
-  ${p?`<div class="card cd wNext"><div><small>próximo pagamento</small><b>${esc(p.f.ticker)} · ${fmtDate(p.date)}</b></div><div id="cd" class="countdown" data-date="${p.date.getTime()}"></div></div>`
+  ${p?provCardHTML(p)
      :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
   <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
   ${al.length>1||FTAB!=='todos'?tabs:''}
@@ -4306,7 +4379,7 @@ function abreRevisar(){
   box.querySelectorAll('select[data-revcat]').forEach(sl=>sl.onchange=()=>revCat(sl.dataset.revcat,sl.value));
 }
 /* v10.79: Pix do banco com o nome de quem te deve: oferece virar a devolução (ou o empréstimo, na saída) */
-function revEmpHTML(t){if(t.emp||t.cartao||!(t.tipo==='receita'||t.tipo==='despesa'))return '';const dir=t.tipo==='receita'?'in':'out';
+function revEmpHTML(t){if(t.emp||t.empJuros||t.cartao||!(t.tipo==='receita'||t.tipo==='despesa'))return '';const dir=t.tipo==='receita'?'in':'out';
   if(dir==='in'&&(S.cfg.empIgn||[]).includes(t.id))return '';
   const e=empCasa(t.descricao,t.valor,t.data,dir);if(!e)return '';
   return `<div class="revEmp">${I('handCoins')}<span>${dir==='in'?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+'?'}</span><button class="btn2 sm" data-act="${dir==='in'?'emp-sug-ok':'emp-sug-out'}" data-id="${esc(t.id)}~${e.id}">sim</button></div>`;}
@@ -4359,7 +4432,7 @@ function empSugestoes(){
   const ign=new Set(S.cfg.empIgn||[]),lim=isoDe(new Date(Date.now()-45*864e5)),out=[];
   const P=(S.emprestimos||[]).map(e=>({e,ab:empTot(e.id).aberto,k:norm(primeiroNome(e.pessoa))})).filter(x=>x.ab>0&&x.k.length>=3);
   if(!P.length)return out;
-  S.tx.forEach(t=>{if(t.tipo!=='receita'||!efetivo(t)||t.emp||ign.has(t.id)||!t.data||t.data<lim)return;
+  S.tx.forEach(t=>{if(t.tipo!=='receita'||!efetivo(t)||t.emp||t.empJuros||ign.has(t.id)||!t.data||t.data<lim)return;
     const e=empCasa(t.descricao,t.valor,t.data,'in');if(e)out.push({t,e});}); // v10.79: nome inteiro conta mais, data depois do empréstimo
   return out.sort((a,b)=>b.t.data.localeCompare(a.t.data));
 }
@@ -4406,19 +4479,21 @@ function abreEmprestimos(){
 function abreEmp(id){
   const e=empPorId(id);if(!e)return abreEmprestimos();
   const t=empTot(id),[k,l]=empPrazo(e,t.aberto),box=$('#modal');
-  const H=S.tx.filter(x=>x.emp===id).sort((a,b)=>b.data.localeCompare(a.data)||(a.empDir==='out'?1:-1));
+  const H=S.tx.filter(x=>x.emp===id||x.empJuros===id).sort((a,b)=>b.data.localeCompare(a.data)||(a.empDir==='out'?1:-1));
   const dev=H.filter(x=>x.empDir==='in'&&efetivo(x));
-  const linha=x=>{const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
+  const jur=empJurosTot(id);
+  const linha=x=>{if(x.empJuros)return `<div class="tx empH juros"><span class="ic receita">${I('plus')}</span><div class="txt"><b>juros/lucro</b><small>${fmtDataCurta(x.data)} · receita${x.conta?' · '+esc(nomeLado('b:'+x.conta)):''}</small></div><div class="val pos">+ ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;
+    const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
     return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.pluggyId?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="${esc(e.pessoa)}"><div class="sh-head"><h3>${esc(e.pessoa)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero">${empAvatar(e.pessoa)}<small>${t.aberto>0?'falta receber':t.perdoado>0?'encerrado':'quitado'}</small><b>${brl(t.aberto)}</b><span><span class="empModo">${EMP_MODO[empModo(e)]}</span> <span class="badge ${k}">${l}</span></span></div>
     <div class="empProg">${empBarHTML(t)}<p class="empProgT"><b>${esc(empResumo(t))}</b></p>
-      <div class="empProgL"><span><i class="pg"></i>recebido ${brl(t.voltou)}</span>${t.perdoado>0?`<span><i class="pd"></i>perdoado ${brl(t.perdoado)}</span>`:''}<span><i class="ab"></i>falta ${brl(t.aberto)}</span></div></div>
+      <div class="empProgL"><span><i class="pg"></i>recebido ${brl(t.voltou)}</span>${t.perdoado>0?`<span><i class="pd"></i>perdoado ${brl(t.perdoado)}</span>`:''}<span><i class="ab"></i>falta ${brl(t.aberto)}</span>${jur>0?`<span class="empJurL"><i class="jr"></i>juros +${brl(jur)}</span>`:''}</div></div>
     ${e.obs?`<p class="small empObs">${esc(e.obs)}</p>`:''}
     ${empSuspeitos().filter(x=>x.e.id===id).slice(0,1).map(x=>empSuspDica(x,false)).join('')}
     ${t.aberto>0?`<div class="empBt" style="margin:10px 0 4px"><button class="btn2" data-act="emp-cobrar" data-id="${id}">${I('mail')}cobrar</button><button class="btn" data-act="emp-recebi" data-id="${id}">${I('arrowDown')}registrar pagamento</button></div>`:''}
-    <h4 class="rsH">devoluções ${dev.length?'('+dev.length+')':''}</h4>
-    ${dev.length?dev.map(linha).join(''):`<p class="small">${t.aberto>0?(empModo(e)==='partes'?'nenhuma parte devolvida ainda. cada pagamento que entrar baixa o que falta.':'ainda não devolveu. se pagar em partes, registre cada uma.'):'sem devoluções.'}</p>`}
+    <h4 class="rsH">pagamentos recebidos ${dev.length?'('+dev.length+')':''}</h4>
+    ${dev.length?dev.map(x=>{const j=S.tx.find(y=>y.jurosDe===x.id&&y.empJuros===id);return linha(x)+(j?linha(j):'');}).join(''):`<p class="small">${t.aberto>0?(empModo(e)==='partes'?'nenhuma parte devolvida ainda. cada pagamento que entrar baixa o que falta.':'ainda não devolveu. se pagar em partes, registre cada uma.'):'sem devoluções.'}</p>`}
     <h4 class="rsH">histórico completo</h4>
     ${H.map(linha).join('')||'<p class="small">sem lançamentos ainda.</p>'}
     <div class="row empRodape"><button class="btn2 sm" data-act="emp-novo" data-id="${id}">${I('plus')}emprestar mais</button><button class="btn2 sm" data-act="emp-edit" data-id="${id}">${I('edit')}editar</button>${empSaidasCorrigiveis(id).length?`<button class="btn2 sm" data-act="emp-ant" data-id="${id}">${I('clock')}${empSaidasCorrigiveis(id).every(x=>x.empAnt)?'saiu antes do app':'já tinha saído antes do app'}</button>`:''}${t.aberto>0?`<button class="btn2 sm" data-act="emp-perdoa" data-id="${id}">${I('heartHand')}perdoar o resto</button>`:''}<button class="btn2 sm danger" data-act="emp-del" data-id="${id}">${I('trash')}excluir</button><button class="btn2 sm" style="margin-left:auto" data-act="emp-lista">todos</button></div>
@@ -4462,7 +4537,16 @@ function novoEmp(id,pre){
   mf.querySelectorAll('[name="modo"]').forEach(r=>r.addEventListener('change',pinta));pinta();
   const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar empréstimo';
 }
-/* registrar pagamento (devolução): mostra o que já voltou e o que falta; valor vem com o restante, editável */
+/* registrar pagamento (devolução). v10.91: o valor recebido pode ser diferente do que falta.
+   - igual: quita. menor: baixa parte e o resto continua em aberto (ou "perdoar o resto").
+   - maior: o que faltava volta como devolução (transferência, não é renda) e só a diferença entra como receita
+     na categoria "Juros de empréstimo" (t.empJuros = id do empréstimo, t.jurosDe = id da devolução). */
+const EMP_JUROS_CAT='Juros de empréstimo';
+function empJurosTot(id){return S.tx.filter(t=>t.empJuros===id&&efetivo(t)).reduce((a,t)=>a+cents(t.valor),0)/100;}
+function empJurosTx(eid,valor,conta,data,de){if(!S.cats.includes(EMP_JUROS_CAT))S.cats.push(EMP_JUROS_CAT);
+  const t={id:uid(),tipo:'receita',valor:c2(valor),categoria:EMP_JUROS_CAT,conta:conta||'',forma:conta?'pix':'dinheiro',status:'pago',data,descricao:'Juros de empréstimo · '+empNome(eid),cartao:'',empJuros:eid,jurosDe:de||''};S.tx.push(t);return t;}
+/* divide a conta do recebido: principal (até o que falta), extra (lucro) e o que continua faltando */
+function empDivide(aberto,recebido){const ab=cents(aberto),vc=cents(recebido);const pr=Math.min(ab,Math.max(0,vc));return {principal:pr/100,extra:Math.max(0,vc-ab)/100,falta:Math.max(0,ab-vc)/100};}
 function recebiEmp(id,pre){
   pre=pre||{};
   const abertos=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
@@ -4472,29 +4556,50 @@ function recebiEmp(id,pre){
   const t0=e?empTot(e.id):abertos[0].t;
   const campos=[];
   if(!e)campos.push({name:'quem',label:'Quem pagou',type:'select',value:abertos[0].e.id,options:abertos.map(x=>({v:x.e.id,t:x.e.pessoa+' · falta '+brl(x.t.aberto)}))});
-  campos.push({name:'valor',label:'Valor recebido agora (R$)',value:num(pre.valor&&pre.valor<=t0.aberto?pre.valor:t0.aberto),required:true,inputmode:'decimal'},
-    {name:'conta',label:'Entrou em',type:'select',value:pre.conta||'b:'+bancoPadrao(),options:contasOpts(pre.conta&&pre.conta.slice(2)).concat([{v:'ant',t:'não mexer no saldo (recebi antes de usar o app)'}])},
+  campos.push({name:'valor',label:'Quanto você recebeu (R$)',value:num(pre.valor>0?pre.valor:t0.aberto),required:true,inputmode:'decimal'},
+    {type:'html',name:'_dif',html:'<div class="empDif" id="empDif" aria-live="polite"></div>'},
+    {name:'perdoa',label:'perdoar o resto (encerra sem cobrar o que falta)',type:'checkbox',value:false},
+    {name:'conta',label:'Entrou na conta',type:'select',value:pre.conta||'b:'+bancoPadrao(),options:contasOpts(pre.conta&&pre.conta.slice(2)).concat([{v:'ant',t:'não mexer no saldo (recebi antes de usar o app)'}])},
     {name:'data',label:'Quando',type:'date',value:pre.data||hojeISO(),required:true});
-  form(e?'Pagamento de '+primeiroNome(e.pessoa):'Recebi de volta',campos,v=>{
+  form(e?'Receber de '+primeiroNome(e.pessoa):'Recebi de volta',campos,v=>{
     const eid=e?e.id:v.quem,ee=empPorId(eid);if(!ee)return 'Escolha quem pagou.';
-    const tt=empTot(eid),valor=parseBR(v.valor);if(!(valor>0))return 'Informe um valor maior que zero.';
-    if(cents(valor)>cents(tt.aberto))return 'Passa do que falta ('+brl(tt.aberto)+'). Se recebeu a mais, registre só o que faltava.';
+    const tt=empTot(eid),valor=parseBR(v.valor);if(!(valor>0))return 'Informe quanto você recebeu.';
     if(!DATA_OK.test(String(v.data)))return 'Informe a data.';
-    const ant=v.conta==='ant';
-    /* v10.79: a entrada já veio do banco? vira a devolução (não conta duas vezes) */
+    const ant=v.conta==='ant',dv=empDivide(tt.aberto,valor);
+    if(ant&&dv.extra>0)return 'O que passou do emprestado é lucro e precisa entrar numa conta. Escolha a conta.';
+    const conta=!ant&&String(v.conta||'').indexOf('b:')===0?v.conta.slice(2):'';
+    /* v10.79: a entrada já veio do banco? vira a devolução (não conta duas vezes); o extra vira juros sozinho */
     const bx=ant?null:txBancoIgual(v.conta,'receita',valor,v.data);
-    if(bx){aplicaEmp(bx,eid,'in');setTimeout(()=>abreEmp(eid),40);return;}
-    S.tx.push(Object.assign({id:uid(),tipo:'transf',emp:eid,empDir:'in',valor,data:v.data,de:'',para:ant?'':v.conta||'',categoria:'Empréstimo',descricao:ee.pessoa+' devolveu',cartao:'',conta:'',forma:''},ant?{empAnt:1}:{}));
-    salvar();render();const ab=empTot(eid).aberto;toast(ab>0?'Pagamento registrado · falta '+brl(ab):primeiroNome(ee.pessoa)+' quitou tudo');setTimeout(()=>abreEmp(eid),40);
+    let pid='';
+    if(bx){aplicaEmpTx(bx,eid,'in');pid=bx.id;}
+    else{
+      if(dv.principal>0){const t={id:uid(),tipo:'transf',emp:eid,empDir:'in',valor:dv.principal,data:v.data,de:'',para:ant?'':v.conta||'',categoria:'Empréstimo',descricao:ee.pessoa+' devolveu',cartao:'',conta:'',forma:''};if(ant)t.empAnt=1;S.tx.push(t);pid=t.id;}
+      if(dv.extra>0)empJurosTx(eid,dv.extra,conta,v.data,pid);
+    }
+    if(v.perdoa&&dv.falta>0)S.tx.push({id:uid(),tipo:'transf',emp:eid,empDir:'perdao',valor:dv.falta,data:v.data,de:'',para:'',categoria:'Empréstimo',descricao:'perdoei '+ee.pessoa,cartao:'',conta:'',forma:'',status:'pago'});
+    salvar();render();const ab=empTot(eid).aberto;
+    toast(dv.extra>0?primeiroNome(ee.pessoa)+' quitou · +'+brl(dv.extra)+' de juros':ab>0?'Pagamento registrado · falta '+brl(ab):v.perdoa&&dv.falta>0?'Recebido e o resto perdoado':primeiroNome(ee.pessoa)+' quitou tudo');
+    setTimeout(()=>abreEmp(eid),40);
   });
   const mf=$('#mf');if(!mf)return;
+  mf.closest('.sheet').classList.add('empRecSheet');
   mf.insertAdjacentHTML('afterbegin','<div class="empRecebi" id="empRecebiBox"></div>');
-  const box=$('#empRecebiBox'),inV=mf.querySelector('[name="valor"]'),selQ=mf.querySelector('[name="quem"]');
-  const pinta=()=>{const eid=e?e.id:selQ.value,tt=empTot(eid),ee=empPorId(eid);const nv=parseBR(inV.value)||0,rest=Math.max(0,(cents(tt.aberto)-cents(nv))/100);
-    box.innerHTML=`<div class="empRecTop">${empAvatar(ee.pessoa)}<div><small>${EMP_MODO[empModo(ee)]}${ee.prev?' · '+(empModo(ee)==='partes'?'quitar até ':'combinado para ')+fmtDataCurta(ee.prev):''}</small><b>${esc(empResumo(tt))}</b></div></div>${empBarHTML(tt)}
-      <p class="empRecDepois">${nv>0&&cents(nv)<=cents(tt.aberto)?(rest>0?`depois deste pagamento falta <b>${brl(rest)}</b>`:'com este pagamento fica <b>quitado</b>'):cents(nv)>cents(tt.aberto)?'<b class="neg">valor maior do que falta</b>':'digite quanto recebeu'}</p>`;};
-  inV.addEventListener('input',pinta);if(selQ)selQ.addEventListener('change',()=>{const tt=empTot(selQ.value);inV.value=num(tt.aberto);pinta();});pinta();
-  const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar pagamento';
+  const box=$('#empRecebiBox'),inV=mf.querySelector('[name="valor"]'),selQ=mf.querySelector('[name="quem"]'),dif=$('#empDif'),
+    ckP=mf.querySelector('[name="perdoa"]'),lbP=ckP.closest('label'),bt=mf.querySelector('button[type="submit"]');
+  inV.closest('label').classList.add('empValLbl');lbP.classList.add('empPerdCk');
+  const pinta=()=>{const eid=e?e.id:selQ.value,tt=empTot(eid),ee=empPorId(eid);const nv=parseBR(inV.value)||0,dv=empDivide(tt.aberto,nv);
+    box.innerHTML=`<div class="empRecTop">${empAvatar(ee.pessoa)}<div><small>${EMP_MODO[empModo(ee)]}${ee.prev?' · '+(empModo(ee)==='partes'?'quitar até ':'combinado para ')+fmtDataCurta(ee.prev):''}</small><b>${esc(primeiroNome(ee.pessoa))} te deve ${brl(tt.aberto)}</b></div></div>${empBarHTML(tt)}
+      <div class="empRecNums"><span><small>emprestei</small><b>${brl(tt.saiu)}</b></span><span><small>já voltou</small><b>${brl(tt.voltou)}</b></span><span><small>falta</small><b>${brl(tt.aberto)}</b></span></div>`;
+    let h='',k='';
+    if(!(nv>0)){h='digite quanto você recebeu';k='mut';}
+    else if(dv.extra>0){k='mais';h=`<em class="empDifL"><b>+${brl(dv.extra)}</b> de juros/lucro</em><small>${brl(dv.principal)} voltam como devolução (não é renda) e ${brl(dv.extra)} entram como receita em ${EMP_JUROS_CAT}</small>`;}
+    else if(dv.falta>0){k=ckP.checked?'perd':'menos';h=ckP.checked?`<em class="empDifL"><b>${brl(dv.falta)}</b> perdoados</em><small>o empréstimo fica encerrado sem mexer no saldo</small>`:`<em class="empDifL">faltam <b>${brl(dv.falta)}</b></em><small>o resto continua em aberto para o próximo pagamento</small>`;}
+    else{k='ok';h=`<em class="empDifL"><b>quitado</b></em><small>recebeu exatamente o que faltava</small>`;}
+    dif.className='empDif '+k;dif.innerHTML=(k==='mais'?I('up'):k==='ok'?I('check'):k==='menos'?I('clock'):k==='perd'?I('heartHand'):'')+'<span>'+h+'</span>';
+    lbP.style.display=dv.falta>0&&nv>0?'':'none';
+    if(bt)bt.textContent=dv.extra>0?'Receber '+brl(nv):dv.falta>0&&nv>0?(ckP.checked?'Receber e perdoar o resto':'Registrar pagamento parcial'):'Registrar pagamento';};
+  inV.addEventListener('input',pinta);ckP.addEventListener('change',pinta);
+  if(selQ)selQ.addEventListener('change',()=>{const tt=empTot(selQ.value);inV.value=num(tt.aberto);pinta();});pinta();
 }
 /* perdoar o que falta: encerra a dívida sem mexer em conta; vira despesa só se a pessoa marcar */
 function perdoaEmp(id){
@@ -4528,7 +4633,7 @@ function editaEmp(id){
 function delEmp(id){
   const e=empPorId(id);if(!e)return;const n=S.tx.filter(t=>t.emp===id).length;
   confirma({titulo:'Excluir '+e.pessoa+'?',texto:n?`Os ${n} lançamento${n>1?'s':''} continuam no extrato, mas voltam a ser gasto e receita normais.`:'',ok:'excluir',perigo:true},()=>{
-    S.tx.forEach(t=>{if(t.emp===id)desfazEmpTx(t);});S.emprestimos=S.emprestimos.filter(x=>x.id!==id);salvar();render();toast('Excluído');});
+    S.tx.forEach(t=>{if(t.emp===id)desfazEmpTx(t);if(t.empJuros===id){delete t.empJuros;delete t.jurosDe;}});S.emprestimos=S.emprestimos.filter(x=>x.id!==id);salvar();render();toast('Excluído');});
 }
 function msgCobranca(e){const t=empTot(e.id),n=primeiroNome(e.pessoa);
   const q=S.tx.filter(x=>x.emp===e.id&&x.empDir==='out').map(x=>x.data).sort()[0];
@@ -4547,15 +4652,22 @@ function cobrarEmp(id){
   $('#empCopia').addEventListener('click',()=>{(navigator.clipboard?navigator.clipboard.writeText(ta.value):Promise.reject()).then(()=>toast('Mensagem copiada'),()=>{ta.select();document.execCommand&&document.execCommand('copy');toast('Mensagem copiada');});});
 }
 /* transforma um lançamento que já existe (ex.: Pix que veio do banco) em empréstimo ou devolução */
-function aplicaEmp(t,eid,dir){
+function aplicaEmpTx(t,eid,dir){
   const c=t.conta||(t.tipo!=='transf'?contaDoLanc(t):'')||'';
+  const ab=dir==='in'?cents(empTot(eid).aberto):0;
   t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:t.conta||''};
   t.tipo='transf';t.emp=eid;t.empDir=dir;t.categoria='Empréstimo';
   if(dir==='out'){t.de=c?'b:'+c:'';t.para='';}else{t.para=c?'b:'+c:'';t.de='';}
   t.conta='';t.cartao='';delete t.rev;
+  /* v10.91: entrou mais do que faltava: a devolução fica com o que faltava e o resto vira juros (receita) */
+  if(dir==='in'&&ab>0&&cents(t.valor)>ab){const ex=(cents(t.valor)-ab)/100;t.empOrig.valor=t.valor;t.valor=ab/100;empJurosTx(eid,ex,c,t.data,t.id);}
+}
+function aplicaEmp(t,eid,dir){
+  aplicaEmpTx(t,eid,dir);
   salvar();render();const ab=empTot(eid).aberto;toast(dir==='in'?(ab>0?'Devolução registrada · falta '+brl(ab):primeiroNome(empNome(eid))+' quitou tudo'):'Marcado como empréstimo');
 }
 function desfazEmpTx(t){const o=t.empOrig||{};const dir=t.empDir,lado=(t.empAnt?t.empAntDe:(dir==='in'?t.para:t.de))||'';
+  if(o.valor>0){t.valor=o.valor;S.tx=S.tx.filter(x=>!(x.jurosDe===t.id&&x.empJuros));} // v10.91: volta o valor inteiro e tira os juros separados
   t.tipo=o.tipo||(dir==='in'?'receita':'despesa');t.categoria=o.categoria||'Outros';t.conta=o.conta||(lado.indexOf('b:')===0?lado.slice(2):'');t.de='';t.para='';delete t.emp;delete t.empDir;delete t.empOrig;delete t.empAnt;delete t.empAntDe;}
 function desfazEmp(id){const t=S.tx.find(x=>x.id===id);if(!t||!t.emp)return;desfazEmpTx(t);salvar();render();toast(t.tipo==='receita'?'Voltou a ser receita':'Voltou a ser gasto');}
 function converteEmp(id,dir){
@@ -6656,6 +6768,7 @@ const ACT={
   'op-compra':id=>opForm(id,'compra'),
   'op-venda':id=>opForm(id,'venda'),
   'op-provento':id=>opForm(id,'provento'),
+  'prov-receber':id=>opForm(id,'provento',true),
   'del-op':v=>{const [a,b]=String(v).split('|');delOp(a,b);},
   'del-fii':id=>confirma({titulo:'Remover da carteira?',texto:'O investimento sai da sua carteira.',ok:'Remover',perigo:true},()=>{S.fiis=S.fiis.filter(x=>x.id!==id);salvar();render();toast('Removido da carteira');}),
   'meta-fii':()=>form('Meta de cotas',[{name:'meta',label:'Quantas cotas você quer acumular?',inputmode:'numeric',value:S.metaFii||100}],v=>{
@@ -6852,7 +6965,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -6870,17 +6983,23 @@ async function confereVersao(){
     const m=h.match(/const GV_BUILD='([^']+)'/);if(!m||m[1]===GV_BUILD)return;
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)reg.update().catch(()=>{});
     const ocupado=$('#modal').classList.contains('on')||$('#lock').classList.contains('on')||document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-    if(!ocupado)location.reload();else toast('Versão nova pronta. Ela entra quando você fechar este formulário.');
+    /* v10.91: nunca recarrega no meio do uso (a tela piscava ao voltar para o app). a versão nova entra quietinha:
+       quando o app sai da tela (recarrega escondido) ou pelo aviso "nova versão pronta". */
+    VERSAO_NOVA=m[1];avisoVersao();
   }catch(e){}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')confereVersao();});
+let VERSAO_NOVA=null;
+function avisoVersao(){if(document.getElementById('gvAtu'))return;const d=document.createElement('button');d.id='gvAtu';d.type='button';d.className='gvAtu';
+  d.innerHTML=I('refresh')+'<span>Nova versão pronta</span><b>atualizar</b>';d.onclick=()=>{window.__gvRecarrega=1;location.reload();};document.body.appendChild(d);}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')confereVersao();
+  else if(VERSAO_NOVA&&!$('#modal').classList.contains('on')&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){window.__gvRecarrega=1;try{location.reload();}catch(e){}}
+});
 window.addEventListener('pageshow',e=>{if(e.persisted)confereVersao();});
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   {const tinha=!!navigator.serviceWorker.controller; // v10.77: versão nova instalada enquanto o app está aberto
-   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tinha||window.__gvRecarrega)return;
-     if(document.getElementById('gvAtu'))return;const d=document.createElement('button');d.id='gvAtu';d.type='button';d.className='gvAtu';
-     d.innerHTML=I('refresh')+'<span>Nova versão pronta</span><b>atualizar</b>';d.onclick=()=>{window.__gvRecarrega=1;location.reload();};document.body.appendChild(d);});}
+   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tinha||window.__gvRecarrega)return;VERSAO_NOVA=VERSAO_NOVA||'sw';avisoVersao();});}
 
 /* v10.48: com um formulário aberto a página de trás não rola junto (iPhone) */
 (function(){const m=$('#modal');let y=0,on=false;
