@@ -16,7 +16,7 @@ export type DB = {
   leAssinatura(uid: string): Promise<Linha>;
   gravaAssinatura(uid: string, campos: Record<string, unknown>): Promise<void>;
 };
-export type Deps = { db: DB; env: { MP_ACCESS_TOKEN?: string; MP_WEBHOOK_SECRET?: string }; PLANOS: any; efetivo: (a: any, agora?: number) => any; fetch?: typeof fetch; agora?: () => number; log?: (...a: unknown[]) => void };
+export type Deps = { db: DB; env: { MP_ACCESS_TOKEN?: string; MP_WEBHOOK_SECRET?: string }; PLANOS: any; efetivo: (a: any, agora?: number) => any; fetch?: typeof fetch; agora?: () => number; log?: (...a: unknown[]) => void; erro?: (etapa: string, e: unknown) => Promise<void> | void };
 
 const resp = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 const ID_OK = /^[A-Za-z0-9_-]{1,64}$/;
@@ -55,7 +55,7 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   // 4. a verdade vem da API do provedor
   let b: MP.Busca;
   try { b = await MP.buscaEstado(n.topico, n.dataId, token, d.PLANOS, d.fetch || fetch, agora); }
-  catch (e) { log("falha ao consultar o provedor", String(e)); return resp({ erro: "provedor indisponível, tente de novo" }, 500); }
+  catch (e) { log("falha ao consultar o provedor", String(e)); await d.erro?.("consulta_provedor", e); return resp({ erro: "provedor indisponível, tente de novo" }, 500); }
   if (b.naoEncontrado) { await d.db.concluiEvento(chave, "nao_encontrado"); return resp({ ok: true, resultado: "nao_encontrado" }); }
   if (b.ignorar || !b.estado) { await d.db.concluiEvento(chave, b.ignorar || "ignorado"); return resp({ ok: true, resultado: b.ignorar || "ignorado" }); }
 
