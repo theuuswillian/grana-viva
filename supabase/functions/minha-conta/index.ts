@@ -2,7 +2,8 @@
 // Chamada pelo app com o login do usuário. Usa a service role só aqui no servidor e sempre com o id
 // tirado do token (nunca do corpo do pedido): ninguém consegue exportar ou apagar a conta de outra pessoa.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import * as MP from "./mercadopago.ts"; // v10.82: cópia gerada de ../_shared (deploy-fn.py)
+import * as MP from "../_shared/mercadopago.ts";
+import { registraErro } from "../_shared/erros.ts"; // v10.93: importado direto de ../_shared (deploy-fn.py envia a pasta junto)
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const ORIGENS = ["https://theuuswillian.github.io"];
 const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
         tabelas,
         comprovantes: { bucket: BUCKET, arquivos: arqs, nota: "Os arquivos podem ser abertos um a um no app, em cada lançamento (Comprovantes)." },
       });
-    } catch (e) { console.log("exportar", String(e)); return json({ erro: "não foi possível gerar a exportação agora" }, 500); }
+    } catch (e) { console.log("exportar", String(e)); await registraErro(sb, "minha-conta", "exportar", e); return json({ erro: "não foi possível gerar a exportação agora" }, 500); }
   }
 
   if (acao === "excluir") {
@@ -93,7 +94,7 @@ Deno.serve(async (req) => {
         await MP.cancela(a.provedor_assinatura_id, tk);
         rel.assinatura_cancelada = 1;
       }
-    } catch (e) { console.log("excluir: cancela assinatura", uid, String(e)); return json({ erro: "não consegui cancelar sua assinatura agora. Tente de novo em instantes." }, 502); }
+    } catch (e) { console.log("excluir: cancela assinatura", uid, String(e)); await registraErro(sb, "minha-conta", "excluir-cancela-assinatura", e); return json({ erro: "não consegui cancelar sua assinatura agora. Tente de novo em instantes." }, 502); }
     try {
       // 1) comprovantes no Storage
       const arqs = await arquivos(uid);
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
       // 3) o usuário de login (as tabelas também têm ON DELETE CASCADE, como segunda garantia)
       const { error: de } = await sb.auth.admin.deleteUser(uid);
       if (de) throw new Error("auth: " + de.message);
-    } catch (e) { console.log("excluir", uid, String(e)); return json({ erro: "não foi possível concluir a exclusão agora. Tente de novo em instantes.", parcial: rel }, 500); }
+    } catch (e) { console.log("excluir", uid, String(e)); await registraErro(sb, "minha-conta", "excluir", e); return json({ erro: "não foi possível concluir a exclusão agora. Tente de novo em instantes.", parcial: rel }, 500); }
     console.log("conta excluída", uid, JSON.stringify(rel));
     return json({ ok: true, apagado: rel });
   }
