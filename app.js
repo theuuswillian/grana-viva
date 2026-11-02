@@ -1354,7 +1354,7 @@ async function atualizaPushUI(){
 }
 const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
-function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
+function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
   try{
@@ -2535,7 +2535,7 @@ const VIEWS={
   inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
 };
 const AFTER={
-  cartoes:()=>{ccIniciaTilt();ccPinta();},
+  cartoes:()=>{ccIniciaTilt();ccDepois();ccPinta();},
   inicio:()=>{
     drawSpark();setTimeout(()=>{const sc=$('#cSpark');if(sc&&sc._ch)sc._ch.resize();},80);
     const bc=$('#cBar'),dc=$('#cDonut');
@@ -3537,7 +3537,7 @@ function ccMarca(d){
 let CC_UID=0;
 function ccArte(d){
   const a=d.art,ac=d.ac||'#fff';let s='';
-  if(a==='dm'){const gi='gvcDm'+(++CC_UID);s=`<defs><linearGradient id="${gi}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${ac}" stop-opacity=".78"/><stop offset=".5" stop-color="#8ef0f2"/><stop offset="1" stop-color="${ac}" stop-opacity=".78"/></linearGradient></defs><path d="M502 258q96 64 192 0" fill="none" stroke="#000" stroke-opacity=".14" stroke-width="24" stroke-linecap="round" transform="translate(0 5)"/><path d="M502 258q96 64 192 0" fill="none" stroke="url(#${gi})" stroke-width="22" stroke-linecap="round"/>`;}
+  if(a==='dm'){const gi='gvcDm'+String(ac).replace(/[^0-9a-z]/gi,''); /* v10.94: id fixo por cor: o mesmo cartão gera o mesmo HTML (render sem troca de nós) */s=`<defs><linearGradient id="${gi}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${ac}" stop-opacity=".78"/><stop offset=".5" stop-color="#8ef0f2"/><stop offset="1" stop-color="${ac}" stop-opacity=".78"/></linearGradient></defs><path d="M502 258q96 64 192 0" fill="none" stroke="#000" stroke-opacity=".14" stroke-width="24" stroke-linecap="round" transform="translate(0 5)"/><path d="M502 258q96 64 192 0" fill="none" stroke="url(#${gi})" stroke-width="22" stroke-linecap="round"/>`;}
   else if(a==='uv')s='<circle cx="860" cy="-40" r="330" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="2"/><circle cx="860" cy="-40" r="300" fill="none" stroke="#b46cff" stroke-opacity=".08" stroke-width="2"/>';
   else if(a==='onda')s='<path d="M-20 410C180 330 360 470 560 400S820 300 880 330V560H-20Z" fill="#fff" fill-opacity=".07"/><path d="M-20 470C200 400 380 520 600 455S830 380 880 400V560H-20Z" fill="#000" fill-opacity=".06"/>';
   else if(a==='curva')s='<path d="M520 -20C700 120 760 330 900 420V-20Z" fill="#fff" fill-opacity=".08"/><path d="M640 -20C760 110 800 260 900 330V-20Z" fill="#fff" fill-opacity=".06"/>';
@@ -3645,93 +3645,188 @@ let CC_AT=(()=>{try{return localStorage.getItem('gv-cc-ativo')||'';}catch(e){ret
 function ccFatPend(c){
   return S.tx.filter(t=>t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0&&restanteFatura(t)>0).sort((a,b)=>a.data.localeCompare(b.data))[0]||null;
 }
-function walDetHTML(c){
-  const u=usoCartao(c),usedT=usadoCartaoTotal(c),disp=c.limite-usedT,pct=c.limite?Math.min(100,usedT/c.limite*100):0,over=usedT>c.limite;
-  const pctR=c.limite?usedT/c.limite*100:(usedT>0?100:0);
-  const nomeBk=ccNomeCurto(c),V=ccVisual(c).d,tom=ccTom(c);
+/* ---------- v10.94: tela Cartões = carrossel + fatura do cartão escolhido + melhor cartão para comprar hoje + agenda ----------
+   o carrossel (#ccRail) não depende do cartão escolhido: o HTML dele só muda quando os dados dos cartões mudam,
+   então um render igual (sync, volta ao app) não toca nele e a rolagem/virada ficam como estão (v10.91).
+   destaque, pontos e o resto da tela seguem CC_AT; o destaque é aplicado no AFTER (antes da pintura). */
+function ccDatasOk(c){const f=+c.fechamento,v=+c.vencimento;return f>=1&&f<=31&&v>=1&&v<=31;}
+function ccDiasEntre(a,b){return Math.round((new Date(String(b).slice(0,10)+'T12:00:00')-new Date(String(a).slice(0,10)+'T12:00:00'))/864e5);}
+function ccDM(iso){return String(iso).slice(8,10)+'/'+String(iso).slice(5,7);}
+function ccNome(c){return c.nome||ccNomeCurto(c);}
+/* compra no dia iso: em que fatura cai, quando vence e quantos dias até pagar */
+function ccPrazo(c,iso){const f=fechamentoDe(c,iso);return {c,fecha:f.fecha,vence:f.vence,dias:ccDiasEntre(iso,f.vence)};}
+/* melhor dia de compra do cartão a partir de iso: o dia seguinte ao próximo fechamento (iso, se iso já é esse dia) */
+function ccMelhorDia(c,iso){const ontem=addDias(iso,-1);const f=fechamentoDe(c,ontem).fecha;return f===ontem?iso:addDias(f,1);}
+/* melhor cartão para comprar no dia hj: o que dá mais dias até pagar. empate = todos os que têm o máximo.
+   prox: o primeiro dia (até 62 à frente) em que um único cartão passa a ser o melhor e ele não é o de hoje (ou hoje é empate). */
+function ccMelhor(CA,hj){
+  hj=hj||hojeISO();
+  const ok=CA.filter(ccDatasOk),pulados=CA.length-ok.length;
+  if(!ok.length)return null;
+  const L=ok.map(c=>ccPrazo(c,hj)).sort((a,b)=>b.dias-a.dias||ccNome(a.c).localeCompare(ccNome(b.c),'pt-BR'));
+  const max=L[0].dias,top=L.filter(x=>x.dias===max);
+  let prox=null;
+  if(L.length>1)for(let k=1;k<=62&&!prox;k++){const d=addDias(hj,k);const M=ok.map(c=>ccPrazo(c,d));const mx=Math.max(...M.map(x=>x.dias));const tp=M.filter(x=>x.dias===mx);
+    if(tp.length===1&&(top.length>1||tp[0].c!==top[0].c))prox=Object.assign({data:d,em:k},tp[0]);}
+  const md=ccMelhorDia(L[0].c,hj);
+  return {L,top,max,prox,pulados,melhorDia:md,melhorDiaPrazo:ccPrazo(L[0].c,md)};
+}
+/* compras (efetivas) do cartão somadas por data de fechamento do ciclo, em centavos */
+function ccCiclos(c){return memo('ccc|'+c.id+'|'+c.fechamento+'|'+c.vencimento,()=>{const m={};S.tx.forEach(t=>{if(t.cartao!==c.id||t.faturaKey||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;const f=fechamentoDe(c,t.data).fecha;m[f]=(m[f]||0)+cents(t.valor);});return m;});}
+/* agenda: fecha, vence e melhor dia de cada cartão de hj a hj+n dias, em ordem */
+const CC_AG_ORD={fecha:0,vence:1,melhor:2};
+function ccAgendaLista(CA,hj,n){
+  hj=hj||hojeISO();n=n==null?30:n;const ate=addDias(hj,n),out=[];
+  CA.filter(ccDatasOk).forEach(c=>{
+    const cic=ccCiclos(c),y=+hj.slice(0,4),m=+hj.slice(5,7)-1;
+    for(let k=-2;k<=2;k++){
+      const F=isoDe(diaMes(y,m+k,Math.min(31,+c.fechamento))),fd=fechamentoDe(c,F);if(fd.fecha!==F)continue;
+      const key='fat|'+c.id+'|'+F.slice(0,7),ft=S.tx.find(t=>t.faturaKey===key),soma=(cic[F]||0)/100;
+      if(F>=hj&&F<=ate){const depois=fechamentoDe(c,addDias(F,1)).vence;out.push({d:F,k:'fecha',c,v:soma,key,sub:'compras depois vão para '+MESES_LONGO[+depois.slice(5,7)-1]});}
+      const M=addDias(F,1);if(M>=hj&&M<=ate)out.push({d:M,k:'melhor',c,v:null,sub:'compra paga só em '+ccDM(fechamentoDe(c,M).vence)});
+      const V=fd.vence;if(V>=hj&&V<=ate){const resta=ft?restanteFatura(ft):soma,paga=ft&&statusFatura(ft)==='paga';
+        out.push({d:V,k:'vence',c,v:paga?ft.valor:resta,key:ft?ft.id:key,paga,sub:paga?'fatura paga':(ft||soma>0)?'pagar fatura':'sem compras nesta fatura'});}
+    }
+  });
+  return out.sort((a,b)=>a.d.localeCompare(b.d)||CC_AG_ORD[a.k]-CC_AG_ORD[b.k]||ccNome(a.c).localeCompare(ccNome(b.c),'pt-BR'));
+}
+/* estado da fatura que aparece no card: a fechada que ainda falta pagar (fechou antes de hoje) ou a aberta */
+function ccFatEstado(c){
+  const hj=hojeISO(),u=usoCartao(c),pend=ccFatPend(c);
+  if(pend&&pend.data<hj){const st=statusFatura(pend);return {tipo:'fechada',st,t:pend,valor:restanteFatura(pend),fecha:pend.data,vence:venceFatura(pend),abre:pend.id,pagar:pend.id,u,prox:{valor:u.used,fecha:u.ci.fim}};}
   const fk='fat|'+c.id+'|'+fechamentoDe(c,u.ci.fim).fecha.slice(0,7);
-  const pend=ccFatPend(c);
-  const fecha=fmtDataCurta(u.ci.fim),vence=fmtDataCurta(isoDe(u.due)),dF=diasAte(u.ci.fim);
-  const vazio=!OCULTO&&!u.n&&Math.abs(u.used)<0.005;
-  const pF=c.limite?u.used/c.limite*100:0;
-  const nivel=over?'over':pctR>80?'alerta':'ok';
-  return `<div class="walDet" style="--tint:${tom};--tint0:${V.g[0]};--tint2:${V.g[2]};--tink:${V.ink};--tom:${tom}">
-    <div class="walHd"><div class="walNm"><b>${esc(c.nome||nomeBk)}</b><small>${esc(nomeBk)}${c.bandeira&&CC_BAND_N[c.bandeira]?' · '+CC_BAND_N[c.bandeira]:''}${c.final?' · final '+esc(c.final):''}</small></div>
-      <button type="button" class="walVira" data-act="cc-vira" data-id="${c.id}" aria-label="virar o cartão e ver limite, fechamento e vencimento">${I('ccVira')}<span>virar</span></button></div>
-    <div class="card walFat${vazio?' vazio':''}">
-      <div class="walFatHd"><span class="walFatLb">fatura atual</span><span class="walChips"><span class="ccChip${dF<=3?' quente':''}" title="fecha ${fecha}">${I('lu_clock')}${fechaChip(u.ci.fim)}</span><span class="ccChip sec">vence ${vence}</span></span></div>
-      ${vazio?`<div class="walVazio"><span class="walVzIc" aria-hidden="true">${I('check')}</span><div class="walVzTx"><b>Nenhuma compra neste ciclo</b><small>o que passar no cartão até ${fecha} entra nesta fatura, que vence ${vence}.</small></div></div>`
-      :`<div class="walFatMain"><div class="walFatNum"><b class="walFatV nw">${brl(u.used)}</b><small class="walFatSub">de um limite de ${brl(c.limite)}</small></div>${anelFat(pF)}</div>`}
-      <p class="ccCiclo tap" data-act="fat-abre" data-id="${fk}" role="button" tabindex="0" aria-label="ver compras do ciclo aberto">ver compras do ciclo · ${u.n} lançamento${u.n===1?'':'s'}${I('chevR','tapCh')}</p>
-      ${pend?`<div class="walPend"><div class="walPendTx"><span><b class="fatNm tap" data-act="fat-abre" data-id="${pend.id}" role="button" tabindex="0" aria-label="ver compras da fatura de ${nomeMesFat(pend.data)}">fatura de ${nomeMesFat(pend.data)}${I('chevR','tapCh')}</b>${faturaBadge(pend)}</span><small>vence ${fmtDataCurta(venceFatura(pend))}</small></div><button type="button" class="walPagar" data-act="pagar-fat" data-id="${pend.id}">${I('check')}<span>Pagar ${brl(restanteFatura(pend))}</span></button></div>`:''}
-      ${faturasCartaoHTML(c,pend&&pend.id)}
-    </div>
-    <div class="card walLim ${nivel}">
-      <div class="walLimHd"><span>disponível</span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b></div>
-      <div class="bar walBar ${over?'over':''} ${nivel}"><i data-w="${OCULTO?0:pct.toFixed(1)}"></i><span class="wbMk m50" aria-hidden="true"></span><span class="wbMk m80" aria-hidden="true"></span></div>
-      <div class="walLimGr"><span><small>${c.bancoData?'usado · banco '+fmtData(c.bancoData).slice(0,5):'usado'}</small><b class="nw">${brl(usedT)}</b></span><span class="wlPct"><small>uso</small><b class="nw ${nivel}">${OCULTO?'•••':Math.round(pctR)+'%'}</b></span><span><small>limite</small><b class="nw">${brl(c.limite)}</b></span></div>
-      ${custoAtrasoHTML(c)}
-    </div>
-    <div class="walActs" role="group" aria-label="ações do cartão ${esc(c.nome||nomeBk)}"><button type="button" class="walAct" data-act="edit-cartao" data-id="${c.id}">${I('edit')}<span>editar</span></button><button type="button" class="walAct" data-act="arq-cartao" data-id="${c.id}">${I('arquivo')}<span>arquivar</span></button><button type="button" class="walAct perigo" data-act="del-cartao" data-id="${c.id}">${I('trash')}<span>excluir</span></button></div>
+  return {tipo:'aberta',st:'aberta',t:pend,valor:u.used,fecha:u.ci.fim,vence:isoDe(u.due),abre:pend&&pend.faturaKey===fk?pend.id:fk,pagar:pend?pend.id:'',u};
+}
+function ccBig(v){if(OCULTO)return '<span class="ccRs">R$</span><span class="ccInt">•••••</span>';const p=brlParts(Math.abs(v));return `<span class="ccRs">${v<0?'−':''}R$</span><span class="ccInt">${p.i}</span><span class="ccCt">${p.d}</span>`;}
+function ccEmDias(n){return n===0?'hoje':n===1?'amanhã':n>1?'em '+n+' dias':n===-1?'ontem':'há '+(-n)+' dias';}
+const CC_IC_CAL='<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',CC_IC_PAY='<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>';
+function ccFatHTML(c){
+  const E=ccFatEstado(c),usedT=usadoCartaoTotal(c),lim=+c.limite||0,disp=lim-usedT,pct=lim>0?usedT/lim*100:0,tom=ccTom(c);
+  const band=c.bandeira&&CC_BAND_N[c.bandeira]?CC_BAND_N[c.bandeira]:ccNomeCurto(c);
+  const dF=ccDiasEntre(hojeISO(),E.fecha),dV=ccDiasEntre(hojeISO(),E.vence);
+  const lbl=E.tipo==='fechada'?(E.st==='vencida'?'vencida':'fechada'):'aberta';
+  const chips=E.tipo==='fechada'
+    ?`<span class="ccChip2 ${dV<=3?'warn':''}">${CC_IC_PAY}vence ${ccDM(E.vence)} · ${ccEmDias(dV)}</span><span class="ccChip2">${CC_IC_CAL}próxima fecha ${ccDM(E.prox.fecha)}</span>`
+    :`<span class="ccChip2 warn">${CC_IC_CAL}fecha ${ccDM(E.fecha)} · ${ccEmDias(dF)}</span><span class="ccChip2">${CC_IC_PAY}vence ${ccDM(E.vence)}</span>`;
+  const badge=E.t&&E.tipo==='fechada'&&E.st!=='aberta'?faturaBadge(E.t):'';
+  return `<div class="card ccFat" data-id="${c.id}" style="--tom:${tom}">
+    <div class="ccFatTop"><b class="ccFatNm">${esc(ccNome(c))}${c.final?` <span class="ccFin">· final ${esc(c.final)}</span>`:''}</b><span class="ccBand">${esc(band)}</span></div>
+    <div class="ccFatSub"><span>fatura atual · ${lbl}</span><span>vence ${ccDM(E.vence)}</span></div>
+    <div class="ccFatV nw">${ccBig(E.valor)}</div>
+    ${badge?`<div class="ccFatBadge">${badge}</div>`:''}
+    ${lim>0?`<div class="ccUsoB${usedT>lim?' over':''}" aria-hidden="true"><i data-w="${OCULTO?0:Math.max(1.5,Math.min(100,pct)).toFixed(1)}"></i></div>
+    <div class="ccLimR"><span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b> disponível</span><span class="nw">limite ${brl(lim)}</span></div>`:`<div class="ccLimR"><span>limite não informado</span><button type="button" class="ccLink" data-act="edit-cartao" data-id="${c.id}">informar</button></div>`}
+    <div class="ccChips">${chips}</div>
+    ${E.tipo==='fechada'?`<p class="ccProx">fatura aberta até ${ccDM(E.prox.fecha)}: <b class="nw">${brl(E.prox.valor)}</b></p>`:''}
+    <div class="ccActs"><button type="button" class="btn2" data-act="fat-abre" data-id="${esc(E.abre)}">ver lançamentos</button>${E.pagar?`<button type="button" class="btn" data-act="pagar-fat" data-id="${E.pagar}">pagar fatura</button>`:`<button type="button" class="btn ccOff" data-act="cc-pagar-aberta" data-id="${c.id}" aria-disabled="true">pagar fatura</button>`}</div>
   </div>`;
 }
-function walHTML(){
-  const CA=cartoesAtivos();if(!CA.length)return '';
-  const at=CA.find(c=>c.id===CC_AT)||CA[CA.length-1];CC_AT=at.id;
-  const ord=CA.filter(c=>c!==at).concat([at]);
-  const d=ccVisual(at).d;
-  return `<div class="walSec" id="walSec" style="--tint:${ccTom(at)};--tint2:${d.g[2]}"><span class="walGlow" aria-hidden="true"></span>
-    <div class="wal${ord.length>1?'':' um'}" role="group" aria-label="carteira de cartões, ${ord.length} cart${ord.length===1?'ão':'ões'}">${ord.map(c=>{const on=c===at;const nm=c.nome||ccNomeCurto(c);
-      return `<div class="walItem${on?' on':''}" data-id="${c.id}"><button type="button" class="walCard${on?' on':''}" data-act="cc-ativa" data-id="${c.id}" aria-label="${esc(on?nm+', em destaque. toque para virar e ver limite e fatura':nm+'. toque para trazer para a frente')}"${on?' aria-pressed="false"':''}>${cartaoHTML(c,{verso:on,tilt:on})}</button></div>`;}).join('')}</div>
-    ${walDetHTML(at)}</div>`;
+function ccMelhorHTML(CA){
+  const R=ccMelhor(CA);if(!R)return '';
+  const hj=hojeISO(),d=n=>n+(n===1?' dia':' dias'),T=R.top[0];
+  let h3,p;
+  if(R.L.length===1){
+    h3=`Comprando hoje, paga em ${d(T.dias)}`;
+    p=R.melhorDia===hj?`Hoje é o melhor dia do <b>${esc(ccNome(T.c))}</b>: a compra só vence em ${ccDM(T.vence)}.`:`A fatura do <b>${esc(ccNome(T.c))}</b> vence ${ccDM(T.vence)}. O melhor dia de compra é <b>${ccDM(R.melhorDia)}</b> (daqui a ${d(ccDiasEntre(hj,R.melhorDia))}): paga só em ${ccDM(R.melhorDiaPrazo.vence)}.`;
+  }else if(R.top.length>1){
+    h3=`Empate: ${R.top.map(x=>esc(ccNome(x.c))).join(' e ')}`;
+    p=`Comprando hoje, ${R.top.length===2?'os dois':'eles'} te dão <b>${d(R.max)}</b> até pagar (vence ${ccDM(T.vence)}).`;
+  }else{
+    h3=`${esc(ccNome(T.c))}: paga só em ${ccDM(T.vence)}`;
+    p=`Comprando hoje, o <b>${esc(ccNome(T.c))}</b> te dá <b>${d(T.dias)}</b> até pagar; ${R.L.slice(1).map(x=>'o '+esc(ccNome(x.c))+', '+x.dias).join('; ')}.`;
+  }
+  const tiles=R.L.length>1?`<div class="ccCmp${R.L.length>2?' rola':''}" role="list">${R.L.map(x=>`<button type="button" role="listitem" class="ccCmpT${x.dias===R.max?' on':''}" data-act="cc-ativa" data-id="${x.c.id}" style="--tom:${ccTom(x.c)}"><small>hoje no ${esc(ccNome(x.c))}</small><b>paga em ${d(x.dias)}</b><em>vence ${ccDM(x.vence)}</em></button>`).join('')}</div>`:'';
+  const tip=R.prox?`<div class="ccTip"><i aria-hidden="true"></i><span>A partir de <b>${ccDM(R.prox.data)}</b> (${R.prox.em===1?'amanhã':'daqui a '+R.prox.em+' dias'}) o melhor passa a ser o <b>${esc(ccNome(R.prox.c))}</b>: a compra só é paga em <b>${ccDM(R.prox.vence)}</b>.</span></div>`:'';
+  return `<div class="card ccBest"><span class="ccCap">melhor cartão para comprar hoje</span><h3>${h3}</h3><p>${p}</p>${tiles}${tip}${R.pulados?`<p class="ccNota">${R.pulados} cart${R.pulados===1?'ão':'ões'} sem dia de fechamento e vencimento fica${R.pulados===1?'':'m'} de fora.</p>`:''}</div>`;
 }
-/* troca o cartão da frente sem redesenhar a tela toda, com animação (FLIP) */
-function walRedesenha(){
-  const sec=$('#walSec');if(!sec){render();return;}
-  const antes={};sec.querySelectorAll('.walItem').forEach(e=>{antes[e.dataset.id]=e.getBoundingClientRect().top;});
-  const tmp=document.createElement('div');tmp.innerHTML=walHTML();const novo=tmp.firstElementChild;sec.replaceWith(novo);
-  novo.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
-  if(ccMov())novo.querySelectorAll('.walItem').forEach(e=>{const a=antes[e.dataset.id];if(a==null)return;const dy=a-e.getBoundingClientRect().top;if(Math.abs(dy)<1)return;
-    e.style.transition='none';e.style.transform='translateY('+dy+'px)';void e.offsetWidth;e.style.transition='transform .5s cubic-bezier(.2,.8,.2,1)';e.style.transform='';
-    setTimeout(()=>{e.style.transition='';},560);});
-  const det=novo.querySelector('.walDet');if(det&&ccMov()){det.classList.add('entra');}
-  ccPinta();
+let CC_AG=(()=>{try{return localStorage.getItem('gv-cc-ag')==='este'?'este':'todos';}catch(e){return 'todos';}})();
+const CC_DSEM=['dom','seg','ter','qua','qui','sex','sáb'];
+function ccAgendaHTML(CA,at){
+  const hj=hojeISO(),este=CA.length>1&&CC_AG==='este';
+  const L=ccAgendaLista(este?[at]:CA,hj,30);
+  const tg=CA.length>1?`<div class="ccAgTg" role="group" aria-label="mostrar na agenda"><button type="button" class="${este?'':'on'}" data-act="cc-ag" data-id="todos" aria-pressed="${!este}">os ${CA.length} cartões</button><button type="button" class="${este?'on':''}" data-act="cc-ag" data-id="este" aria-pressed="${este}">este cartão</button></div>`:'';
+  let mes=hj.slice(0,7),rows='';
+  L.forEach(e=>{
+    if(e.d.slice(0,7)!==mes){mes=e.d.slice(0,7);rows+=`<div class="ccAgMes">${MESES_LONGO[+mes.slice(5,7)-1]}</div>`;}
+    const nm=esc(ccNome(e.c)),tit=e.k==='fecha'?nm+' fecha':e.k==='vence'?nm+' vence':'Melhor dia no '+nm;
+    const dt=new Date(e.d+'T12:00:00'),act=e.k==='melhor'?`data-act="cc-ativa" data-id="${e.c.id}"`:`data-act="fat-abre" data-id="${esc(e.key)}"`;
+    rows+=`<div class="ccAgE tap k-${e.k}${e.paga?' paga':''}" ${act} role="button" tabindex="0"><span class="ccAgD"><b>${e.d.slice(8,10)}</b><small>${e.d===hj?'hoje':CC_DSEM[dt.getDay()]}</small></span><span class="ccAgB" style="background:${e.k==='melhor'?'#fbbf24':ccTom(e.c)}"></span><span class="ccAgT"><b>${tit}</b><small>${e.sub}</small></span>${e.v!=null&&(e.v>0.004||e.paga)?`<span class="ccAgV nw">${brl(e.v)}</span>`:''}</div>`;
+  });
+  return `<div class="ccAgW"><div class="ccAgH"><h3>Agenda de ${MESES_LONGO[+hj.slice(5,7)-1]}</h3>${tg}</div><div class="card ccAg">${rows||'<p class="small" style="margin:6px 0">nada nos próximos 30 dias.</p>'}</div></div>`;
 }
+function ccMaisHTML(c){
+  const usedT=usadoCartaoTotal(c),lim=+c.limite||0,pctR=lim?usedT/lim*100:(usedT>0?100:0),nivel=usedT>lim?'over':pctR>80?'alerta':'ok';
+  const fl=faturasCartaoHTML(c);
+  return `<div class="card ccMais"><h3>Mais do ${esc(ccNome(c))}</h3>
+    ${fl||'<p class="small ccSemFat">nenhuma fatura fechada ainda.</p>'}
+    <div class="walLimGr ccLimGr"><span><small>${c.bancoData?'usado · banco '+fmtData(c.bancoData).slice(0,5):'usado'}</small><b class="nw">${brl(usedT)}</b></span><span class="wlPct"><small>uso</small><b class="nw ${nivel}">${OCULTO?'•••':Math.round(pctR)+'%'}</b></span><span><small>fecha · vence</small><b class="nw">dia ${c.fechamento} · ${c.vencimento}</b></span></div>
+    ${custoAtrasoHTML(c)}
+    <div class="walActs ccMaisActs" role="group" aria-label="ações do cartão ${esc(ccNome(c))}"><button type="button" class="walAct ccViraB" data-act="cc-vira" data-id="${c.id}">${I('ccVira')}<span>virar</span></button><button type="button" class="walAct" data-act="edit-cartao" data-id="${c.id}">${I('edit')}<span>editar</span></button><button type="button" class="walAct" data-act="arq-cartao" data-id="${c.id}">${I('arquivo')}<span>arquivar</span></button><button type="button" class="walAct perigo" data-act="del-cartao" data-id="${c.id}">${I('trash')}<span>excluir</span></button></div>
+  </div>`;
+}
+function ccRailHTML(CA){
+  return `<div class="ccRail${CA.length===1?' um':''}" id="ccRail" role="group" aria-label="seus cartões, ${CA.length}">${CA.map(c=>`<div class="ccIt" data-id="${c.id}"><button type="button" class="ccCard" data-act="cc-ativa" data-id="${c.id}" data-nm="${esc(ccNome(c))}" aria-label="${esc(ccNome(c))}">${cartaoHTML(c,{verso:true,tilt:true})}</button></div>`).join('')}</div>`;
+}
+function ccDotsHTML(CA,at){
+  return `<div class="ccDots">${CA.length>1?`<div class="ccDotL" role="tablist" aria-label="escolher cartão">${CA.map(c=>`<button type="button" role="tab" class="${c===at?'on':''}" aria-selected="${c===at}" data-act="cc-ativa" data-id="${c.id}" aria-label="${esc(ccNome(c))}"></button>`).join('')}</div>`:''}<button type="button" class="ccViraP" data-act="cc-vira" data-id="${at.id}" aria-label="virar o cartão e ver limite, fechamento e vencimento">${I('ccVira')}<span>virar</span></button></div>`;
+}
+function ccAtual(CA){const at=CA.find(c=>c.id===CC_AT)||CA[0];if(at&&CC_AT!==at.id)CC_AT=at.id;return at;}
+function viewCartoes(){
+  const CA=cartoesAtivos(),arqC=S.cartoes.filter(c=>c.arq);
+  const head=`<div class="head ccHead"><h2>Cartões</h2><button type="button" class="ccPlus" data-act="novo-cartao" aria-label="novo cartão" title="novo cartão">${I('plus')}</button></div>`;
+  const arq=arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow">${cartaoMini(c,'arqMini')}<div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:'';
+  if(!CA.length)return head+`<div class="card ccVazio"><div class="ccVzArt" aria-hidden="true"><span class="ccVzC c1"></span><span class="ccVzC c2"><i></i></span></div>
+      <b>${S.cartoes.length?'Todos os cartões estão arquivados':'Nenhum cartão ainda'}</b>
+      <p>${S.cartoes.length?'Desarquive um cartão abaixo ou adicione outro para ver a fatura, o limite e o melhor dia de compra.':'Adicione seu cartão de crédito para acompanhar a fatura, o limite, as parcelas e saber qual cartão usar em cada dia.'}</p>
+      <button type="button" class="btn" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`+arq;
+  const at=ccAtual(CA);
+  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+arq;
+}
+/* ---------- carrossel: escolha por rolagem, pontos, toque ---------- */
+let CC_ROL=0,CC_ROL_T=0,CC_DET_T=0;
+function ccItens(){const r=$('#ccRail');return r?[...r.querySelectorAll('.ccIt')]:[];}
+function ccIdxRolagem(r){const its=[...r.querySelectorAll('.ccIt')];if(!its.length)return -1;
+  if(r.scrollLeft>=r.scrollWidth-r.clientWidth-2&&r.scrollLeft>2)return its.length-1;
+  const pl=parseFloat(getComputedStyle(r).scrollPaddingLeft)||0,x=r.getBoundingClientRect().left+pl;let b=0,bd=1e9;
+  its.forEach((e,i)=>{const d=Math.abs(e.getBoundingClientRect().left-x);if(d<bd){bd=d;b=i;}});return b;}
+function ccMarcaSel(){const its=ccItens();its.forEach(e=>{const on=e.dataset.id===CC_AT;e.classList.toggle('on',on);const b=e.querySelector('.ccCard');if(b){b.setAttribute('aria-current',on?'true':'false');b.setAttribute('aria-label',(b.dataset.nm||'')+(on?', em destaque. toque para virar':'. toque para escolher'));}});
+  document.querySelectorAll('.ccDotL button').forEach(b=>{const on=b.dataset.id===CC_AT;b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));});}
+function ccRolaPara(id,suave){const r=$('#ccRail');if(!r)return;const e=r.querySelector('.ccIt[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');if(!e)return;
+  const alvo=Math.max(0,Math.min(r.scrollWidth-r.clientWidth,e.offsetLeft-r.firstElementChild.offsetLeft));
+  if(Math.abs(r.scrollLeft-alvo)<2)return;if(suave&&ccMov())r.scrollTo({left:alvo,behavior:'smooth'});else r.scrollLeft=alvo;}
+function ccEscolhe(id,rolar){
+  if(!cartoesAtivos().some(c=>c.id===id))return;
+  const mudou=id!==CC_AT;CC_AT=id;try{localStorage.setItem('gv-cc-ativo',id);}catch(e){}
+  ccMarcaSel();if(rolar)ccRolaPara(id,true);
+  if(mudou){clearTimeout(CC_DET_T);CC_DET_T=setTimeout(()=>{if(TAB==='cartoes')render();},rolar?0:90);}
+}
+function ccRailLiga(){const r=$('#ccRail');if(!r||r.__lig)return;r.__lig=1;
+  r.addEventListener('scroll',()=>{CC_ROL_T=Date.now();if(CC_ROL)return;CC_ROL=requestAnimationFrame(()=>{CC_ROL=0;const i=ccIdxRolagem(r),its=r.querySelectorAll('.ccIt');if(i<0||!its[i])return;const id=its[i].dataset.id;if(id!==CC_AT)ccEscolhe(id,false);});},{passive:true});}
+/* depois de cada render: liga a rolagem, marca o destaque e, se o carrossel é novo (ou foi trocado), põe o cartão escolhido no lugar sem animação */
+function ccDepois(){const r=$('#ccRail');if(!r)return;ccRailLiga();ccMarcaSel();
+  if(Date.now()-CC_ROL_T<350)return; // o dedo ainda está rolando: não briga com ele
+  const its=r.querySelectorAll('.ccIt'),i=ccIdxRolagem(r);if(its[i]&&its[i].dataset.id!==CC_AT)ccRolaPara(CC_AT,false);}
 function ccAtiva(id){
   ccPedeOri();
   if(id===CC_AT){ccVira(id);return;}
-  if(!cartoesAtivos().some(c=>c.id===id))return;
-  CC_AT=id;try{localStorage.setItem('gv-cc-ativo',id);}catch(e){}
-  walRedesenha();
-  const b=document.querySelector('.walCard.on');if(b)b.focus({preventScroll:true});
+  ccEscolhe(id,true);
 }
 function ccVira(id){
-  const b=document.querySelector('.walCard.on[data-id="'+id+'"]');if(!b)return;
-  const g=b.querySelector('.gvc'),v=!g.classList.contains('virado');
-  g.classList.toggle('virado',v);b.setAttribute('aria-pressed',v?'true':'false');
+  const it=document.querySelector('.ccIt[data-id="'+id+'"]');if(!it)return;
+  const b=it.querySelector('.ccCard'),g=it.querySelector('.gvc');if(!g)return;const v=!g.classList.contains('virado');
+  g.classList.toggle('virado',v);if(b)b.setAttribute('aria-pressed',v?'true':'false');
   const fr=g.querySelector('.gvc-front'),bk=g.querySelector('.gvc-back');if(bk)bk.setAttribute('aria-hidden',v?'false':'true');if(fr)fr.setAttribute('aria-hidden',v?'true':'false');
-  const vb=document.querySelector('.walVira');if(vb)vb.classList.toggle('on',v);
+  document.querySelectorAll('.ccViraP,.ccViraB').forEach(x=>x.classList.toggle('on',v));
 }
-/* toque longo no cartão da frente vira o cartão */
+/* toque longo no cartão em destaque também vira */
 (()=>{let lp=null,dis=false;
-  document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('.walCard.on');if(!b)return;dis=false;lp={x:e.clientX,y:e.clientY,t:setTimeout(()=>{lp=null;dis=true;ccVira(b.dataset.id);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}},480)};},{passive:true});
+  document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('.ccIt.on .ccCard');if(!b)return;dis=false;lp={x:e.clientX,y:e.clientY,t:setTimeout(()=>{lp=null;dis=true;ccVira(b.dataset.id);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}},480)};},{passive:true});
   const solta=()=>{if(lp){clearTimeout(lp.t);lp=null;}};
   document.addEventListener('pointermove',e=>{if(lp&&(Math.abs(e.clientX-lp.x)>8||Math.abs(e.clientY-lp.y)>8))solta();},{passive:true});
   document.addEventListener('pointerup',solta,{passive:true});document.addEventListener('pointercancel',solta,{passive:true});
-  document.addEventListener('click',e=>{if(dis&&e.target.closest&&e.target.closest('.walCard')){dis=false;e.stopPropagation();e.preventDefault();}},true);
-  document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.walCard'))e.preventDefault();});
+  document.addEventListener('click',e=>{if(dis&&e.target.closest&&e.target.closest('.ccCard')){dis=false;e.stopPropagation();e.preventDefault();}},true);
+  document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.ccCard'))e.preventDefault();});
 })();
-function viewCartoes(){
-  const CA=cartoesAtivos(),arqC=S.cartoes.filter(c=>c.arq);
-  const tL=CA.reduce((a,c)=>a+c.limite,0);
-  const tU=CA.reduce((a,c)=>a+usadoCartaoTotal(c),0);
-  return `
-  <div class="head"><h2>Cartões</h2><button class="btn" data-act="novo-cartao">${I('plus')} novo</button></div>
-  ${S.cartoes.length?`${CA.length?walHTML():'<div class="card"><p class="vazio">todos os cartões estão arquivados.</p></div>'}
-    ${CA.length?ccResumoHTML(CA):''}
-    ${arqC.length?`<details class="card arqBox"><summary>cartões arquivados (${arqC.length})</summary>${arqC.map(c=>`<div class="tx arqRow">${cartaoMini(c,'arqMini')}<div class="txt"><b>${esc(c.nome)}</b><small>${c.final?'final '+esc(c.final)+' · ':''}${c.arqEm?'arquivado em '+fmtData(c.arqEm):'arquivado'}</small></div><div class="val">${brl(usadoCartaoTotal(c))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-cartao" data-id="${c.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-cartao" data-id="${c.id}">excluir</button></div></div>${faturasCartaoHTML(c)}`).join('')}<p class="small" style="margin:8px 0 0">as faturas e parcelas seguem valendo e aparecem nos avisos.</p></details>`:''}`
-    :vazioHTML('card','Nenhum cartão ainda','Adicione seu cartão de crédito para acompanhar a fatura, o limite e as parcelas.','<button class="btn sm" data-act="novo-cartao">+ cartão</button>')}`;
-}
 function viewBancos(){
   const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
   const pos=S.bancos.reduce((a,b)=>a+Math.max(0,saldoBanco(b)),0);
@@ -6719,6 +6814,8 @@ const ACT={
   'fat-abre':id=>abreFatura(id),
   'cc-ativa':id=>ccAtiva(id),
   'cc-vira':id=>{ccPedeOri();ccVira(id);},
+  'cc-ag':id=>{CC_AG=id==='este'?'este':'todos';try{localStorage.setItem('gv-cc-ag',CC_AG);}catch(e){}render();},
+  'cc-pagar-aberta':id=>{const c=S.cartoes.find(x=>x.id===id);if(!c)return;const u=usoCartao(c);toast('A fatura ainda está aberta: fecha '+ccDM(u.ci.fim)+'. Dá para pagar depois que ela fechar.');},
   'prev-abre':()=>abrePrevisao(),
   'nav-contas':()=>navega('bancos'),
   'nav-rec':()=>navLanc('receita'),
@@ -6793,7 +6890,8 @@ const ACT={
   'lock-atraso':id=>{const c=lockCfg();if(!c)return;c.atraso=+id||0;lockSalva(c);render();},
   'oculta':()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();},
   'notif-tog':id=>{if(!S.cfg.notif)S.cfg.notif={};const on=!notifOn(id);S.cfg.notif[id]=on;salvar();const b=document.querySelector('.ntRow[data-id="'+id+'"]');if(b){b.setAttribute('aria-checked',on);b.querySelector('.ntSw').classList.toggle('on',on);}toast(on?'Aviso ligado':'Aviso desligado');},
-  'notif-disc':()=>{const on=!(S.cfg.pushDiscreto!==false);S.cfg.pushDiscreto=!on;salvar();const b=document.querySelector('[data-act="notif-disc"]');if(b){b.setAttribute('aria-checked',S.cfg.pushDiscreto);b.querySelector('.ntSw').classList.toggle('on',S.cfg.pushDiscreto);}toast(S.cfg.pushDiscreto?'Discretas: sem valores':'Discretas: com valores');},
+  /* v10.94: antes o valor novo era calculado ao contrário (pushDiscreto ficava sempre true): o botão nunca desligava */
+  'notif-disc':()=>{S.cfg.pushDiscreto=!(S.cfg.pushDiscreto!==false);salvar();const b=document.querySelector('[data-act="notif-disc"]');if(b){b.setAttribute('aria-checked',S.cfg.pushDiscreto);b.querySelector('.ntSw').classList.toggle('on',S.cfg.pushDiscreto);}toast(S.cfg.pushDiscreto?'Notificações discretas: sem valores nem nomes':'Notificações completas: com valores e nomes');},
   'tema':id=>{S.cfg.tema=['claro','preto'].includes(id)?id:'escuro';salvar();applyCfg();render();},
   'accent':id=>{S.cfg.accent=id;salvar();applyCfg();render();},
   'nova-cat':()=>catForm(),
@@ -6965,7 +7063,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
