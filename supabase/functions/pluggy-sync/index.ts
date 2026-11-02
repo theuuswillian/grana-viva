@@ -3,6 +3,7 @@
 // na tabela pluggy_cfg (RLS ligada, sem políticas: só a service role lê). O app nunca vê o segredo.
 // Chamada pelo app com o login do usuário: {acao:'status'|'salvar'|'sincronizar'|'remover'|'webhook'|'backfill', ...}
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { registraErro } from "../_shared/erros.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 // v10.55: só o próprio app (e testes locais) pode chamar pelo navegador
@@ -128,7 +129,7 @@ async function backfill(cfg: any, dias: number) {
   }
   return { desde, contas: nAcc, tx: nTx };
 }
-const bg = (p: Promise<unknown>) => { const q = p.catch(e => console.error("pluggy-sync bg", String((e as Error)?.message || e))); try { (globalThis as any).EdgeRuntime.waitUntil(q); } catch (_) { /* */ } };
+const bg = (p: Promise<unknown>) => { const q = p.catch(e => { console.error("pluggy-sync bg", String((e as Error)?.message || e)); return registraErro(sb, "pluggy-sync", "segundo-plano", e); }); try { (globalThis as any).EdgeRuntime.waitUntil(q); } catch (_) { /* */ } };
 // -------------------------------------------------------------------
 const limpaIds = (a: unknown) => (Array.isArray(a) ? a : String(a || "").split(/[\s,;]+/)).map(x => String(x).trim()).filter(x => /^[0-9a-f-]{20,40}$/i.test(x)).slice(0, 5);
 
@@ -243,6 +244,7 @@ Deno.serve(async (req) => {
     // v10.55: detalhes técnicos ficam no log; o app recebe uma mensagem amigável
     const m = String((e as Error)?.message || e);
     console.error("pluggy-sync", b.acao, m.slice(0, 300));
+    await registraErro(sb, "pluggy-sync", String(b?.acao || "?"), e);
     const amigavel = /\b401\b|\b403\b|auth/i.test(m) ? "O Pluggy recusou as credenciais. Confira o Client ID e o Client Secret." : /\b429\b/.test(m) ? "O Pluggy pediu uma pausa. Tente de novo em alguns minutos." : "Não consegui falar com o Pluggy agora. Tente de novo daqui a pouco.";
     return json({ erro: amigavel }, 502);
   }
