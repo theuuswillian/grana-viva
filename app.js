@@ -949,14 +949,32 @@ const CRIPTO_LIST=[
  {t:'BTC',n:'Bitcoin',id:'bitcoin'},{t:'ETH',n:'Ethereum',id:'ethereum'},{t:'SOL',n:'Solana',id:'solana'},
  {t:'XRP',n:'XRP',id:'ripple'},{t:'USDT',n:'Tether',id:'tether'},{t:'BNB',n:'BNB',id:'binancecoin'},
  {t:'ADA',n:'Cardano',id:'cardano'},{t:'DOGE',n:'Dogecoin',id:'dogecoin'},{t:'USDC',n:'USD Coin',id:'usd-coin'},
- {t:'LINK',n:'Chainlink',id:'chainlink'}
+ {t:'LINK',n:'Chainlink',id:'chainlink'},
+ /* v10.98: mais moedas para o seletor de "a comprar" e para o formulário de cripto */
+ {t:'TRX',n:'Tron',id:'tron'},{t:'AVAX',n:'Avalanche',id:'avalanche-2'},{t:'TON',n:'Toncoin',id:'the-open-network'},
+ {t:'DOT',n:'Polkadot',id:'polkadot'},{t:'LTC',n:'Litecoin',id:'litecoin'},{t:'SHIB',n:'Shiba Inu',id:'shiba-inu'},{t:'POL',n:'Polygon',id:'polygon-ecosystem-token'}
 ];
+/* v10.98: cor de cada moeda (cartões do seletor) */
+const CRYPTO_COR={BTC:'#F7931A',ETH:'#627EEA',SOL:'#9945FF',XRP:'#8b98a5',USDT:'#26A17B',BNB:'#F3BA2F',ADA:'#2a6df4',DOGE:'#C2A633',USDC:'#2775CA',LINK:'#2A5ADA',TRX:'#EB0029',AVAX:'#E84142',TON:'#0098EA',DOT:'#E6007A',LTC:'#345D9D',SHIB:'#FFA409',POL:'#8247E5'};
 const CRYPTO_SVG={
- BTC:'<circle cx="12" cy="12" r="12" fill="#F7931A"/><text x="12" y="17" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="Arial">₿</text>',
+ BTC:'<circle cx="12" cy="12" r="12" fill="#F7931A"/><path d="M9.2 6.8h4.1a2.4 2.4 0 0 1 0 4.8H9.2zm0 4.8h4.6a2.5 2.5 0 0 1 0 5H9.2zM9.2 6.8v9.8M10.6 5.2v1.6M12.8 5.2v1.6M10.6 16.6v1.6M12.8 16.6v1.6" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/>', /* v10.98: desenho em vez do caractere ₿ (sem fonte, virava um quadrado) */
  ETH:'<circle cx="12" cy="12" r="12" fill="#627EEA"/><path d="M12 4l5 8-5 3-5-3z" fill="#fff" opacity=".9"/><path d="M12 16l5-3-5 7-5-7z" fill="#fff"/>',
  SOL:'<circle cx="12" cy="12" r="12" fill="#0b0b12"/><path d="M6.5 7.5h11l-1.6 2h-11z" fill="#14F195"/><path d="M6.5 11h11l-1.6 2h-11z" fill="#8f6bff"/><path d="M6.5 14.5h11l-1.6 2h-11z" fill="#14F195"/>',
  XRP:'<circle cx="12" cy="12" r="12" fill="#23292F"/><path d="M7.5 7.5l9 9M16.5 7.5l-9 9" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
- USDT:'<circle cx="12" cy="12" r="12" fill="#26A17B"/><text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" font-family="Arial">T</text>'
+ USDT:'<circle cx="12" cy="12" r="12" fill="#26A17B"/><text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" font-family="Arial">T</text>',
+ /* v10.98: desenhos próprios (sem imagem de fora) */
+ BNB:'<circle cx="12" cy="12" r="12" fill="#F3BA2F"/><path d="M12 5.2l2.1 2.1-2.1 2.1-2.1-2.1zM7.3 9.9l2.1 2.1-2.1 2.1L5.2 12zM16.7 9.9l2.1 2.1-2.1 2.1-2.1-2.1zM12 9.9l2.1 2.1-2.1 2.1L9.9 12zM12 14.6l2.1 2.1-2.1 2.1-2.1-2.1z" fill="#fff"/>',
+ ADA:'<circle cx="12" cy="12" r="12" fill="#0033AD"/><g fill="#fff"><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="5.6" r="1.2"/><circle cx="12" cy="18.4" r="1.2"/><circle cx="6.5" cy="8.8" r="1.2"/><circle cx="17.5" cy="8.8" r="1.2"/><circle cx="6.5" cy="15.2" r="1.2"/><circle cx="17.5" cy="15.2" r="1.2"/></g>',
+ DOGE:'<circle cx="12" cy="12" r="12" fill="#C2A633"/><path d="M9 7h3.4a5 5 0 0 1 0 10H9zM7.5 12h6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
+ USDC:'<circle cx="12" cy="12" r="12" fill="#2775CA"/><circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" stroke-width="1.3" opacity=".85"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Arial">$</text>',
+ LINK:'<circle cx="12" cy="12" r="12" fill="#2A5ADA"/><path d="M12 5.5l5.6 3.2v6.6L12 18.5l-5.6-3.2V8.7z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>',
+ TRX:'<circle cx="12" cy="12" r="12" fill="#EB0029"/><path d="M6.5 7l11 2.2-6 9.3zM6.5 7l5 11.5M17.5 9.2l-6 1.8" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>',
+ AVAX:'<circle cx="12" cy="12" r="12" fill="#E84142"/><path d="M12 6l5.5 10.5h-3.4L12 12.3l-2.1 4.2H6.5z" fill="#fff"/>',
+ TON:'<circle cx="12" cy="12" r="12" fill="#0098EA"/><path d="M7 8h10l-5 9.5zM12 8v9.5" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/>',
+ DOT:'<circle cx="12" cy="12" r="12" fill="#E6007A"/><ellipse cx="12" cy="6.6" rx="3.2" ry="1.9" fill="#fff"/><ellipse cx="12" cy="17.4" rx="3.2" ry="1.9" fill="#fff"/><ellipse cx="7.3" cy="9.3" rx="3.2" ry="1.9" transform="rotate(60 7.3 9.3)" fill="#fff"/><ellipse cx="16.7" cy="14.7" rx="3.2" ry="1.9" transform="rotate(60 16.7 14.7)" fill="#fff"/><ellipse cx="16.7" cy="9.3" rx="3.2" ry="1.9" transform="rotate(-60 16.7 9.3)" fill="#fff"/><ellipse cx="7.3" cy="14.7" rx="3.2" ry="1.9" transform="rotate(-60 7.3 14.7)" fill="#fff"/>',
+ LTC:'<circle cx="12" cy="12" r="12" fill="#345D9D"/><path d="M10.5 6l-1.8 11h7.6M7.5 13.2l6-2.2" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+ SHIB:'<circle cx="12" cy="12" r="12" fill="#FFA409"/><path d="M6.5 7.5l3 2.5h5l3-2.5-.6 6.5L12 18l-4.9-4z" fill="#fff"/><circle cx="10" cy="12.5" r=".9" fill="#c2410c"/><circle cx="14" cy="12.5" r=".9" fill="#c2410c"/>',
+ POL:'<circle cx="12" cy="12" r="12" fill="#8247E5"/><path d="M15.5 9.3l-2.6-1.5-2.6 1.5v3l-1.7 1-1.7-1v-2l1.7-1 .9.5V8.8l-.9-.5-2.6 1.5v3l2.6 1.5 2.6-1.5v-3l1.7-1 1.7 1v2l-1.7 1-.9-.5v1.9l.9.5 2.6-1.5z" fill="#fff"/>'
 };
 function cgCache(){try{const c=JSON.parse(localStorage.getItem('gv-cg')||'null');return c&&c.p?Object.assign({img:{}},c):{ts:0,p:{},img:{}};}catch(e){return {ts:0,p:{},img:{}};}}
 let CG_ST={st:'manual',msg:'valores manuais'};
@@ -987,8 +1005,8 @@ async function atualizaCripto(forca){
   if(mudou)salvar();
   if(TAB==='fii')render();
 }
-function cryptoIco(t){
-  const cg=CRIPTO_LIST.find(x=>x.t===t),img=cg&&cgCache().img[cg.id];
+function cryptoIco(t,proprio){ // v10.98: proprio = só o desenho do app (seletor das metas)
+  const cg=CRIPTO_LIST.find(x=>x.t===t),img=!proprio&&cg&&cgCache().img[cg.id];
   if(img)return '<img src="'+esc(img)+'" alt="'+esc(t)+'" width="26" height="26">';
   return '<svg class="coin" viewBox="0 0 24 24" aria-label="'+esc(t)+'">'+(CRYPTO_SVG[t]||'<circle cx="12" cy="12" r="12" fill="#475569"/><text x="12" y="15.5" text-anchor="middle" font-size="6" font-weight="700" fill="#fff" font-family="Arial">'+esc(t.slice(0,4))+'</text>')+'</svg>';
 }
@@ -4438,7 +4456,7 @@ function investDoBanco(L0){let n=0;const hj=hojeISO();
   Object.values(G).forEach(g=>{g.saldo=c2(g.saldo);g.original=c2(g.original);L.push(g);});
   L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
     let f=S.fiis.find(x=>x.pluggyInv===v.id);
-    const tk=String(tp==='rf'?(v.codigo||v.nome):(v.codigo||v.nome)).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV';
+    const tk=tp==='rf'?rfCodigo(v.codigo||v.nome||''):String(v.codigo||v.nome).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV'; // v10.98: rf sem cortar palavra
     if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
     if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
     if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
@@ -5924,6 +5942,10 @@ function rfProdOf(f){
   return /caixinha|cofrinho|porquinho|conta remunerada/.test(n)?'caixinha':/\blci\b/.test(n)?'lci':/\blca\b/.test(n)?'lca':/tesouro\s*(selic|reserva)/.test(n)?'tsel':/tesouro\s*(pre|pré)/.test(n)?'tpre':/tesouro\s*ipca/.test(n)?'tipca':/poupan/.test(n)?'poup':/\bcdb\b|\brdb\b/.test(n)?'cdb':/\bcri\b/.test(n)?'cri':/\bcra\b/.test(n)?'cra':/deb[eê]nture/.test(n)?'deb':'outro';
 }
 function rfIdxOf(f){return f.idx||'fixo';}
+/* v10.98: código interno da renda fixa (12 letras, exigência do sanea) feito de palavras inteiras: "Caixinha Nubank" -> "CAIXINHA",
+   não "CAIXINHANUBA". A tela usa nomeAtivo(f) (o nome); o código só identifica. */
+function rfCodigo(nome){const w=norm(nome).toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);let c='';
+  for(const x of w){if((c+x).length>12)break;c+=x;}return c||(w[0]||'').slice(0,12)||'RF';}
 function rfTaxaOf(f){return f.idx==='cdi'?(+f.pctCdi||100):(+f.taxa||0);}
 function rfRotulo(f){const i=rfIdxOf(f),t=rfTaxaOf(f),n=x=>num(x).replace(/,00$/,'').replace(/(,\d)0$/,'$1');
   return i==='cdi'?n(t)+'% do CDI':i==='cdimais'?'CDI + '+n(t)+'% a.a.':i==='pre'?n(t)+'% a.a.':i==='ipca'?'IPCA + '+n(t)+'% a.a.':i==='selic'?(t?'Selic + '+n(t)+'%':'100% da Selic'):i==='poup'?'poupança':'saldo atualizado por você';}
@@ -6088,7 +6110,7 @@ function rfForm(f){
     if(idx==='selic'&&!(tx>-5&&tx<20)&&String(v.taxa).trim())return 'Informe a taxa acima da Selic (geralmente 0).';
     const venc=v.liq==='venc'||P.mm||P.car?(ISO_RE.test(v.venc)?v.venc:''):'';
     if(v.liq==='venc'&&!venc)return 'Informe a data de vencimento.';
-    const obj={tipo:'rf',prod:v.prod,nome:nome.slice(0,80),ticker:nome.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||'RF',dpc:0,diaPag:0,
+    const obj={tipo:'rf',prod:v.prod,nome:nome.slice(0,80),ticker:rfCodigo(nome),dpc:0,diaPag:0,
       idx:idx==='fixo'?'':idx,pctCdi:idx==='cdi'?tx:0,taxa:idx==='cdi'?0:(isFinite(tx)?tx:0),semVenc:!venc,venc,cdiBase:null};
     if(idx==='fixo'){
       const sd=parseBR(v.saldo);if(!(sd>=0))return 'Informe o saldo de hoje.';
@@ -6327,6 +6349,32 @@ function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.cei
 const MT_VOL={BTC:.55,ETH:.7,SOL:.9,XRP:.85,BNB:.65,ADA:.85,DOGE:1,LINK:.9,USDT:.03,USDC:.03}; // volatilidade anual de referência (aprox. histórica)
 const MT_COR={caixa:'#22c55e',rf:'#0ea5e9',fii:'#a78bfa',acao:'#f59e0b',cripto:'#f97316',plano:'#94a3b8'};
 const MT_GL={caixa:'caixinha',rf:'renda fixa',fii:'FII',acao:'ações',cripto:'cripto',plano:'a comprar'};
+/* v10.98: nome legível. Na renda fixa o ticker é um código interno de até 12 letras (sanea), gerado do nome:
+   "Caixinha Nubank" virava "CAIXINHANUBA" e a folha Fontes mostrava o código. Agora a renda fixa mostra o nome;
+   sem nome (ou nome todo junto em maiúsculas, como vem de banco), separa as palavras conhecidas e completa o banco. */
+const NM_SIGLA=/^(CDB|RDB|LCI|LCA|LC|CRI|CRA|CDI|IPCA|SELIC|XP|BTG|BB|C6|FII|ETF|BDR|IR|IOF|FGC)$/;
+const NM_BANCOS=['Nubank','Inter','Itaú','Bradesco','Santander','Caixa','PicPay','PagBank','Mercado Pago','C6 Bank','BTG Pactual','XP','Neon','Sicredi','Sicoob','Banco do Brasil','Next','Original','Sofisa','Daycoval','Agibank','Rico','Genial','Will Bank','Banrisul','Safra','Stone','Cora','Digio','BMG','BV'];
+const NM_PROD=['Caixinha','Caixinhas','Cofrinho','Porquinho','Tesouro','Poupança','Reserva','Turbo','Selic','Prefixado','IPCA','Renda Fixa','Conta','Rendimento','Investimento','Emergência','Viagem','CDB','RDB','LCI','LCA','CRI','CRA'];
+function nmTitulo(s){return String(s).toLowerCase().split(/(\s+)/).map((w,i)=>{if(!w.trim())return w;const u=w.toUpperCase();if(NM_SIGLA.test(u.replace(/[^A-Z0-9]/g,'')))return u;if(i>0&&/^(de|da|do|das|dos|e|para)$/.test(w))return w;return w.charAt(0).toUpperCase()+w.slice(1);}).join('');}
+function nmDescola(t){
+  const sem=x=>norm(x).toUpperCase().replace(/[^A-Z0-9]/g,'');let r=sem(t);const out=[];
+  const W=NM_PROD.concat(NM_BANCOS).map(x=>[x,sem(x)]).sort((a,b)=>b[1].length-a[1].length);
+  for(let g=0;r&&g<8;g++){
+    const p=W.find(([x,k])=>k.length>=2&&r.startsWith(k));if(p){out.push(p[0]);r=r.slice(p[1].length);continue;}
+    const b=r.length>=3&&NM_BANCOS.find(x=>sem(x).startsWith(r));if(b){out.push(b);r='';break;}
+    out.push(nmTitulo(r));r='';}
+  return out.join(' ');}
+function nomeAtivo(f){if(!f)return 'ativo';
+  if(tipoOf(f)==='rf'){let n=String(f.nome||'').trim();
+    if(!n)n=nmDescola(f.ticker||'');
+    else if(!/\s/.test(n)&&n.length>6&&n===n.toUpperCase())n=nmDescola(n);
+    else if(n===n.toUpperCase()&&/[A-Z]{3}/.test(n))n=nmTitulo(n);
+    return n||'Renda fixa';}
+  return f.ticker||f.nome||'ativo';}
+function ativoBanco(f){if(tipoOf(f)!=='rf')return null;try{return bancoDoCartao({banco:'',nome:nomeAtivo(f)+' '+String(f.nome||'')});}catch(e){return null;}}
+function rfTaxaTxt(f){const n=x=>String(c2(+x||0)).replace('.',',');try{const i=rfIdxOf(f);
+  if(i==='cdi')return n(f.pctCdi||100)+'% do CDI';if(i==='cdimais')return 'CDI + '+n(f.taxa)+'% a.a.';if(i==='pre')return n(f.taxa)+'% a.a.';
+  if(i==='ipca')return 'IPCA + '+n(f.taxa)+'%';if(i==='selic')return 'Selic'+(+f.taxa?' + '+n(f.taxa)+'%':'');if(i==='poup')return 'poupança';}catch(e){}return '';}
 function mtGrupo(f){const t=typeof f==='string'?f:tipoOf(f);return t==='rf'?'rf':t==='cripto'?'cripto':t==='fii'?'fii':'acao';}
 function mtProFontes(){return pode('investimentos');}
 function mtAtivos(m){return (m.ativos||[]).map(a=>({a,f:S.fiis.find(x=>x.id===a.fid)})).filter(x=>x.f&&x.a.pct>0);}
@@ -6469,7 +6517,7 @@ function mtFontesChips(m,max){
   const out=[];const cx=mtCaixa(m);
   if(cx.pri>0||m.cdi||!(m.ativos||[]).length)out.push({g:'caixa',t:m.cdi?'caixinha '+String(m.pctCdi||100).replace('.',',')+'% CDI':'caixinha'});
   mtAtivos(m).forEach(({a,f})=>out.push({g:mtGrupo(f),t:(f.ticker||f.nome||'ativo').slice(0,14)+' '+String(c2(a.pct)).replace('.',',')+'%'}));
-  (m.planos||[]).forEach(p=>out.push({g:'plano',t:'a comprar · '+(p.nome||'ativo').slice(0,14)}));
+  (m.planos||[]).forEach(p=>out.push({g:'plano',t:'a comprar · '+(p.nome||'ativo').slice(0,18)}));
   const L=max&&out.length>max?out.slice(0,max).concat([{g:'mais',t:'+'+(out.length-max)}]):out;
   return `<div class="mtFt" aria-label="fontes da meta">${L.map(x=>`<span class="mtF ${x.g}" style="--fc:${MT_COR[x.g]||'#64748b'}"><i></i>${esc(x.t)}</span>`).join('')}</div>`;
 }
@@ -6601,8 +6649,8 @@ function abreMeta(id){
   const fonteL=[];
   if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
   mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
-    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(f.ticker||f.nome||'ativo')}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
-  (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(pl.nome||'ativo')}</b><small>a comprar · ${MT_GL[mtGrupo(pl.tipo)]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+  (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(mtPlanoNome(pl)||'ativo')}</b><small>a comprar · ${(MT_PK_T.find(k=>k[0]===pl.tipo)||['',MT_GL[mtGrupo(pl.tipo)]])[1]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
   const hist=(m.aportes||[]).slice().reverse().slice(0,24);
   const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
     return `<div class="mtAh"><div><b>${fmtDataCurta(a.d)}</b><small>${f?'em '+esc(f.ticker||f.nome):'caixinha'}${b?' · saiu de '+esc(b.nome):''}</small></div><b class="nw pos">+ ${brl(a.v)}</b><button class="mtB sm" data-act="meta-ap-del" data-id="${m.id}|${a.id}" aria-label="desfazer aporte de ${fmtDataCurta(a.d)}">${I('trash')}</button></div>`;}).join('');
@@ -6717,36 +6765,107 @@ function metaForm(id){
   segs.forEach(s=>s.addEventListener('change',modo));modo();
 }
 /* ---------- fontes da meta (ativos e a comprar) ---------- */
+/* v10.98: linha da fonte em duas partes (nome em até 2 linhas + valor/taxa embaixo; abaixo, chips 25/50/75/100% e
+   stepper de 5 em 5 com o campo) e "a comprar" com seletor por tipo: moedas com ícone, cor e cotação, sugestões de
+   FII/ação/ETF, produtos de renda fixa, busca e "usar o que digitei". O % continua no input [data-pct] (salvar igual). */
+const MT_PK_T=[['fii','FII','#a78bfa'],['acao','Ação','#f59e0b'],['etf','ETF','#22d3ee'],['rf','Renda fixa','#0ea5e9'],['cripto','Cripto','#f97316']];
+const MT_PK_PH={fii:'Buscar FII: HGLG11, MXRF11…',acao:'Buscar ação: PETR4, ITUB4…',etf:'Buscar ETF: BOVA11, IVVB11…',rf:'Nome: CDB Inter, Tesouro Selic…',cripto:'Buscar moeda: bitcoin, SOL, PEPE…'};
+const MT_PK_RF=[['Caixinha','liquidez diária'],['CDB','rende % do CDI'],['LCI','isenta de IR'],['LCA','isenta de IR'],['Tesouro Selic','reserva de emergência'],['Tesouro IPCA+','protege da inflação'],['Tesouro Prefixado','taxa travada'],['Poupança','rende pouco']];
+function mtPkPreco(t,tipo){
+  if(tipo==='cripto'){const x=CRIPTO_LIST.find(c=>c.t===t),p=x&&cgCache().p[x.id];if(p>0)return p;}
+  const f=(S.fiis||[]).find(f=>f.ticker===t&&(tipo==='cripto'?tipoOf(f)==='cripto':tipoOf(f)!=='cripto')&&f.preco>0);return f?f.preco:0;}
+function mtPkLista(tipo){
+  if(tipo==='cripto')return CRIPTO_LIST.map(x=>({t:x.t,n:x.n,cor:CRYPTO_COR[x.t]||'#64748b'}));
+  if(tipo==='rf')return MT_PK_RF.map(([t,n])=>({t,n,cor:'#0ea5e9'}));
+  const L=B3_LIST.filter(x=>x.tipo===tipo).map(x=>({t:x.t,n:x.n,cor:(MT_PK_T.find(k=>k[0]===tipo)||[])[2]}));
+  (S.fiis||[]).filter(f=>tipoOf(f)===tipo&&f.ticker&&!L.some(x=>x.t===f.ticker)).forEach(f=>L.unshift({t:f.ticker,n:f.nome||'',cor:L[0]?L[0].cor:'#94a3b8'}));
+  return L;}
+function mtPkIco(t,tipo){
+  if(tipo==='cripto')return '<span class="mtPkI coin">'+cryptoIco(t,true)+'</span>';
+  if(tipo==='rf')return '<span class="mtPkI rf">'+I('bank')+'</span>';
+  return '<span class="mtPkI">'+assetIco(t,tipo==='etf'?'etf':tipo)+'</span>';}
+function mtPkPrecoTxt(p){if(!(p>0))return '';if(OCULTO)return 'R$ •••';return p>=100000?brlK(p):brl(p);}
+function mtPlanoNome(p){const x=p.tipo==='cripto'&&CRIPTO_LIST.find(c=>c.t===String(p.nome).toUpperCase());return x?x.t+' · '+x.n:p.nome;}
+function mtPlanoRow(p,del){const tl=(MT_PK_T.find(k=>k[0]===p.tipo)||['','ativo'])[1];
+  return `<div class="mtSrc plano">${p.tipo==='cripto'||p.tipo==='rf'||B3_LIST.some(x=>x.t===p.nome)?mtPkIco(String(p.nome).toUpperCase()===p.nome||p.tipo==='cripto'?String(p.nome).toUpperCase():p.nome,p.tipo):`<span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span>`}<div class="mtSrcT"><b class="mtSrcN">${esc(mtPlanoNome(p))}</b><small>a comprar · ${tl}${p.valor>0?' · pretende '+brl(p.valor):''}</small></div>${del?`<button type="button" class="mtB sm del" data-pldel="${esc(p.id)}" aria-label="remover ${esc(p.nome)}">${I('trash')}</button>`:''}</div>`;}
 function metaFontes(id){
   const m=S.metas.find(x=>x.id===id);if(!m)return;
   if(!mtProFontes()&&!(m.ativos||[]).length){abrePlanos('investimentos');return;}
   const box=$('#modal');
-  const lin=f=>{const a=(m.ativos||[]).find(x=>x.fid===f.id),out=mtAlocado(f.id,m.id),livre=Math.max(0,100-out),g=mtGrupo(f);
-    return `<div class="mtSrc" data-fid="${esc(f.id)}"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span>
-      <div class="mtSrcT"><b>${esc(f.ticker||f.nome||'ativo')}</b><small>${MT_GL[g]} · ${brl(mtValorAtivo(f))}${out>0?' · '+String(c2(out)).replace('.',',')+'% em outras metas':''}${f.pluggyInv?' · do banco':''}</small>
-      ${(g==='fii'||g==='acao')?`<label class="ckrow sm"><input type="checkbox" data-reinv="${esc(f.id)}" ${a&&a.reinv?'checked':''}><span>proventos reinvestem na meta</span></label>`:''}</div>
-      <label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?c2(a.pct):''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(f.ticker||f.nome)} para a meta (até ${livre}%)"><span>%</span></label></div>`;};
+  const pc=x=>String(c2(x)).replace('.',',');
+  const lin=f=>{const a=(m.ativos||[]).find(x=>x.fid===f.id),out=mtAlocado(f.id,m.id),livre=c2(Math.max(0,100-out)),g=mtGrupo(f),nm=nomeAtivo(f),val=mtValorAtivo(f);
+    const bk=ativoBanco(f),tx=g==='rf'?rfTaxaTxt(f):'',v0=a?c2(a.pct):0;
+    const ic=bk?bancoLogoHTML(bancoLogo(bk.d),bk.n,'mtFi mtFiBk'):g==='cripto'?'<span class="mtFi mtFiCoin">'+cryptoIco(f.ticker,true)+'</span>':`<span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span>`;
+    const ch=[25,50,75,100].filter(p=>p<=livre+1e-9);if(livre>0&&livre<100&&!ch.includes(livre))ch.push(livre);
+    return `<div class="mtSrc mtSrc2" data-fid="${esc(f.id)}" data-val="${val}" data-livre="${livre}">
+      <div class="mtSrcTop">${ic}<div class="mtSrcT"><b class="mtSrcN">${esc(nm)}</b>
+        <span class="mtSrcV"><b class="nw">${brl(val)}</b>${tx?`<em class="mtTx">${esc(tx)}</em>`:''}</span>
+        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${f.pluggyInv?' · do banco':''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
+      <div class="mtPctC" role="group" aria-label="quanto de ${esc(nm)} vai para esta meta">
+        <div class="mtChips">${ch.length?ch.map(p=>`<button type="button" class="mtChip${v0===p?' on':''}" data-pq="${p}" aria-pressed="${v0===p}">${p===livre&&livre<100&&![25,50,75].includes(p)?'livre ':''}${pc(p)}%</button>`).join(''):'<span class="mtSemLivre">100% já está em outras metas</span>'}</div>
+        <div class="mtStep"><button type="button" class="mtStB" data-ps="-5" aria-label="menos 5%">−</button><label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?v0:''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(nm)} para a meta (até ${pc(livre)}%)"><span>%</span></label><button type="button" class="mtStB" data-ps="5" aria-label="mais 5%">+</button></div>
+      </div>
+      <small class="mtPctR" aria-live="polite"></small>
+      ${(g==='fii'||g==='acao')?`<label class="ckrow sm"><input type="checkbox" data-reinv="${esc(f.id)}" ${a&&a.reinv?'checked':''}><span>proventos reinvestem na meta</span></label>`:''}
+    </div>`;};
   const L=S.fiis.slice().sort((a,b)=>mtValorAtivo(b)-mtValorAtivo(a));
   box.innerHTML=`<div class="sheet mtSheet" role="dialog" aria-modal="true" aria-label="Fontes da meta"><div class="sh-head"><h3>Fontes · ${esc(m.nome)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <p class="small">Escolha quanto de cada investimento pertence a esta meta. O saldo da meta usa o valor de mercado de hoje. Um ativo pode ser dividido entre metas até 100%.</p>
     <div class="mtSrcL">${L.length?L.map(lin).join(''):'<p class="small">Você ainda não tem investimentos cadastrados. Adicione em Investimentos ou planeje abaixo um ativo a comprar.</p>'}</div>
     <h4 class="rsH">a comprar</h4>
-    <div id="mtPl">${(m.planos||[]).map(p=>`<div class="mtSrc plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtSrcT"><b>${esc(p.nome)}</b><small>${MT_GL[mtGrupo(p.tipo)]}${p.valor>0?' · pretende '+brl(p.valor):''}</small></div><button type="button" class="mtB sm del" data-pldel="${esc(p.id)}" aria-label="remover ${esc(p.nome)}">${I('trash')}</button></div>`).join('')}</div>
-    <div class="mtPlF"><select id="mtPlT" aria-label="tipo do ativo a comprar"><option value="fii">FII</option><option value="acao">Ação/ETF</option><option value="rf">Renda fixa</option><option value="cripto">Cripto</option></select><input id="mtPlN" maxlength="30" placeholder="ex: HGLG11" aria-label="nome do ativo a comprar"><input id="mtPlV" inputmode="decimal" placeholder="R$ (opcional)" aria-label="valor que pretende investir"><button type="button" class="btn2 sm" id="mtPlAdd">${I('plus')}</button></div>
+    <div id="mtPl">${(m.planos||[]).map(p=>mtPlanoRow(p,true)).join('')}</div>
+    <div class="mtPk" id="mtPk">
+      <input type="hidden" id="mtPlT" value="fii">
+      <div class="mtPkTs" role="radiogroup" aria-label="tipo do ativo a comprar">${MT_PK_T.map(([k,l,c],i)=>`<button type="button" role="radio" class="mtPkT${i?'':' on'}" data-pkt="${k}" aria-checked="${!i}" style="--cc:${c}">${l}</button>`).join('')}</div>
+      <label class="mtPkBusca"><span class="mtPkLupa" aria-hidden="true">${I('search')}</span><input id="mtPlN" maxlength="30" autocomplete="off" autocapitalize="characters" placeholder="${MT_PK_PH.fii}" aria-label="nome ou código do ativo a comprar"></label>
+      <div class="mtPkS" id="mtPkS" role="listbox" aria-label="sugestões"></div>
+      <div class="mtPkRod"><input id="mtPlV" inputmode="decimal" placeholder="Valor em R$ (opcional)" aria-label="valor que pretende investir"><button type="button" class="btn2 sm" id="mtPlAdd" aria-label="adicionar à lista a comprar">${I('plus')}<span>adicionar</span></button></div>
+    </div>
     <button class="btn full" id="mtSrcOk">Salvar fontes</button></div>`;
   box.classList.add('on');
   const planos=(m.planos||[]).slice();
+  /* % por chip, stepper ou digitando: limita ao livre e mostra quanto vai para a meta */
+  const pinta=row=>{const inp=row.querySelector('[data-pct]'),v=String(inp.value).trim()?parseBR(String(inp.value)):0,val=+row.dataset.val||0,r=row.querySelector('.mtPctR');
+    row.querySelectorAll('[data-pq]').forEach(b=>{const on=Math.abs(+b.dataset.pq-v)<1e-9;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
+    row.classList.toggle('sel',v>0);if(r)r.innerHTML=v>0?'<b class="nw">'+brl(val*Math.min(v,100)/100)+'</b> deste ativo para a meta':'';};
+  const poe=(row,v)=>{const lv=+row.dataset.livre||0;v=Math.max(0,Math.min(lv,Math.round(v*100)/100));const inp=row.querySelector('[data-pct]');inp.value=v?String(v).replace('.',','):'';if(inp.type==='number')inp.value=v?String(v):'';pinta(row);};
+  box.querySelectorAll('.mtSrc2').forEach(row=>{pinta(row);
+    row.addEventListener('click',e=>{const q=e.target.closest('[data-pq]'),st=e.target.closest('[data-ps]');if(!q&&!st)return;e.preventDefault();
+      const inp=row.querySelector('[data-pct]'),cur=String(inp.value).trim()?parseBR(String(inp.value)):0;
+      if(q){const v=+q.dataset.pq;poe(row,Math.abs(cur-v)<1e-9?0:v);}else{const d=+st.dataset.ps;poe(row,d>0?Math.floor((cur+1e-9)/5)*5+5:Math.ceil((cur-1e-9)/5)*5-5);}vibra(6);});
+    row.querySelector('[data-pct]').addEventListener('input',()=>pinta(row));});
   box.querySelectorAll('[data-pldel]').forEach(b=>b.onclick=()=>{const i=planos.findIndex(p=>p.id===b.dataset.pldel);if(i>=0)planos.splice(i,1);b.closest('.mtSrc').remove();});
-  $('#mtPlAdd').onclick=()=>{const n=$('#mtPlN').value.trim().slice(0,30);if(!n){toast('Dê um nome ao ativo a comprar.',true);return;}
-    const v=$('#mtPlV').value.trim()?parseBR($('#mtPlV').value):0,t=$('#mtPlT').value,p={id:uid(),tipo:t,nome:n,valor:v>0?c2(v):0};planos.push(p);
-    $('#mtPl').insertAdjacentHTML('beforeend',`<div class="mtSrc plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtSrcT"><b>${esc(n)}</b><small>${MT_GL[mtGrupo(t)]}${p.valor?' · pretende '+brl(p.valor):''}</small></div></div>`);
-    $('#mtPlN').value='';$('#mtPlV').value='';};
+  /* seletor do "a comprar" */
+  const inT=$('#mtPlT'),inN=$('#mtPlN'),sug=$('#mtPkS');let esc1='';
+  const desenha=()=>{const t=inT.value,q=norm(inN.value),Q=inN.value.trim().toUpperCase();let L=mtPkLista(t);
+    if(q)L=L.filter(x=>norm(x.t).includes(q)||norm(x.n).includes(q));
+    const lim=q?12:(t==='cripto'?10:8),vis=L.slice(0,lim);
+    let h=vis.map(x=>{const p=t==='rf'?0:mtPkPreco(x.t,t),tem=t!=='rf'&&(S.fiis||[]).some(f=>f.ticker===x.t&&f.cotas>0&&(t==='cripto')===(tipoOf(f)==='cripto'));const on=esc1===x.t;
+      return `<button type="button" class="mtPkC${on?' on':''}" role="option" aria-selected="${on}" data-pk="${esc(x.t)}" style="--cc:${x.cor||'#94a3b8'}">${mtPkIco(x.t,t)}<span class="mtPkTx"><b>${esc(x.t)}</b><small>${esc(x.n)}</small>${p>0?`<em class="mtPkP nw">${mtPkPrecoTxt(p)}</em>`:''}</span>${tem?'<i class="mtPkH" title="você já tem na carteira" aria-label="na carteira"></i>':''}${on?'<i class="mtPkOk" aria-hidden="true">'+I('check')+'</i>':''}</button>`;}).join('');
+    if(Q&&!L.some(x=>x.t.toUpperCase()===Q))h+=`<button type="button" class="mtPkC livre${esc1===Q?' on':''}" role="option" aria-selected="${esc1===Q}" data-pk="${esc(t==='rf'?inN.value.trim().slice(0,30):Q.replace(/[^A-Z0-9.]/g,'').slice(0,12))}" style="--cc:#94a3b8"><span class="mtPkI livre">${I('plus')}</span><span class="mtPkTx"><b>usar “${esc(inN.value.trim().slice(0,30))}”</b><small>${t==='cripto'?'outra moeda':t==='rf'?'nome que você digitou':'outro código'}</small></span></button>`;
+    if(!h)h='<p class="mtPkV">Nada encontrado.</p>';
+    else if(h.includes('class="mtPkH"'))h+='<p class="mtPkV mtPkLeg"><i class="mtPkHl" aria-hidden="true"></i>já está na sua carteira</p>';
+    sug.innerHTML=h;
+    if(t!=='rf'&&!q&&L.length>lim)sug.insertAdjacentHTML('beforeend',`<p class="mtPkV">digite para buscar entre ${L.length} ${t==='cripto'?'moedas':'opções'}</p>`);};
+  box.querySelectorAll('[data-pkt]').forEach(b=>b.onclick=()=>{inT.value=b.dataset.pkt;box.querySelectorAll('[data-pkt]').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-checked',String(on));});
+    inN.placeholder=MT_PK_PH[inT.value];inN.setAttribute('autocapitalize',inT.value==='rf'?'sentences':'characters');esc1='';inN.value='';desenha();btA();
+    if(inT.value==='cripto')cgPrecos(CRIPTO_LIST.map(x=>x.id),false).then(()=>{if(inT.value==='cripto'&&document.body.contains(sug))desenha();}).catch(()=>{});});
+  inN.addEventListener('input',()=>{esc1='';desenha();btA();});
+  /* escolher um cartão não mexe na busca (a grade continua à vista); o botão diz o que vai entrar */
+  const btA=()=>{const b=$('#mtPlAdd');if(b)b.querySelector('span').textContent=esc1?'adicionar '+(inT.value==='rf'?esc1:esc1.slice(0,8)):'adicionar';};
+  sug.addEventListener('click',e=>{const c=e.target.closest('[data-pk]');if(!c)return;esc1=esc1===c.dataset.pk?'':c.dataset.pk;desenha();btA();});
+  desenha();
+  $('#mtPlAdd').onclick=()=>{const t=inT.value;let n=(esc1||inN.value).trim().slice(0,30);if(!n){toast('Escolha ou digite o ativo a comprar.',true);return;}
+    if(t!=='rf')n=n.toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||n;
+    const v=$('#mtPlV').value.trim()?parseBR($('#mtPlV').value):0,p={id:uid(),tipo:t,nome:n,valor:v>0?c2(v):0};planos.push(p);
+    $('#mtPl').insertAdjacentHTML('beforeend',mtPlanoRow(p,false));
+    inN.value='';$('#mtPlV').value='';esc1='';desenha();btA();toast((mtPlanoNome(p))+' na lista a comprar');};
   $('#mtSrcOk').onclick=()=>{
     const novos=[],hj=hojeISO();let erro='';
     box.querySelectorAll('[data-pct]').forEach(inp=>{const fid=inp.dataset.pct,v=String(inp.value).trim()?parseBR(String(inp.value)):0;if(!v)return;
       const f=S.fiis.find(x=>x.id===fid),livre=Math.max(0,100-mtAlocado(fid,m.id));
       if(!(v>0&&v<=100)){erro='Use um % entre 0 e 100.';return;}
-      if(v>livre+1e-9){erro=(f&&(f.ticker||f.nome)||'ativo')+': só '+String(c2(livre)).replace('.',',')+'% estão livres (o resto já está em outras metas).';return;}
+      if(v>livre+1e-9){erro=(f?nomeAtivo(f):'ativo')+': só '+String(c2(livre)).replace('.',',')+'% estão livres (o resto já está em outras metas).';return;}
       const ant=(m.ativos||[]).find(a=>a.fid===fid),ri=box.querySelector('[data-reinv="'+fid+'"]');
       novos.push({fid,pct:c2(v),desde:ant&&ant.desde||hj,reinv:!!(ri&&ri.checked)});});
     if(erro){toast(erro,true);return;}
@@ -6837,7 +6956,7 @@ function saneaMetaExtra(m,ids){
   const idv=x=>{const t=String(x==null?'':x);return t&&ID_OK.test(t)?t:'';}; // id inválido vira vazio (não um id novo que não aponta para nada)
   const vistos=new Set();
   o.ativos=arr(m.ativos).slice(0,60).map(a=>({fid:idv(a.fid),pct:Math.min(100,Math.max(0,c2(a.pct))),desde:ISO(a.desde),reinv:!!a.reinv})).filter(a=>a.fid&&a.pct>0&&!vistos.has(a.fid)&&vistos.add(a.fid));
-  o.planos=arr(m.planos).slice(0,30).map(p=>({id:sid(p.id),tipo:['fii','acao','rf','cripto'].includes(p.tipo)?p.tipo:'fii',nome:str(p.nome,30).trim()||'ativo',valor:Math.max(0,c2(p.valor))}));
+  o.planos=arr(m.planos).slice(0,30).map(p=>({id:sid(p.id),tipo:['fii','acao','etf','rf','cripto'].includes(p.tipo)?p.tipo:'fii',nome:str(p.nome,30).trim()||'ativo',valor:Math.max(0,c2(p.valor))}));
   o.aportes=arr(m.aportes).slice(-600).map(a=>({id:sid(a.id),d:ISO(a.d),v:Math.max(0,c2(a.v)),fonte:a.fonte&&a.fonte!=='manual'?idv(a.fonte)||'manual':'manual',conta:idv(a.conta),tx:idv(a.tx)})).filter(a=>a.d&&a.v>0);
   {const d=parseInt(m.diaAporte,10);o.diaAporte=d>=1&&d<=28?d:0;}
   o.cripMax=Math.max(0,Math.min(100,c2(m.cripMax)));
@@ -7454,7 +7573,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 

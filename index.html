@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-zcLIyQs8tkyuNAwfAooOcWcuTkOjUwTsSv5U9p4VVZM=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-w3rVKs6Lea9GETRq1neZX/By8mDv18DEHuMPHoeDiJk=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2299,6 +2299,58 @@ html.claro .mtNota.warn,html.claro .mtNota.warn .i{color:#b45309}
 .hB-mt>.i{width:16px;height:16px;flex:none;opacity:.9}
 .hB-mt span{flex:1;min-width:0}.hB-mt b{font-variant-numeric:tabular-nums}
 html.claro .mtF{color:#1e293b}
+/* v10.98: folha Fontes da meta — linha que respira + seletor do "a comprar" */
+.mtSrc2{flex-direction:column;align-items:stretch;gap:10px;padding:12px}
+.mtSrc2.sel{border-color:color-mix(in srgb,var(--a1) 45%,var(--line))}
+.mtSrcTop{display:flex;align-items:flex-start;gap:11px;min-width:0}
+.mtSrc2 .mtSrcN,.mtSrc .mtSrcN{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25;overflow-wrap:anywhere;font-size:15px}
+.mtSrcV{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin-top:1px}
+.mtSrcV>b{font-size:14px;color:var(--txt);font-variant-numeric:tabular-nums}
+.mtTx{font-style:normal;font-size:11.5px;font-weight:700;color:#0ea5e9;background:color-mix(in srgb,#0ea5e9 14%,transparent);padding:2px 7px;border-radius:999px}
+.mtFiBk{width:40px;height:40px;border-radius:12px;flex:none;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--line)}
+.mtFiBk img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}.mtFiBk .bl-ini{font-size:13px;font-weight:800;color:var(--hd)}
+.mtFiCoin{background:transparent}.mtFiCoin .coin,.mtFiCoin img{width:34px;height:34px;border-radius:50%}
+.mtPctC{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mtChips{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.mtChip{min-height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:13px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+.mtChip.on{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent;color:#05120a}
+.mtSemLivre{font-size:12px;color:var(--mut)}
+.mtStep{display:flex;align-items:center;gap:4px;flex:none;margin-left:auto}
+.mtStB{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--hd);font:inherit;font-size:18px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mtSrc2 .mtPct input{width:58px!important;padding:7px 6px!important;text-align:center}
+.mtPctR{font-size:12px;color:var(--mut);margin-top:-4px}.mtPctR:empty{display:none}.mtPctR b{color:var(--hd)}
+.mtSrc2 .ckrow.sm{margin:0!important}
+.mtPk{display:flex;flex-direction:column;gap:9px;margin:10px 0 14px}
+.mtPkTs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px;padding:2px}
+.mtPkTs::-webkit-scrollbar{display:none}
+.mtPkT{flex:none;min-height:36px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.mtPkT.on{border-color:var(--cc);color:var(--hd);background:color-mix(in srgb,var(--cc) 18%,var(--card2));box-shadow:inset 0 0 0 1px var(--cc)}
+.mtPkBusca{position:relative;display:block;margin:0!important}
+.mtPkBusca input{width:100%;margin:0!important;padding-left:38px!important}
+.mtPkLupa{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mut);display:flex;pointer-events:none}.mtPkLupa .i{width:17px;height:17px}
+.mtPkS{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.mtPkC{position:relative;display:flex;align-items:center;gap:9px;min-width:0;text-align:left;padding:9px 10px;border-radius:13px;border:1px solid var(--line);background:var(--card2);color:inherit;font:inherit;cursor:pointer;min-height:54px}
+.mtPkC::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,color-mix(in srgb,var(--cc) 16%,transparent),transparent 60%);pointer-events:none}
+.mtPkC.on{border-color:var(--cc);box-shadow:0 0 0 1px var(--cc) inset}
+.mtPkI{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;position:relative}
+.mtPkI .coin{width:30px;height:30px}
+.mtPkI.rf,.mtPkI.livre{border-radius:9px;color:var(--cc);background:color-mix(in srgb,var(--cc) 16%,transparent)}.mtPkI.rf .i,.mtPkI.livre .i{width:16px;height:16px}
+.mtPkI .tkb{font-size:9px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+.mtPkTx{display:flex;flex-direction:column;min-width:0;flex:1;position:relative}
+.mtPkTx b{font-size:13.5px;color:var(--hd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtPkTx small{font-size:11.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtPkP{font-style:normal;font-size:11.5px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;margin-top:1px}
+.mtPkH{position:absolute;left:31px;top:calc(50% + 5px);width:11px;height:11px;border-radius:50%;background:var(--a1);border:2px solid var(--card2)}
+.mtPkOk{position:absolute;right:8px;bottom:7px;width:18px;height:18px;border-radius:50%;background:var(--cc);color:#fff;display:flex;align-items:center;justify-content:center}.mtPkOk .i{width:12px;height:12px;stroke-width:3}
+.mtPkC:has(.mtPkOk) .mtPkTx small{padding-right:20px}
+.mtPkLeg{display:flex;align-items:center;justify-content:center;gap:6px}.mtPkHl{width:8px;height:8px;border-radius:50%;background:var(--a1);display:inline-block}
+.mtPkV{grid-column:1/-1;font-size:12px;color:var(--mut);margin:2px 0 0;text-align:center}
+.mtPkRod{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.mtPkRod input{margin:0!important;min-width:0}
+.mtPkRod .btn2{display:inline-flex;align-items:center;gap:6px;height:46px;padding:0 14px}.mtPkRod .btn2 .i{width:16px;height:16px}
+html.preto .mtPkC,html.preto .mtPkT,html.preto .mtChip,html.preto .mtStB{background:#0d0d0f;border-color:#1c1c1f}
+html.claro .mtChip.on{color:#fff}
+@media (max-width:360px){.mtPkS{grid-template-columns:minmax(0,1fr)}}
 html.preto .mtGw,html.preto .mtSim,html.preto .mtFr,html.preto .mtSrc,html.preto .mtFipe{background:#0d0d0f;border-color:#1c1c1f}
 @media (max-width:420px){.mtHero{gap:12px}.mtRingL{width:88px;height:88px}.mtHv>b{font-size:22px}.mtPlF{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}.mtPlF #mtPlV{grid-column:1/3;grid-row:2}.mtPlF .btn2{grid-row:1/3;height:auto;align-self:stretch}}
 @media (prefers-reduced-motion:reduce){.mtRingL .rf{transition:none}}
@@ -2588,7 +2640,7 @@ html.claro .ccFmP.st-paga small{color:#16a34a}html.claro .ccFmP.st-vencida small
 </div>
 
 <script>
-const GV_BUILD='10.97'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.98'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -2609,8 +2661,8 @@ const GV_BUILD='10.97'; // versão publicada (./bump.sh troca aqui e no sw.js)
 })();
 </script>
 <script src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script src="planos.js?v=10.97"></script>
-<script src="app.js?v=10.97"></script>
+<script src="planos.js?v=10.98"></script>
+<script src="app.js?v=10.98"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
