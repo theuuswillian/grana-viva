@@ -10,7 +10,7 @@
 // verify_jwt desligado: a função confere o segredo do cron ou o token do usuário por conta própria.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { alertas, orcamentos, resumoSemana, textoSemana, discretoOn, semValores, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
+import { alertasD, diarioPayload, orcamentos, resumoSemana, textoSemana, discretoOn, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
 // v10.89: plano da pessoa (metas são do Plus). planos.js é cópia gerada do /planos.js da raiz por deploy-fn.py.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     const D = { tx: (t.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), cartoes: (c.data || []).map((r: any) => r.data).filter(Boolean), cfg };
     const on = (k: string) => !(cfg?.cfg?.notif && cfg.cfg.notif[k] === false);
     const discreto = discretoOn(cfg);
-    const lista = alertas(D, hoje);
+    const lista = alertasD(D, hoje);
     // orçamento: um aviso por limite, por categoria, por mês (chaves em push_log)
     const orcs = orcamentos(D, hoje);
     let novos: { chave: string; txt: string }[] = [];
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", orcs.map((o) => o.chave));
       const feitos = new Set((ja || []).map((r: any) => r.chave));
       novos = orcs.filter((o) => !feitos.has(o.chave));
-      lista.push(...novos.map((o) => o.txt));
+      lista.push(...novos.map((o) => ({ txt: o.txt, disc: o.disc })));
     }
     // resumo da semana: domingo, padrão ligado (Ajustes › notificações › Resumo da semana); um por domingo
     let sem: { chave: string; payload: any; r: any } | null = null;
@@ -110,12 +110,7 @@ Deno.serve(async (req) => {
     /* resumo diário: toda manhã, mesmo sem alerta ("Nada vence hoje."). no domingo com resumo da semana, ele já cobre isso */
     const resumo = cfg?.cfg?.resumoDiario !== false && on("resumo");
     let diario: any = null;
-    if (lista.length || (resumo && !sem)) {
-      if (!lista.length) lista.push("Nada vence hoje.");
-      const corpo = discreto ? lista.map(semValores) : lista;
-      const title = corpo.length === 1 ? "GranaViva" : `GranaViva · ${corpo.length} alertas`;
-      diario = { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje };
-    }
+    if (lista.length || (resumo && !sem)) diario = diarioPayload(lista, discreto, hoje);
     if (!diario && !sem && !gd) continue;
     usuarios++;
     if (dry) { simulado.push({ usuario: uid.slice(0, 8), aparelhos: porUser[uid].length, discreto, diario, semana: sem && { payload: sem.payload, numeros: { ...sem.r, venc: sem.r.venc.length } }, orcNovos: novos.map((o) => o.chave), guardar: gd }); continue; }

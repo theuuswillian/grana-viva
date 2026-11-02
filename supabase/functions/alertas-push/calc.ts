@@ -141,10 +141,10 @@ export function textoSemana(r: ReturnType<typeof resumoSemana>, discreto: boolea
 
 // ---------- orçamento do mês (mesma base da aba Orçamentos: despesas efetivas da categoria no mês, cartão pela data da compra,
 // sem as faturas; limite = registro mensal mais recente até o mês, senão o padrão). um aviso ao passar de 80% e outro ao estourar.
-export function orcamentos(D: Dados, hoje: string): { chave: string; txt: string; cat: string; nivel: number }[] {
+export function orcamentos(D: Dados, hoje: string): { chave: string; txt: string; disc: string; cat: string; nivel: number }[] {
   const cfg = D.cfg;
   if (cfg?.cfg?.notif && cfg.cfg.notif.orc === false) return [];
-  const mes = hoje.slice(0, 7), out: { chave: string; txt: string; cat: string; nivel: number }[] = [];
+  const mes = hoje.slice(0, 7), out: { chave: string; txt: string; disc: string; cat: string; nivel: number }[] = [];
   const om = cfg?.orcMes && typeof cfg.orcMes === "object" ? cfg.orcMes : {};
   const k = Object.keys(om).filter((x) => /^\d{4}-\d{2}$/.test(x) && x <= mes).sort().pop();
   const orc = (k ? om[k] : cfg?.orc) || {};
@@ -159,16 +159,19 @@ export function orcamentos(D: Dados, hoje: string): { chave: string; txt: string
       else if (t.categoria === cat) g += cents(t.valor);
     }
     const p = g / 100 / lim * 100;
-    if (p >= 100) out.push({ chave: `orc|${cat}|${mes}|100`, txt: `Orçamento de ${cat} estourou · ${brl(g / 100)} de ${brl(lim)}`, cat, nivel: 100 });
-    else if (p >= 80) out.push({ chave: `orc|${cat}|${mes}|80`, txt: `Orçamento de ${cat} em ${Math.floor(p)}% · ${brl(g / 100)} de ${brl(lim)}`, cat, nivel: 80 });
+    if (p >= 100) out.push({ chave: `orc|${cat}|${mes}|100`, txt: `Orçamento de ${cat} estourou · ${brl(g / 100)} de ${brl(lim)}`, disc: "orc|100", cat, nivel: 100 });
+    else if (p >= 80) out.push({ chave: `orc|${cat}|${mes}|80`, txt: `Orçamento de ${cat} em ${Math.floor(p)}% · ${brl(g / 100)} de ${brl(lim)}`, disc: "orc|80", cat, nivel: 80 });
   }
   return out;
 }
 
 // ---------- alertas do dia: faturas, contas fixas, previstos e empréstimos
-export function alertas(D: Dados, hoje: string): string[] {
+// v10.94: cada alerta tem a versão discreta (sem valor e sem nome de cartão, conta, pessoa ou categoria) para a tela bloqueada
+export type Alerta = { txt: string; disc: string };
+export function alertas(D: Dados, hoje: string): string[] { return alertasD(D, hoje).map((x) => x.txt); }
+export function alertasD(D: Dados, hoje: string): Alerta[] {
   const { tx, cartoes, cfg } = D;
-  const out: string[] = [], pagDesde = cfg?.cfg?.pagDesde, gerados = cfg?.gerados || {};
+  const out: Alerta[] = [], pagDesde = cfg?.cfg?.pagDesde, gerados = cfg?.gerados || {};
   const on = (k: string) => !(cfg?.cfg?.notif && cfg.cfg.notif[k] === false);
   const N = [0, 1, 2, 3, 5, 7].includes(+cfg?.cfg?.avisoDias) ? +cfg.cfg.avisoDias : 3;
   const emN = (d: number) => `vence em ${d} dias`;
@@ -190,10 +193,10 @@ export function alertas(D: Dados, hoje: string): string[] {
       const resto = (somas[k].c - cents(fat?.pagoValor)) / 100;
       if (resto <= 0.009) continue;
       const d = dias(hoje, vence), nome = c.nome || "cartão";
-      if (N > 1 && d === N && on("fatVence")) out.push(`Fatura ${nome} ${emN(d)} (${fmt(vence)}) · ${brl(resto)}`);
-      else if (d === 1 && on("fatVence")) out.push(`Fatura ${nome} vence amanhã · ${brl(resto)}`);
-      else if (d === 0 && on("fatVence")) out.push(`Fatura ${nome} vence hoje · ${brl(resto)}`);
-      else if ((d === -1 || d === -3 || d === -7) && on("fatAtras")) out.push(`Fatura ${nome} está atrasada desde ${fmt(vence)} · ${brl(resto)}`);
+      if (N > 1 && d === N && on("fatVence")) out.push({ txt: `Fatura ${nome} ${emN(d)} (${fmt(vence)}) · ${brl(resto)}`, disc: `fatura|${emN(d)}` });
+      else if (d === 1 && on("fatVence")) out.push({ txt: `Fatura ${nome} vence amanhã · ${brl(resto)}`, disc: "fatura|vence amanhã" });
+      else if (d === 0 && on("fatVence")) out.push({ txt: `Fatura ${nome} vence hoje · ${brl(resto)}`, disc: "fatura|vence hoje" });
+      else if ((d === -1 || d === -3 || d === -7) && on("fatAtras")) out.push({ txt: `Fatura ${nome} está atrasada desde ${fmt(vence)} · ${brl(resto)}`, disc: "fatura|atrasada" });
     }
   }
   const amanha = addDias(hoje, 1), diaN = addDias(hoje, N);
@@ -201,27 +204,27 @@ export function alertas(D: Dados, hoje: string): string[] {
     if (f.tipo === "receita") continue;
     const pago = (o: any) => { const t = tx.find((x) => x.fixaKey === o.key); return !!t && t.status !== "previsto"; };
     const oH = occ(f, hoje), oA = occ(f, amanha), oN = N > 1 ? occ(f, diaN) : null;
-    if (oH && !pago(oH)) out.push(`Conta fixa ${f.nome} vence hoje · ${brl(+f.valor || 0)}`);
-    else if (oA && !pago(oA)) out.push(`Conta fixa ${f.nome} vence amanhã · ${brl(+f.valor || 0)}`);
-    else if (oN && !pago(oN)) out.push(`Conta fixa ${f.nome} ${emN(N)} (${fmt(diaN)}) · ${brl(+f.valor || 0)}`);
+    if (oH && !pago(oH)) out.push({ txt: `Conta fixa ${f.nome} vence hoje · ${brl(+f.valor || 0)}`, disc: "fixa|vence hoje" });
+    else if (oA && !pago(oA)) out.push({ txt: `Conta fixa ${f.nome} vence amanhã · ${brl(+f.valor || 0)}`, disc: "fixa|vence amanhã" });
+    else if (oN && !pago(oN)) out.push({ txt: `Conta fixa ${f.nome} ${emN(N)} (${fmt(diaN)}) · ${brl(+f.valor || 0)}`, disc: `fixa|${emN(N)}` });
   }
   for (const t of (on("previstos") ? tx : [])) {
     if (t.status !== "previsto" || t.tipo !== "despesa" || t.cartao || t.fxAuto || typeof t.data !== "string") continue;
     if (t.fixaKey && (cfg?.fixas || []).some((f: any) => (t.data === hoje || t.data === amanha || (N > 1 && t.data === diaN)) && occ(f, t.data)?.key === t.fixaKey)) continue; // já avisado acima
     const d = dias(hoje, t.data), nome = t.descricao || t.categoria || "conta";
-    if (d === 0) out.push(`${nome} vence hoje · ${brl(+t.valor || 0)}`);
-    else if (d === 1) out.push(`${nome} vence amanhã · ${brl(+t.valor || 0)}`);
-    else if (N > 1 && d === N) out.push(`${nome} ${emN(d)} (${fmt(t.data)}) · ${brl(+t.valor || 0)}`);
-    else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasada desde ${fmt(t.data)} · ${brl(+t.valor || 0)}`);
+    if (d === 0) out.push({ txt: `${nome} vence hoje · ${brl(+t.valor || 0)}`, disc: "conta|vence hoje" });
+    else if (d === 1) out.push({ txt: `${nome} vence amanhã · ${brl(+t.valor || 0)}`, disc: "conta|vence amanhã" });
+    else if (N > 1 && d === N) out.push({ txt: `${nome} ${emN(d)} (${fmt(t.data)}) · ${brl(+t.valor || 0)}`, disc: `conta|${emN(d)}` });
+    else if (d === -1 || d === -3 || d === -7) out.push({ txt: `${nome} está atrasada desde ${fmt(t.data)} · ${brl(+t.valor || 0)}`, disc: "conta|atrasada" });
   }
   for (const e of (on("previstos") ? cfg?.emprestimos || [] : [])) {
     if (typeof e?.prev !== "string" || !e.prev) continue;
     const ab = empAberto(D, e.id); if (ab <= 0) continue;
     const d = dias(hoje, e.prev), nome = String(e.pessoa || "alguém").slice(0, 40);
-    if (d === 0) out.push(`${nome} combinou de devolver hoje · falta ${brl(ab)}`);
-    else if (d === 1) out.push(`${nome} combinou de devolver amanhã · falta ${brl(ab)}`);
-    else if (N > 1 && d === N) out.push(`${nome} combinou de devolver em ${d} dias (${fmt(e.prev)}) · falta ${brl(ab)}`);
-    else if (d === -1 || d === -3 || d === -7) out.push(`${nome} está atrasado desde ${fmt(e.prev)} · falta ${brl(ab)}`);
+    if (d === 0) out.push({ txt: `${nome} combinou de devolver hoje · falta ${brl(ab)}`, disc: "emp|hoje" });
+    else if (d === 1) out.push({ txt: `${nome} combinou de devolver amanhã · falta ${brl(ab)}`, disc: "emp|amanhã" });
+    else if (N > 1 && d === N) out.push({ txt: `${nome} combinou de devolver em ${d} dias (${fmt(e.prev)}) · falta ${brl(ab)}`, disc: `emp|em ${d} dias` });
+    else if (d === -1 || d === -3 || d === -7) out.push({ txt: `${nome} está atrasado desde ${fmt(e.prev)} · falta ${brl(ab)}`, disc: "emp|atrasada" });
   }
   return out;
 }
@@ -256,4 +259,36 @@ export function textoGuardar(L: { nome: string; txt: string }[], discreto: boole
   const title = "GranaViva · dia de guardar";
   if (discreto) return { title, body: L.length === 1 ? "Hoje é dia de guardar para uma meta. Toque para ver." : `Hoje é dia de guardar para ${L.length} metas. Toque para ver.` };
   return { title, body: L.slice(0, 4).map((x) => x.txt).join("\n") + (L.length > 4 ? `\n+${L.length - 4} no app` : "") };
+}
+
+// v10.94: texto discreto. agrupa alertas iguais ("2 faturas vencem hoje") e nunca leva valor nem nome.
+const DISC: Record<string, [string, (n: number) => string]> = {
+  fatura: ["Uma fatura de cartão", (n) => `${n} faturas de cartão`],
+  fixa: ["Uma conta fixa", (n) => `${n} contas fixas`],
+  conta: ["Uma conta prevista", (n) => `${n} contas previstas`],
+};
+export function textoDiscreto(k: string, n: number): string {
+  const [g, q] = [k.slice(0, k.indexOf("|")), k.slice(k.indexOf("|") + 1)];
+  if (g === "orc") return n > 1 ? `${n} orçamentos ${q === "100" ? "estouraram" : "passaram de 80%"}` : `Um orçamento ${q === "100" ? "estourou" : "passou de 80%"}`;
+  if (g === "emp") {
+    if (q === "atrasada") return n > 1 ? `${n} devoluções de empréstimo estão atrasadas` : "Uma devolução de empréstimo está atrasada";
+    return n > 1 ? `${n} devoluções de empréstimo combinadas para ${q}` : `Uma devolução de empréstimo combinada para ${q}`;
+  }
+  if (g === "nada") return "Nada vence hoje.";
+  const D0 = DISC[g] || ["Um aviso", (x: number) => `${x} avisos`];
+  if (q === "atrasada") return n > 1 ? `${D0[1](n)} estão atrasadas` : `${D0[0]} está atrasada`;
+  const verbo = n > 1 ? q.replace(/^vence/, "vencem") : q;
+  return n > 1 ? `${D0[1](n)} ${verbo}` : `${D0[0]} ${verbo}`;
+}
+export function linhasDiscretas(L: Alerta[]): string[] {
+  const ord: string[] = [], n: Record<string, number> = {};
+  for (const x of L) { if (!(x.disc in n)) { ord.push(x.disc); n[x.disc] = 0; } n[x.disc]++; }
+  return ord.map((k) => textoDiscreto(k, n[k]));
+}
+/* corpo do resumo diário (título + texto). discreto: só tipos e prazos, sem R$ e sem nomes */
+export function diarioPayload(L: Alerta[], discreto: boolean, hoje: string) {
+  if (!L.length) L = [{ txt: "Nada vence hoje.", disc: "nada|" }];
+  const corpo = discreto ? linhasDiscretas(L) : L.map((x) => x.txt);
+  const title = L.length === 1 ? "GranaViva" : `GranaViva · ${L.length} alertas`;
+  return { title, body: corpo.slice(0, 4).join("\n") + (corpo.length > 4 ? `\n+${corpo.length - 4} no app` : ""), url: "./?alertas=1", tag: "gv-" + hoje };
 }
