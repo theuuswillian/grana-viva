@@ -4,6 +4,7 @@
 // Autenticação: ?k=<webhook_secret> na URL (comparação em tempo constante) + itemId tem que ser do usuário.
 // Responde 2xx na hora e faz o trabalho em EdgeRuntime.waitUntil (o Pluggy exige resposta em até ~10 s).
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { registraErro } from "../_shared/erros.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const API = "https://api.pluggy.ai";
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
   if (!cfg) return txt("no", 401); // 401 não é reenviado pelo Pluggy
   if (!ev?.event || !ev.itemId) return txt("ok"); // eventos sem item (connector/status_updated etc.) são ignorados
   if (!(cfg.item_ids || []).includes(String(ev.itemId))) return txt("ignored"); // item de outra pessoa / removido
-  const p = abre(cfg).then(c => processa(c, ev)).catch(e => console.error("pluggy-webhook", ev.event, String((e as Error)?.message || e)));
+  const p = abre(cfg).then(c => processa(c, ev)).catch(e => { console.error("pluggy-webhook", ev.event, String((e as Error)?.message || e)); return registraErro(sb, "pluggy-webhook", String(ev.event), e); });
   try { (globalThis as any).EdgeRuntime.waitUntil(p); } catch (_) { await p; }
   return txt("ok");
 });
