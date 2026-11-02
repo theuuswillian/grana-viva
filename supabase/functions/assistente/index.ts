@@ -12,7 +12,7 @@ const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Or
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 const LIMITE_HORA = 15; // por dia: GVP.limite(nivel, "assistente_dia") (Pro: 30)
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
-import "./planos.js";
+import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
 async function planoDe(uid: string) {
   const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
