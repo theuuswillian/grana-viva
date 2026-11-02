@@ -246,7 +246,7 @@ function retornoAssinatura(){
 }
 
 const FREQS=['diaria','semanal','quinzenal','mensal','anual','intervalo'],ISO_RE=/^\d{4}-\d{2}-\d{2}$/;
-function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},bens:[],passivos:[],patHist:{},fiis:[],metaFii:100,metas:[],cartoes:[],bancos:[],fixas:[],emprestimos:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
+function vazio(){return {tx:[],cats:CATS_PADRAO.slice(),catIcons:{},catCores:{},orc:{},orcMes:{},bens:[],passivos:[],patHist:{},fiis:[],metas:[],cartoes:[],bancos:[],fixas:[],emprestimos:[],gerados:{},cfg:{tema:'escuro',accent:'verde'}};}
 /* saneamento: tudo que vem do aparelho, da nuvem ou de um backup passa por aqui.
    garante tipos (números, datas, ids seguros) e impede que um backup adulterado injete HTML pelos ids/cores. */
 const ID_OK=/^[A-Za-z0-9_|:.\-]{1,80}$/;
@@ -267,7 +267,7 @@ function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
-  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
   /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
   o.metas=saneaAlocacoes(o.metas.map(m=>{const x=Object.assign({},m);['ativos','planos','aportes','diaAporte','cripMax','ipca','alvoBase','alvoEm','baseEm','baseN','apDest','apConta','apFonte','criadoEm','fipe'].forEach(k=>delete x[k]);return Object.assign(x,saneaMetaExtra(m));}));
@@ -313,10 +313,16 @@ function sanea(d){
   o.catCores={};Object.entries(obj(d&&d.catCores)).forEach(([k,v])=>{if(COR_OK.test(String(v)))o.catCores[str(k,60)]=v;});
   o.catIcons={};Object.entries(obj(d&&d.catIcons)).forEach(([k,v])=>{if(ICONS[v]||(typeof v==='string'&&v.length<=8&&EMO_RE.test(v)))o.catIcons[str(k,60)]=v;});
   o.gerados=obj(o.gerados);
-  o.metaFii=n0(o.metaFii)>0?n0(o.metaFii):100;
   o.cfgTs={};Object.entries(obj(d&&d.cfgTs)).forEach(([k,v])=>{if(n0(v)>0&&k.length<=60)o.cfgTs[k]=n0(v);});
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
   if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
+  /* v10.95: a "meta de cotas" saiu de Investimentos. o número antigo (metaFii, de backups e da nuvem antiga) não se perde:
+     fica em cfg.metaCotas {n, fim:''|'criada'|'dispensada'} e a aba Metas oferece virar uma meta comum (só se for diferente de 100, o padrão) */
+  {const mf=Math.round(n0(o.metaFii)*1e4)/1e4,mc=obj(o.cfg.metaCotas),n=Math.round(n0(mc.n)*1e4)/1e4;
+   if(mf>0&&mf!==100&&mf!==n)o.cfg.metaCotas={n:mf,fim:''};
+   else if(n>0)o.cfg.metaCotas={n,fim:['criada','dispensada'].includes(mc.fim)?mc.fim:'',...(mc.meta?{meta:sid(mc.meta)}:{})};
+   else delete o.cfg.metaCotas;
+   delete o.metaFii;}
   if(!ACCENTS[o.cfg.accent])o.cfg.accent='verde';
   if(o.cfg.pagDesde&&!DATA_OK.test(String(o.cfg.pagDesde)))o.cfg.pagDesde='';
   if(o.cfg.tema!=='claro'&&o.cfg.tema!=='preto')o.cfg.tema='escuro';
@@ -450,7 +456,7 @@ let SNAP=null,syncFalhas=0;
 function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return t.length+':'+h;}
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
-function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},metaFii:S.metaFii,cfg:S.cfg,cfgTs:S.cfgTs||{},fixas:S.fixas||[],emprestimos:S.emprestimos||[],gerados:S.gerados||{}};}
+function cfgNuvem(){return {cats:S.cats,catIcons:S.catIcons||{},catCores:S.catCores||{},orc:S.orc,orcMes:S.orcMes||{},bens:S.bens||[],passivos:S.passivos||[],patHist:S.patHist||{},cfg:S.cfg,cfgTs:S.cfgTs||{},fixas:S.fixas||[],emprestimos:S.emprestimos||[],gerados:S.gerados||{}};}
 /* hash por chave dos ajustes (cfg entra campo a campo) para saber o que este aparelho mudou */
 const hashV=v=>v===undefined?'u':hashObj(v);
 /* v10.54: cada ajuste guarda quando foi mudado neste aparelho (cfgTs); na junção com a nuvem vence o mais recente,
@@ -477,7 +483,8 @@ async function juntaCfgRemoto(){
   });
   {const ts=Object.assign({},tL);Object.keys(tR).forEach(k=>{if((+tR[k]||0)>(+ts[k]||0))ts[k]=+tR[k];});if(hashV(ts)!==hashV(tL)){S.cfgTs=ts;toma.cfgTs=ts;}}
   if(!Object.keys(toma).length&&!Object.keys(tomaCfg).length)return false;
-  const z=sanea(Object.assign({},loc,toma,{cfg:Object.assign({},loc.cfg,tomaCfg)}));
+  const z=sanea(Object.assign({},loc,toma,{metaFii:rem.metaFii,cfg:Object.assign({},loc.cfg,tomaCfg)})); // v10.95: aparelho antigo ainda grava metaFii
+  if(hashV(z.cfg.metaCotas)!==hashV(S.cfg.metaCotas)&&!('metaCotas' in tomaCfg))tomaCfg.metaCotas=1;
   Object.keys(toma).forEach(k=>{S[k]=z[k];});
   Object.keys(tomaCfg).forEach(j=>{S.cfg[j]=z.cfg[j];});
   zeraCfgH();
@@ -987,7 +994,6 @@ function cryptoIco(t){
 }
 const patrimonio=()=>S.fiis.reduce((a,f)=>a+cents(f.cotas*f.preco),0)/100;
 const divMensal=()=>S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?cents(f.cotas*f.dpc):0),0)/100;
-const cotasTotal=()=>S.fiis.reduce((a,f)=>a+(tipoOf(f)==='cripto'?0:f.cotas),0);
 function proximoPag(){
   const now=new Date(),h0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   let best=null;
@@ -1460,6 +1466,32 @@ function assinNome(n){
   if(s===s.toUpperCase()||s===s.toLowerCase())s=s.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());
   return s.slice(0,60);
 }
+/* v10.95: cobranças recorrentes em dois grupos.
+   "Assinaturas": valor estável, mesma loja, no cartão ou débito (ou serviço conhecido: streaming, apps, academia, telefonia).
+   "Contas do mês": aluguel, condomínio, luz, água, gás, internet de casa, mercado, escola, plano de saúde... (o valor pode variar até ~40%).
+   fora: dinheiro, variação acima de ~40%, e lazer/restaurante/delivery que não são assinatura. o alerta "subiu X%" é só das assinaturas.
+   as chaves salvas continuam as mesmas: f.assinatura, f.assinKey, cfg.assinIgnora, cfg.assinVisto. */
+const ASSIN_VAR=0.4;
+const ASSIN_CONTA_CAT=/moradia|contas? da casa|aluguel|condom|mercado|supermerc|feira|educa|escola|faculdade|plano de saude|seguro|imposto|agua|luz|energia|\bgas\b|internet e celular/;
+const ASSIN_CONTA_KW=/aluguel|condominio|\bluz\b|energia|eletric|enel\b|cemig|copel|light\b|neoenergia|celpe|coelba|cosern|equatorial|energisa|\bagua\b|saneamento|sabesp|caesb|copasa|cedae|embasa|compesa|sanepar|\bgas\b|comgas|naturgy|iptu|ipva|supermerc|mercado|atacad|assai|carrefour|hortifruti|sacolao|escola|colegio|faculdade|mensalidade|plano de saude|unimed|amil|hapvida|seguro|financiamento|consorcio/;
+const ASSIN_LAZER=/lazer|restaurant|delivery|lanche|lanchonete|\bbar\b|ifood|rappi|cinema|ingresso|pizza|burger|padaria|cafe\b|cafeteria|entretenimento|viagem|uber|99 ?app|taxi/;
+const ASSIN_SERV=/netflix|spotify|disney|hbo|\bmax\b|prime ?video|amazon ?prime|youtube|apple|icloud|google ?one|google ?storage|deezer|globoplay|paramount|crunchyroll|chatgpt|openai|microsoft|office ?365|adobe|canva|smart ?fit|academia|gympass|wellhub|assinatura|streaming|\bvivo\b|\bclaro\b|\btim\b|\boi\b/;
+function assinDinheiro(t){if(t.forma==='dinheiro')return true;const c=t.conta||contaDoLanc(t);if(!c)return false;const b=(S.bancos||[]).find(x=>x.id===c);return !!(b&&b.tipo==='Dinheiro');}
+function assinCartaoDeb(t){if(t.cartao||t.forma==='cartao'||t.forma==='debito')return true;const n=norm((t.descricao||'')+' '+(t.sub||''));return /debito|compra no cartao|nupay/.test(n)&&!/\bpix\b|boleto/.test(n);}
+/* grupo de uma cobrança: 'assin' | 'conta' | '' (fora) */
+function assinGrupo(o){
+  const nm=norm((o.nome||'')+' '+(o.chave||'')+' '+(o.sub||'')),cat=norm(o.cat||'');
+  const serv=o.kw||ASSIN_SERV.test(nm)||/assinatura|streaming/.test(cat);
+  const conta=ASSIN_CONTA_CAT.test(cat)||ASSIN_CONTA_KW.test(nm),lazer=ASSIN_LAZER.test(cat)||ASSIN_LAZER.test(nm);
+  const vals=(o.vals||[]).map(Number).filter(v=>v>0),ant=vals.slice(0,-1).length?vals.slice(0,-1):vals;
+  const md=ant.length?ant.slice().sort((a,b)=>a-b)[ant.length>>1]:0,dentro=p=>md>0&&ant.every(v=>Math.abs(v-md)<=md*p);
+  const estavel=dentro(lazer?0.03:0.12); // lazer/restaurante/delivery só é assinatura com preço fixo (clube, plano)
+  if(serv&&!(conta&&!ASSIN_SERV.test(nm)))return 'assin';
+  if(conta&&!lazer)return 'conta';
+  if(estavel&&o.cartaoDeb)return 'assin';
+  return '';
+}
+function assinGrupoFixa(f){return assinGrupo({nome:f.nome,chave:f.assinKey||'',cat:f.categoria,vals:[f.valor],kw:false,cartaoDeb:f.forma==='cartao'||!!f.cartao})||(f.forma==='cartao'||f.cartao?'assin':'conta');}
 function detectaAssinaturas(tx,fixas,cfg,hoje){if(!tx&&!fixas&&!cfg&&!hoje)return memo('assin',()=>detectaAssinaturas0(),true);return detectaAssinaturas0(tx,fixas,cfg,hoje);}
 function detectaAssinaturas0(tx,fixas,cfg,hoje){
   tx=tx||S.tx;fixas=fixas||S.fixas||[];cfg=cfg||S.cfg||{};hoje=hoje||hojeISO();
@@ -1476,6 +1508,7 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     const nTx=norm(t.descricao||'')+' '+norm(t.sub||'');
     if(/pix (enviado|para|tef)|chave aleat|\bcpf\b|\bcnpj\b|[0-9a-f]{16,}/.test(nTx))return;
     if(/posto|combust|gasolina|etanol|\balcool\b|ipiranga|shell|petrobras|br mania|ale combust/.test(nTx))return;
+    if(assinDinheiro(t))return; // v10.95: compra em dinheiro (ou numa conta do tipo Dinheiro) não é cobrança recorrente
     (G[k]=G[k]||[]).push(t);
   });
   const out=[];
@@ -1486,7 +1519,7 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     if(meses.length<2||L.length>meses.length+1||meses.some(m=>porMes[m].length>2))return; // várias por mês (Uber, mercado): não é assinatura
     const seq=meses.map(m=>porMes[m][porMes[m].length-1]);
     const vals=seq.map(t=>+t.valor),mv=med(vals);
-    if(vals.some(v=>Math.abs(v-mv)>mv*0.25))return;
+    if(vals.some(v=>Math.abs(v-mv)>mv*ASSIN_VAR))return; // v10.95: variação acima de ~40% não é recorrente
     const gaps=seq.slice(1).map((t,i)=>Math.round((dt(t.data)-dt(seq[i].data))/864e5)),mg=med(gaps);
     if(mg<25||mg>35)return;
     const ult=seq[seq.length-1];if(ult.data<rec)return; // parou de cobrar
@@ -1494,6 +1527,8 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     const kw=ASSIN_KW.test(k)||ASSIN_KW.test(norm(nomeU))||ASSIN_KW.test(norm(ult.sub||''));
     const consec=meses.slice(1).some((m,i)=>{const [y0,m0]=meses[i].split('-').map(Number),[y1,m1]=m.split('-').map(Number);return (y1*12+m1)-(y0*12+m0)===1;});
     if(!(meses.length>=3||(kw&&consec)))return;
+    const grupo=assinGrupo({nome:nomeU,chave:k,cat:ult.categoria,sub:ult.sub,vals,kw,cartaoDeb:seq.every(assinCartaoDeb)});
+    if(!grupo)return;
     const dias=seq.map(t=>+t.data.slice(8,10)),dia=Math.round(med(dias));
     const coberta=fixas.some(f=>{if(f.tipo==='receita')return false;const fk=f.assinKey||assinChave(f.nome);if(assinParecidas(fk,k))return true;
       const dd=Math.abs((+f.dia||1)-dia),dc=Math.min(dd,31-dd);return Math.abs((+f.valor||0)-ult.valor)<=(+f.valor||0)*0.05&&dc<=3;});
@@ -1501,7 +1536,7 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     const vA=+ult.valor,prev=seq.length>1?+seq[seq.length-2].valor:null;
     let vAnt=null;for(let i=seq.length-2;i>=0;i--){if(Math.round(seq[i].valor*100)!==Math.round(vA*100)){vAnt=+seq[i].valor;break;}}
     const aumento=prev&&vA>prev*1.03&&vA-prev>=0.5?Math.floor((vA/prev-1)*100):0;
-    out.push({key:k,nome:assinNome(String(nomeU||k))||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento});
+    out.push({key:k,nome:assinNome(String(nomeU||k))||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento:grupo==='assin'?aumento:0,grupo});
   });
   return out.sort((a,b)=>b.valorAtual-a.valorAtual);
 }
@@ -1511,8 +1546,9 @@ function assinRastreadas(){
   return (S.fixas||[]).filter(f=>f.assinatura&&f.tipo!=='receita').map(f=>{
     const k=f.assinKey||assinChave(f.nome);
     const t=S.tx.filter(x=>x.tipo==='despesa'&&!x.fixaKey&&!x.faturaKey&&x.status!=='cancelado'&&x.status!=='previsto'&&x.data&&x.data.slice(0,7)===m&&assinParecidas(assinChave(x.descricao||''),k)).sort((a,b)=>a.data<b.data?1:-1)[0];
-    const subiu=t&&t.valor>f.valor*1.03&&t.valor-f.valor>=0.5?Math.floor((t.valor/f.valor-1)*100):0;
-    return {f,k,t,subiu};
+    const grupo=assinGrupoFixa(f);
+    const subiu=grupo==='assin'&&t&&t.valor>f.valor*1.03&&t.valor-f.valor>=0.5?Math.floor((t.valor/f.valor-1)*100):0;
+    return {f,k,t,subiu,grupo};
   });
 }
 /* assinatura virou conta fixa: o lançamento previsto da fixa sai quando a cobrança real do mês já entrou (não conta duas vezes) */
@@ -1538,14 +1574,16 @@ function assinHTML(){
   const C=detectaAssinaturas(),R=assinRastreadas();ASSIN_C=C;
   if(!C.length&&!R.length)return '';
   const mes=R.reduce((a,x)=>a+cents(mensalEq(x.f)),0)/100+C.reduce((a,c)=>a+cents(c.valorAtual),0)/100,n=C.length+R.length;
+  const somaG=g=>(R.filter(x=>x.grupo===g).reduce((a,x)=>a+cents(mensalEq(x.f)),0)+C.filter(c=>c.grupo===g).reduce((a,c)=>a+cents(c.valorAtual),0))/100;
   const row=(ic,cc,nome,info,val,badge,id)=>`<div class="rmRow asRow"><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(nome)}</b><small>${info}</small></div><div class="hvR"><span class="rmV nw">${brl(val)}</span>${badge}</div><button class="asMais" data-act="assin-menu" data-id="${esc(id)}" aria-label="opções da cobrança ${esc(nome)}">${I('more')}</button></div>`;
   const bdg=p=>p?`<span class="hvQ ${p>=10?'late':'soon'}">subiu ${p}%</span>`:'';
-  const lin=R.map(x=>row(catIcon(x.f.categoria),corCat(x.f.categoria),x.f.nome,`dia ${x.f.dia} · conta fixa`,x.f.valor,bdg(x.subiu),'f:'+x.f.id))
-    .concat(C.map(c=>row(catIcon(c.categoria),corCat(c.categoria),c.nome,`dia ${c.dia} · ${c.mesesVistos} meses seguidos`,c.valorAtual,bdg(c.aumento),'c:'+c.key)));
+  const linG=g=>R.filter(x=>x.grupo===g).map(x=>row(catIcon(x.f.categoria),corCat(x.f.categoria),x.f.nome,`dia ${x.f.dia} · conta fixa`,x.f.valor,bdg(x.subiu),'f:'+x.f.id))
+    .concat(C.filter(c=>c.grupo===g).map(c=>row(catIcon(c.categoria),corCat(c.categoria),c.nome,`dia ${c.dia} · ${c.mesesVistos} meses seguidos${g==='conta'&&c.valorAnterior?' · varia':''}`,c.valorAtual,bdg(c.aumento),'c:'+c.key)));
+  const sec=(g,tit,sub)=>{const L=linG(g);if(!L.length)return '';const v=somaG(g);
+    return `<div class="asSec asSec-${g}"><div class="asSecH"><h5>${tit}</h5><span class="nw">${L.length} · ${brl(v)}/mês</span></div>${sub?`<p class="asAno">${sub(v)}</p>`:''}${L.slice(0,6).join('')}${L.length>6?`<p class="hmNota">+${L.length-6} ${L.length-6>1?'cobranças':'cobrança'}</p>`:''}</div>`;};
   return `<div class="card hmAssin"><div class="hmH"><h4>cobranças recorrentes</h4><span class="hmSub">${n} · ${brl(mes)}/mês</span></div>
-    <p class="asAno">${brl(Math.round(mes*1200)/100)} por ano</p>
-    ${lin.slice(0,8).join('')}
-    ${lin.length>8?`<p class="hmNota">+${lin.length-8} ${lin.length-8>1?'cobranças':'cobrança'}</p>`:''}
+    ${sec('assin','Assinaturas',v=>brl(Math.round(v*1200)/100)+' por ano')}
+    ${sec('conta','Contas do mês',null)}
     ${C.length?'<p class="hmNota">detectadas pelas cobranças mensais. use o menu para virar conta fixa ou dispensar.</p>':''}
   </div>`;
 }
@@ -2265,7 +2303,7 @@ function opForm(fid,tipo,deCard){
     {name:'valor',label:'Valor recebido (R$)',value:esp?num(esp):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'data',label:'Data',type:'date',value:hojeISO(),required:true},
     contaCampo()
-  ]:[
+  ].concat(rvPode(f)?[{type:'html',html:rvBlocoHTML(f)}]:[]):[
     {name:'qtd',label:cri?'Quantidade':'Cotas',required:true,inputmode:'decimal',placeholder:'0'},
     {name:'preco',label:'Preço por '+(cri?'unidade':'cota')+' (R$)',value:f.preco?num(f.preco):'',required:true,inputmode:'decimal',placeholder:'0,00'},
     {name:'taxas',label:'Taxas e corretagem (R$)',inputmode:'decimal',placeholder:'0,00'},
@@ -2283,8 +2321,16 @@ function opForm(fid,tipo,deCard){
       if(!(op.preco>0))return 'Informe o preço.';
       if(op.taxas<0)return 'Taxas não podem ser negativas.';
     }
+    /* v10.95: reinvestir o provento em cotas inteiras (opcional "completar" com dinheiro da conta para +1 cota) */
+    const rv=tipo==='provento'&&rvPode(f)&&$('#rvOn')&&$('#rvOn').checked?rvCalc(op.valor,f.preco,!!($('#rvCompl')&&$('#rvCompl').checked)):null;
+    if(rv){
+      if(!(v.conta&&S.bancos.some(b=>b.id===v.conta)))return 'Escolha a conta onde o provento entra para reinvestir.';
+      if(!(rv.n>=1))return 'O provento não compra 1 cota inteira. Marque "completar" para comprar com dinheiro da conta.';
+    }
     garanteInicial(f);
-    const r=calcOps(f.ops.concat(op));if(r.erro)return r.erro;
+    const opC=rv?{id:uid(),tipo:'compra',data:v.data,qtd:rv.n,preco:c2(f.preco),taxas:0,valor:0,custo:0}:null;
+    if(rv){op.g=opC.g=uid();}
+    const r=calcOps(f.ops.concat(opC?[op,opC]:[op]));if(r.erro)return r.erro;
     if((tipo==='provento'||tipo==='venda')&&v.conta&&S.bancos.some(b=>b.id===v.conta)){
       const liq=tipo==='provento'?op.valor:c2((cents(op.qtd*op.preco)-cents(op.taxas))/100);
       if(liq>0){
@@ -2297,19 +2343,86 @@ function opForm(fid,tipo,deCard){
       }
     }
     if(tipo==='compra'&&v.conta&&S.bancos.some(b=>b.id===v.conta))op.conta=v.conta;
-    f.ops.push(op);aplicaOps(f);
+    f.ops.push(op);
+    if(opC){
+      /* a compra sai da mesma conta como transferência para o investimento (aplicação): não conta como gasto */
+      opC.tx='inv-'+opC.id;
+      S.tx.push({id:opC.tx,tipo:'transf',valor:rv.custo,categoria:'Investimentos',de:'b:'+v.conta,para:'',forma:'',conta:'',cartao:'',data:opC.data,
+        descricao:'Compra '+f.ticker+' ('+rv.n+(rv.n>1?' cotas':' cota')+') · reinvestimento',invOp:f.id+'|'+opC.id});
+      f.ops.push(opC);
+    }
+    aplicaOps(f);
     if(tipo!=='provento'&&f.cotFonte!=='brapi'&&!cri){f.preco=op.preco;f.cotFonte='manual';f.cotEm='';}
-    salvar();render();if(!deCard)setTimeout(()=>historico(fid),30);toast(tipo==='provento'?'Provento de '+f.ticker+' registrado'+(op.tx?' · entrou na conta':''):OP_L[tipo]+' registrada');
+    salvar();render();if(!deCard)setTimeout(()=>historico(fid),30);
+    if(opC){const g=op.g;setTimeout(()=>alDesfazer('Provento recebido · '+rv.n+(rv.n>1?' cotas compradas':' cota comprada'),()=>rvDesfaz(fid,g)),0);}
+    else toast(tipo==='provento'?'Provento de '+f.ticker+' registrado'+(op.tx?' · entrou na conta':''):OP_L[tipo]+' registrada');
   });
   /* v10.91: provento com cabeçalho do ativo e a conta do valor esperado */
   if(tipo==='provento'){const mf=$('#mf');if(!mf)return;mf.closest('.sheet').classList.add('pvSheet');
     const pp=proxPags(45).find(q=>q.f===f);
     mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
     const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar provento';
-    const sc=mf.querySelector('[name="conta"]');if(sc&&sc.closest('label')&&sc.closest('label').firstChild)sc.closest('label').firstChild.textContent='Entrou na conta (vira receita)';}
+    const sc=mf.querySelector('[name="conta"]');if(sc&&sc.closest('label')&&sc.closest('label').firstChild)sc.closest('label').firstChild.textContent='Entrou na conta (vira receita)';
+    if(rvPode(f))rvLiga(f);}
+}
+/* ---------- v10.95: reinvestir provento ----------
+   provento ÷ cotação atual = cotas inteiras; o que sobra fica na conta. "completar" usa dinheiro da conta para +1 cota.
+   ao confirmar: provento = receita na conta, compra = transferência da conta para o ativo (não é gasto), cotas e preço médio pelo histórico.
+   provento e compra ficam ligados (op.g): desfazer ou excluir um tira os dois. vale para FIIs, ações, ETFs e BDRs. */
+function rvPode(f){const t=tipoOf(f);return ['fii','acao','etf','bdr'].includes(t)&&f.preco>0;}
+function rvCalc(valor,preco,compl){
+  const vc=cents(valor),pc=cents(preco);if(!(vc>0)||!(pc>0))return {n:0,custo:0,sobra:c2(valor||0),falta:0,base:0};
+  const base=Math.floor(vc/pc),faltaC=(base+1)*pc-vc,exato=vc%pc===0;
+  const n=compl&&!exato?base+1:base,custoC=n*pc;
+  return {n,base,custo:custoC/100,sobra:(vc-custoC)/100,falta:exato?0:faltaC/100,compl:!!(compl&&!exato)};
+}
+function rvCotTxt(f){
+  if((f.cotFonte==='brapi'||f.cotFonte==='b3')&&f.cotEm){const d=new Date(f.cotEm);if(!isNaN(d))return 'cotação de '+['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1);}
+  return 'preço informado por você';
+}
+function rvBlocoHTML(f){
+  return `<div class="rvBox" id="rvBox"><label class="rvTg"><span class="rvTgT"><b>Reinvestir em cotas</b><small>compra cotas inteiras com o provento</small></span><input type="checkbox" id="rvOn" role="switch" aria-label="reinvestir em cotas"><i class="rvSw" aria-hidden="true"></i></label><div class="rvCalc" id="rvCalc" hidden></div></div>`;
+}
+function rvLiga(f){
+  const mf=$('#mf');if(!mf)return;
+  const on=$('#rvOn'),box=$('#rvCalc'),bt=mf.querySelector('button[type="submit"]'),vIn=mf.querySelector('[name="valor"]'),cIn=mf.querySelector('[name="conta"]');
+  let compl=false;
+  const pinta=()=>{
+    const ligado=on.checked;$('#rvBox').classList.toggle('on',ligado);box.hidden=!ligado;
+    if(bt)bt.textContent=ligado?'Receber e reinvestir':'Registrar provento';
+    if(!ligado)return;
+    const valor=c2(parseBR(vIn?vIn.value:0)||0),conta=cIn?cIn.value:'',bk=S.bancos.find(b=>b.id===conta);
+    const R=rvCalc(valor,f.preco,compl),pr=f.preco,q0=+f.cotas||0,pm0=q0>0&&f.pago>0?f.pago/q0:0;
+    const q1=q0+R.n,pm1=q1>0&&(f.pago>0||R.n>0)?((cents(f.pago||0)+cents(R.custo))/100)/q1:0;
+    const nT=x=>num(x).replace(/,00$/,'');const ct=n=>n+(n===1?' cota':' cotas');
+    const fl=R.compl?R.custo-valor:R.falta;
+    const semConta=!bk?`<p class="rvAviso">${I('alert')}<span>Escolha acima a conta onde o provento entra: a compra sai dela.</span></p>`:'';
+    const zero=!(R.n>=1)?`<p class="rvAviso">${I('alert')}<span>${valor>0?'O provento não compra 1 cota inteira de '+esc(f.ticker)+'.':'Informe o valor recebido.'}</span></p>`:'';
+    box.innerHTML=`<div class="rvTop"><span><b class="nw">${brl(valor)}</b> ÷ cota <span class="nw">${brl(pr)}</span></span><small>${esc(rvCotTxt(f))}</small></div>
+      <div class="rvTiles"><span><small>compra</small><b class="rvN">${ct(R.n)}</b></span><span><small>custo</small><b class="nw">${brl(R.custo)}</b></span><span><small>${R.sobra<0?'sai da conta':'sobra na conta'}</small><b class="nw">${brl(Math.abs(R.sobra))}</b></span></div>
+      ${fl>0||R.compl?`<label class="rvCompl${R.compl?' on':''}"><input type="checkbox" id="rvCompl" ${R.compl?'checked':''}><span><span class="rvCT">Completar com <b class="nw">${brl(fl)}</b> da conta para comprar mais 1 cota</span><small>${ct(R.compl?R.n:R.n+1)} por <span class="nw">${brl(R.compl?R.custo:R.custo+pr)}</span>, sem sobra${bk?' · saldo '+esc(bk.nome)+' '+brl(saldoBanco(bk)):''}</small></span></label>`:''}
+      <div class="rvAD"><div><small>hoje</small><b>${ct(nT(q0))}</b><em>preço médio <span class="nw">${pm0>0?brl(pm0):'—'}</span></em></div>${I('chevR')}<div class="rvDep"><small>depois</small><b>${ct(nT(q1))}</b><em>preço médio <span class="nw">${pm1>0?brl(pm1):'—'}</span></em></div></div>
+      <div class="rvRes"><p><span>Provento entra na conta</span><b class="nw pos">+ ${brl(valor)}</b></p><p><span>Compra de ${ct(R.n)} de ${esc(f.ticker)}</span><b class="nw">− ${brl(R.custo)}</b></p><p class="rvFica"><span>${R.sobra<0?'Sai da conta':'Fica na conta'}</span><b class="nw">${R.sobra<0?'− ':''}${brl(Math.abs(R.sobra))}</b></p></div>
+      ${semConta}${zero}`;
+    const ck=$('#rvCompl');if(ck)ck.onchange=()=>{compl=ck.checked;pinta();};
+  };
+  on.onchange=pinta;if(vIn)vIn.addEventListener('input',pinta);if(cIn)cIn.addEventListener('change',pinta);
+  pinta();
+}
+/* desfaz o "Receber e reinvestir": tira o provento, a compra e os dois lançamentos (receita e transferência) */
+function rvDesfaz(fid,g){
+  const f=S.fiis.find(x=>x.id===fid);if(!f||!g)return;
+  const sai=(f.ops||[]).filter(o=>o.g===g);if(!sai.length)return;
+  const txs=new Set(sai.map(o=>o.tx).filter(Boolean));
+  f.ops=f.ops.filter(o=>o.g!==g);S.tx=S.tx.filter(t=>!txs.has(t.id));aplicaOps(f);salvar();render();toast('Desfeito: provento e compra removidos');
 }
 function delOp(fid,oid){
   const f=S.fiis.find(x=>x.id===fid);if(!f)return;
+  const o0=(f.ops||[]).find(o=>o.id===oid);
+  if(o0&&o0.g&&(f.ops||[]).some(o=>o.g===o0.g&&o.id!==oid)){ // v10.95: provento reinvestido: provento e compra saem juntos
+    const resto=f.ops.filter(o=>o.g!==o0.g),r=calcOps(resto);if(r.erro){toast(r.erro);return;}
+    confirma({titulo:'Excluir o reinvestimento?',texto:'O provento e a compra das cotas foram registrados juntos e saem juntos, com os lançamentos na conta. Quantidade e preço médio serão recalculados.',ok:'Excluir os dois',perigo:true},()=>{const g=o0.g;const txs=new Set(f.ops.filter(o=>o.g===g).map(o=>o.tx).filter(Boolean));S.tx=S.tx.filter(t=>!txs.has(t.id));f.ops=f.ops.filter(o=>o.g!==g);aplicaOps(f);salvar();render();setTimeout(()=>historico(fid),30);toast('Reinvestimento excluído');});
+    return;}
   const resto=(f.ops||[]).filter(o=>o.id!==oid);const r=calcOps(resto);
   if(r.erro){toast(r.erro);return;}
   confirma({titulo:'Excluir operação?',texto:'Quantidade, preço médio e lucro serão recalculados.'+(((f.ops||[]).find(x=>x.id===oid)||{}).tx&&S.tx.some(t=>t.id===((f.ops||[]).find(x=>x.id===oid)||{}).tx)?' O valor lançado na conta também será removido.':''),ok:'Excluir',perigo:true},()=>{const o=(f.ops||[]).find(x=>x.id===oid);if(o&&o.tx)S.tx=S.tx.filter(t=>t.id!==o.tx);f.ops=resto;aplicaOps(f);salvar();render();setTimeout(()=>historico(fid),30);toast('Operação excluída');});
@@ -2321,7 +2434,7 @@ function historico(fid){
   const linha=o=>{
     const v=o.tipo==='provento'?o.valor:o.tipo==='inicial'?o.custo:o.qtd*o.preco;
     const det=o.tipo==='provento'?'':o.tipo==='inicial'?num(o.qtd).replace(/,00$/,'')+(cri?'':' cotas'):num(o.qtd).replace(/,00$/,'')+' × '+brl(o.preco)+(o.taxas?' + taxas '+brl(o.taxas):'');
-    return `<div class="tx opRow"><div class="txt"><b>${OP_L[o.tipo]}</b><small>${o.data?fmtData(o.data):'antes do histórico'}${det?' · '+det:''}${o.conta?' · pago com '+esc((S.bancos.find(b=>b.id===o.conta)||{}).nome||'conta removida'):''}${o.tx&&S.tx.some(t=>t.id===o.tx)?' · na conta '+esc(((S.bancos.find(b=>b.id===(x=>x.conta||String(x.para||'').slice(2))(S.tx.find(t=>t.id===o.tx)||{})))||{}).nome||''):''}</small></div><div class="val ${o.tipo==='venda'||o.tipo==='provento'?'pos':''}">${brl(v)}</div><div class="acts"><button data-act="del-op" data-id="${f.id}|${o.id}" title="excluir operação" aria-label="excluir operação">${I('trash')}</button></div></div>`;
+    return `<div class="tx opRow"><div class="txt"><b>${OP_L[o.tipo]}</b><small>${o.data?fmtData(o.data):'antes do histórico'}${det?' · '+det:''}${o.conta?' · pago com '+esc((S.bancos.find(b=>b.id===o.conta)||{}).nome||'conta removida'):''}${o.tx&&S.tx.some(t=>t.id===o.tx)?(o.tipo==='compra'?' · saiu de ':' · na conta ')+esc(((S.bancos.find(b=>b.id===(x=>x.conta||String(x.para||x.de||'').slice(2))(S.tx.find(t=>t.id===o.tx)||{})))||{}).nome||''):''}${o.g?' · reinvestimento':''}</small></div><div class="val ${o.tipo==='venda'||o.tipo==='provento'?'pos':''}">${brl(v)}</div><div class="acts"><button data-act="del-op" data-id="${f.id}|${o.id}" title="excluir operação" aria-label="excluir operação">${I('trash')}</button></div></div>`;
   };
   const box=$('#modal');
   box.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="Histórico de ${esc(f.ticker)}"><div class="sh-head"><h3>${esc(f.ticker)} · histórico</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
@@ -3057,9 +3170,9 @@ function provCardHTML(p){
   </div>`;
 }
 function viewFii(){
-  const pat=patrimonio(),dm=divMensal(),ct=cotasTotal(),meta=S.metaFii||100;
+  const pat=patrimonio(),dm=divMensal();
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
-  const pct=Math.min(100,meta?ct/meta*100:0),yld=patFii?dm/patFii*100:0;
+  const yld=patFii?dm/patFii*100:0;
   const p=proximoPag();
   const filtrados=S.fiis.filter(f=>FTAB==='todos'||tipoOf(f)===FTAB);
   const comCusto=S.fiis.filter(f=>f.pago>0);
@@ -3700,6 +3813,48 @@ function ccFatEstado(c){
 function ccBig(v){if(OCULTO)return '<span class="ccRs">R$</span><span class="ccInt">•••••</span>';const p=brlParts(Math.abs(v));return `<span class="ccRs">${v<0?'−':''}R$</span><span class="ccInt">${p.i}</span><span class="ccCt">${p.d}</span>`;}
 function ccEmDias(n){return n===0?'hoje':n===1?'amanhã':n>1?'em '+n+' dias':n===-1?'ontem':'há '+(-n)+' dias';}
 const CC_IC_CAL='<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',CC_IC_PAY='<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>';
+/* ---------- v10.95: faturas por mês na tela Cartões ----------
+   todas as faturas do cartão (anteriores, a atual e as próximas com parcelas ou compras com data futura), com total,
+   vencimento, situação e lançamentos. o que falta pagar nas fechadas + a aberta + as futuras = limite usado (usadoCartaoTotal0). */
+function ccFaturasLista(c){return memo('cfl|'+c.id+'|'+c.fechamento+'|'+c.vencimento,()=>{
+  const hj=hojeISO(),FAT={},M={};
+  S.tx.forEach(t=>{if(t.faturaKey&&t.faturaKey.indexOf('fat|'+c.id+'|')===0)FAT[t.faturaKey.split('|')[2]]=t;});
+  const add=f=>M[f.fecha]||(M[f.fecha]={fecha:f.fecha,vence:f.vence,c:0,txs:[]});
+  S.tx.forEach(t=>{if(t.cartao!==c.id||t.faturaKey||!(t.tipo==='despesa'||t.tipo==='transf')||!t.data||!efetivo(t))return;const m=add(fechamentoDe(c,t.data));m.c+=cents(t.valor);m.txs.push(t);});
+  Object.keys(FAT).forEach(k=>{if(!Object.keys(M).some(f=>f.slice(0,7)===k))add(fechamentoDe(c,FAT[k].data));});
+  add(fechamentoDe(c,hj));
+  const f0=fechamentoDe(c,hj).fecha;
+  return Object.values(M).sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(m=>{
+    const mk=m.fecha.slice(0,7),key='fat|'+c.id+'|'+mk,ft=FAT[mk],soma=m.c/100;let estado,valor,rest;
+    if(m.fecha>hj){estado=m.fecha===f0?'aberta':'futura';valor=soma;rest=soma;}
+    else if(ft){const st=statusFatura(ft);estado=st==='aberta'?'fechada':st;valor=ft.valor;rest=restanteFatura(ft);}
+    else if(S.gerados&&S.gerados[key]==='del'){estado='excluida';valor=soma;rest=0;}
+    else if(!S.cfg.pagDesde||m.vence>=S.cfg.pagDesde){estado=m.vence<hj?'vencida':'fechada';valor=soma;rest=soma;}
+    else{estado='paga';valor=soma;rest=0;}
+    return {key,mk,fecha:m.fecha,vence:m.vence,valor,rest,estado,ft,txs:m.txs.slice().sort((a,b)=>b.data.localeCompare(a.data))};
+  });});}
+const CC_FM_L={aberta:'aberta',futura:'próxima',fechada:'fechada',vencida:'vencida',parcial:'parcial',paga:'paga',excluida:'excluída'};
+let CC_FSEL='';
+function ccFmNome(f){const m=+f.vence.slice(5,7)-1,y=f.vence.slice(0,4);return MESES_LONGO[m]+(y!==hojeISO().slice(0,4)?' de '+y:'');}
+function ccFmHTML(c,E){
+  const L=ccFaturasLista(c);if(!L.length)return '';
+  const atualK=E.tipo==='fechada'&&E.t?E.t.faturaKey:'fat|'+c.id+'|'+E.fecha.slice(0,7);
+  const iA=Math.max(0,L.findIndex(f=>f.key===atualK));
+  const vis=L.filter((f,i)=>i>=iA-3||f.rest>0);
+  const sel=vis.find(f=>f.key===CC_FSEL)||L[iA]||vis[0];
+  const emAb=L.reduce((a,f)=>a+cents(f.rest),0)/100;
+  const pills=vis.map(f=>`<button type="button" class="ccFmP${f===sel?' on':''} st-${f.estado}" data-act="cc-fm" data-id="${esc(f.key)}" aria-pressed="${f===sel}"><b>${MESES[+f.vence.slice(5,7)-1]}${f.vence.slice(0,4)!==hojeISO().slice(0,4)?' '+f.vence.slice(2,4):''}</b><small class="nw">${f.valor>0.004?brl(f.valor):'—'}</small></button>`).join('');
+  const rows=sel.txs.slice(0,5).map(t=>`<div class="ccFmR"><span class="ccFmRd">${ccDM(t.data)}</span><span class="ccFmRn">${esc(nomeTx(t).n||t.descricao||t.categoria)}${t.parcelas>1?' <em>'+t.parcela+'/'+t.parcelas+'</em>':''}</span><b class="nw">${brl(t.valor)}</b></div>`).join('');
+  const bco=c.bancoData&&c.bancoUsado!=null&&isFinite(c.bancoUsado);
+  return `<div class="ccFm" aria-label="faturas por mês">
+    <div class="ccFmH"><span>faturas por mês</span><small>${L.filter(f=>f.estado==='futura').length?L.filter(f=>f.estado==='futura').length+(L.filter(f=>f.estado==='futura').length>1?' próximas':' próxima'):'nenhuma próxima'}</small></div>
+    <div class="ccFmPs rolaH" role="group" aria-label="escolher a fatura">${pills}</div>
+    <div class="ccFmD"><div class="ccFmDh"><span><b>Fatura de ${ccFmNome(sel)}</b><small>${CC_FM_L[sel.estado]} · fecha ${ccDM(sel.fecha)} · vence ${ccDM(sel.vence)}</small></span><b class="nw ccFmV">${brl(sel.valor)}</b></div>
+      ${rows||'<p class="ccFmVz">nenhum lançamento nesta fatura.</p>'}
+      ${sel.txs.length?`<button type="button" class="ccLink" data-act="fat-abre" data-id="${esc(sel.ft?sel.ft.id:sel.key)}">${sel.txs.length>5?'ver todos os '+sel.txs.length+' lançamentos':'ver detalhes'}</button>`:''}</div>
+    <p class="ccFmT">em aberto (fechadas a pagar + atual + próximas): <b class="nw">${brl(emAb)}</b>${bco?` · o banco informa <b class="nw">${brl(c.bancoUsado)}</b> usados`:' = limite usado'}</p>
+  </div>`;
+}
 function ccFatHTML(c){
   const E=ccFatEstado(c),usedT=usadoCartaoTotal(c),lim=+c.limite||0,disp=lim-usedT,pct=lim>0?usedT/lim*100:0,tom=ccTom(c);
   const band=c.bandeira&&CC_BAND_N[c.bandeira]?CC_BAND_N[c.bandeira]:ccNomeCurto(c);
@@ -3718,7 +3873,9 @@ function ccFatHTML(c){
     <div class="ccLimR"><span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b> disponível</span><span class="nw">limite ${brl(lim)}</span></div>`:`<div class="ccLimR"><span>limite não informado</span><button type="button" class="ccLink" data-act="edit-cartao" data-id="${c.id}">informar</button></div>`}
     <div class="ccChips">${chips}</div>
     ${E.tipo==='fechada'?`<p class="ccProx">fatura aberta até ${ccDM(E.prox.fecha)}: <b class="nw">${brl(E.prox.valor)}</b></p>`:''}
+    ${E.tipo==='aberta'&&!(E.valor>0.004)&&c.bancoData&&c.bancoUsado>0?`<p class="ccProx ccBcoNota">o banco informa <b class="nw">${brl(c.bancoUsado)}</b> usados do limite, mas nenhuma compra deste ciclo chegou ao app. Parcelas de compras antigas e compras novas entram na próxima sincronização.</p>`:''}
     <div class="ccActs"><button type="button" class="btn2" data-act="fat-abre" data-id="${esc(E.abre)}">ver lançamentos</button>${E.pagar?`<button type="button" class="btn" data-act="pagar-fat" data-id="${E.pagar}">pagar fatura</button>`:`<button type="button" class="btn ccOff" data-act="cc-pagar-aberta" data-id="${c.id}" aria-disabled="true">pagar fatura</button>`}</div>
+    ${ccFmHTML(c,E)}
   </div>`;
 }
 function ccMelhorHTML(CA){
@@ -4345,6 +4502,21 @@ function abreImport(nome,txt){
   else if(!r.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
   montaImport();
 }
+/* v10.95: número da parcela escrito na descrição do banco. só com a palavra parc/parcela (dd/mm solto é data, não parcela) */
+function parcelaDesc(desc){const m=String(desc||'').match(/parc(?:ela)?\.?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i);if(!m)return null;const k=+m[1],n=+m[2];return k>=1&&n>=2&&n<=48&&k<=n?{k,n}:null;}
+function parcelaBase(desc){return norm(String(desc||'').replace(/parc(?:ela)?\.?\s*\d{1,2}\s*(?:\/|de)\s*\d{1,2}/ig,' ')).replace(/[^a-z0-9]+/g,' ').trim();}
+function parcelaIgual(t,l){if(!l.parc)return true;const p=parcelaDesc(t.bancoDesc||t.descricao);return !p||p.k===l.parc.k;}
+/* data da parcela k no cartão c. a data do banco é a da compra quando: (a) outra parcela da mesma compra veio com a mesma data,
+   ou (b) a data é de um ciclo anterior ao último fechado (o banco só manda a parcela quando a fatura dela abre/fecha) */
+function parcelaDataBanco(c,l,linhas){
+  const base=l.data0||l.data,k=l.parc.k,b0=parcelaBase(l.desc),vc=cents(Math.abs(l.valor));
+  const irma=x=>{const p=parcelaDesc(x.desc!=null?x.desc:(x.bancoDesc||x.descricao));return p&&p.k!==k&&p.n===l.parc.n&&parcelaBase(x.desc!=null?x.desc:(x.bancoDesc||x.descricao))===b0&&cents(Math.abs(x.valor))===vc;};
+  const mesma=(linhas||[]).some(x=>x!==l&&(x.data0||x.data)===base&&irma(x))||S.tx.some(t=>t.cartao===c.id&&(t.dataCompra||t.data)===base&&irma(t));
+  const hj=hojeISO(),prev=fechamentoDe(c,addMeses(hj,-1)).fecha,fb=fechamentoDe(c,base).fecha;
+  if(!mesma&&!(fb<prev))return base;
+  const nd=dataParcela(c,base,k-1);
+  return mesma||fechamentoDe(c,nd).fecha>=prev?nd:base;
+}
 function montaImport(){
   const d=IMP.destino,ehCartao=d.indexOf('c:')===0,ehConta=d.indexOf('b:')===0,usados=new Set();
   IMP.linhas.forEach(l=>{
@@ -4353,8 +4525,14 @@ function montaImport(){
     if(l.transf){l.tipo='transf';if(!l.para||l._d!==d)l.para='b:'+bancoPadrao();}
     l.propria=!ehCartao&&!l.transf&&ehPropria(l.desc);
     if(l.propria){l.tipo='transf';l.de=l.valor<0?d:'';l.para=l.valor>0?d:'';}
+    /* v10.95: parcela 2+ de compra no cartão (ex.: "PARC 03/10", "Parcela 3/10"). alguns bancos mandam todas as parcelas com a data
+       da COMPRA: a parcela caía no ciclo antigo (fatura aberta zerada com o limite usado) e, igual à parcela 1 no dia e no valor,
+       era descartada como "já está no app". a data passa a ser a do ciclo da parcela; a da compra fica em l.data0. */
+    if(l.data0)l.data=l.data0;
+    l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
+    if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
     l.id=IMP.banco?l.fitid:idImport(d,l);
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))); // v10.54: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))&&parcelaIgual(t,l)); // v10.54 · v10.95: parcela diferente não é duplicata: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
@@ -4427,6 +4605,7 @@ function confirmaImport(){
     if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
+    if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
     if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
     if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
@@ -5362,6 +5541,14 @@ function novoTx(id,tipoPre,base){
   const selP=mf.querySelector('select[name="pagoCom"]'),wP=selP.closest('label');
   selP.onchange=pintaK;
   selF.onchange=pintaK;
+  /* v10.95: compra no cartão com data depois do fechamento: diz para qual fatura vai */
+  {const inD=mf.querySelector('[name="data"]'),fd=document.createElement('p');fd.className='fatDica';fd.hidden=true;wK.appendChild(fd);
+   const pf=()=>{const c=S.cartoes.find(x=>x.id===selK.value),d=inD&&inD.value;
+     if(!c||!d||!ISO_RE.test(d)||selT.value==='receita'||wK.style.display==='none'){fd.hidden=true;return;}
+     const f=fechamentoDe(c,d),f0=fechamentoDe(c,hojeISO());if(f.fecha<=f0.fecha){fd.hidden=true;return;}
+     fd.hidden=false;fd.innerHTML=`${I('card')}<span>vai para a fatura de <b>${MESES_LONGO[+f.vence.slice(5,7)-1]}</b> · fecha ${ccDM(f.fecha)}, vence ${ccDM(f.vence)}</span>`;};
+   [selK,selF,selT,selP].forEach(e=>e&&e.addEventListener('change',()=>setTimeout(pf,0)));if(inD){inD.addEventListener('input',pf);inD.addEventListener('change',pf);}
+   mf._fatDica=pf;setTimeout(pf,0);}
   pintaK();
   /* v10.81: o cartão escolhido aparece como o cartão de verdade (miniatura); o select continua por trás */
   {const KS=cartoesAtivos(P&&P.cartao);if(KS.length){
@@ -6180,9 +6367,39 @@ function viewMetas(){
     ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
   return `
   <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  ${metaCotasHTML()}
   ${ritmo}
   ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
   ${S.metas.length?cards:vazioHTML('flag','Nenhuma meta ainda','Comece por uma reserva de emergência. Escolha um prazo e o app calcula quanto guardar por mês.','<button class="btn sm" data-act="nova-meta">+ meta</button>')}`;
+}
+/* v10.95: a antiga "meta de cotas" de Investimentos (S.metaFii) virou cfg.metaCotas. diferente de 100 (o padrão), a aba Metas
+   oferece transformá-la numa meta comum: alvo = cotas × preço médio dos FIIs, fontes = os FIIs com o % que ainda está livre */
+function metaCotasDados(){
+  const mc=S.cfg&&S.cfg.metaCotas;if(!mc||mc.fim||!(mc.n>0))return null;
+  const F=(S.fiis||[]).filter(f=>tipoOf(f)==='fii'&&f.cotas>0);
+  const q=F.reduce((a,f)=>a+(+f.cotas||0),0),custo=F.reduce((a,f)=>a+cents(f.pago>0?f.pago:f.cotas*f.preco),0)/100;
+  const pm=q>0?custo/q:0;
+  const fontes=F.map(f=>({f,livre:Math.max(0,c2(100-mtAlocado(f.id)))})).filter(x=>x.livre>0);
+  return {n:mc.n,pm,alvo:c2(mc.n*pm),fontes,q};
+}
+function metaCotasHTML(){
+  const D=metaCotasDados();if(!D)return '';
+  const nT=num(D.n).replace(/,00$/,'');
+  const det=D.pm>0?`<div class="mcCalc"><span><small>cotas</small><b>${nT}</b></span><i>×</i><span><small>preço médio</small><b class="nw">${brl(D.pm)}</b></span><i>=</i><span><small>alvo</small><b class="nw">${brl(D.alvo)}</b></span></div>
+    <p class="mcFt">${D.fontes.length?'fontes: '+D.fontes.map(x=>`<b>${esc(x.f.ticker)}</b> ${String(x.livre).replace('.',',')}%`).join(' · '):'seus FIIs já estão 100% em outras metas: a meta começa sem fonte.'}</p>`
+    :'<p class="mcFt">cadastre seus FIIs em Investimentos para calcular o alvo pelo preço médio.</p>';
+  return `<div class="card mcCard"><div class="mcHd"><span class="mcIc">${I('flag')}</span><div><h4>Sua meta de cotas agora é uma meta</h4><p>A meta de juntar <b>${nT} cotas</b> saiu de Investimentos. Dá para acompanhar como uma meta comum, com os FIIs como fonte.</p></div></div>
+    ${det}
+    <div class="mcBt">${D.pm>0?'<button class="btn" data-act="mc-criar">criar a meta</button>':''}<button class="btn2" data-act="mc-dispensar">dispensar</button></div></div>`;
+}
+function metaCotasCria(){
+  const D=metaCotasDados();if(!D||!(D.pm>0))return;
+  const hj=hojeISO(),nT=num(D.n).replace(/,00$/,'');
+  const m={id:uid(),nome:'Meta de '+nT+' cotas',alvo:D.alvo,atual:0,aporteMes:0,cdi:false,pctCdi:0,prazo:'',criadoEm:hj,
+    ativos:D.fontes.map(x=>({fid:x.f.id,pct:x.livre,desde:hj,reinv:false}))};
+  Object.assign(m,saneaMetaExtra(m));
+  S.metas.push(m);S.cfg.metaCotas.fim='criada';S.cfg.metaCotas.meta=m.id;
+  salvar();render();toast('Meta criada: '+m.nome);
 }
 /* gráfico da previsão (SVG, sem biblioteca): faixa da cripto, só aportes (tracejada), com rendimento e o alvo */
 function mtGraficoSVG(p,prazoK){
@@ -6813,6 +7030,7 @@ const ACT={
   'emp-sug-out':id=>{const [tid,eid]=String(id).split('~');const t=S.tx.find(x=>x.id===tid);if(t&&empPorId(eid))aplicaEmp(t,eid,'out');if($('#modal').classList.contains('on')&&$('.revSheet'))abreRevisar();},
   'fat-abre':id=>abreFatura(id),
   'cc-ativa':id=>ccAtiva(id),
+  'cc-fm':id=>{CC_FSEL=String(id||'');render();},
   'cc-vira':id=>{ccPedeOri();ccVira(id);},
   'cc-ag':id=>{CC_AG=id==='este'?'este':'todos';try{localStorage.setItem('gv-cc-ag',CC_AG);}catch(e){}render();},
   'cc-pagar-aberta':id=>{const c=S.cartoes.find(x=>x.id===id);if(!c)return;const u=usoCartao(c);toast('A fatura ainda está aberta: fecha '+ccDM(u.ci.fim)+'. Dá para pagar depois que ela fechar.');},
@@ -6868,11 +7086,8 @@ const ACT={
   'prov-receber':id=>opForm(id,'provento',true),
   'del-op':v=>{const [a,b]=String(v).split('|');delOp(a,b);},
   'del-fii':id=>confirma({titulo:'Remover da carteira?',texto:'O investimento sai da sua carteira.',ok:'Remover',perigo:true},()=>{S.fiis=S.fiis.filter(x=>x.id!==id);salvar();render();toast('Removido da carteira');}),
-  'meta-fii':()=>form('Meta de cotas',[{name:'meta',label:'Quantas cotas você quer acumular?',inputmode:'numeric',value:S.metaFii||100}],v=>{
-    const n=parseBR(v.meta);
-    if(!(n>0))return 'Informe um número maior que zero.';
-    S.metaFii=n;salvar();render();toast('Meta de cotas atualizada');
-  }),
+  'mc-criar':()=>metaCotasCria(),
+  'mc-dispensar':()=>{const mc=S.cfg.metaCotas;if(!mc)return;mc.fim='dispensada';salvar();render();toast('Aviso dispensado. O número antigo continua guardado.');},
   'nova-meta':()=>metaForm(),
   'novo-bem':()=>bemForm(),'edit-bem':id=>bemForm(id),
   'del-bem':id=>confirma({titulo:'Excluir bem?',texto:'Ele sai do patrimônio.',ok:'Excluir',perigo:true},()=>{S.bens=(S.bens||[]).filter(x=>x.id!==id);salvar();render();toast('Bem excluído');}),
@@ -7063,7 +7278,7 @@ document.addEventListener('change',e=>{
 });
 
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(/[?&]gvtest\b/.test(location.search))window.__GV={setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+if(/[?&]gvtest\b/.test(location.search))window.__GV={ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
