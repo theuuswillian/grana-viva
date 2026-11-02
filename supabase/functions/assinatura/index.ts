@@ -2,8 +2,9 @@
 // depois de confirmar na API do Mercado Pago. Sem MP_ACCESS_TOKEN configurado, checkout responde "Pagamento em breve".
 // Secrets: MP_ACCESS_TOKEN; APP_URL (opcional, padrão https://theuuswillian.github.io/grana-viva/).
 import { createClient } from "npm:@supabase/supabase-js@2";
-import "./planos.js";
-import * as MP from "./mercadopago.ts";
+import "../_shared/planos.js";
+import * as MP from "../_shared/mercadopago.ts";
+import { registraErro } from "../_shared/erros.ts";
 const GVP = (globalThis as any).GVP;
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const ORIGENS = ["https://theuuswillian.github.io"];
@@ -50,12 +51,12 @@ Deno.serve(async (req) => {
         backUrl: app + "?assinatura=retorno",
       });
       return json({ url: c.url });
-    } catch (e) { console.log("checkout", String(e)); return json({ erro: "não consegui abrir o pagamento agora" }, 502); }
+    } catch (e) { console.log("checkout", String(e)); await registraErro(sb, "assinatura", "checkout", e); return json({ erro: "não consegui abrir o pagamento agora" }, 502); }
   }
   if (acao === "cancelar") {
     if (!token) return json({ erro: "Pagamento em breve", emBreve: true }, 503);
     if (row?.provedor !== "mercadopago" || !row?.provedor_assinatura_id) return json({ erro: "não há assinatura para cancelar" }, 404);
-    try { await MP.cancela(row.provedor_assinatura_id, token); } catch (e) { console.log("cancela", String(e)); return json({ erro: "não consegui cancelar agora" }, 502); }
+    try { await MP.cancela(row.provedor_assinatura_id, token); } catch (e) { console.log("cancela", String(e)); await registraErro(sb, "assinatura", "cancelar", e); return json({ erro: "não consegui cancelar agora" }, 502); }
     return json({ ok: true, aviso: "Cancelamento enviado. Seu acesso continua até o fim do período pago." });
   }
   return json({ erro: "ação desconhecida" }, 400);
