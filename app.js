@@ -1346,7 +1346,7 @@ function alMarca(ids,estado){
 }
 /* notificações push: o aparelho se inscreve aqui; a função alertas-push (Supabase) manda os avisos todo dia às 9h */
 const VAPID_PUB='BABTAFc-W1foM1xFylZj_HA06v-U6H5f-NsjVk_9-wuzRPHIIh6eavWXler-eTcGWD8xOsCagXVPzoGQfzeeZDo';
-function pushSuportado(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
+function pushSuportado(){try{return !!navigator.serviceWorker&&'PushManager' in window&&'Notification' in window;}catch(e){return false;}} // v10.97: !! (alguns navegadores têm a propriedade, mas vazia)
 function b64uBytes(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
 async function inscricaoAtual(){if(!pushSuportado())return null;const r=await navigator.serviceWorker.getRegistration();return r?r.pushManager.getSubscription():null;}
 async function atualizaPushUI(){
@@ -1363,6 +1363,7 @@ function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
+  if(!pushSuportado()){toast('Este navegador não aceita notificações push.',true);return;}
   try{
     const p=await Notification.requestPermission();
     if(p!=='granted'){toast('permissão não concedida');atualizaPushUI();return;}
@@ -3686,7 +3687,9 @@ function cartaoHTML(c,o){
   }
   return `<span class="gvc gvc-k-${V.k} gvc-t-${d.tex||'fosco'}${o.mini?' gvc-mini':''}${o.cls?' '+o.cls:''}" style="${st}"${o.tilt?' data-tilt="1"':''} data-cc="${esc(c.id||'')}"${o.mini?' aria-hidden="true"':' role="img" aria-label="'+esc(ccRotulo(c))+'"'}><span class="gvc-in">${frente}${verso}</span></span>`;
 }
-function cartaoMini(c,cls){return '<span class="gvcMini '+(cls||'')+'">'+cartaoHTML(c,{mini:true})+'</span>';}
+/* v10.97: a miniatura (formulário, fatura, patrimônio) aparece por cima do carrossel, que já tem o mesmo cartão:
+   o degradê da DM ganha sufixo próprio para não repetir id no documento (continua fixo, sem troca de nós a cada render) */
+function cartaoMini(c,cls){return '<span class="gvcMini '+(cls||'')+'">'+cartaoHTML(c,{mini:true}).replace(/(id="|url\(#)(gvcDm[0-9a-z]+)/gi,'$1$2m')+'</span>';}
 /* ---------- brilho que acompanha o aparelho (ou o dedo) ---------- */
 const CC_T={on:false,raf:0,x:0,y:0,b0:null,ori:0};
 function ccMov(){try{return !matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return true;}}
@@ -6820,7 +6823,10 @@ function mtLembra(){
   const novos=L.filter(a=>av[a.m.id]!==hj);if(!novos.length)return;
   novos.forEach(a=>{av[a.m.id]=hj;});S.cfg.mtAv=av;
   clearTimeout(MT_NOTIF_T);MT_NOTIF_T=setTimeout(()=>{const a=novos[0],txt='Dia de guardar '+(OCULTO?'':brl(a.m.aporteMes)+' ')+'para '+a.m.nome;toast(txt);
-    try{if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(r=>{if(r)r.showNotification('GranaViva',{body:S.cfg.pushDiscreto!==false?'Hoje é dia de guardar para uma meta.':txt,tag:'gv-meta-'+a.m.id,icon:'icons/icon-192.png'});}).catch(()=>{});}catch(e){}
+    try{if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(async r=>{if(!r)return;
+      /* v10.97: aparelho inscrito no push já recebe o lembrete da alertas-push: não mostra uma segunda notificação */
+      const sub=r.pushManager&&await r.pushManager.getSubscription().catch(()=>null);if(sub)return;
+      r.showNotification('GranaViva',{body:S.cfg.pushDiscreto!==false?'Hoje é dia de guardar para uma meta.':txt,tag:'gv-meta-'+a.m.id,icon:'icons/icon-192.png'});}).catch(()=>{});}catch(e){}
     try{atualizaSino();}catch(e){}},3200);
   try{gravaLocal();}catch(e){}
 }
@@ -7479,10 +7485,13 @@ document.addEventListener('visibilitychange',()=>{
   else if(VERSAO_NOVA&&!$('#modal').classList.contains('on')&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){window.__gvRecarrega=1;try{location.reload();}catch(e){}}
 });
 window.addEventListener('pageshow',e=>{if(e.persisted)confereVersao();});
-if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-  {const tinha=!!navigator.serviceWorker.controller; // v10.77: versão nova instalada enquanto o app está aberto
-   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tinha||window.__gvRecarrega)return;VERSAO_NOVA=VERSAO_NOVA||'sw';avisoVersao();});}
+/* v10.97: tudo do service worker dentro do if. Antes o bloco do controllerchange rodava fora e, sem navigator.serviceWorker
+   (navegador dentro do Instagram/Facebook no iPhone, Firefox privado, http), dava TypeError e o app abria em branco. */
+try{if(navigator.serviceWorker){
+  if(location.protocol==='https:'||location.hostname==='localhost')
+    window.addEventListener('load',()=>{try{navigator.serviceWorker.register('sw.js').catch(()=>{});}catch(e){}});
+  const tinha=!!navigator.serviceWorker.controller; // v10.77: versão nova instalada enquanto o app está aberto
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!tinha||window.__gvRecarrega)return;VERSAO_NOVA=VERSAO_NOVA||'sw';avisoVersao();});}}catch(e){}
 
 /* v10.48: com um formulário aberto a página de trás não rola junto (iPhone) */
 (function(){const m=$('#modal');let y=0,on=false;
