@@ -1,7 +1,7 @@
 /* GranaViva · páginas públicas (gerado por site.py). Mesmas cores e fonte do app. */
-@font-face{font-family:'Inter';font-weight:400;font-display:swap;src:url(../fonts/inter-400.woff2) format('woff2')}
-@font-face{font-family:'Inter';font-weight:600;font-display:swap;src:url(../fonts/inter-600.woff2) format('woff2')}
-@font-face{font-family:'Inter';font-weight:700;font-display:swap;src:url(../fonts/inter-700.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-weight:400;font-display:swap;src:url(../fonts/inter-400-lat.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-weight:600;font-display:swap;src:url(../fonts/inter-600-lat.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-weight:700;font-display:swap;src:url(../fonts/inter-700-lat.woff2) format('woff2')}
 :root{--bg:#0a0a0c;--card:#1a1a1e;--card2:#101012;--txt:#e7e7ea;--mut:#9ca3af;--hd:#fff;--line:#26262c;--ac:#22c55e;--ac2:#8b5cf6}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
