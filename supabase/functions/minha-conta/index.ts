@@ -4,6 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as MP from "../_shared/mercadopago.ts";
 import { registraErro } from "../_shared/erros.ts"; // v10.93: importado direto de ../_shared (deploy-fn.py envia a pasta junto)
+import { apagaItensPluggy } from "./pluggy.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const ORIGENS = ["https://theuuswillian.github.io"];
 const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
@@ -95,6 +96,15 @@ Deno.serve(async (req) => {
         rel.assinatura_cancelada = 1;
       }
     } catch (e) { console.log("excluir: cancela assinatura", uid, String(e)); await registraErro(sb, "minha-conta", "excluir-cancela-assinatura", e); return json({ erro: "não consegui cancelar sua assinatura agora. Tente de novo em instantes." }, 502); }
+    // v10.108: antes de apagar as tabelas, apaga na Pluggy as conexões de banco (items). Falha aqui não impede a exclusão:
+    // fica em erros_fn (sem dados pessoais) e o resultado diz quantas não saíram. Prazo total ~8 s.
+    let pluggy = { apagados: 0, falhas: 0 };
+    try {
+      const { data: pc, error: pe } = await sb.from("pluggy_cfg").select("client_id,client_secret,api_key,api_key_exp,item_ids").eq("user_id", uid).maybeSingle();
+      if (pe) throw new Error("pluggy_cfg: " + pe.message);
+      pluggy = await apagaItensPluggy(pc, { chave: Deno.env.get("PLUGGY_ENC_KEY") || "", prazoMs: 8000, registra: (etapa, e, cod) => registraErro(sb, "minha-conta", etapa, e, cod) });
+    } catch (e) { await registraErro(sb, "minha-conta", "excluir-pluggy", e); }
+    if (pluggy.falhas) console.log("excluir: pluggy", JSON.stringify(pluggy));
     try {
       // 1) comprovantes no Storage
       const arqs = await arquivos(uid);
@@ -112,9 +122,9 @@ Deno.serve(async (req) => {
       // 3) o usuário de login (as tabelas também têm ON DELETE CASCADE, como segunda garantia)
       const { error: de } = await sb.auth.admin.deleteUser(uid);
       if (de) throw new Error("auth: " + de.message);
-    } catch (e) { console.log("excluir", uid, String(e)); await registraErro(sb, "minha-conta", "excluir", e); return json({ erro: "não foi possível concluir a exclusão agora. Tente de novo em instantes.", parcial: rel }, 500); }
-    console.log("conta excluída", uid, JSON.stringify(rel));
-    return json({ ok: true, apagado: rel });
+    } catch (e) { console.log("excluir", uid, String(e)); await registraErro(sb, "minha-conta", "excluir", e); return json({ erro: "não foi possível concluir a exclusão agora. Tente de novo em instantes.", parcial: rel, pluggy }, 500); }
+    console.log("conta excluída", uid, JSON.stringify(rel), JSON.stringify(pluggy));
+    return json({ ok: true, apagado: rel, pluggy });
   }
   return json({ erro: "ação desconhecida" }, 400);
 });
