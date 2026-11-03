@@ -358,13 +358,26 @@ async function crDecifra(raw){const k=await crChave(false);if(!k)throw new Error
 /* grava cifrado; gravações mais novas da mesma chave vencem as antigas que ainda estavam cifrando */
 function gravaCifrado(chave,txt){const g=CR_G[chave]=(CR_G[chave]||0)+1;
   return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;localStorage.setItem(chave,c||txt);},()=>{if(CR_G[chave]!==g)return;try{localStorage.setItem(chave,txt);}catch(e){}});}
-function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;}
+function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;if(chave===KEY){clearTimeout(GL_T);GL_T=null;GL_PEND=false;}}
 async function leTalvezCifrado(chave){const raw=localStorage.getItem(chave);if(!raw)return null;return JSON.parse(raw.indexOf(CR_PFX)===0?await crDecifra(raw):raw);}
-function gravaLocal(){
+/* v10.99: gravação agrupada. Vários salvar() seguidos (importar extrato, gerar parcelas, sincronizar) viram uma só
+   cifragem + escrita, 40 ms depois do último. Ao sair do app (aba escondida, fechar, trocar de app) grava na hora,
+   então nenhum lançamento fica só na memória. gravaLocal(true) grava já. */
+var GL_T=null,GL_PEND=false;
+function gravaLocal(ja){
   if(!CR_OK)return; // ainda abrindo a cópia cifrada: não sobrescreve com dados vazios
-  try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde;localStorage.setItem('gv-ui',JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]}));}catch(e){}
-  gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
+  GL_PEND=true;
+  if(ja){gravaLocalJa();return;}
+  if(!GL_T)GL_T=setTimeout(gravaLocalJa,40);
 }
+function gravaLocalJa(){
+  clearTimeout(GL_T);GL_T=null;
+  if(!GL_PEND||!CR_OK)return;GL_PEND=false;
+  try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}
+  return gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')gravaLocalJa();});
+window.addEventListener('pagehide',()=>gravaLocalJa());
 function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'||u.tema==='preto'?u.tema:'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
 async function abreCripto(){
   try{
@@ -1067,18 +1080,42 @@ function bar(ctx,x,y,w,h,color){
   ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
   ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h);ctx.closePath();ctx.fill();
 }
+/* v10.100: no computador as barras são mais finas, em esmeralda e rosa suave, e o gráfico ocupa a altura do card ao lado */
+const DESK=()=>innerWidth>=900;
+const COR_REC=()=>DESK()?'#10b981':'#34d399',COR_DES=()=>DESK()?'#f08a98':'#a78bfa';
+function barAltura(c){
+  if(innerWidth<1200||c.id!=='cBar')return 220;
+  const cat=document.querySelector('#view .hmCat'),card=c.closest('.card');if(!cat||!card)return 220;
+  const cr=card.getBoundingClientRect(),vr=c.getBoundingClientRect(),lg=card.querySelector('.legend');
+  const resto=(vr.top-cr.top)+(lg?lg.offsetHeight+14:0)+24;
+  return Math.max(220,Math.min(460,cat.offsetHeight-resto));
+}
+/* v10.100: dica ao passar o mouse nas barras (só com mouse; no toque o card abre o relatório) */
+function barTip(c){
+  if(c.__tip||!matchMedia('(hover:hover)').matches)return;c.__tip=1;
+  const card=c.closest('.card');if(!card)return;card.style.position='relative';
+  const tip=document.createElement('div');tip.className='gvTip';tip.setAttribute('aria-hidden','true');card.appendChild(tip);
+  c.addEventListener('mousemove',e=>{
+    const ds=barData();if(!ds.length)return;
+    const r=c.getBoundingClientRect(),x=e.clientX-r.left,i=Math.max(0,Math.min(ds.length-1,Math.floor(x/(r.width/ds.length)))),d=ds[i];
+    tip.innerHTML='<b>'+esc(d.l)+'</b><div><span><i style="background:'+COR_REC()+'"></i>receitas</span><span class="nw">'+(OCULTO?'•••':brl(d.r))+'</span></div><div><span><i style="background:'+COR_DES()+'"></i>despesas</span><span class="nw">'+(OCULTO?'•••':brl(d.d))+'</span></div>';
+    const cr=card.getBoundingClientRect(),gx=r.left-cr.left+(i+.5)*r.width/ds.length;
+    const tw=tip.offsetWidth||160;tip.style.left=Math.max(8,Math.min(cr.width-tw-8,gx-tw/2))+'px';tip.style.top=(r.top-cr.top+6)+'px';tip.classList.add('on');
+  });
+  c.addEventListener('mouseleave',()=>tip.classList.remove('on'));
+}
 function drawBars(c,p){
-  const {ctx,w,h}=fitCanvas(c,220);
+  const {ctx,w,h}=fitCanvas(c,c.__bh||(c.__bh=barAltura(c)));
   const ds=barData(),max=Math.max(1,...ds.flatMap(d=>[d.r,d.d]));
   const top=14,base=h-26,H=base-top,gw=w/ds.length;
   ctx.clearRect(0,0,w,h);
   ctx.strokeStyle=cor('--line');ctx.lineWidth=1;
   for(let i=0;i<=3;i++){const y=top+H*i/3;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
   ds.forEach((d,i)=>{
-    const x0=i*gw,bw=Math.min(18,gw*0.26),cx=x0+gw/2;
+    const x0=i*gw,bw=Math.min(DESK()?12:18,gw*0.26),cx=x0+gw/2;
     const hr=d.r/max*H*p,hd=d.d/max*H*p;
-    bar(ctx,cx-bw-2,base-hr,bw,hr,'#34d399');
-    bar(ctx,cx+2,base-hd,bw,hd,'#a78bfa');
+    bar(ctx,cx-bw-2,base-hr,bw,hr,COR_REC());
+    bar(ctx,cx+2,base-hd,bw,hd,COR_DES());
     ctx.fillStyle=cor('--mut');ctx.font='12px system-ui';ctx.textAlign='center';
     ctx.fillText(d.l,cx,h-8);
   });
@@ -1087,7 +1124,7 @@ function drawDonut(c,p){
   const size=c.clientWidth;
   const {ctx,w,h}=fitCanvas(c,size);
   const sl=despesasPorCat(periodo()),total=sl.reduce((a,s)=>a+s.v,0);
-  const cx=w/2,cy=h/2,lw=24,R=Math.min(w,h)/2-lw/2-2;
+  const cx=w/2,cy=h/2,lw=DESK()?18:24,R=Math.min(w,h)/2-lw/2-2;
   ctx.clearRect(0,0,w,h);
   if(R<=0)return;
   ctx.lineWidth=lw;ctx.lineCap='butt';
@@ -1098,7 +1135,7 @@ function drawDonut(c,p){
     ctx.strokeStyle=s.color;ctx.beginPath();ctx.arc(cx,cy,R,a,a+da);ctx.stroke();a+=da;
   });
   ctx.fillStyle=cor('--txt');ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.font='bold 17px system-ui';
+  ctx.font="700 18px Inter, system-ui";
   ctx.fillText(brl(total*p),cx,cy-7);
   ctx.fillStyle=cor('--mut');ctx.font='12px system-ui';
   ctx.fillText(total>0?'em despesas':'sem despesas',cx,cy+12);
@@ -2525,6 +2562,7 @@ const DATA_HOJE=()=>{const d=new Date();if(innerWidth<=360)return ['dom','seg','
 function applyCfg(){
   {const k=S.cfg.tema+'|'+S.cfg.accent;if(window.__gvCfgK&&window.__gvCfgK!==k)REND.html=null;window.__gvCfgK=k; // v10.91: tema novo redesenha os gráficos com as cores certas
    try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}} // e o próximo boot já pinta no tema certo
+  document.documentElement.dataset.ac=ACCENTS[S.cfg.accent]?S.cfg.accent:'verde'; // v10.100: o esmeralda do computador só vale para o tema verde
   document.documentElement.classList.toggle('claro',S.cfg.tema==='claro');
   document.documentElement.classList.toggle('preto',S.cfg.tema==='preto');
   {const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content',S.cfg.tema==='preto'?'#000000':S.cfg.tema==='claro'?'#f2f5fb':'#0b0f1a');}
@@ -2606,7 +2644,7 @@ document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.tar
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='catBusca'){const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const q=nz(e.target.value.trim());{const cl=e.target.closest('.card');const li=cl&&cl.querySelector('.catList');if(li)li.classList.toggle('busca',!!q);const mb=cl&&cl.querySelector('.catMaisBtn');if(mb)mb.hidden=!!q;}let n=0;document.querySelectorAll('.catRow').forEach(r=>{const ok=!q||nz(r.dataset.q).includes(q);r.hidden=!ok;if(ok)n++;});const v=document.querySelector('.catVazio');if(v)v.hidden=n>0;}});
 /* v10.91: estado do último desenho da tela (para não redesenhar o que não mudou) */
 let REND={tab:null,bloq:null,html:null},RENDER_QUIETO=false;
-function mataGraficos(root){if(typeof Chart!=='undefined')Object.values(Chart.instances||{}).forEach(ch=>{try{if(root.contains(ch.canvas))ch.destroy();}catch(e){}});} // v10.51: gráficos da tela antiga não ficam presos na memória
+function mataGraficos(root){} /* v10.99: gráficos agora são SVG, nada a destruir */ // v10.51: gráficos da tela antiga não ficam presos na memória
 function gvFilhos(html){const t=document.createElement('template');t.innerHTML=html;return [...t.content.childNodes].filter(n=>n.nodeType===1||(n.nodeType===3&&n.textContent.trim()));}
 /* troca só os filhos de primeiro nível que mudaram; false = estrutura diferente (o chamador troca tudo) */
 function morphView(v,antHtml,html){
@@ -2632,6 +2670,7 @@ function render(){
   const mesma=REND.tab===TAB&&REND.bloq===bloq&&REND.html!=null&&v.childElementCount>0;
   if(mesma&&html===REND.html){MEMO=null;try{cabeNum(v);}catch(e){}return;}
   const ant=REND.html;REND={tab:TAB,bloq,html};
+  v.dataset.v=bloq?'bloq':TAB; // v10.100: o layout de computador muda por tela
   if(mesma){
     const y=window.scrollY;RENDER_QUIETO=true;
     if(!morphView(v,ant,html)){mataGraficos(v);v.innerHTML=html;}
@@ -2669,8 +2708,8 @@ const VIEWS={
 const AFTER={
   cartoes:()=>{ccIniciaTilt();ccDepois();ccPinta();},
   inicio:()=>{
-    drawSpark();setTimeout(()=>{const sc=$('#cSpark');if(sc&&sc._ch)sc._ch.resize();},80);
     const bc=$('#cBar'),dc=$('#cDonut');
+    if(bc){bc.__bh=0;barTip(bc);}
     if(bc)drawBars(bc,1);if(dc)drawDonut(dc,1);
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
   },
@@ -2724,21 +2763,22 @@ function sparkPer(per){
   return {vals:out,lab};
 }
 const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
-function drawSpark(){
-  const c=$('#cSpark');if(!c||typeof Chart==='undefined')return;
-  const sp=sparkPer(periodo()),vals=sp.vals;if(!vals.length)return;
-  const chave=JSON.stringify([sp.lab,vals]);
-  if(c._ch&&c._chK===chave&&Chart.getChart&&Chart.getChart(c)===c._ch)return; // v10.91: mesmo gráfico, não redesenha
-  if(c._ch)c._ch.destroy();
-  const last=vals.length-1;c._chK=chave;
-  c._ch=new Chart(c,{type:'line',data:{labels:sp.lab,datasets:[{
-    data:vals,borderColor:'#a3e635',borderWidth:2,fill:true,tension:.35,
-    backgroundColor:(ctx)=>{const ch=ctx.chart,ar=ch.chartArea;if(!ar)return 'rgba(163,230,53,.2)';const g=ch.ctx.createLinearGradient(0,ar.top,0,ar.bottom);g.addColorStop(0,'rgba(163,230,53,.35)');g.addColorStop(1,'rgba(163,230,53,0)');return g;},
-    pointRadius:ctx=>ctx.dataIndex===last?5:0,pointHoverRadius:5,
-    pointBackgroundColor:'#a3e635',pointBorderColor:'#0a0a0c',pointBorderWidth:2
-  }]},options:{responsive:true,maintainAspectRatio:false,animation:RENDER_QUIETO?false:{duration:600},
-    plugins:{legend:{display:false},tooltip:{callbacks:{title:x=>x[0].label,label:x=>brl(x.parsed.y)}}},
-    scales:{x:{display:false},y:{display:false,beginAtZero:true}}}});
+/* v10.99: gráfico de gastos acumulados desenhado em SVG pelo próprio app (antes biblioteca de 210 KB só para este gráfico).
+   sai pronto no HTML da tela, então o redesenho por diferença (v10.91) só troca o gráfico quando os números mudam */
+function gastoSVG(per){
+  const sp=sparkPer(per),v=sp.vals;if(!v.length)return '';
+  const W=300,H=120,T=8,B=6,mx=Math.max(...v,0)||1,n=v.length;
+  const L=6,R=W-6,X=i=>n===1?R:L+i*(R-L)/(n-1),Y=y=>T+(H-T-B)*(1-y/mx),f=x=>x.toFixed(1);
+  const P=v.map((y,i)=>[X(i),Y(y)]);
+  /* curva monótona: suave como antes, sem passar acima ou abaixo dos pontos */
+  let d;
+  if(n===1)d='M'+L+' '+f(P[0][1])+'L'+R+' '+f(P[0][1]);
+  else{d='M'+f(P[0][0])+' '+f(P[0][1]);const m=[];
+    for(let i=0;i<n;i++){const a=i>0?(P[i][1]-P[i-1][1])/(P[i][0]-P[i-1][0]):null,b=i<n-1?(P[i+1][1]-P[i][1])/(P[i+1][0]-P[i][0]):null;
+      m.push(a===null?b:b===null?a:a*b<=0?0:(a+b)/2);}
+    for(let i=0;i<n-1;i++){const h=(P[i+1][0]-P[i][0])/3;d+='C'+f(P[i][0]+h)+' '+f(P[i][1]+m[i]*h)+' '+f(P[i+1][0]-h)+' '+f(P[i+1][1]-m[i+1]*h)+' '+f(P[i+1][0])+' '+f(P[i+1][1]);}}
+  const ul=P[n-1];
+  return `<div class="spk" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="spkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3e635" stop-opacity=".35"/><stop offset="1" stop-color="#a3e635" stop-opacity="0"/></linearGradient></defs><path class="spkA" d="${d}L${R} ${H}L${L} ${H}Z" fill="url(#spkG)"/><path class="spkL" d="${d}" fill="none" stroke="#a3e635" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg><i class="spkP" style="left:${(ul[0]/W*100).toFixed(2)}%;top:${(ul[1]/H*100).toFixed(2)}%"></i></div>`;
 }
 /* previsão do fim do mês: saldo de hoje + o que ainda está previsto até o fim do mês
    (receitas − despesas previstas, inclusive atrasadas) − compras no cartão cujo ciclo fecha até o fim do mês.
@@ -2920,12 +2960,12 @@ function viewInicio(){
     ${tile('pou','piggy','você guardou',pou===null?'—':(OCULTO?'••%':pou+'%'),`<span class="rsD">${pou===null?'sem receitas no período':'da renda do período'}</span>`)}
   </div>${TOPO!==null?'-->':''}
   <div class="hmDuo">${prevHTML}
-  <div class="card hmSpark tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}${I('chevR','tapCh')}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]"><canvas id="cSpark"></canvas></div></div></div>
+  <div class="card hmSpark tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}${I('chevR','tapCh')}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]" id="cSpark">${gastoSVG(per)}</div></div></div>
   <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${assinHTML()}${orcInicioHTML()}${ultHTML}</div></div>
   <div class="card tap" data-act="nav-rel" role="button" tabindex="0" aria-label="abrir relatório">
     <h4 class="hmH0">Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}${I('chevR','tapCh')}</h4>
     <canvas id="cBar" class="cv"></canvas>
-    <div class="legend"><span><i class="dot" style="background:#34d399"></i>receitas</span><span><i class="dot" style="background:#a78bfa"></i>despesas</span></div>
+    <div class="legend"><span><i class="dot" style="background:${COR_REC()}"></i>receitas</span><span><i class="dot" style="background:${COR_DES()}"></i>despesas</span></div>
   </div>
   ${cartHTML}
   ${dicaInstalarHTML(false)}`;
@@ -7626,8 +7666,7 @@ $('#fab').innerHTML=I('plus');
   window.addEventListener('scroll',()=>{if(tk)return;tk=true;requestAnimationFrame(()=>{const y=window.scrollY,d=y-y0;
     if(y<80||d<-6)f.classList.remove('esc');else if(d>6)f.classList.add('esc');
     if(Math.abs(d)>6)y0=y;tk=false;});},{passive:true});})();
-// chart.js carrega com defer: redesenha a linha de gastos assim que ele estiver disponível
-document.addEventListener('DOMContentLoaded',()=>{if(TAB==='inicio')drawSpark();});
+
 restauraAba();
 if(!S.cfg.pagDesde){S.cfg.pagDesde=hojeISO();}
 if(geraRecorrentes())salvar();

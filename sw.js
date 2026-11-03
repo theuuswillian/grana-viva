@@ -2,17 +2,32 @@
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v10.98'; // troque junto com GV_BUILD no index.html (./bump.sh)
+const V='gv-v10.99'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
-const PRE=['./','./index.html','./manifest.webmanifest','./fonts/inter-400.woff2','./fonts/inter-600.woff2','./fonts/inter-700.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/chart.umd.min.js','./vendor/supabase.min.js','./app.js?v=10.98','./planos.js?v=10.98'];
+/* v10.99: dois caches.
+   - V (troca a cada versão): página, app.js, planos.js e manifesto.
+   - FIXO (não troca): fontes, ícones, logos e bibliotecas. Esses arquivos mudam de nome quando o conteúdo muda
+     (inter-400-lat.woff2, vendor/*.min.js com SRI), então a cópia salva vale entre versões e não é baixada de novo a cada publicação. */
+const FIXO='gv-fixo';
+const PRE=['./','./index.html','./manifest.webmanifest','./app.js?v=10.99','./planos.js?v=10.99'];
+const PRE_FIXO=['./fonts/inter-400-lat.woff2','./fonts/inter-600-lat.woff2','./fonts/inter-700-lat.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/supabase.min.js'];
+const abs=u=>new URL(u,self.location).href;
 self.addEventListener('install',e=>{
   /* v10.93: cache:'reload' = baixa da rede ignorando o cache HTTP do navegador (o GitHub Pages manda max-age=600).
-     Sem isso, nos 10 min depois de publicar, a versão nova podia guardar index.html/vendor/fontes ainda da versão anterior. */
-  e.waitUntil((async()=>{const c=await caches.open(V);await c.addAll(PRE.map(u=>new Request(u,{cache:'reload'})));
+     Sem isso, nos 10 min depois de publicar, a versão nova podia guardar index.html ainda da versão anterior. */
+  e.waitUntil((async()=>{
+    const c=await caches.open(V);await c.addAll(PRE.map(u=>new Request(u,{cache:'reload'})));
+    const f=await caches.open(FIXO);
+    for(const u of PRE_FIXO){if(!(await f.match(abs(u))))await f.add(new Request(u,{cache:'reload'}));}
     await self.skipWaiting();})());
 });
 self.addEventListener('activate',e=>{
-  e.waitUntil((async()=>{for(const k of await caches.keys())if(k!==V)await caches.delete(k);await self.clients.claim();})());
+  e.waitUntil((async()=>{
+    for(const k of await caches.keys())if(k!==V&&k!==FIXO)await caches.delete(k);
+    /* tira do cache fixo o que esta versão não usa mais (fontes e bibliotecas antigas); logos ficam */
+    const f=await caches.open(FIXO),manter=new Set(PRE_FIXO.map(abs));
+    for(const r of await f.keys()){const p=new URL(r.url).pathname;if(/\/(fonts|vendor|icons)\//.test(p)&&!manter.has(r.url))await f.delete(r);}
+    await self.clients.claim();})());
 });
 self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;
@@ -31,9 +46,13 @@ self.addEventListener('fetch',e=>{
     })());
     return;
   }
-  const estatico=u.origin===location.origin&&(/\/(fonts|icons|vendor|logos)\//.test(u.pathname)||(/\/(app|planos)\.js$/.test(u.pathname)&&u.search)); // v10.75: app.js?v=10.98versão nunca muda: cópia salva primeiro
+  const fixo=u.origin===location.origin&&/\/(fonts|icons|vendor|logos)\//.test(u.pathname);
+  const estatico=fixo||(u.origin===location.origin&&/\/(app|planos)\.js$/.test(u.pathname)&&u.search); // v10.75: app.js?v=10.99<versão> nunca muda: cópia salva primeiro
   if(estatico){
-    e.respondWith((async()=>{const c=await caches.open(V);const hit=await c.match(r.url);if(hit)return hit;
+    e.respondWith((async()=>{const c=await caches.open(fixo?FIXO:V);const hit=await c.match(r.url);
+      /* ícones e logos mantêm o nome quando mudam: entrega a cópia salva e confere a versão da rede em segundo plano */
+      if(hit&&/\/(icons|logos)\//.test(u.pathname))e.waitUntil(fetch(r,{cache:'no-cache'}).then(res=>{if(res.ok&&res.type==='basic')return c.put(r.url,res);}).catch(()=>{}));
+      if(hit)return hit;
       const res=await fetch(r,{cache:'no-cache'});if(res.ok&&(res.type==='basic'||res.type==='cors'))c.put(r.url,res.clone());return res;})());
   }
 });
