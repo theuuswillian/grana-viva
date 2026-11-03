@@ -1,6 +1,41 @@
 
 (function(){
 'use strict';
+/* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
+   (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
+const ERR_KEY='gv-erros',ERR_MAX=50;
+function errTexto(t){return String(t==null?'':t)
+  .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g,'<email>').replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g,'<token>')
+  .replace(/https?:\/\/[^\s)'"]+/g,u=>{try{const x=new URL(u);return x.origin===location.origin?(x.pathname.split('/').pop()||'/'):x.host;}catch(e){return '<link>';}})
+  .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,'<id>')
+  .replace(/\b(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{16,}\b/g,'<id>')
+  .replace(/R\$\s?-?[\d.,]+/g,'R$ <valor>').replace(/\d[\d.,:\/-]{3,}/g,'<n>').replace(/"[^"]{25,}"/g,'"<texto>"').replace(/\s+/g,' ').trim().slice(0,240);}
+function errOnde(st){const o=[];String(st||'').replace(/(?:at\s+([\w$.<>]+)\s+\()?[^\s(]*?([\w.-]+\.js)(?:\?v=[\d.]+)?:(\d+):(\d+)/g,(m,fn,f,l,c)=>{if(o.length<4)o.push((fn?fn+' ':'')+f+':'+l+':'+c);return m;});return o;}
+function errLista(){try{const a=JSON.parse(localStorage.getItem(ERR_KEY)||'[]');return Array.isArray(a)?a.filter(x=>x&&typeof x==='object'&&typeof x.m==='string').slice(-ERR_MAX):[];}catch(e){return [];}}
+function errRegistra(tipo,msg,stack,ondeExtra){
+  try{
+    const m=errTexto(msg);if(!m)return;
+    if(/^(Script error\.?|ResizeObserver loop)/i.test(m))return; // de outro site/extensão ou aviso do navegador: sem informação útil
+    const pilha=errOnde(stack);if(!pilha.length&&ondeExtra)pilha.push(ondeExtra);
+    let aba='';try{aba=String(localStorage.getItem('gv-tab')||'').replace(/[^a-z]/g,'').slice(0,12);}catch(e){}
+    const L=errLista(),ult=L[L.length-1],em=new Date().toISOString().slice(0,16)+'Z';
+    let v='';try{v=typeof GV_BUILD==='string'?GV_BUILD:'';}catch(e){}
+    if(ult&&ult.m===m&&ult.t===tipo&&String(ult.p)===String(pilha)){ult.n=(ult.n||1)+1;ult.em=em;}
+    else L.push({em,t:tipo,m,p:pilha,v,aba,n:1});
+    localStorage.setItem(ERR_KEY,JSON.stringify(L.slice(-ERR_MAX)));
+  }catch(e){}
+}
+window.addEventListener('error',e=>{
+  if(!e||!(e instanceof ErrorEvent))return; // erro de carregar imagem/script não é ErrorEvent
+  const f=String(e.filename||'');if(f&&!f.startsWith(location.origin))return; // extensões e scripts de fora
+  const onde=f?f.split('/').pop().replace(/\?.*$/,'')+':'+(e.lineno||0)+':'+(e.colno||0):'';
+  errRegistra('erro',(e.error&&e.error.name&&e.error.name!=='Error'?e.error.name+': ':'')+(e.message||''),e.error&&e.error.stack,onde);
+});
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;let msg;
+  try{msg=r&&typeof r==='object'?((r.name&&r.name!=='Error'?r.name+': ':'')+(r.message||r.error_description||r.msg||JSON.stringify(r).slice(0,120))):String(r);}catch(x){msg='falha sem descrição';}
+  errRegistra('promessa',msg,r&&r.stack,'');
+});
 
 /* ---------- estado e persistência ---------- */
 const KEY='grana-viva-v1';
@@ -372,21 +407,66 @@ function gravaLocal(ja){
 }
 function gravaLocalJa(){
   clearTimeout(GL_T);GL_T=null;
-  if(!GL_PEND||!CR_OK)return;GL_PEND=false;
+  if(!GL_PEND||!CR_OK||LOC_BLOQ)return;GL_PEND=false;
   try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}
-  return gravaCifrado(KEY,JSON.stringify(S)).catch(()=>toast('Não foi possível salvar neste aparelho (armazenamento cheio?)',true));
+  const g=CR_G[KEY]=(CR_G[KEY]||0)+1,txt=JSON.stringify(S);
+  return crCifra(txt).catch(()=>null).then(c=>{if(CR_G[KEY]!==g)return;return guardaCopia(c||txt);}).then(()=>{LOC_AVISOU=false;},e=>avisoArmazenamento(e));
+}
+/* v10.106: a cópia local fica no localStorage (rápido). quando ele enche (QuotaExceededError; no Safari ~5 MB),
+   a cópia passa para o IndexedDB (gv-dados), que tem bem mais espaço. ordem: grava no IndexedDB, marca gv-loc=idb,
+   e só então tira a cópia antiga do localStorage. a leitura prefere o IndexedDB e cai no localStorage se ele falhar,
+   então interromper no meio não perde a cópia. sem IndexedDB: aviso com "Exportar backup", nada é apagado. */
+const LOC_KEY='gv-loc';let LOC_BLOQ=false,LOC_AVISOU=false;
+function locIdb(){try{return localStorage.getItem(LOC_KEY)==='idb';}catch(e){return false;}}
+function ehCota(e){return !!e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22||e.code===1014);}
+function dadosIdb(modo,fn){return new Promise((ok,er)=>{if(!window.indexedDB)return er(new Error('sem IndexedDB'));let r;try{r=indexedDB.open('gv-dados',1);}catch(e){return er(e);}
+  r.onupgradeneeded=()=>r.result.createObjectStore('d');r.onerror=()=>er(r.error||new Error('IndexedDB'));r.onblocked=()=>er(new Error('IndexedDB bloqueado'));
+  r.onsuccess=()=>{const db=r.result;let q;try{const tx=db.transaction('d',modo);q=fn(tx.objectStore('d'));tx.oncomplete=()=>{db.close();ok(q&&q.result);};tx.onerror=tx.onabort=()=>{db.close();er(tx.error||new Error('IndexedDB abortado'));};}catch(e){db.close();er(e);}};});}
+async function guardaCopia(v){
+  if(locIdb()){
+    try{await dadosIdb('readwrite',st=>st.put(v,KEY));return;}
+    catch(e){localStorage.setItem(KEY,v);try{localStorage.removeItem(LOC_KEY);}catch(x){}return;} // IndexedDB falhou: volta para o localStorage (se também falhar, o erro sobe e a cópia anterior fica onde estava)
+  }
+  let cota;try{localStorage.setItem(KEY,v);return;}catch(e){if(!ehCota(e))throw e;cota=e;}
+  try{await dadosIdb('readwrite',st=>st.put(v,KEY));}catch(e){throw cota;} // IndexedDB também falhou: o aviso de cota cheia sobe (a cópia anterior continua no localStorage)
+  try{localStorage.setItem(LOC_KEY,'idb');}catch(e){try{localStorage.removeItem(KEY);localStorage.setItem(LOC_KEY,'idb');}catch(x){}}
+  try{localStorage.removeItem(KEY);}catch(e){}
+  try{errRegistra('aviso','cópia local passou para o IndexedDB (localStorage cheio)','','');}catch(e){}
+  toast('A cópia deste aparelho passou para um espaço maior do navegador. Nada foi perdido.');
+}
+function avisoArmazenamento(e){
+  try{errRegistra('armazenamento',(e&&e.name?e.name+': ':'')+(e&&e.message||'falha ao gravar a cópia local'),e&&e.stack,'');}catch(x){}
+  GL_PEND=true; // a próxima gravação tenta de novo com tudo
+  const cheio=ehCota(e)||/quota|cheio|full/i.test(String(e&&e.message||''));
+  const curto=cheio?'Armazenamento cheio: a cópia deste aparelho não foi atualizada. Nada foi apagado.':'Não deu para salvar a cópia deste aparelho. Nada foi apagado.';
+  if(LOC_AVISOU)return;LOC_AVISOU=true;
+  if(document.querySelector('#modal.on')){ // formulário aberto: não fecha, avisa no rodapé com o botão
+    const t=$('#toast');t.className='err';t.innerHTML='<span>'+esc(curto)+'</span><button type="button" class="tDesf">Exportar backup</button>';t.classList.add('on');
+    t.querySelector('.tDesf').onclick=()=>{t.classList.remove('on');try{exportar();}catch(x){}};clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),9000);return;
+  }
+  confirma({titulo:cheio?'Armazenamento do aparelho cheio':'Não deu para salvar neste aparelho',
+    texto:'A cópia deste aparelho (usada para abrir sem internet) não foi atualizada. Nada foi apagado: o que você fez continua aberto no app'+(USER?' e vai para a nuvem normalmente':'')+'. '+(USER?'':'Sem conta, essas alterações só existem nesta aba. ')+'Exporte um backup e, se puder, libere espaço no navegador.',
+    ok:'Exportar backup'},()=>{try{exportar();}catch(x){}});
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')gravaLocalJa();});
 window.addEventListener('pagehide',()=>gravaLocalJa());
 function uiSalva(){try{const u=JSON.parse(localStorage.getItem('gv-ui')||'null');return u&&typeof u==='object'?{tema:u.tema==='claro'||u.tema==='preto'?u.tema:'escuro',accent:String(u.accent||'verde').slice(0,20)}:null;}catch(e){return null;}}
+const CR_IDB='idb:'; // v10.106: marca "a cópia está no IndexedDB" (abreCripto lê de lá)
 async function abreCripto(){
   try{
-    const d=JSON.parse(await crDecifra(CR_RAW));
+    let raw=CR_RAW;
+    if(raw===CR_IDB){
+      try{raw=await dadosIdb('readonly',st=>st.get(KEY));}catch(e){raw=undefined;LOC_BLOQ=!localStorage.getItem(KEY);} // não abriu: não grava por cima do que está lá
+      if(raw==null)raw=localStorage.getItem(KEY);
+    }
+    if(raw==null)throw {semCopia:1};
+    const d=JSON.parse(String(raw).indexOf(CR_PFX)===0?await crDecifra(raw):raw);
     const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
     S=dono&&sess&&dono===sess&&d&&typeof d==='object'?sanea(d):Object.assign(vazio(),{cfg:S.cfg});
   }catch(e){
+    if(e&&e.semCopia){S=Object.assign(vazio(),{cfg:S.cfg});if(LOC_BLOQ)setTimeout(()=>toast('Não foi possível abrir a cópia deste aparelho; seus dados vêm da nuvem.',true),800);}
     /* chave perdida (o sistema limpou o IndexedDB) ou cópia corrompida: descarta o cache local e baixa tudo da nuvem de novo */
-    CR_FALHOU=true;limpaCache();S=Object.assign(vazio(),{cfg:S.cfg});
+    else{CR_FALHOU=true;limpaCache();S=Object.assign(vazio(),{cfg:S.cfg});}
   }
   CR_RAW=null;CR_OK=true;zeraCfgH();document.documentElement.classList.remove('crAbrindo');
   try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();CR_TELA=!CR_FALHOU;}catch(e){}
@@ -396,6 +476,8 @@ function carregar(){
   try{
     const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
     const raw=localStorage.getItem(KEY)||'null';
+    /* v10.106: cópia no IndexedDB (ou sem cópia no localStorage, mas com dono: pode ter migrado e parado no meio) */
+    if(dono&&sess&&dono===sess&&window.indexedDB&&(locIdb()||raw==='null')){CR_RAW=CR_IDB;CR_OK=false;document.documentElement.classList.add('crAbrindo');const u=uiSalva();const v=vazio();if(u)Object.assign(v.cfg,u);return v;}
     if(raw.indexOf(CR_PFX)===0){if(!dono||!sess||dono!==sess)return vazio();CR_RAW=raw;CR_OK=false;document.documentElement.classList.add('crAbrindo');const u=uiSalva();const v=vazio();if(u)Object.assign(v.cfg,u);return v;}
     const d=JSON.parse(raw);
     if(!dono&&d&&typeof d==='object'&&Array.isArray(d.tx)){LEGADO=d;return vazio();}
@@ -3551,6 +3633,10 @@ function viewCfg(){
     </div>
     <button class="lkOff" data-act="limpar">limpar todos os dados</button>
   </div>
+  ${(()=>{const n=errLista().reduce((a,x)=>a+(x.n||1),0);return `<div class="card lkCard erCard">
+    <div class="lkHead"><span class="lkIc dkIc">${I('alert')}</span><div><h4>Erros recentes</h4><small>falhas do app neste aparelho, sem seus dados</small></div></div>
+    <div class="lkList"><button class="lkRow" data-act="erros-ver"><span class="lkRi">${I('list')}</span><span class="lkRt"><b>${n?n+(n>1?' erros registrados':' erro registrado'):'Nenhum erro registrado'}</b><small>${n?'ver, copiar para enviar ao suporte ou limpar':'se algo der errado, aparece aqui'}</small></span><span class="lkCh">${I('chevR')}</span></button></div>
+  </div>`;})()}
   <div class="card lkCard lgCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('shield')}</span><div><h4>Privacidade e seus dados</h4><small>seus direitos pela LGPD</small></div></div>
     <div class="lkList">
@@ -5574,10 +5660,36 @@ function abreTxIA(o,arq){
 const LIMITE_LEITURAS=40;
 async function usoIA(){return {mes:hojeISO().slice(0,7),n:0};}
 async function contaLeitura(){}
-async function chamaIA(body){
-  const {data:o,error}=await sb.functions.invoke('ler-comprovante',{body:Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body)});
-  if(error||!o||o.erro){let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}throw new Error(m||'não consegui entender');}
-  return limpaIA(o);
+/* v10.106: chamadas à IA (ler-comprovante, assistente) tentam de novo quando o serviço está ocupado (429/502/503)
+   ou a rede falhou: até 3 vezes, esperando ~1,5 s, 4 s e 8 s (±20% aleatório). nunca repete limite diário ("limite de"),
+   erro de plano (402/upgrade/"plano"), "muitas perguntas" nem 401. aoTentar(n) avisa a tela a cada nova tentativa. */
+let IA_ESP=[1500,4000,8000],IA_FN=null;
+const IA_OCUPADA='A IA está ocupada, tentando de novo…';
+function iaEspera(i){const b=IA_ESP[Math.min(i,IA_ESP.length-1)];return Math.round(b*(0.8+Math.random()*0.4));}
+function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite))||/limite de|plano|muitas perguntas/i.test(String(erro||''));}
+async function invokeIA(nome,body,aoTentar){
+  for(let i=0;;i++){
+    let o=null,status=0,rede=false;
+    try{
+      const r=await (IA_FN||((n,op)=>sb.functions.invoke(n,op)))(nome,{body});
+      const error=r&&r.error;o=r&&r.data;
+      if(!error&&o&&typeof o==='object'&&!o.erro)return {o,erro:'',status:200};
+      if(error){
+        const ctx=error.context;
+        if(ctx&&typeof ctx.status==='number'){status=ctx.status;try{const j=await (ctx.clone?ctx.clone():ctx).json();if(j&&typeof j==='object')o=j;}catch(e){}}
+        else rede=true; // FunctionsFetchError: sem resposta do servidor
+      }else status=200;
+    }catch(e){rede=true;}
+    const erro=String(o&&o.erro||'');
+    if(i>=IA_ESP.length||!(rede||status===429||status===502||status===503)||iaNaoRepete(status,o,erro))return {o,erro,status,rede};
+    if(aoTentar)try{aoTentar(i+1);}catch(e){}
+    await new Promise(ok=>setTimeout(ok,iaEspera(i)));
+  }
+}
+async function chamaIA(body,aoTentar){
+  const r=await invokeIA('ler-comprovante',Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body),aoTentar);
+  if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui entender'));
+  return limpaIA(r.o);
 }
 /* v10.45: a resposta da IA é tratada como dado não confiável: tipos, faixas e datas conferidos antes de abrir o formulário */
 function limpaIA(o){
@@ -5704,7 +5816,7 @@ async function enviaFraseIA(){
   if(RS){const st=RS;RS=null;clearInterval(st.tm);clearTimeout(st.esp);const r=REC;REC=null;if(r){try{r.abort();}catch(e){}}micUI();} // mantém o que já foi transcrito
   if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+' Entendendo…';}
   try{
-    const o=await chamaIA({texto});
+    const o=await chamaIA({texto},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('sparkle')+' '+esc(IA_OCUPADA);});
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     abreTxIA(o);
   }catch(e){toast(String(e&&e.message||'não consegui entender'),true);}
@@ -5725,7 +5837,7 @@ function lerComprovanteIA(){
       let imagem,mime;
       if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
       else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
-      const o=await chamaIA({imagem,mime});
+      const o=await chamaIA({imagem,mime},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('receipt')+'Tentando de novo…';toast(IA_OCUPADA);});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
       abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null); // a foto/PDF vira comprovante do lançamento quando ele for salvo
@@ -7177,6 +7289,19 @@ function limpar(){
 }
 
 /* ---------- confirmação própria (substitui window.confirm) ---------- */
+/* v10.106: folha "Erros recentes" */
+function errTextoCopia(){const L=errLista();let ua='';try{ua=(navigator.userAgent||'').replace(/\s+/g,' ').slice(0,160);}catch(e){}
+  return 'GranaViva v'+(typeof GV_BUILD==='string'?GV_BUILD:'?')+' · '+ua+'\n'+(L.length?L.map(x=>x.em+' · v'+(x.v||'?')+(x.aba?' · '+x.aba:'')+' · '+x.t+(x.n>1?' ×'+x.n:'')+'\n  '+x.m+(x.p&&x.p.length?'\n  em '+x.p.join(' < '):'')).join('\n'):'nenhum erro registrado');}
+function abreErros(){
+  const L=errLista().slice().reverse(),box=$('#modal');
+  const nome=t=>t==='promessa'?'falha assíncrona':t==='armazenamento'?'armazenamento':t==='aviso'?'aviso':'erro';
+  box.innerHTML=`<div class="sheet erSheet" role="dialog" aria-modal="true" aria-label="Erros recentes"><div class="sh-head"><h3>Erros recentes</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="hmNota">Ficam só neste aparelho (até ${ERR_MAX}). Não guardam valores, nomes, e-mails nem descrições. Copie e envie ao suporte se algo não funcionar.</p>
+    ${L.length?`<div class="erLista">${L.map(x=>`<div class="erItem"><div class="erTop"><b>${esc(nome(x.t))}</b><small>${esc(fmtHora(x.em))} · v${esc(x.v||'?')}${x.aba?' · '+esc(x.aba):''}${x.n>1?' · ×'+esc(String(x.n)):''}</small></div><code>${esc(x.m)}</code>${x.p&&x.p.length?`<small class="erP">${esc(x.p.join(' < '))}</small>`:''}</div>`).join('')}</div>`:`<div class="alVazio">${I('check')}<b>Nenhum erro</b><p>Se algo der errado, o registro aparece aqui.</p></div>`}
+    <div class="cfBtns">${L.length?'<button class="btn2" type="button" data-act="erros-limpar">Limpar</button>':''}<button class="btn" type="button" data-act="erros-copiar">${I('copy')} Copiar</button></div></div>`;
+  box.classList.add('on');
+}
+function copiaTexto(t){return (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const ta=document.createElement('textarea');ta.value=t;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:-1000px;opacity:0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();if(!ok)throw new Error('copiar');});}
 function confirma(o,cb){
   const box=$('#modal');
   box.innerHTML=`<div class="sheet cfSheet">
@@ -7328,7 +7453,7 @@ function abreAssistente(){
   $('#asForm').onsubmit=e=>{e.preventDefault();const i=$('#asIn');const q=i.value.trim();if(q.length<3){toast('Escreva a pergunta.',true);return;}i.value='';perguntaAssistente(q);};
   setTimeout(()=>{const i=$('#asIn');if(i&&matchMedia('(min-width:900px)').matches)i.focus();},60);
 }
-function asBolhas(h){return `<div class="asQ">${esc(h.p)}</div><div class="asR${h.local?' local':''}${h.carregando?' carregando':''}">${h.carregando?'<span class="asDots"><i></i><i></i><i></i></span>':esc(h.r)}${!h.carregando&&h.nota?`<small>${esc(h.nota)}</small>`:''}</div>`;}
+function asBolhas(h){return `<div class="asQ">${esc(h.p)}</div><div class="asR${h.local?' local':''}${h.carregando?' carregando':''}">${h.carregando?'<span class="asDots"><i></i><i></i><i></i></span>'+(h.status?`<small class="asSt">${esc(h.status)}</small>`:''):esc(h.r)}${!h.carregando&&h.nota?`<small>${esc(h.nota)}</small>`:''}</div>`;}
 function asPinta(){const m=$('#asMsgs');if(!m)return;m.innerHTML=AS_HIST.map(asBolhas).join('');m.scrollTop=m.scrollHeight;}
 async function perguntaAssistente(q){
   if(AS_OCUP)return;AS_OCUP=true;
@@ -7339,9 +7464,9 @@ async function perguntaAssistente(q){
     if(!USER)local('calculado neste aparelho, sem IA');
     else if(!navigator.onLine)local('sem internet: resposta calculada no aparelho, sem IA');
     else{
-      const {data:o,error}=await sb.functions.invoke('assistente',{body:{pergunta:h.p,fatos:F,historico:AS_HIST.slice(0,-1).filter(x=>!x.carregando).slice(-3).map(x=>({p:x.p,r:x.r}))}});
-      let erro=o&&o.erro;try{if(!erro&&error&&error.context)erro=(await error.context.json()).erro;}catch(e){}
-      if(error||erro)local((erro||'a IA não respondeu')+' · resposta calculada no aparelho');
+      const r=await invokeIA('assistente',{pergunta:h.p,fatos:F,historico:AS_HIST.slice(0,-1).filter(x=>!x.carregando).slice(-3).map(x=>({p:x.p,r:x.r}))},()=>{h.status=IA_OCUPADA;asPinta();});
+      const o=r.o,erro=r.erro;h.status='';
+      if(r.status!==200||erro||!o)local((erro||'a IA não respondeu')+' · resposta calculada no aparelho');
       else if(!o.resposta)local('resposta direta dos seus números');
       else{h.r=o.resposta;h.nota=o.conferida?'conferido com os seus lançamentos':'';}
     }
@@ -7412,6 +7537,8 @@ async function apagaRastrosLocais(){
   try{const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^(gv-|grana-viva|sb-)/.test(k)||k===KEY||k===OWNER_KEY||k===LOCK_KEY)rm.push(k);}rm.forEach(k=>localStorage.removeItem(k));}catch(e){}
   try{sessionStorage.clear();}catch(e){}
   try{CR_KEY=null;await new Promise(ok=>{const r=indexedDB.deleteDatabase('gv-cripto');r.onsuccess=r.onerror=r.onblocked=()=>ok();});}catch(e){}
+  try{await new Promise(ok=>{const r=indexedDB.deleteDatabase('gv-dados');r.onsuccess=r.onerror=r.onblocked=()=>ok();});}catch(e){} // v10.106
+  try{localStorage.removeItem(ERR_KEY);localStorage.removeItem(LOC_KEY);}catch(e){}
   S=vazio();AS_HIST=[];
 }
 const ACT={
@@ -7565,6 +7692,9 @@ const ACT={
     S.cats=S.cats.filter(x=>x!==c);delete S.orc[c];Object.values(S.orcMes||{}).forEach(mp=>delete mp[c]);delete S.catIcons[c];delete S.catCores[c];salvar();render();toast('Categoria removida');
   }),
   'exportar':exportar,
+  'erros-ver':abreErros,
+  'erros-copiar':()=>{copiaTexto(errTextoCopia()).then(()=>toast('Erros copiados'),()=>toast('Não deu para copiar neste navegador',true));},
+  'erros-limpar':()=>{try{localStorage.removeItem(ERR_KEY);}catch(e){}abreErros();if(TAB==='cfg')render();toast('Registro de erros limpo');},
   'lg-dados':()=>telaMeusDados(),
   'lg-json':()=>exportaJSON(),
   'lg-csv':()=>{if(!S.tx.length){toast('Nenhum lançamento para exportar.',true);return;}baixaArquivo('granaviva-lancamentos-'+hojeISO()+'.csv',csvLancTodos(),'text/csv;charset=utf-8');toast(S.tx.length+' lançamentos na planilha');},
@@ -7843,7 +7973,8 @@ function tourPosiciona(){
 /* v10.102: o gancho de testes só existe rodando localmente (antes bastava ?gvtest no site publicado para expor S, planoAplica etc.) */
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR;},get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR;},get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -8237,6 +8368,8 @@ $('#authForm').addEventListener('submit',async ev=>{
 });
 function limpaCache(){
   crCancela(KEY);
+  try{localStorage.removeItem(LOC_KEY);localStorage.removeItem(ERR_KEY);}catch(e){}LOC_BLOQ=false;LOC_AVISOU=false; // v10.106
+  dadosIdb('readwrite',st=>st.delete(KEY)).catch(()=>{});
   try{
     const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k===KEY||k===OWNER_KEY||k==='gv-cot-ts'||/^gv-snap-/.test(k))rm.push(k);}
     rm.forEach(k=>localStorage.removeItem(k));
