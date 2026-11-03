@@ -8147,11 +8147,13 @@ $('#icLock').innerHTML=I('lock');
 let aMode='in';
 function mostraAuth(){$('#auth').classList.add('on');$('#fab').style.display='none';}
 function escondeAuth(){$('#auth').classList.remove('on');$('#fab').style.display='';}
+/* v10.104: o servidor exige letras e números em senha nova (cadastro e troca); o login com senha antiga continua igual */
+const senhaForte=p=>/[A-Za-zÀ-ÿ]/.test(p)&&/\d/.test(p);
 function erroTraduzido(m){
   m=String(m||'');
   if(/Invalid login/i.test(m))return 'email ou senha incorretos';
   if(/already registered|already been registered/i.test(m))return 'esse email já tem conta, entre com ela';
-  if(/Password should be/i.test(m))return 'a senha precisa ter pelo menos 6 caracteres';
+  if(/Password should (contain|be)|weak.?password/i.test(m))return 'a senha precisa ter pelo menos 8 caracteres, com letras e números';
   if(/valid email|invalid.*email/i.test(m))return 'confira o e-mail';
   if(/rate limit|too many/i.test(m))return 'muitas tentativas, espera um pouco';
   if(/Failed to fetch|NetworkError|network/i.test(m))return 'sem conexão com o servidor';
@@ -8183,6 +8185,7 @@ $('#authForm').addEventListener('submit',async ev=>{
   marcaCampo('#aEmail',false);marcaCampo('#aPass',false);
   if(!email||!pass){marcaCampo('#aEmail',!email);marcaCampo('#aPass',!pass);$('#aErr').textContent='Preencha e-mail e senha';return;}
   if(pass.length<6||(aMode==='up'&&pass.length<8)){marcaCampo('#aPass',true);$('#aErr').textContent=aMode==='up'?'use pelo menos 8 caracteres na nova senha':'a senha precisa ter pelo menos 6 caracteres';return;}
+  if(aMode==='up'&&!senhaForte(pass)){marcaCampo('#aPass',true);$('#aErr').textContent='use letras e números na senha';return;}
   const btn=$('#aSubmit');btn.disabled=true;$('#aErr').textContent='';$('#aErr').className='aerr';
   try{
     if(aMode==='up'){
@@ -8233,9 +8236,10 @@ $('#aForgot').addEventListener('click',async ()=>{
 });
 /* v10.82: 'Termos e privacidade' virou links para site/termos.html e site/privacidade.html (index.html) */
 function pedeNovaSenha(){
-  form('Nova senha',[{name:'p',label:'Nova senha (mín. 8 caracteres)',type:'password',required:true}],v=>{
+  form('Nova senha',[{name:'p',label:'Nova senha (mín. 8 caracteres, letras e números)',type:'password',required:true}],v=>{
     const p=String(v.p);
     if(p.length<8)return 'use pelo menos 8 caracteres';
+    if(!senhaForte(p))return 'use letras e números na senha';
     sb.auth.updateUser({password:p}).then(({error})=>{
       if(error)toast(erroTraduzido(error.message)||'não deu pra trocar a senha',true);
       else toast('Senha atualizada');
