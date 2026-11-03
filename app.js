@@ -3386,6 +3386,167 @@ function provCardHTML(p){
     ${L.length>1?`<div class="pvList"><h4>próximos pagamentos</h4>${rows}</div>`:`<div class="pvList pvList1">${rows}</div>`}
   </div>`;
 }
+/* v10.108: renda passiva mensal e yield on cost.
+   Fonte: as operações "provento" dos ativos de renda variável (FII, ação, ETF, BDR). O provento já guarda o valor
+   recebido, então o total do mês é a soma direta; o valor por cota usa as cotas que o ativo tinha na data do pagamento
+   (compras e vendas até aquele dia). Renda fixa fica de fora: o app só estima o rendimento pelo CDI, não registra o que foi pago. */
+const RP_TIPOS=['fii','acao','etf','bdr'];
+let RP_SEL='',RP_VER='mes',YOC_ORD='yoc';
+function rpCotasNaData(f,data){
+  let q=0;(f.ops||[]).forEach(o=>{
+    if(o.tipo==='inicial'){if(!o.data||o.data<=data)q=Q8(q+(+o.qtd||0));}
+    else if(o.tipo==='compra'&&o.data&&o.data<=data)q=Q8(q+(+o.qtd||0));
+    else if(o.tipo==='venda'&&o.data&&o.data<=data)q=Q8(Math.max(0,q-(+o.qtd||0)));
+  });
+  return q;
+}
+/* valor por cota de um provento: valor recebido ÷ cotas na data (sem histórico de cotas, usa as cotas de hoje) */
+function rpPorCota(f,o){const q=rpCotasNaData(f,o.data)||(+f.cotas||0);return q>0?(+o.valor||0)/q:0;}
+/* desde quando o ativo está na carteira: 1ª compra ou posição inicial com data. posição inicial sem data
+   (o ativo já existia antes do app) conta a partir do 1º provento registrado, que é quando o histórico começa. */
+function rpInicio(f){
+  const ops=f.ops||[];let d='';
+  ops.forEach(o=>{if((o.tipo==='compra'||o.tipo==='inicial')&&o.data&&(!d||o.data<d))d=o.data;});
+  const semData=ops.some(o=>o.tipo==='inicial'&&!o.data);
+  if(semData||!d){const pv=ops.filter(o=>o.tipo==='provento'&&o.data).map(o=>o.data).sort()[0]||'';if(semData)return pv&&(!d||pv<d)?pv:(d||pv);return d||pv;}
+  return d;
+}
+function rpMesesEntre(a,b){return (+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7));}
+function rpCalc(hj){
+  hj=hj||hojeISO();const atual=hj.slice(0,7);
+  const ativos=S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f)));
+  const porMes={};let primeiro='';
+  ativos.forEach(f=>(f.ops||[]).forEach(o=>{
+    if(o.tipo!=='provento'||!DATA_OK.test(String(o.data))||!(+o.valor>0)||o.data>hj)return;
+    const ym=o.data.slice(0,7),c=cents(o.valor);
+    const M=porMes[ym]||(porMes[ym]={tot:0,por:{}});M.tot+=c;M.por[f.id]=(M.por[f.id]||0)+c;
+    if(!primeiro||ym<primeiro)primeiro=ym;
+  }));
+  const soma=(de,ate)=>{let s=0;Object.keys(porMes).forEach(k=>{if(k>=de&&k<=ate)s+=porMes[k].tot;});return s;};
+  const mesesL=[];for(let k=11;k>=0;k--){const ym=mesMais(atual,-k),M=porMes[ym]||{tot:0,por:{}};
+    mesesL.push({ym,tot:M.tot/100,ativos:Object.keys(M.por).map(id=>({f:ativos.find(x=>x.id===id),v:M.por[id]/100})).filter(a=>a.f).sort((a,b)=>b.v-a.v)});}
+  const ultFech=mesMais(atual,-1);
+  let media=null,mediaN=0;
+  if(primeiro&&primeiro<=ultFech){mediaN=Math.min(12,rpMesesEntre(primeiro,ultFech)+1);media=soma(mesMais(atual,-12),ultFech)/100/mediaN;}
+  /* variação: 12 meses fechados contra os 12 anteriores, só quando o histórico cobre o período anterior (folga de 2 meses para quem paga por trimestre) */
+  let vari=null;const ult=soma(mesMais(atual,-12),ultFech),ant=soma(mesMais(atual,-24),mesMais(atual,-13));
+  if(ant>0&&primeiro<=mesMais(atual,-22))vari={ult:ult/100,ant:ant/100,pct:(ult-ant)/ant*100};
+  /* estimativa do próximo mês: por ativo, média do valor por cota dos 3 últimos meses fechados (meses sem provento contam como zero,
+     só a partir de quando o ativo entrou na carteira) × cotas de hoje */
+  const projA=[];
+  ativos.forEach(f=>{if(!(f.cotas>0))return;const ini=rpInicio(f);let s=0,n=0;
+    for(let k=3;k>=1;k--){const ym=mesMais(atual,-k);if(ini&&ym<ini.slice(0,7))continue;n++;
+      (f.ops||[]).forEach(o=>{if(o.tipo==='provento'&&o.data&&o.data.slice(0,7)===ym&&+o.valor>0)s+=rpPorCota(f,o);});}
+    if(n&&s>0){const pc=s/n;projA.push({f,pc,v:c2(pc*f.cotas),n});}});
+  projA.sort((a,b)=>b.v-a.v);
+  const proj={ym:mesMais(atual,1),tot:projA.reduce((a,x)=>a+cents(x.v),0)/100,ativos:projA};
+  /* contas fixas do mês: lançamentos gerados pelas contas fixas de despesa neste mês (pagas ou previstas) */
+  let fixas=null;
+  const fx=S.tx.filter(t=>t.fixaKey&&t.tipo==='despesa'&&String(t.data).slice(0,7)===atual);
+  const totFx=fx.reduce((a,t)=>a+cents(t.valor),0)/100;
+  if(fx.length&&totFx>0&&media>0)fixas={tot:totFx,n:fx.length,pct:media/totFx*100};
+  return {atual,meses:mesesL,mesAtual:(porMes[atual]||{tot:0}).tot/100,tot12:mesesL.reduce((a,m)=>a+cents(m.tot),0)/100,media,mediaN,vari,proj,fixas,primeiro,temProv:!!primeiro,temAtivos:ativos.length>0};
+}
+/* yield on cost por ativo e da carteira (FII, ação, ETF, BDR com cotas hoje) */
+function yocCalc(hj){
+  hj=hj||hojeISO();const d=new Date(hj+'T12:00:00'),umAno=isoDe(new Date(d.getFullYear()-1,d.getMonth(),d.getDate()));
+  const L=[];let rendaC=0,custoC=0,rendaM=0,mercC=0;
+  S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f))&&f.cotas>0).forEach(f=>{
+    const pv=(f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&o.data>umAno&&o.data<=hj&&+o.valor>0);
+    const pcTTM=pv.reduce((a,o)=>a+rpPorCota(f,o),0),recebido=pv.reduce((a,o)=>a+cents(o.valor),0)/100;
+    const ini=rpInicio(f);let meses=12,anualiz=false;
+    if(ini&&ini>umAno){meses=Math.max(1,Math.min(12,Math.round((d-new Date(ini+'T12:00:00'))/864e5/30.4375)));anualiz=meses<12;}
+    const pcAno=anualiz?pcTTM*12/meses:pcTTM;
+    const pm=f.pago>0?f.pago/f.cotas:0,renda=pcAno*f.cotas;
+    const yoc=pm>0?pcAno/pm*100:null,dy=f.preco>0?pcAno/f.preco*100:null;
+    if(pm>0){rendaC+=renda;custoC+=+f.pago;}
+    if(f.preco>0){rendaM+=renda;mercC+=f.cotas*f.preco;}
+    L.push({f,yoc,dy,recebido,renda:c2(renda),pm,meses,anualiz,cot:f.cotFonte==='brapi'||f.cotFonte==='b3'});
+  });
+  return {lista:L,yoc:custoC>0?rendaC/custoC*100:null,dy:mercC>0?rendaM/mercC*100:null,renda:c2(rendaC),custo:c2(custoC)};
+}
+function yocOrdena(L,ord){
+  const k=ord==='dy'?'dy':ord==='rec'?'recebido':ord==='az'?'':'yoc';
+  return L.slice().sort((a,b)=>{if(!k)return String(a.f.ticker).localeCompare(String(b.f.ticker));const x=a[k],y=b[k];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return y-x||String(a.f.ticker).localeCompare(String(b.f.ticker));});
+}
+const rpPct=v=>v==null?'—':OCULTO?'•••%':num(v)+'%'; // o olho também esconde os percentuais (dariam pistas dos valores)
+function rpBarsSVG(R,sel){
+  /* só as barras no SVG (esticam na largura do card); os meses ficam em HTML embaixo, junto com a área de toque */
+  const W=336,H=100,top=6,base=99,n=R.meses.length,slot=W/n,bw=Math.min(16,slot*.56),mx=Math.max(...R.meses.map(m=>m.tot),R.media||0,0.01);
+  const bars=R.meses.map((m,i)=>{const h=m.tot>0?Math.max(3,(base-top)*m.tot/mx):2,x=i*slot+(slot-bw)/2,y=base-h;
+    const cl=(m.ym===sel?'on ':'')+(m.ym===R.atual?'cur ':'')+(m.tot>0?'':'zero');
+    return `<rect class="rpB ${cl}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3"><title>${esc(nomeMesL(m.ym))}: ${brl(m.tot)}</title></rect>`;}).join('');
+  const my=R.media>0?base-(base-top)*R.media/mx:null;
+  return `<svg class="rpSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="proventos por mês nos últimos 12 meses">
+    <line class="rpBase" x1="0" x2="${W}" y1="${base+.5}" y2="${base+.5}" vector-effect="non-scaling-stroke"/>
+    ${my!=null?`<line class="rpMed" x1="0" x2="${W}" y1="${my.toFixed(1)}" y2="${my.toFixed(1)}" vector-effect="non-scaling-stroke"/>`:''}
+    ${bars}</svg>`;
+}
+function rpDetHTML(R,sel){
+  if(RP_VER==='proj'){const P=R.proj;
+    return `<div class="rpDh"><span><b>${esc(nomeMesL(P.ym))}</b><small>estimativa · média dos 3 últimos meses × cotas de hoje</small></span><b class="nw">${brl(P.tot)}</b></div>
+    ${P.ativos.length?P.ativos.map(a=>`<div class="rpRow">${assetIco(a.f.ticker,tipoOf(a.f))}<span class="rpRN"><b>${esc(a.f.ticker)}</b><small>${num(a.f.cotas).replace(/,00$/,'')} cotas × ${brl(a.pc)}${a.n<3?' · '+a.n+(a.n===1?' mês':' meses')+' de histórico':''}</small></span><b class="nw">${brl(a.v)}</b></div>`).join(''):'<p class="rpVaz">Sem proventos nos últimos 3 meses para estimar.</p>'}`;}
+  const m=R.meses.find(x=>x.ym===sel)||R.meses[R.meses.length-1],mx=Math.max(0.01,...m.ativos.map(a=>a.v));
+  return `<div class="rpDh"><span><b>${esc(nomeMesL(m.ym))}</b><small>${m.ativos.length?m.ativos.length+(m.ativos.length===1?' ativo pagou':' ativos pagaram'):'nenhum provento'}${m.ym===R.atual?' · até hoje':''}</small></span><b class="nw">${brl(m.tot)}</b></div>
+  ${m.ativos.length?m.ativos.map(a=>`<div class="rpRow" style="--tc:${TCOR[tipoOf(a.f)]||'var(--a1)'}">${assetIco(a.f.ticker,tipoOf(a.f))}<span class="rpRN"><b>${esc(a.f.ticker)}${a.f.cotas>0?'':' <em class="rpVend">vendido</em>'}</b><i class="rpRb"><i style="width:${(a.v/mx*100).toFixed(1)}%"></i></i></span><b class="nw">${brl(a.v)}</b></div>`).join(''):`<p class="rpVaz">Nenhum provento registrado em ${esc(nomeMesMin(m.ym))}.</p>`}`;
+}
+function rpSelPadrao(R){if(RP_SEL&&R.meses.some(m=>m.ym===RP_SEL))return RP_SEL;const c=R.meses.slice().reverse().find(m=>m.tot>0);return c?c.ym:R.atual;}
+function rpCardHTML(R){
+  if(!R.temProv){
+    const f=S.fiis.find(x=>RP_TIPOS.includes(tipoOf(x))&&x.cotas>0);
+    return `<div class="card rpCard rpVazio"><div class="rpHead"><small>renda passiva</small></div>
+      <div class="rpEmpty"><span class="rpEi">${I('chart')}</span><div><b>Sua renda passiva aparece aqui</b><p>${f?'Registre os proventos que caírem na conta: o app soma mês a mês, mostra quem pagou e estima o próximo mês.':'Adicione FIIs, ações, ETFs ou BDRs e registre os proventos para acompanhar quanto eles pagam por mês.'}</p>
+      ${f?`<button class="btn2 sm" data-act="prov-receber" data-id="${f.id}">${I('arrowDown')} registrar provento de ${esc(f.ticker)}</button>`:`<button class="btn2 sm" data-act="novo-fii">${I('plus')} adicionar ativo</button>`}</div></div></div>`;
+  }
+  const sel=rpSelPadrao(R),v=R.vari;
+  const bt=x=>Math.abs(x)>=1e4?brlK(x):brl(x); // valores grandes encurtados para caber nos 3 blocos a 390 px
+  const tile=(lb,val,sub,act,on)=>`<${act?'button type="button" data-act="'+act+'"':'div'} class="rpT${on?' on':''}"><small>${lb}</small><b class="nw">${val}</b>${sub?`<em>${sub}</em>`:''}</${act?'button':'div'}>`;
+  return `<div class="card rpCard">
+    <div class="rpHead"><small>renda passiva</small><span class="rpPill">${R.mediaN&&R.mediaN<12?'desde '+esc(nomeMesMin(R.primeiro)):'últimos 12 meses'}</span></div>
+    <div class="rpTop"><div class="rpMain"><b class="nw">${R.media!=null?brl(R.media):brl(R.mesAtual)}</b><small>${R.media!=null?'por mês, em média'+(R.mediaN<12?' ('+R.mediaN+(R.mediaN===1?' mês':' meses')+')':''):'recebido este mês'} · <span class="nw">${brl(R.tot12)}</span> em 12 meses</small></div>
+      ${v?`<span class="plPill ${v.pct>=0?'pos':'neg'}" title="12 meses contra os 12 anteriores">${v.pct>=0?'▲ +':'▼ '}${OCULTO?'•••%':num(v.pct)+'%'} <em>vs ano anterior</em></span>`:''}</div>
+    <div class="rpTiles">
+      ${tile(esc(MESES_LONGO[+R.atual.slice(5,7)-1]),bt(R.mesAtual),'até hoje','rp-mes" data-id="'+R.atual,RP_VER==='mes'&&sel===R.atual)}
+      ${tile('próximo mês',R.proj.tot>0?bt(R.proj.tot):'—','estimativa','rp-proj',RP_VER==='proj')}
+    </div>
+    <div class="rpChart">${rpBarsSVG(R,RP_VER==='mes'?sel:'')}
+      <div class="rpHit">${R.meses.map(m=>`<button type="button" data-act="rp-mes" data-id="${m.ym}" class="${RP_VER==='mes'&&m.ym===sel?'on':''}" aria-label="${esc(nomeMesL(m.ym))}: ${brl(m.tot)}" aria-pressed="${RP_VER==='mes'&&m.ym===sel}"><span>${MESES[+m.ym.slice(5,7)-1]}</span></button>`).join('')}</div></div>
+    ${R.media>0?`<p class="rpLeg"><i></i>média ${brl(R.media)}</p>`:''}
+    <div class="rpDet" id="rpDet" aria-live="polite">${rpDetHTML(R,sel)}</div>
+    ${R.fixas?`<div class="rpFx">${I('home')}<p>Sua renda passiva paga <b>${OCULTO?'•••%':R.fixas.pct>=100?'todas':Math.round(R.fixas.pct)+'%'}</b> das suas contas fixas de ${esc(nomeMesMin(R.atual))}${R.fixas.pct>=100&&!OCULTO?' (e sobra)':''} <span class="nw">(${brl(R.media)} de ${brl(R.fixas.tot)})</span>.</p></div>`:''}
+    <p class="rpNota">FIIs, ações, ETFs e BDRs, pelo que você registrou como provento. O rendimento da renda fixa fica de fora.</p>
+  </div>`;
+}
+function yocCardHTML(Y){
+  if(!Y.lista.length)return '';
+  const L=yocOrdena(Y.lista,YOC_ORD);
+  const ords=[['yoc','YoC'],['dy','DY'],['rec','12 meses'],['az','A–Z']];
+  const rows=L.map(x=>`<div class="yocRow" style="--tc:${TCOR[tipoOf(x.f)]||'var(--a1)'}">${assetIco(x.f.ticker,tipoOf(x.f))}
+    <span class="yocN"><b>${esc(x.f.ticker)}${x.anualiz?` <em class="yocAn" title="menos de 12 meses na carteira: valor anualizado">anualizado · ${x.meses} ${x.meses===1?'mês':'meses'}</em>`:''}</b><small>${x.pm>0?'preço médio '+brl(x.pm):'sem preço médio'} · recebeu ${brl(x.recebido)}</small></span>
+    <span class="yocV"><b>${rpPct(x.yoc)}</b><small>DY ${rpPct(x.dy)}${x.dy!=null&&!x.cot?'*':''}</small></span></div>`).join('');
+  const manual=L.some(x=>x.dy!=null&&!x.cot);
+  return `<div class="card yocCard">
+    <div class="rpHead"><small>yield on cost</small><button type="button" class="yocInfo" data-act="yoc-info" aria-label="o que é yield on cost">${I('info')}</button></div>
+    <div class="yocTop"><div><b>${rpPct(Y.yoc)}</b><small>da carteira sobre o que você pagou</small></div><div><b>${rpPct(Y.dy)}</b><small>dividend yield pelo preço de hoje</small></div></div>
+    <div class="seg yocOrd" role="group" aria-label="ordenar por">${ords.map(([k,l])=>`<button type="button" data-act="yoc-ord" data-id="${k}" class="${YOC_ORD===k?'on':''}" aria-pressed="${YOC_ORD===k}">${l}</button>`).join('')}</div>
+    <div class="yocList">${rows}</div>
+    <p class="rpNota">Proventos dos últimos 12 meses por cota${manual?' · * preço digitado, não cotação':''}.</p>
+  </div>`;
+}
+function yocInfo(){
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet yocSheet" role="dialog" aria-modal="true" aria-label="O que é yield on cost"><div class="sh-head"><h3>Yield on cost</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p><b>Yield on cost (YoC)</b> é quanto os proventos rendem sobre o preço que <b>você pagou</b>. Pagou R$ 100 numa cota que pagou R$ 10 em 12 meses: YoC de 10%.</p>
+    <p><b>Dividend yield (DY)</b> faz a mesma conta com o <b>preço de hoje</b>: mostra quanto renderia para quem comprasse agora.</p>
+    <p>Se o YoC está acima do DY, você comprou mais barato do que a cota está hoje.</p>
+    <p class="small">Conta com os proventos dos últimos 12 meses, por cota, usando as cotas que você tinha em cada pagamento. Ativo com menos de 12 meses na carteira tem o valor anualizado e aparece marcado. Não é garantia de que vai pagar igual.</p>
+  </div>`;
+  box.classList.add('on');
+}
+function rpAtualiza(){
+  const card=document.querySelector('#view .rpCard');if(!card)return;
+  const R=rpCalc(),tmp=document.createElement('div');tmp.innerHTML=rpCardHTML(R);card.replaceWith(tmp.firstElementChild);
+}
 function viewFii(){
   const pat=patrimonio(),dm=divMensal();
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
@@ -3455,6 +3616,7 @@ function viewFii(){
   </div>`:''}
   ${p?provCardHTML(p)
      :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
+  ${S.fiis.length?(R=>rpCardHTML(R)+(R.temProv?yocCardHTML(yocCalc()):''))(rpCalc()):''}
   <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
   ${al.length>1||FTAB!=='todos'?tabs:''}
   <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>`;
@@ -7751,6 +7913,11 @@ const ACT={
   'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
   'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);atualizaCDI(true);},
   'ftab':id=>{FTAB=id;render();},
+  /* v10.108: renda passiva (toque na barra mostra quem pagou; "próximo mês" mostra a estimativa) e yield on cost */
+  'rp-mes':id=>{RP_VER='mes';RP_SEL=id;rpAtualiza();},
+  'rp-proj':()=>{RP_VER=RP_VER==='proj'?'mes':'proj';rpAtualiza();},
+  'yoc-ord':id=>{YOC_ORD=id;const c=document.querySelector('#view .yocCard');if(!c){render();return;}const t=document.createElement('div');t.innerHTML=yocCardHTML(yocCalc());c.replaceWith(t.firstElementChild);},
+  'yoc-info':()=>yocInfo(),
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
   'rel-print':()=>window.print(),
   'rel-a-prev':()=>relShift('a',-1),
@@ -7897,7 +8064,7 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 /* v10.102: o gancho de testes só existe rodando localmente (antes bastava ?gvtest no site publicado para expor S, planoAplica etc.) */
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
+if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
   get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
