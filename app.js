@@ -506,11 +506,12 @@ async function juntaCfgRemoto(){
   return true;
 }
 let APAGA_LIBERADO=false,AVISO_MASSA=false;
-async function upTabela(tab,arr){
+async function upTabela(tab,arr,uid,ok){
+  uid=uid||USER.id;ok=ok||(()=>true);
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
   const mudou=[],hashes={};
-  (arr||[]).forEach(x=>{const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:USER.id,id,data:x,updated_at:agora});});
+  (arr||[]).forEach(x=>{const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:uid,id,data:x,updated_at:agora});});
   let sair=Object.keys(snap).filter(id=>!(id in hashes));
   /* v10.65: trava de segurança. sumir mais da metade de uma tabela de uma vez só acontece de propósito por "Apagar tudo"
      ou "Importar backup". fora disso, seria um defeito: a exclusão na nuvem fica segurada e os dados continuam lá. */
@@ -520,24 +521,29 @@ async function upTabela(tab,arr){
     sair=[];
   }
   for(let i=0;i<mudou.length;i+=500){
+    if(!ok())throw CONTA_TROCOU;
     const lote=mudou.slice(i,i+500);
     const {error}=await sb.from(tab).upsert(lote);if(error)throw error;
     lote.forEach(r=>{snap[r.id]=hashes[r.id];});gravaSnap();
   }
   for(let i=0;i<sair.length;i+=200){
+    if(!ok())throw CONTA_TROCOU;
     const lote=sair.slice(i,i+200);
-    const {error}=await sb.from(tab).delete().eq('user_id',USER.id).in('id',lote);if(error)throw error;
+    const {error}=await sb.from(tab).delete().eq('user_id',uid).in('id',lote);if(error)throw error;
     lote.forEach(id=>{delete snap[id];});gravaSnap();
   }
 }
+const CONTA_TROCOU=new Error('conta trocada durante o envio');
 async function enviar(){
   if(!USER||!CR_OK)return;
   if(syncBusy){syncPend=true;return;}
   if(!navigator.onLine){setSync('offline, salvo no aparelho');return;}
   if(!SNAP)SNAP=lerSnap()||{};
   syncBusy=true;setSync('sincronizando…');
+  /* v10.103: a conta é fixada no começo do envio; se sair ou trocar de conta no meio, o envio para sem gravar nada na outra */
+  const uid=USER.id,S0=S,SN0=SNAP,ok=()=>!!USER&&USER.id===uid&&S===S0&&SNAP===SN0;
   try{
-    for(const t of TABELAS)await upTabela(t,S[t]);
+    for(const t of TABELAS){if(!ok())throw CONTA_TROCOU;await upTabela(t,S0[t],uid,ok);}
     APAGA_LIBERADO=false;
     let cfg=cfgNuvem(),hc=hashObj(cfg);
     if(SNAP.__cfg!==hc){
@@ -545,12 +551,14 @@ async function enviar(){
          chaves que este aparelho não mexeu desde então ficam com a versão da nuvem (antes o último a gravar apagava o outro) */
       if(await juntaCfgRemoto()){cfg=cfgNuvem();hc=hashObj(cfg);}
       const at=new Date().toISOString();
-      const {error}=await sb.from('settings').upsert({user_id:USER.id,data:cfg,updated_at:at});
+      if(!ok())throw CONTA_TROCOU;
+      const {error}=await sb.from('settings').upsert({user_id:uid,data:cfg,updated_at:at});
       if(error)throw error;
       SNAP.__cfg=hc;SNAP.__cfgAt=at;SNAP.__cfgK=cfgHashes(cfg);gravaSnap();
     }
     syncFalhas=0;setSync('sincronizado');
   }catch(e){
+    if(e===CONTA_TROCOU){syncPend=false;return;}
     syncFalhas++;
     const espera=Math.min(300,15*Math.pow(2,syncFalhas-1));
     setSync('pendente, tenta de novo em '+espera+'s');
@@ -3531,6 +3539,9 @@ function viewCfg(){
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('lu_chart_candlestick')}</span><div><h4>Cotações</h4><small>preços de ações e FIIs da carteira</small></div></div>
     <div class="lkList"><button class="lkRow" data-act="brapi-token"><span class="lkRi">${I('lu_key_round')}</span><span class="lkRt"><b>Token brapi</b><small>opcional, deixa as cotações mais rápidas</small></span><span class="dkSt${S.cfg.brapi?' on':''}">${S.cfg.brapi?'configurado':'não configurado'}</span><span class="lkCh">${I('chevR')}</span></button></div>
+  </div>
+  <div class="card lkCard">
+    <div class="lkList"><button class="lkRow" data-act="tour"><span class="lkRi">${I('compass')}</span><span class="lkRt"><b>Fazer o tour do app</b><small>um minuto para conhecer cada seção</small></span><span class="lkCh">${I('chevR')}</span></button></div>
   </div>
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('cloud')}</span><div><h4>Dados e backup</h4><small>tudo salvo na sua conta e sincronizado</small></div></div>
@@ -7597,6 +7608,7 @@ const ACT={
   'rel-csv':()=>relCSV(),
   'tx-planilha':()=>txPlanilha(),
   'limpar':limpar,
+  'tour':()=>tourAbre(),
   'novo-cartao':()=>cartaoForm(),
   'edit-cartao':id=>cartaoForm(id),
   'tx-propria':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const cp=norm(String(t.descricao).split('|').slice(1).join('|'));
@@ -7693,10 +7705,124 @@ document.addEventListener('change',e=>{
   }
 });
 
+/* v10.103: tour de boas-vindas. Abre sozinho na primeira entrada de uma conta nova (sem lançamentos, cartões nem contas)
+   e pode ser refeito em Ajustes. Destaca o elemento real da tela e explica cada seção. */
+const TOUR_PASSOS=[
+  {k:'oi'},
+  {alvo:'#fab',ic:'plus',cor:'#10b981',t:'Lance em segundos',d:'Este botão registra um gasto, uma entrada ou uma transferência. Dá para fotografar o comprovante e deixar a IA preencher.'},
+  {tab:'inicio',ic:'home',cor:'#10b981',t:'Início',d:'Seu mês num relance: saldo, o que entrou e saiu, contas que vencem e como os gastos andam dia a dia.'},
+  {tab:'lanc',ic:'receipt',cor:'#f97316',t:'Despesas',d:'Todos os seus lançamentos. Filtre por mês, categoria, conta ou cartão e toque em um para editar, duplicar ou anexar.'},
+  {tab:'orc',ic:'gauge',cor:'#eab308',t:'Orçamentos',d:'Ponha um limite por categoria e veja se está no ritmo. Informe sua renda e o app monta um plano 50/30/20 para você.'},
+  {tab:'cartoes',ic:'card',cor:'#8b5cf6',t:'Cartões',d:'Fatura atual, fechamento, vencimento e limite usado de cada cartão, com parcelas já distribuídas nas faturas certas.'},
+  {tab:'bancos',ic:'bank',cor:'#0ea5e9',t:'Bancos',d:'Suas contas e o saldo de cada uma. Se quiser, conecte pelo Open Finance para os lançamentos chegarem sozinhos.'},
+  {tab:'metas',ic:'flag',cor:'#ec4899',t:'Metas',d:'Junte dinheiro para um objetivo e veja quanto falta e quanto guardar por mês para chegar lá.'},
+  {tab:'fii',ic:'chart',cor:'#a3e635',t:'Investimentos',d:'FIIs, ações, renda fixa e cripto num lugar só, com proventos e a evolução do que você investiu.'},
+  {tab:'pat',ic:'scale',cor:'#14b8a6',t:'Patrimônio',d:'Tudo o que você tem menos o que deve. O número que mostra se você está, de fato, ficando mais rico.'},
+  {tab:'plan',ic:'compass',cor:'#6366f1',t:'Planejamento',d:'Olhe para frente: o saldo dos próximos meses com as contas fixas e parcelas que já estão por vir.'},
+  {tab:'rel',ic:'report',cor:'#f43f5e',t:'Relatório',d:'Para onde foi o dinheiro: categorias, comparação entre meses e exportação.'},
+  {tab:'cfg',ic:'sliders',cor:'#64748b',t:'Ajustes',d:'Tema, categorias, bloqueio com PIN, backup e sua conta. Quiser rever este tour, ele fica aqui.'},
+  {k:'fim'}
+];
+let TOUR=null;
+function tourPC(){return matchMedia('(min-width:1024px)').matches&&$('#sbNav')&&$('#sbNav').offsetParent!==null;}
+function tourAlvo(p){
+  if(p.alvo)return $(p.alvo);
+  if(!p.tab)return null;
+  if(tourPC())return $('#sbNav [data-tab="'+p.tab+'"]');
+  return $('#view h2')||$('#view .card');
+}
+function tourTalvez(){
+  try{
+    if(TOUR||S.cfg.tourVisto||localStorage.getItem('gv-tour-'+(USER&&USER.id)))return;
+    if((S.tx||[]).length||(S.cartoes||[]).length||(S.bancos||[]).length)return;
+    setTimeout(()=>{if(!TOUR&&USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on'))tourAbre();},900);
+  }catch(e){}
+}
+function tourMarca(){try{localStorage.setItem('gv-tour-'+(USER&&USER.id),'1');}catch(e){}if(!S.cfg.tourVisto){S.cfg.tourVisto=1;salvar();}}
+function tourAbre(){
+  if(TOUR)return;
+  const ov=document.createElement('div');ov.id='tour';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','Tour do GranaViva');
+  ov.innerHTML='<div class="tr-buraco"></div><div class="tr-card" tabindex="-1"></div>';
+  document.body.appendChild(ov);document.body.classList.add('tourOn');
+  TOUR={i:0,ov,aba:TAB,y:window.scrollY||0};
+  ov.addEventListener('click',tourClique);
+  document.addEventListener('keydown',tourTecla,true);
+  window.addEventListener('resize',tourPosiciona);window.addEventListener('scroll',tourPosiciona,{passive:true});
+  requestAnimationFrame(()=>ov.classList.add('on'));
+  tourMostra(0);
+}
+function tourFecha(final){
+  if(!TOUR)return;
+  const {ov,aba}=TOUR;TOUR=null;
+  document.removeEventListener('keydown',tourTecla,true);
+  window.removeEventListener('resize',tourPosiciona);window.removeEventListener('scroll',tourPosiciona);
+  ov.classList.remove('on');setTimeout(()=>ov.remove(),260);document.body.classList.remove('tourOn','tourFab');
+  tourMarca();
+  if(final!=='ir'&&TAB!==aba)go(aba||'inicio');
+}
+function tourTecla(e){
+  if(!TOUR)return;
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();tourFecha();}
+  else if(e.key==='ArrowRight'||e.key==='Enter'&&e.target===TOUR.ov.querySelector('.tr-card')){e.preventDefault();tourMostra(TOUR.i+1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();tourMostra(TOUR.i-1);}
+}
+function tourClique(e){
+  const b=e.target.closest('[data-tr]');if(!b)return;
+  const a=b.dataset.tr;
+  if(a==='prox')tourMostra(TOUR.i+1);
+  else if(a==='volta')tourMostra(TOUR.i-1);
+  else if(a==='pula'||a==='fim')tourFecha();
+  else if(a==='ponto')tourMostra(+b.dataset.i);
+  else if(a==='ir'){const t=b.dataset.t;tourFecha('ir');if(t==='novo')abreRapido();else go(t);}
+}
+function tourMostra(i){
+  if(!TOUR)return;
+  const N=TOUR_PASSOS.length;i=Math.max(0,Math.min(N-1,i));TOUR.i=i;
+  const p=TOUR_PASSOS[i],card=TOUR.ov.querySelector('.tr-card');
+  if(p.tab&&TAB!==p.tab)go(p.tab);
+  const meio=TOUR_PASSOS.filter(x=>!x.k).length,n=TOUR_PASSOS.slice(0,i).filter(x=>!x.k).length+1;
+  const pontos='<div class="tr-pontos">'+TOUR_PASSOS.map((x,j)=>x.k?'':'<button data-tr="ponto" data-i="'+j+'" class="'+(j===i?'on':j<i?'ja':'')+'" style="--c:'+x.cor+'" aria-label="passo '+(TOUR_PASSOS.slice(0,j).filter(y=>!y.k).length+1)+'"></button>').join('')+'</div>';
+  TOUR.ov.classList.toggle('centro',!!p.k);document.body.classList.toggle('tourFab',p.alvo==='#fab');
+  if(p.k==='oi'){
+    card.innerHTML='<div class="tr-hero">'+'<div class="tr-orb"><span>'+logoSVG()+'</span><i style="--d:0s;--c:#10b981">'+I('receipt')+'</i><i style="--d:-2s;--c:#a3e635">'+I('chart')+'</i><i style="--d:-4s;--c:#8b5cf6">'+I('card')+'</i><i style="--d:-6s;--c:#ec4899">'+I('flag')+'</i></div></div>'
+      +'<h3>Bem-vindo ao GranaViva'+(USER&&USER.user_metadata&&USER.user_metadata.name?', '+esc(String(USER.user_metadata.name).split(' ')[0]):'')+'</h3>'
+      +'<p>Em um minuto eu te mostro onde fica cada coisa, para você sair daqui sabendo usar o app inteiro.</p>'
+      +'<div class="tr-acts"><button class="btn" data-tr="prox">Começar o tour</button><button class="btn tr-sec" data-tr="pula">Agora não</button></div><small class="tr-dica">Dá para refazer quando quiser em Ajustes.</small>';
+  }else if(p.k==='fim'){
+    card.innerHTML='<div class="tr-confete" aria-hidden="true">'+Array.from({length:26},(_,j)=>'<i style="--x:'+(Math.cos(j*2.4)*140|0)+'px;--y:'+(-60-Math.abs(Math.sin(j*1.7))*120|0)+'px;--r:'+(j*47%360)+'deg;--c:'+['#10b981','#a3e635','#8b5cf6','#ec4899','#eab308','#0ea5e9'][j%6]+';--d:'+(j%7)*.04+'s"></i>').join('')+'</div>'
+      +'<div class="tr-ok">'+I('check')+'</div><h3>Tudo pronto!</h3><p>Por onde quer começar?</p>'
+      +'<div class="tr-passos"><button data-tr="ir" data-t="bancos"><span style="--c:#0ea5e9">'+I('bank')+'</span><b>Cadastrar minha conta</b><small>e o saldo de hoje</small></button>'
+      +'<button data-tr="ir" data-t="cartoes"><span style="--c:#8b5cf6">'+I('card')+'</span><b>Adicionar um cartão</b><small>com fechamento e vencimento</small></button>'
+      +'<button data-tr="ir" data-t="novo"><span style="--c:#10b981">'+I('plus')+'</span><b>Lançar o primeiro gasto</b><small>leva 10 segundos</small></button></div>'
+      +'<div class="tr-acts"><button class="btn tr-sec" data-tr="fim">Explorar sozinho</button></div>';
+  }else{
+    card.innerHTML='<div class="tr-top"><span class="tr-ic" style="--c:'+p.cor+'">'+I(p.ic)+'</span><span class="tr-n">'+n+' de '+meio+'</span><button class="tr-x" data-tr="pula" aria-label="fechar o tour">'+I('close')+'</button></div>'
+      +'<h3>'+p.t+'</h3><p>'+p.d+'</p>'+pontos
+      +'<div class="tr-acts"><button class="btn tr-sec" data-tr="volta"'+(n===1?' disabled':'')+'>Voltar</button><button class="btn" data-tr="prox">'+(n===meio?'Concluir':'Próximo')+'</button></div>';
+  }
+  card.style.setProperty('--c',p.cor||'#10b981');
+  card.classList.remove('entra');void card.offsetWidth;card.classList.add('entra');
+  setTimeout(()=>{if(!TOUR||TOUR.i!==i)return;const a=tourAlvo(p);if(a&&!tourPC()&&p.tab)window.scrollTo(0,0);else if(a){const r=a.getBoundingClientRect();if(r.top<70||r.bottom>innerHeight-260)a.scrollIntoView({block:'center'});}tourPosiciona();try{card.focus({preventScroll:true});}catch(e){}},p.tab?80:0);
+}
+function tourPosiciona(){
+  if(!TOUR)return;
+  const p=TOUR_PASSOS[TOUR.i],b=TOUR.ov.querySelector('.tr-buraco'),card=TOUR.ov.querySelector('.tr-card');
+  const a=p.k?null:tourAlvo(p);
+  if(!a||!a.getClientRects().length){b.style.opacity='0';b.style.cssText+=';left:50%;top:50%;width:0;height:0';card.style.left=card.style.top='';card.classList.remove('flut');return;}
+  const r=a.getBoundingClientRect(),pad=8;
+  Object.assign(b.style,{opacity:'1',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:(a.id==='fab'?'999px':'16px')});
+  if(innerWidth<720){card.classList.remove('flut');card.style.left=card.style.top='';TOUR.ov.classList.toggle('topo',r.top>innerHeight*.55);return;}
+  TOUR.ov.classList.remove('topo');card.classList.add('flut');
+  const cw=card.offsetWidth,ch=card.offsetHeight;let x,y;
+  if(r.right+24+cw<innerWidth){x=r.right+20;y=Math.min(Math.max(16,r.top+r.height/2-ch/2),innerHeight-ch-16);}
+  else{x=Math.min(Math.max(16,r.left+r.width/2-cw/2),innerWidth-cw-16);y=r.top>ch+40?r.top-ch-20:Math.min(r.bottom+20,innerHeight-ch-16);}
+  card.style.left=x+'px';card.style.top=y+'px';
+}
+
 /* v10.102: o gancho de testes só existe rodando localmente (antes bastava ?gvtest no site publicado para expor S, planoAplica etc.) */
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
-if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={enviar,tourAbre,tourFecha,get TOUR(){return TOUR;},get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -8158,7 +8284,7 @@ async function entraComSessao(sess){
     const ger=geraRecorrentes();if(ger)salvar();
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
-    prcAuto(); // v10.96: verificar parcelas, uma vez
+    prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
   }
 }
 // bootstrap explícito: após o redirect do Google a sessão vem no hash (#access_token)
@@ -8188,6 +8314,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       /* v10.52: sessão expirada (não foi um sair de propósito) com edições ainda não enviadas:
          guarda uma cópia local e devolve no próximo login da mesma conta, em vez de apagar sem aviso */
       if(!saiuDeProposito&&USER&&temPendencia()){try{gravaCifrado('gv-pend',JSON.stringify({dono:USER.id,S:sanea(S)}));}catch(e){}}
+      clearTimeout(syncT);syncPend=false; // v10.103: nada agendado da conta anterior roda depois de sair
       USER=null;planoZera();pintaUsuario();setSync('');
       limpaCache();
       S=Object.assign(vazio(),{cfg:S.cfg});applyCfg();render();
@@ -8225,7 +8352,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     const ger=geraRecorrentes();if(ger)salvar();
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
-    prcAuto(); // v10.96: verificar parcelas, uma vez
+    prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
   }
 });
 if(!navigator.onLine){
