@@ -3151,6 +3151,59 @@ function histOrc(m,n){
     out.push({m:mm,plan,gasto,est});}
   return out;
 }
+/* v10.101: plano pela renda. regra 50/30/20 (Elizabeth Warren, "All Your Worth") e variações; divide cada parte pelas categorias que a pessoa mais usa */
+const PERFIS={eq:{n:'Equilibrado',p:[50,30,20],d:'a regra 50/30/20'},ap:{n:'Contas apertadas',p:[60,30,10],d:'para custo fixo alto'},ac:{n:'Acelerar',p:[50,20,30],d:'para guardar mais'}};
+const ESSENC=/^(moradia|aluguel|mercado|alimenta|contas|sa[uú]de|farm[aá]cia|transporte|combust|internet|educa|filhos|impostos|tarifas|manuten|pets?|seguro|condom|luz|[aá]gua|g[aá]s)/i;
+let PLANO_TODOS=false;
+function rendaAuto(m){let s=0,n=0;for(let k=1;k<=3;k++){const v=somaMes(mesMais(m,-k),'receita');if(v>0){s+=v;n++;}}return n?s/n:somaMes(m,'receita');}
+function mediaCat(m,c){let s=0,n=0;for(let k=1;k<=3;k++){const v=somaMes(mesMais(m,-k),'despesa',c,true);if(v>0){s+=v;n++;}}return n?s/n:somaMes(m,'despesa',c,true);}
+function calcPlano(m){
+  const P=(S.cfg&&S.cfg.orcPlano)||{},renda=+P.renda||0,pf=PERFIS[P.perfil]||PERFIS.eq;
+  const cats=S.cats.map(c=>({c,ess:ESSENC.test(c),med:mediaCat(m,c)})).filter(x=>x.med>0);
+  const medE=cats.filter(x=>x.ess).reduce((s,x)=>s+x.med,0),medD=cats.filter(x=>!x.ess).reduce((s,x)=>s+x.med,0);
+  let E=renda*pf.p[0]/100,D=renda*pf.p[1]/100,G=renda*pf.p[2]/100,aviso='';
+  if(medE>E){const falta=medE-E;E=medE;D-=falta;aviso='Suas contas essenciais já passam de '+pf.p[0]+'% da renda, então o plano tira a diferença dos desejos.';if(D<0){G+=D;D=0;aviso='Suas contas essenciais estão altas para essa renda: sobra menos para guardar.';}if(G<0)G=0;}
+  const fl=v=>Math.max(0,Math.floor(v/10)*10);
+  /* teto: a parte proporcional, mas nunca muito acima do que a pessoa já gasta (média + 10%); o que sobra vira folga para guardar */
+  const linhas=cats.map(x=>{const tot=x.ess?medE:medD,bud=x.ess?E:D;const sug=Math.min(fl(tot?bud*x.med/tot:0),Math.ceil(x.med*1.1/10)*10);return {c:x.c,ess:x.ess,med:x.med,sug};}).sort((a,b)=>b.med-a.med);
+  const folga=Math.max(0,E+D-linhas.reduce((s,x)=>s+x.sug,0));
+  return {renda,pf,perfil:P.perfil||'eq',E,D,G,aviso,linhas,medE,medD,folga};
+}
+function planoHTML(m){
+  const P=(S.cfg&&S.cfg.orcPlano)||{};
+  if(!(+P.renda>0)){const au=rendaAuto(m);return `<div class="card orcPlano vazio">
+    <div class="opIco">${I('piggy')}</div>
+    <div class="opTxt"><h4>Plano pela sua renda</h4><p>Diga quanto você ganha e eu sugiro quanto gastar em cada categoria e quanto guardar por mês.</p></div>
+    <button class="btn" data-act="orc-renda">${au>0?'começar com '+brl(au):'informar minha renda'}</button></div>`;}
+  const R=calcPlano(m),pc=v=>R.renda?Math.max(0,v/R.renda*100):0,lim=limOrc(m);
+  const seg=[['ess','Essenciais',R.E],['des','Desejos',R.D],['gua','Guardar',R.G]];
+  const ano=R.G*12,taxa=.008,fut=R.G?R.G*((Math.pow(1+taxa,12)-1)/taxa):0;
+  const rows=PLANO_TODOS?R.linhas:R.linhas.slice(0,6);
+  const linha=x=>{const d=x.sug-x.med,atual=lim[x.c]||0;return `<div class="opRow" style="--cc:${corCat(x.c)}"><span class="orcIc">${I(catIcon(x.c))}</span>
+    <span class="opN"><b>${esc(x.c)}</b><small><i class="opTag ${x.ess?'ess':'des'}">${x.ess?'essencial':'desejo'}</i> média ${brl(x.med)}</small></span>
+    <span class="opV"><b class="nw">${brl(x.sug)}</b><small class="${d<-0.5?'cut':'ok'}">${d<-0.5?'corta '+brl(-d):'dentro'}</small></span>
+    <button class="orcEd sm" data-act="def-orc-sug" data-id="${esc(x.c)}|${x.sug}" aria-label="usar ${brl(x.sug)} como limite de ${esc(x.c)}" title="${atual?'limite atual '+brl(atual):'usar como limite'}">${I(atual&&Math.abs(atual-x.sug)<1?'check':'plus')}</button></div>`;};
+  return `<div class="card orcPlano">
+    <div class="opHead"><div><small>plano pela sua renda</small><h4>Renda de <span class="nw">${brl(R.renda)}</span> <button class="opEdit" data-act="orc-renda" aria-label="mudar renda">${I('edit')}</button></h4></div>
+      <div class="opChips" role="tablist">${Object.entries(PERFIS).map(([k,v])=>`<button class="opChip ${R.perfil===k?'on':''}" data-act="orc-perfil" data-id="${k}" role="tab" aria-selected="${R.perfil===k}">${v.n}<small>${v.p.join(' · ')}</small></button>`).join('')}</div></div>
+    <div class="opGrid">
+      <div class="opL">
+        <div class="opBar">${seg.map(s=>`<i class="${s[0]}" style="width:${pc(s[2]).toFixed(1)}%"></i>`).join('')}</div>
+        <div class="opLeg">${seg.map(s=>`<span class="${s[0]}"><em></em><small>${s[1]} · ${Math.round(pc(s[2]))}%</small><b class="nw">${brl(s[2])}</b></span>`).join('')}</div>
+        ${R.aviso?`<p class="opAviso">${I('alert')}${R.aviso}</p>`:''}
+        <div class="opGuardar"><span class="opGi">${I('chart')}</span><div><small>guardando ${brl(R.G)} por mês</small><b class="nw">${brl(fut)}</b><p>em 12 meses, investindo a 0,8% ao mês (estimativa). Só guardando: ${brl(ano)}.</p></div></div>
+        ${R.folga>=50?`<div class="opFolga">${I('sparkle')}<span>Mantendo os gastos de hoje, sobram mais <b class="nw">${brl(R.folga)}</b> por mês além do plano. Dá pra guardar até <b class="nw">${brl(R.G+R.folga)}</b>.</span></div>`:''}
+        <p class="opComo"><b>${R.pf.n} ${R.pf.p.join('/')}</b>: ${R.pf.p[0]}% para o essencial (moradia, mercado, contas), ${R.pf.p[1]}% para desejos (lazer, restaurantes, compras) e ${R.pf.p[2]}% para guardar e investir. Baseado na regra 50/30/20 de Elizabeth Warren.</p>
+      </div>
+      <div class="opR">
+        <div class="opRh"><b>Sugestão por categoria</b><small>pelo que você mais usa</small></div>
+        ${R.linhas.length?rows.map(linha).join(''):`<p class="small">Ainda não há gastos nos últimos meses para sugerir por categoria.</p>`}
+        ${R.linhas.length>6?`<button class="opMais" data-act="orc-plano-todos">${PLANO_TODOS?'mostrar menos':'ver todas ('+R.linhas.length+')'}</button>`:''}
+        ${R.linhas.length?`<button class="btn opAplica" data-act="orc-aplica">${I('check')}usar como meus limites</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
 function viewOrc(){
   const atual=mesAtual();if(!OMES||OMES>mesMais(atual,12))OMES=atual;
   const m=OMES,L=limOrc(m),passado=m<atual;
@@ -3161,36 +3214,51 @@ function viewOrc(){
   const hist=H.map(h=>`<div class="ohRow ${h.m===m?'on':''}" data-act="orc-mes" data-id="${h.m}"><span class="ohM">${MESES[+h.m.slice(5,7)-1]}</span>
     <span class="ohBars"><i class="p" style="width:${h.plan/mx*100}%"></i><i class="g ${h.plan&&h.gasto>h.plan?'over':''}" style="width:${h.gasto/mx*100}%"></i></span>
     <span class="ohV">${h.plan?Math.round(h.gasto/h.plan*100)+'%':'—'}${h.est?` <em>${h.est} estourou</em>`:''}</span></div>`).join('');
-  /* v10.54: categorias sem limite e sem gasto no mês viram uma lista compacta (antes: um cartão grande para cada uma) */
+  /* v10.101: orçamento reorganizado: resumo com ritmo do mês, categorias com limite, gastos sem limite (com sugestão) e o resto recolhido */
   const vazias=S.cats.filter(c=>!(L[c]||0)&&!somaMes(m,'despesa',c,true));
-  const outrasHTML=vazias.length?`<div class="card"><div class="catHead"><h4>Sem limite e sem gasto <span class="catQt">${vazias.length}</span></h4></div><p class="small" style="margin:0 0 10px">toque para definir um limite</p><div class="catList">${vazias.map(c=>`<button type="button" class="catRow" data-act="def-orc" data-id="${esc(c)}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${I('plus')}</span></button>`).join('')}</div></div>`:'';
-  const cards=S.cats.filter(c=>!vazias.includes(c)).map(c=>{
-    const lim=L[c]||0,gasto=somaMes(m,'despesa',c,true);
-    const pct=lim?gasto/lim*100:0,over=lim>0&&gasto>lim;
-    let aviso='';
-    if(over)aviso=`<p class="aviso">${I('alert')}estourou em ${brl(gasto-lim)} ${passado?'neste mês':'este mês'}</p>`;
-    else if(lim&&pct>=80&&!passado)aviso=`<p class="aviso warn">perto do limite: restam ${brl(lim-gasto)}</p>`;
-    return `<div class="card orc hov ${over?'alerta':''}">
-      <div class="row"><span class="catName"><span class="ic despesa" style="color:${corCat(c)}">${I(catIcon(c))}</span><b>${esc(c)}</b></span><button class="btn2" data-act="def-orc" data-id="${esc(c)}">${lim?'editar limite':'definir limite'}</button></div>
-      <div class="orcTap tap" data-act="nav-cat-orc" data-id="${esc(c)}" role="button" tabindex="0" aria-label="ver gastos de ${esc(c)}">${lim?`<div class="row small"><span>${brl(gasto)} de ${brl(lim)}</span><span>${Math.round(pct)}%${I('chevR','tapCh')}</span></div>
-      <div class="bar ${over?'over':pct>=80?'warn':''}"><i data-w="${Math.min(100,pct)}"></i></div>${aviso}`
-           :`<div class="row small"><span>sem limite · gasto no mês: ${brl(gasto)}</span>${I('chevR','tapCh')}</div>`}</div>
+  const comLim=S.cats.filter(c=>(L[c]||0)>0),semLim=S.cats.filter(c=>!(L[c]||0)&&!vazias.includes(c));
+  const gLim=comLim.reduce((s,c)=>s+cents(somaMes(m,'despesa',c,true)),0)/100;
+  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),hj=hojeISO(),dia=m===atual?+hj.slice(8,10):passado?dMes:0;
+  const ritmo=dMes?dia/dMes*100:0,pctT=totLim?gLim/totLim*100:0,rest=c2(totLim-gLim),dRest=m===atual?dMes-dia+1:0;
+  const st=!totLim?'':gLim>totLim?['over','estourou']:m===atual&&pctT>ritmo+5?['warn','acima do ritmo']:passado?['ok','dentro do limite']:['ok','no ritmo'];
+  const marca=p=>m===atual?`<b class="orcPace" style="left:${Math.min(100,p).toFixed(1)}%" title="hoje"></b>`:'';
+  const sug=c=>{let s=0,n=0;for(let k=1;k<=3;k++){const v=somaMes(mesMais(m,-k),'despesa',c,true);if(v>0){s+=v;n++;}}const b=n?s/n:somaMes(m,'despesa',c,true);return Math.max(50,Math.ceil(b/50)*50);};
+  const hero=`<div class="card orcHero">
+    <div class="orcHt"><small>orçamento de ${MESES[+m.slice(5,7)-1].toLowerCase()}</small>${st?`<span class="orcSt ${st[0]}">${st[1]}</span>`:''}</div>
+    ${totLim?`<div class="orcHv"><b class="nw">${brl(gLim)}</b><span>de ${brl(totLim)}</span></div>
+    <div class="orcHb"><div class="bar ${gLim>totLim?'over':pctT>=80?'warn':''}"><i data-w="${Math.min(100,pctT)}"></i></div>${marca(ritmo)}</div>
+    <div class="orcHs">
+      <span><small>${rest>=0?'disponível':'passou'}</small><b class="nw ${rest<0?'neg':''}">${brl(Math.abs(rest))}</b></span>
+      ${dRest&&rest>0?`<span><small>por dia</small><b class="nw">${brl(rest/dRest)}</b></span>`:`<span><small>usado</small><b>${Math.round(pctT)}%</b></span>`}
+      <span class="tap" data-act="nav-mes-orc" role="button" tabindex="0" aria-label="ver despesas do mês"><small>gasto total</small><b class="nw">${brl(totGasto)}${I('chevR','tapCh')}</b></span>
+    </div>`:`<p class="orcVaz">Defina limites nas categorias para acompanhar o mês. Gasto total até agora: <b class="nw">${brl(totGasto)}</b>.</p>`}
+  </div>`;
+  const aviso=`<div class="orcInfo">${I('calendar')}<span>${proprio?'limites definidos para este mês':'limites herdados do mês anterior'}. Mudar um limite vale para ${nomeMes(m)} e os seguintes.</span><button class="btn2 sm" data-act="orc-copia">copiar limites de ${nomeMes(mesMais(m,-1))}</button>${m!==atual?`<button class="btn2 sm" data-act="orc-mes" data-id="${atual}">voltar ao mês atual</button>`:''}</div>`;
+  const cards=comLim.map(c=>{
+    const lim=L[c],gasto=somaMes(m,'despesa',c,true),pct=gasto/lim*100,over=gasto>lim,cl=over?'over':pct>=80?'warn':'ok';
+    const sub=over?`estourou ${brl(gasto-lim)}`:passado?`sobrou ${brl(lim-gasto)}`:`restam ${brl(lim-gasto)}`;
+    return `<div class="card orc hov ${over?'alerta':''} ${cl}" style="--cc:${corCat(c)}">
+      <div class="orcTop"><span class="orcIc">${I(catIcon(c))}</span><span class="orcNm"><b>${esc(c)}</b><small class="${cl}">${sub}</small></span><button class="orcEd" data-act="def-orc" data-id="${esc(c)}" aria-label="editar limite de ${esc(c)}" title="editar limite">${I('edit')}</button></div>
+      <div class="orcTap tap" data-act="nav-cat-orc" data-id="${esc(c)}" role="button" tabindex="0" aria-label="ver gastos de ${esc(c)}">
+        <div class="orcVals"><span><b class="nw">${brl(gasto)}</b> de ${brl(lim)}</span><em class="${cl}">${Math.round(pct)}%</em></div>
+        <div class="orcHb"><div class="bar ${over?'over':pct>=80?'warn':''}"><i data-w="${Math.min(100,pct)}"></i></div>${marca(ritmo)}</div>
+      </div>
     </div>`;
   }).join('');
+  const semHTML=semLim.length?`<div class="card orcSem"><div class="catHead"><h4>Gastos sem limite <span class="catQt">${semLim.length}</span></h4></div><p class="small" style="margin:0 0 6px">sugestão pela média dos últimos meses. dá pra mudar o valor antes de salvar</p>
+    ${semLim.map(c=>{const g=somaMes(m,'despesa',c,true),s=sug(c);return `<div class="orcSr" style="--cc:${corCat(c)}"><span class="orcIc">${I(catIcon(c))}</span><span class="orcNm tap" data-act="nav-cat-orc" data-id="${esc(c)}" role="button" tabindex="0"><b>${esc(c)}</b><small>gastou <span class="nw">${brl(g)}</span></small></span><button class="btn2 sm" data-act="def-orc-sug" data-id="${esc(c)}|${s}">definir <span class="nw">${OCULTO?'R$ •••':'R$ '+s.toLocaleString('pt-BR')}</span></button></div>`;}).join('')}</div>`:'';
+  const outrasHTML=vazias.length?`<details class="card orcMais"><summary><span>${I('plus')}Adicionar limite a outras categorias</span><span class="catQt">${vazias.length}</span>${I('chevR','tapCh')}</summary><div class="catList">${vazias.map(c=>`<button type="button" class="catRow" data-act="def-orc" data-id="${esc(c)}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${I('plus')}</span></button>`).join('')}</div></details>`:'';
   return `
   <div class="head"><h2>Orçamentos</h2></div>
   <div class="mesNav"><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,-1)}" aria-label="mês anterior">‹</button><b>${nomeMes(m)}${m===atual?' · atual':''}</b><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,1)}" aria-label="próximo mês">›</button></div>
-  <div class="card">
-    <p class="small" style="margin:0 0 8px">${proprio?'limites definidos para este mês':'limites herdados do mês anterior'} · alterar um limite vale para ${nomeMes(m)} e os meses seguintes.</p>
-    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn2" data-act="orc-copia">copiar limites de ${nomeMes(mesMais(m,-1))}</button>${m!==atual?`<button class="btn2" data-act="orc-mes" data-id="${atual}">voltar ao mês atual</button>`:''}</div>
-  </div>
-  <div class="card">
-    <div class="row tap" data-act="nav-mes-orc" role="button" tabindex="0" aria-label="ver despesas do mês"><span class="small" style="margin:0">gasto total do mês <em class="orcNota">(cartão pela data da compra)</em></span><b class="neg">${brl(totGasto)}${I('chevR','tapCh')}</b></div>
-    <div class="row" style="margin-top:6px"><span class="small" style="margin:0">soma dos limites</span><b>${brl(totLim)}</b></div>
-  </div>
-  <div class="card"><h4 style="margin:0 0 10px">Histórico · planejado x gasto</h4>${hist}<p class="small" style="margin:8px 0 0"><span class="ohLeg p"></span> planejado <span class="ohLeg g"></span> gasto nas categorias com limite</p></div>
+  ${hero}
+  <div class="card orcHist"><h4 style="margin:0 0 10px">Histórico · planejado x gasto</h4>${hist}<p class="small" style="margin:8px 0 0"><span class="ohLeg p"></span> planejado <span class="ohLeg g"></span> gasto nas categorias com limite</p></div>
+  ${planoHTML(m)}
+  ${comLim.length?`<div class="wSec orcSec"><h3>Com limite <span>${comLim.length}</span></h3></div>`:''}
   ${cards}
-  ${outrasHTML}`;
+  ${semHTML}
+  ${outrasHTML}
+  ${aviso}`;
 }
 
 const TCOR={fii:'#a3e635',acao:'#60a5fa',etf:'#f59e0b',bdr:'#f472b6',rf:'#34d399',cripto:'#fb923c'};
@@ -5894,10 +5962,10 @@ function desfazPagamento(id){
 const FAT_ST={paga:['paga','ok'],parcial:['pago em parte','warn'],vencida:['vencida','over'],aberta:['a pagar','warn']};
 function pagoAMais(t){if(!t.faturaKey)return 0;const pg=pagsFatura(t),p=pg.length?pg.reduce((a,x)=>a+cents(x.valor),0):cents(t.pagoValor);return Math.max(0,(p-cents(t.valor))/100);}
 function faturaBadge(t){const st=statusFatura(t),[l,k]=FAT_ST[st],pm=pagoAMais(t);return `<span class="badge ${k}">${l}${st==='parcial'?' · falta '+brl(restanteFatura(t)):''}${pm>0?' · pago a mais '+brl(pm):''}</span>`;}
-function defOrc(c){
+function defOrc(c,sug){
   const m=OMES||mesAtual(),lim=limOrc(m);
   form('Limite de '+c+' · '+nomeMes(m),[
-    {name:'valor',label:'Limite (R$). deixe 0 pra remover',value:lim[c]?num(lim[c]):'',inputmode:'decimal',placeholder:'0,00'}
+    {name:'valor',label:'Limite (R$). deixe 0 pra remover',value:lim[c]?num(lim[c]):sug?num(sug):'',inputmode:'decimal',placeholder:'0,00'}
   ],v=>{
     const n=parseBR(v.valor);
     if(n<0)return 'Valor inválido.';
@@ -7407,6 +7475,15 @@ const ACT={
     if(!fu.length)return confirma({titulo:'Excluir compra parcelada?',texto:'As '+pl(rest.length)+' de "'+nm+'" já estão em faturas fechadas. Fatura paga continua com o pagamento; a sobra aparece como pago a mais.',ok:'Excluir todas',perigo:true},()=>apaga(rest));
     return confirma({titulo:'Excluir compra parcelada?',texto:'"'+nm+'": '+pl(fu.length)+' por vir e '+pl(fe)+' em fatura já fechada. O mais seguro é excluir só as futuras.',ok:'Só as futuras ('+fu.length+')',alt:'Todas, até as fechadas ('+rest.length+')',altPerigo:true,altCb:()=>apaga(rest)},()=>apaga(fu));}return confirma({titulo:'Excluir lançamento?',texto:'Essa ação não pode ser desfeita.',ok:'Excluir',perigo:true},()=>{const t=S.tx.find(x=>x.id===id);if(t&&t.faturaKey)S.gerados[t.faturaKey]='del';if(t&&t.meta)mtTxSaiu(t);if(t)removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);if(geraRecorrentes()){}salvar();render();toast('Lançamento excluído');});},
   'def-orc':c=>defOrc(c),
+  'orc-renda':()=>{const m=OMES||mesAtual(),P=S.cfg.orcPlano||{},au=rendaAuto(m);
+    form('Quanto você ganha por mês?',[{name:'valor',label:'Renda líquida mensal (R$)'+(au>0?'. média dos últimos meses: '+brl(au):''),value:+P.renda>0?num(P.renda):au>0?num(c2(au)):'',inputmode:'decimal',placeholder:'0,00'}],v=>{
+      const n=parseBR(v.valor);if(!(n>0))return 'Informe um valor maior que zero.';
+      S.cfg.orcPlano=Object.assign({perfil:'eq'},S.cfg.orcPlano||{},{renda:c2(n)});salvar();render();toast('Plano montado');});},
+  'orc-perfil':k=>{if(!PERFIS[k])return;S.cfg.orcPlano=Object.assign({},S.cfg.orcPlano||{},{perfil:k});salvar();render();},
+  'orc-plano-todos':()=>{PLANO_TODOS=!PLANO_TODOS;render();},
+  'orc-aplica':()=>{const m=OMES||mesAtual(),R=calcPlano(m),L=R.linhas.filter(x=>x.sug>0);if(!L.length)return;
+    confirma({titulo:'Usar o plano como limites?',texto:L.length+' categorias recebem o limite sugerido a partir de '+nomeMes(m)+'. Os outros limites continuam como estão.',ok:'Usar limites'},()=>{L.forEach(x=>setLimOrc(m,x.c,x.sug));salvar();render();toast('Limites atualizados');});},
+  'def-orc-sug':id=>{const k=id.lastIndexOf('|');defOrc(id.slice(0,k),+id.slice(k+1)||0);},
   'mais-lista':()=>{const y=scrollY;LIM_LISTA+=50;render();scrollTo(0,y);},
   'tag-filtro':g=>{F.tag=F.tag===g?'':g;render();},
   'orc-mes':m=>{if(/^\d{4}-\d{2}$/.test(m)){OMES=m;render();}},
