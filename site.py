@@ -27,7 +27,7 @@ def pagina(arq, titulo, descricao, corpo, atual=None):
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>{e(titulo)}</title>
 <meta name="description" content="{e(descricao)}">
-<meta name="theme-color" content="#0a0a0c">
+<meta name="theme-color" content="#050d0a">
 <link rel="icon" href="../icons/icon-192.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <link rel="stylesheet" href="site.css">
@@ -428,6 +428,8 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     arqs = {'index.html': landing(), 'funcionalidades.html': funcionalidades(), 'precos.html': precos(), 'sobre.html': sobre(), 'faq.html': faq(), 'privacidade.html': privacidade(), 'termos.html': termos(), 'site.css': CSS}
+    # v10.103: index.html, funcionalidades.html e site.css passaram a ser editados à mão (redesenho de nov/2026); não sobrescrever
+    for n in ('index.html', 'funcionalidades.html', 'site.css'): arqs.pop(n)
     for n, t in arqs.items():
         open(os.path.join(OUT, n), 'w', encoding='utf-8').write(t)
     print('site/ gerado:', ', '.join(arqs))
