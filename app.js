@@ -5662,11 +5662,13 @@ async function usoIA(){return {mes:hojeISO().slice(0,7),n:0};}
 async function contaLeitura(){}
 /* v10.106: chamadas à IA (ler-comprovante, assistente) tentam de novo quando o serviço está ocupado (429/502/503)
    ou a rede falhou: até 3 vezes, esperando ~1,5 s, 4 s e 8 s (±20% aleatório). nunca repete limite diário ("limite de"),
-   erro de plano (402/upgrade/"plano"), "muitas perguntas" nem 401. aoTentar(n) avisa a tela a cada nova tentativa. */
+   erro de plano (402/upgrade), "muitas perguntas" nem 401. aoTentar(n) avisa a tela a cada nova tentativa.
+   v10.107: o 503 "não foi possível conferir seu plano agora" é falha passageira do servidor e repete como 429/502;
+   só o erro de plano de verdade (402 ou upgrade) não repete. */
 let IA_ESP=[1500,4000,8000],IA_FN=null;
 const IA_OCUPADA='A IA está ocupada, tentando de novo…';
 function iaEspera(i){const b=IA_ESP[Math.min(i,IA_ESP.length-1)];return Math.round(b*(0.8+Math.random()*0.4));}
-function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite))||/limite de|plano|muitas perguntas/i.test(String(erro||''));}
+function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite))||/limite de|muitas perguntas/i.test(String(erro||''));}
 async function invokeIA(nome,body,aoTentar){
   for(let i=0;;i++){
     let o=null,status=0,rede=false;
@@ -7856,125 +7858,47 @@ document.addEventListener('change',e=>{
   }
 });
 
-/* v10.103: tour de boas-vindas. Abre sozinho na primeira entrada de uma conta nova (sem lançamentos, cartões nem contas)
-   e pode ser refeito em Ajustes. Destaca o elemento real da tela e explica cada seção. */
-const TOUR_PASSOS=[
-  {k:'oi'},
-  {alvo:'#fab',ic:'plus',cor:'#10b981',t:'Lance em segundos',d:'Este botão registra um gasto, uma entrada ou uma transferência. Dá para fotografar o comprovante e deixar a IA preencher.'},
-  {tab:'inicio',ic:'home',cor:'#10b981',t:'Início',d:'Seu mês num relance: saldo, o que entrou e saiu, contas que vencem e como os gastos andam dia a dia.'},
-  {tab:'lanc',ic:'receipt',cor:'#f97316',t:'Despesas',d:'Todos os seus lançamentos. Filtre por mês, categoria, conta ou cartão e toque em um para editar, duplicar ou anexar.'},
-  {tab:'orc',ic:'gauge',cor:'#eab308',t:'Orçamentos',d:'Ponha um limite por categoria e veja se está no ritmo. Informe sua renda e o app monta um plano 50/30/20 para você.'},
-  {tab:'cartoes',ic:'card',cor:'#8b5cf6',t:'Cartões',d:'Fatura atual, fechamento, vencimento e limite usado de cada cartão, com parcelas já distribuídas nas faturas certas.'},
-  {tab:'bancos',ic:'bank',cor:'#0ea5e9',t:'Bancos',d:'Suas contas e o saldo de cada uma. Se quiser, conecte pelo Open Finance para os lançamentos chegarem sozinhos.'},
-  {tab:'metas',ic:'flag',cor:'#ec4899',t:'Metas',d:'Junte dinheiro para um objetivo e veja quanto falta e quanto guardar por mês para chegar lá.'},
-  {tab:'fii',ic:'chart',cor:'#a3e635',t:'Investimentos',d:'FIIs, ações, renda fixa e cripto num lugar só, com proventos e a evolução do que você investiu.'},
-  {tab:'pat',ic:'scale',cor:'#14b8a6',t:'Patrimônio',d:'Tudo o que você tem menos o que deve. O número que mostra se você está, de fato, ficando mais rico.'},
-  {tab:'plan',ic:'compass',cor:'#6366f1',t:'Planejamento',d:'Olhe para frente: o saldo dos próximos meses com as contas fixas e parcelas que já estão por vir.'},
-  {tab:'rel',ic:'report',cor:'#f43f5e',t:'Relatório',d:'Para onde foi o dinheiro: categorias, comparação entre meses e exportação.'},
-  {tab:'cfg',ic:'sliders',cor:'#64748b',t:'Ajustes',d:'Tema, categorias, bloqueio com PIN, backup e sua conta. Quiser rever este tour, ele fica aqui.'},
-  {k:'fim'}
-];
-let TOUR=null;
-function tourPC(){return matchMedia('(min-width:1024px)').matches&&$('#sbNav')&&$('#sbNav').offsetParent!==null;}
-function tourAlvo(p){
-  if(p.alvo)return $(p.alvo);
-  if(!p.tab)return null;
-  if(tourPC())return $('#sbNav [data-tab="'+p.tab+'"]');
-  return $('#view h2')||$('#view .card');
+/* v10.107: partes pesadas e pouco usadas ficam em arquivos à parte (nome.min.js?v=versão), carregados na primeira vez.
+   script do próprio site (a CSP só aceita 'self'), sem atributo onload no HTML; o service worker guarda junto com o app.
+   cada parte se registra em window.__gvParte[nome] e recebe o contexto X (funções do app e getters do estado que muda). */
+const PARTES={};
+const PARTE_X={$,I,esc,logoSVG,go,abreRapido,salvar,get S(){return S;},get USER(){return USER;},get TAB(){return TAB;}};
+function carregaParte(nome){
+  if(PARTES[nome])return PARTES[nome];
+  return PARTES[nome]=new Promise((ok,falha)=>{
+    const reg=window.__gvParte=window.__gvParte||{};
+    if(typeof reg[nome]==='function'){const f=reg[nome];delete reg[nome];try{ok(f(PARTE_X));}catch(e){delete PARTES[nome];falha(e);}return;}
+    const sc=document.createElement('script');sc.src=nome+'.min.js?v='+GV_BUILD;sc.async=true;
+    sc.onload=()=>{const f=reg[nome];delete reg[nome];sc.remove();
+      if(typeof f!=='function'){delete PARTES[nome];falha(new Error('parte '+nome+' não registrada'));return;}
+      try{ok(f(PARTE_X));}catch(e){delete PARTES[nome];falha(e);}};
+    sc.onerror=()=>{delete PARTES[nome];sc.remove();falha(new Error('não carregou '+nome));};
+    document.head.appendChild(sc);
+  });
 }
+/* v10.103: tour de boas-vindas. Abre sozinho na primeira entrada de uma conta nova (sem lançamentos, cartões nem contas)
+   e pode ser refeito em Ajustes. Destaca o elemento real da tela e explica cada seção.
+   v10.107: o tour mora em tour.js (carregado na primeira vez que abre); aqui fica só a decisão de abrir. */
+let TOUR_P=null;
+const tourAberto=()=>!!(TOUR_P&&TOUR_P.TOUR);
 function tourTalvez(){
   try{
-    if(TOUR||S.cfg.tourVisto||localStorage.getItem('gv-tour-'+(USER&&USER.id)))return;
+    if(tourAberto()||S.cfg.tourVisto||localStorage.getItem('gv-tour-'+(USER&&USER.id)))return;
     if((S.tx||[]).length||(S.cartoes||[]).length||(S.bancos||[]).length)return;
-    setTimeout(()=>{if(!TOUR&&USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on'))tourAbre();},900);
+    setTimeout(()=>{if(!tourAberto()&&USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on'))tourAbre();},900);
   }catch(e){}
 }
-function tourMarca(){try{localStorage.setItem('gv-tour-'+(USER&&USER.id),'1');}catch(e){}if(!S.cfg.tourVisto){S.cfg.tourVisto=1;salvar();}}
 function tourAbre(){
-  if(TOUR)return;
-  const ov=document.createElement('div');ov.id='tour';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','Tour do GranaViva');
-  ov.innerHTML='<div class="tr-buraco"></div><div class="tr-card" tabindex="-1"></div>';
-  document.body.appendChild(ov);document.body.classList.add('tourOn');
-  TOUR={i:0,ov,aba:TAB,y:window.scrollY||0};
-  ov.addEventListener('click',tourClique);
-  document.addEventListener('keydown',tourTecla,true);
-  window.addEventListener('resize',tourPosiciona);window.addEventListener('scroll',tourPosiciona,{passive:true});
-  requestAnimationFrame(()=>ov.classList.add('on'));
-  tourMostra(0);
+  return carregaParte('tour').then(p=>{TOUR_P=p;p.abre();})
+    .catch(()=>toast('Não consegui abrir o tour agora. Confira a conexão e tente de novo.',true));
 }
-function tourFecha(final){
-  if(!TOUR)return;
-  const {ov,aba}=TOUR;TOUR=null;
-  document.removeEventListener('keydown',tourTecla,true);
-  window.removeEventListener('resize',tourPosiciona);window.removeEventListener('scroll',tourPosiciona);
-  ov.classList.remove('on');setTimeout(()=>ov.remove(),260);document.body.classList.remove('tourOn','tourFab');
-  tourMarca();
-  if(final!=='ir'&&TAB!==aba)go(aba||'inicio');
-}
-function tourTecla(e){
-  if(!TOUR)return;
-  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();tourFecha();}
-  else if(e.key==='ArrowRight'||e.key==='Enter'&&e.target===TOUR.ov.querySelector('.tr-card')){e.preventDefault();tourMostra(TOUR.i+1);}
-  else if(e.key==='ArrowLeft'){e.preventDefault();tourMostra(TOUR.i-1);}
-}
-function tourClique(e){
-  const b=e.target.closest('[data-tr]');if(!b)return;
-  const a=b.dataset.tr;
-  if(a==='prox')tourMostra(TOUR.i+1);
-  else if(a==='volta')tourMostra(TOUR.i-1);
-  else if(a==='pula'||a==='fim')tourFecha();
-  else if(a==='ponto')tourMostra(+b.dataset.i);
-  else if(a==='ir'){const t=b.dataset.t;tourFecha('ir');if(t==='novo')abreRapido();else go(t);}
-}
-function tourMostra(i){
-  if(!TOUR)return;
-  const N=TOUR_PASSOS.length;i=Math.max(0,Math.min(N-1,i));TOUR.i=i;
-  const p=TOUR_PASSOS[i],card=TOUR.ov.querySelector('.tr-card');
-  if(p.tab&&TAB!==p.tab)go(p.tab);
-  const meio=TOUR_PASSOS.filter(x=>!x.k).length,n=TOUR_PASSOS.slice(0,i).filter(x=>!x.k).length+1;
-  const pontos='<div class="tr-pontos">'+TOUR_PASSOS.map((x,j)=>x.k?'':'<button data-tr="ponto" data-i="'+j+'" class="'+(j===i?'on':j<i?'ja':'')+'" style="--c:'+x.cor+'" aria-label="passo '+(TOUR_PASSOS.slice(0,j).filter(y=>!y.k).length+1)+'"></button>').join('')+'</div>';
-  TOUR.ov.classList.toggle('centro',!!p.k);document.body.classList.toggle('tourFab',p.alvo==='#fab');
-  if(p.k==='oi'){
-    card.innerHTML='<div class="tr-hero">'+'<div class="tr-orb"><span>'+logoSVG()+'</span><i style="--d:0s;--c:#10b981">'+I('receipt')+'</i><i style="--d:-2s;--c:#a3e635">'+I('chart')+'</i><i style="--d:-4s;--c:#8b5cf6">'+I('card')+'</i><i style="--d:-6s;--c:#ec4899">'+I('flag')+'</i></div></div>'
-      +'<h3>Bem-vindo ao GranaViva'+(USER&&USER.user_metadata&&USER.user_metadata.name?', '+esc(String(USER.user_metadata.name).split(' ')[0]):'')+'</h3>'
-      +'<p>Em um minuto eu te mostro onde fica cada coisa, para você sair daqui sabendo usar o app inteiro.</p>'
-      +'<div class="tr-acts"><button class="btn" data-tr="prox">Começar o tour</button><button class="btn tr-sec" data-tr="pula">Agora não</button></div><small class="tr-dica">Dá para refazer quando quiser em Ajustes.</small>';
-  }else if(p.k==='fim'){
-    card.innerHTML='<div class="tr-confete" aria-hidden="true">'+Array.from({length:26},(_,j)=>'<i style="--x:'+(Math.cos(j*2.4)*140|0)+'px;--y:'+(-60-Math.abs(Math.sin(j*1.7))*120|0)+'px;--r:'+(j*47%360)+'deg;--c:'+['#10b981','#a3e635','#8b5cf6','#ec4899','#eab308','#0ea5e9'][j%6]+';--d:'+(j%7)*.04+'s"></i>').join('')+'</div>'
-      +'<div class="tr-ok">'+I('check')+'</div><h3>Tudo pronto!</h3><p>Por onde quer começar?</p>'
-      +'<div class="tr-passos"><button data-tr="ir" data-t="bancos"><span style="--c:#0ea5e9">'+I('bank')+'</span><b>Cadastrar minha conta</b><small>e o saldo de hoje</small></button>'
-      +'<button data-tr="ir" data-t="cartoes"><span style="--c:#8b5cf6">'+I('card')+'</span><b>Adicionar um cartão</b><small>com fechamento e vencimento</small></button>'
-      +'<button data-tr="ir" data-t="novo"><span style="--c:#10b981">'+I('plus')+'</span><b>Lançar o primeiro gasto</b><small>leva 10 segundos</small></button></div>'
-      +'<div class="tr-acts"><button class="btn tr-sec" data-tr="fim">Explorar sozinho</button></div>';
-  }else{
-    card.innerHTML='<div class="tr-top"><span class="tr-ic" style="--c:'+p.cor+'">'+I(p.ic)+'</span><span class="tr-n">'+n+' de '+meio+'</span><button class="tr-x" data-tr="pula" aria-label="fechar o tour">'+I('close')+'</button></div>'
-      +'<h3>'+p.t+'</h3><p>'+p.d+'</p>'+pontos
-      +'<div class="tr-acts"><button class="btn tr-sec" data-tr="volta"'+(n===1?' disabled':'')+'>Voltar</button><button class="btn" data-tr="prox">'+(n===meio?'Concluir':'Próximo')+'</button></div>';
-  }
-  card.style.setProperty('--c',p.cor||'#10b981');
-  card.classList.remove('entra');void card.offsetWidth;card.classList.add('entra');
-  setTimeout(()=>{if(!TOUR||TOUR.i!==i)return;const a=tourAlvo(p);if(a&&!tourPC()&&p.tab)window.scrollTo(0,0);else if(a){const r=a.getBoundingClientRect();if(r.top<70||r.bottom>innerHeight-260)a.scrollIntoView({block:'center'});}tourPosiciona();try{card.focus({preventScroll:true});}catch(e){}},p.tab?80:0);
-}
-function tourPosiciona(){
-  if(!TOUR)return;
-  const p=TOUR_PASSOS[TOUR.i],b=TOUR.ov.querySelector('.tr-buraco'),card=TOUR.ov.querySelector('.tr-card');
-  const a=p.k?null:tourAlvo(p);
-  if(!a||!a.getClientRects().length){b.style.opacity='0';b.style.cssText+=';left:50%;top:50%;width:0;height:0';card.style.left=card.style.top='';card.classList.remove('flut');return;}
-  const r=a.getBoundingClientRect(),pad=8;
-  Object.assign(b.style,{opacity:'1',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:(a.id==='fab'?'999px':'16px')});
-  if(innerWidth<720){card.classList.remove('flut');card.style.left=card.style.top='';TOUR.ov.classList.toggle('topo',r.top>innerHeight*.55);return;}
-  TOUR.ov.classList.remove('topo');card.classList.add('flut');
-  const cw=card.offsetWidth,ch=card.offsetHeight;let x,y;
-  if(r.right+24+cw<innerWidth){x=r.right+20;y=Math.min(Math.max(16,r.top+r.height/2-ch/2),innerHeight-ch-16);}
-  else{x=Math.min(Math.max(16,r.left+r.width/2-cw/2),innerWidth-cw-16);y=r.top>ch+40?r.top-ch-20:Math.min(r.bottom+20,innerHeight-ch-16);}
-  card.style.left=x+'px';card.style.top=y+'px';
-}
+function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 
 /* v10.102: o gancho de testes só existe rodando localmente (antes bastava ?gvtest no site publicado para expor S, planoAplica etc.) */
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR;},get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,confirmaImport,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,montaImport,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,folgaPlano,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,listaAlertas,relMesA,detectaAssinaturas,notifOn,NOTIF_T,lerCSV,mtGraficoSVG,mesesMeta,pmtMeta,pode,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
