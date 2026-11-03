@@ -3289,8 +3289,11 @@ function viewFii(){
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados</small></div>`:''}
     ${barra}
   </div>
-  ${temRV?`<div class="wKpi">
-    <div class="card mini"><small>renda mensal estimada</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>
+  ${temRV||S.fiis.length?`<div class="wKpi${temRV?'':' semRV'}">
+    ${temRV?`<div class="card mini wRenda"><small>renda mensal</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>`:''}
+    <div class="card mini wDk"><small>total aplicado</small><b>${brl(aplic)}</b><small class="wHint">custo das compras</small></div>
+    <div class="card mini wDk"><small>resultado</small><b class="${plT>=0?'pos':'neg'}">${plT>0?'+':''}${brl(plT)}</b><small class="wHint">${aplic?(plTp>0?'+':'')+num(plTp)+'% no total':'sem preço médio'}</small></div>
+    <div class="card mini wDk"><small>ativos</small><b>${S.fiis.length}</b><small class="wHint">${al.length} ${al.length===1?'tipo':'tipos'} na carteira</small></div>
   </div>`:''}
   ${p?provCardHTML(p)
      :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
@@ -3921,9 +3924,10 @@ function ccFatHTML(c){
   const band=c.bandeira&&CC_BAND_N[c.bandeira]?CC_BAND_N[c.bandeira]:ccNomeCurto(c);
   const dF=ccDiasEntre(hojeISO(),E.fecha),dV=ccDiasEntre(hojeISO(),E.vence);
   const lbl=E.tipo==='fechada'?(E.st==='vencida'?'vencida':'fechada'):'aberta';
+  const ccTi=(ic,k,d,n,w)=>`<span class="ccChip2 ccTi${w?' warn':''}">${ic}<span><small>${k}</small><b>${ccDM(d)}</b><em>${ccEmDias(n)}</em></span></span>`;
   const chips=E.tipo==='fechada'
-    ?`<span class="ccChip2 ${dV<=3?'warn':''}">${CC_IC_PAY}vence ${ccDM(E.vence)} · ${ccEmDias(dV)}</span><span class="ccChip2">${CC_IC_CAL}próxima fecha ${ccDM(E.prox.fecha)}</span>`
-    :`<span class="ccChip2 warn">${CC_IC_CAL}fecha ${ccDM(E.fecha)} · ${ccEmDias(dF)}</span><span class="ccChip2">${CC_IC_PAY}vence ${ccDM(E.vence)}</span>`;
+    ?ccTi(CC_IC_PAY,'vence',E.vence,dV,dV<=3)+ccTi(CC_IC_CAL,'próxima fecha',E.prox.fecha,ccDiasEntre(hojeISO(),E.prox.fecha),false)
+    :ccTi(CC_IC_CAL,'fecha',E.fecha,dF,dF<=7)+ccTi(CC_IC_PAY,'vence',E.vence,dV,false);
   const badge=E.t&&E.tipo==='fechada'&&E.st!=='aberta'?faturaBadge(E.t):'';
   return `<div class="card ccFat" data-id="${c.id}" style="--tom:${tom}">
     <div class="ccFatTop"><b class="ccFatNm">${esc(ccNome(c))}${c.final?` <span class="ccFin">· final ${esc(c.final)}</span>`:''}</b><span class="ccBand">${esc(band)}</span></div>
@@ -3935,7 +3939,7 @@ function ccFatHTML(c){
     <div class="ccChips">${chips}</div>
     ${E.tipo==='fechada'?`<p class="ccProx">fatura aberta até ${ccDM(E.prox.fecha)}: <b class="nw">${brl(E.prox.valor)}</b></p>`:''}
     ${E.tipo==='aberta'&&!(E.valor>0.004)&&c.bancoData&&c.bancoUsado>0?`<p class="ccProx ccBcoNota">o banco informa <b class="nw">${brl(c.bancoUsado)}</b> usados do limite, mas nenhuma compra deste ciclo chegou ao app. Parcelas de compras antigas e compras novas entram na próxima sincronização.</p>`:''}
-    <div class="ccActs"><button type="button" class="btn2" data-act="fat-abre" data-id="${esc(E.abre)}">ver lançamentos</button>${E.pagar?`<button type="button" class="btn" data-act="pagar-fat" data-id="${E.pagar}">pagar fatura</button>`:`<button type="button" class="btn ccOff" data-act="cc-pagar-aberta" data-id="${c.id}" aria-disabled="true">pagar fatura</button>`}</div>
+    <div class="ccActs"><button type="button" class="btn2" data-act="fat-abre" data-id="${esc(E.abre)}">${I('list')}ver lançamentos</button>${E.pagar?`<button type="button" class="btn" data-act="pagar-fat" data-id="${E.pagar}">${I('check')}pagar fatura</button>`:`<button type="button" class="btn ccOff" data-act="cc-pagar-aberta" data-id="${c.id}" aria-disabled="true">${I('lock')}pagar fatura</button>`}</div>
     ${ccFmHTML(c,E)}
   </div>`;
 }
@@ -6605,7 +6609,7 @@ function viewMetas(){
       <div class="mtHd tap" data-act="meta-abre" data-id="${m.id}" role="button" tabindex="0" aria-label="abrir meta ${esc(m.nome)}">
         <span class="mtIc">${I(ic)}</span>
         <div class="mtNm"><b>${esc(m.nome)}</b><small>${m.prazo?'até '+mesCurto(m.prazo):'sem prazo'}${m.cdi&&!nova?' · '+String(m.pctCdi||100).replace('.',',')+'% do CDI':''}${m.fipe?' · FIPE':m.ipca?' · corrigido pelo IPCA':''}${sq.n>1?' · '+sq.n+' meses seguidos':''}</small></div>
-        <div class="mtRing"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R2}" class="rb"/><circle cx="32" cy="32" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span>${pct>0&&pct<1?'<1':Math.round(pct)}%</span></div>
+        <div class="mtRing"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R2}" class="rb"/><circle cx="32" cy="32" r="${R2}" class="rf mtRf" style="stroke-dasharray:${C2.toFixed(1)};stroke-dashoffset:${off.toFixed(1)};--c:${C2.toFixed(1)}"/></svg><span>${pct>0&&pct<1?'<1':Math.round(pct)}%</span></div>
       </div>
       <div class="mtVal"><b class="nw">${brl(sA)}</b><span>de ${brl(alvo)}</span>${st}</div>
       <div class="bar mtBar"><i data-w="${pct}"></i></div>
@@ -6697,7 +6701,7 @@ function abreMeta(id){
   const simMax=Math.max(500,Math.round((m.aporteMes||0)/50)*50);
   box.innerHTML=`<div class="sheet mtSheet" role="dialog" aria-modal="true" aria-label="${esc(m.nome)}" style="--m1:${pal[0]};--m2:${pal[1]}"><div class="sh-head"><h3>${esc(m.nome)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="mtHero">
-      <div class="mtRingL"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${R2}" class="rb"/><circle cx="50" cy="50" r="${R2}" class="rf" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span class="mtRingI">${I(metaIcone(m.nome))}<b>${pct>0&&pct<1?'<1':Math.round(pct)}%</b></span></div>
+      <div class="mtRingL"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${R2}" class="rb"/><circle cx="50" cy="50" r="${R2}" class="rf mtRf" style="stroke-dasharray:${C2.toFixed(1)};stroke-dashoffset:${off.toFixed(1)};--c:${C2.toFixed(1)}"/></svg><span class="mtRingI">${I(metaIcone(m.nome))}<b>${pct>0&&pct<1?'<1':Math.round(pct)}%</b></span></div>
       <div class="mtHv"><small>guardado</small><b class="nw">${brl(D.total)}</b><span>de ${brl(alvo)}${m.fipe?' · FIPE':m.ipca?' · com IPCA':''}</span>
         ${ch?`<em class="mtCh">${I('flag')}chega em ${mtMesTxt(ch)}</em>`:p.P>0||D.total>0?'<em class="mtCh off">sem data com o ritmo atual</em>':''}</div>
     </div>
@@ -6718,7 +6722,7 @@ function abreMeta(id){
     <h4 class="rsH">aportes${sq.n?` <span class="mtStk">${I('lu_flame')}${sq.n} ${sq.n>1?'meses seguidos':'mês'}</span>`:''}</h4>
     <p class="small">${m.aporteMes>0?'combinado: '+brl(m.aporteMes)+' por mês'+(m.diaAporte?', todo dia '+m.diaAporte:'')+'. '+(sq.mesOk?'este mês já foi.':'este mês ainda não.'):'defina um valor por mês em editar para acompanhar a sequência.'}</p>
     ${ap||'<p class="small">nenhum aporte registrado ainda. toque em guardei quando separar o dinheiro.</p>'}
-    <div class="row mtRod"><button class="btn2 sm" data-act="edit-meta" data-id="${m.id}">${I('edit')}editar</button><button class="btn2 sm danger" data-act="del-meta" data-id="${m.id}">${I('trash')}excluir</button></div>
+    <div class="mtRod"><button class="mtRodB" data-act="edit-meta" data-id="${m.id}">${I('edit')}<span>editar meta</span></button><button class="mtRodB del" data-act="del-meta" data-id="${m.id}">${I('trash')}<span>excluir</span></button></div>
   </div>`;
   box.classList.add('on');
   const r=$('#mtSimR');if(r)r.oninput=()=>{const x=+r.value||0,q=mtProj(m,x),c=q.k>=0?mesAdd(mesAtual(),q.k):'';
