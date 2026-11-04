@@ -4341,7 +4341,7 @@ function ccFatHTML(c){
   const band=c.bandeira&&CC_BAND_N[c.bandeira]?CC_BAND_N[c.bandeira]:ccNomeCurto(c);
   const dF=ccDiasEntre(hojeISO(),E.fecha),dV=ccDiasEntre(hojeISO(),E.vence);
   const lbl=E.tipo==='fechada'?(E.st==='vencida'?'vencida':'fechada'):'aberta';
-  const ccTi=(ic,k,d,n,w)=>`<span class="ccChip2 ccTi${w?' warn':''}">${ic}<span><small>${k}</small><b>${ccDM(d)}</b><em>${ccEmDias(n)}</em></span></span>`;
+  const ccTi=(ic,k,d,n,w)=>`<span class="ccChip2 ccTi${w?' warn':''}" role="group" aria-label="${k} ${ccDM(d)}, ${ccEmDias(n)}">${ic}<span aria-hidden="true"><small>${k}</small><b>${ccDM(d)}</b><em>${ccEmDias(n)}</em></span></span>`;
   const chips=E.tipo==='fechada'
     ?ccTi(CC_IC_PAY,'vence',E.vence,dV,dV<=3)+ccTi(CC_IC_CAL,'próxima fecha',E.prox.fecha,ccDiasEntre(hojeISO(),E.prox.fecha),false)
     :ccTi(CC_IC_CAL,'fecha',E.fecha,dF,dF<=7)+ccTi(CC_IC_PAY,'vence',E.vence,dV,false);
