@@ -75,7 +75,7 @@ def card_plano(id, destaque=False):
 def grade_planos():
     return f'<div class="planos">{card_plano("gratis")}{card_plano("plus")}{card_plano("pro", True)}</div>'
 
-NOTA_PAG = '<p class="aviso"><strong>Pagamentos em breve.</strong> As assinaturas ainda não estão abertas. Toda conta nova ganha 14 dias do Pro para testar tudo, sem cartão. Depois, continua no Grátis e nada do que você registrou é apagado.</p>'
+NOTA_PAG = '<p class="aviso"><strong>Assinaturas abertas.</strong> Você assina pelo app, em Ajustes, com pagamento pelo Mercado Pago. Toda conta nova ganha 14 dias do Pro para testar tudo, sem cartão. Depois, continua no Grátis e nada do que você registrou é apagado.</p>'
 
 def shots():
     s = [('inicio', 'Início: saldo, entradas e saídas do mês e atalhos'), ('planejamento', 'Planejamento: projeção do saldo para os próximos meses'), ('cartoes', 'Cartões: fatura aberta, limite e parcelas')]
@@ -208,7 +208,7 @@ def sobre():
 FAQ = [
     ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, relatórios, metas, investimentos e IA.'),
     ('O que acontece depois dos 14 dias de teste?', 'Sua conta passa para o Grátis automaticamente. Nada é cobrado e nada do que você registrou é apagado. Os recursos pagos ficam escondidos e voltam se você assinar.'),
-    ('Já posso assinar?', 'Ainda não. Os pagamentos estão sendo preparados e serão feitos pelo Mercado Pago. Enquanto isso, o botão de assinar aparece como "Pagamento em breve".'),
+    ('Já posso assinar?', 'Sim. No app, abra Ajustes, escolha o plano e pague pelo Mercado Pago, com as opções que ele oferecer no pagamento (como cartão ou Pix). Dá para cancelar quando quiser.'),
     ('Como cancelo a assinatura?', 'Em Ajustes, no app. O acesso continua até o fim do período já pago e você não é cobrado de novo.'),
     ('Meus dados estão seguros?', 'Os dados ficam em um banco de dados na nuvem (Supabase) com regras que deixam cada conta ver apenas os próprios dados, conexão sempre criptografada (HTTPS) e uma cópia criptografada no seu aparelho. Nenhum sistema é 100% imune a falhas, mas tratamos segurança como prioridade.'),
     ('Vocês vendem meus dados ou mostram anúncios?', 'Não. Não vendemos nem alugamos dados e não há anúncios.'),
