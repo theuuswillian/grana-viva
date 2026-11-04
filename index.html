@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-cH8ahgMTdSry7+RtYD/UWJMGbQhAh0EX1l/bxiZFBaA=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-Kifp6HVNjRmGUHYy0SD0eWU4wYEzIAXHbqkiR/6jHOU=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1919,10 +1919,10 @@ html.preto .gvc-face{box-shadow:inset 0 0 0 .25cqw rgba(255,255,255,.09),inset 0
 .gvc-wm-mercadopago{font-size:4.8cqw;font-weight:600;letter-spacing:-.02em;text-shadow:0 .14cqw .3cqw rgba(0,40,90,.35)}
 .gvc-wm-neon{font-size:5.8cqw;font-weight:600;letter-spacing:.02em;text-shadow:0 .14cqw .3cqw rgba(0,30,90,.35)}
 .gvc-wm-next{font-size:6cqw;letter-spacing:-.04em;color:var(--ac)}
-/* chip dourado */
-.gvc-chip{position:absolute;left:8.6cqw;top:23.4cqw;width:12.6cqw;height:9.6cqw;display:block;border-radius:1.7cqw;color:rgba(104,72,18,.62);
-  background:radial-gradient(70% 60% at 30% 25%,rgba(255,250,220,.9),transparent 60%),linear-gradient(135deg,#f6e2a2 0%,#d7b25a 26%,#f2d98f 48%,#b88f3e 74%,#e7cc82 100%);
-  box-shadow:inset 0 0 0 .22cqw rgba(120,86,24,.5),inset 0 .2cqw .2cqw rgba(255,255,255,.5),0 .25cqw .45cqw rgba(0,0,0,.28)}
+/* chip prateado (v10.110: igual aos cartões físicos do Matheus, Nubank e DM) */
+.gvc-chip{position:absolute;left:8.6cqw;top:23.4cqw;width:12.6cqw;height:9.6cqw;display:block;border-radius:1.7cqw;color:rgba(70,74,82,.6);
+  background:radial-gradient(70% 60% at 30% 25%,rgba(255,255,255,.95),transparent 60%),linear-gradient(135deg,#eef0f3 0%,#b9bec6 26%,#e3e6ea 48%,#9097a1 74%,#d4d8de 100%);
+  box-shadow:inset 0 0 0 .22cqw rgba(70,76,86,.45),inset 0 .2cqw .2cqw rgba(255,255,255,.6),0 .25cqw .45cqw rgba(0,0,0,.28)}
 .gvc-chip svg{display:block;width:100%;height:100%}
 .gvc-nfc{position:absolute;left:23.6cqw;top:24.6cqw;width:6.8cqw;height:7.2cqw;color:var(--ink);opacity:.85}
 /* final do cartão, em relevo */
@@ -2139,9 +2139,9 @@ html.claro .topBar::before{opacity:.18}
 .walFatSub{font-size:13px;color:var(--mut)}.walFatSub em{font-style:normal;font-weight:700;color:var(--txt)}
 .fatAnel{position:relative;flex:none;width:58px;height:58px;display:grid;place-items:center}
 .fatAnel svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.fatAnel circle{fill:none;stroke-width:5}
-.fatAnel .faT{stroke:color-mix(in srgb,var(--txt) 8%,transparent)}
-.fatAnel .faA{stroke:var(--tom);stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.2,.8,.2,1)}
+.fatAnel circle{fill:none;stroke-width:6}
+.fatAnel .faT{stroke:color-mix(in srgb,var(--txt) 14%,transparent)}
+.fatAnel .faA{stroke:color-mix(in srgb,var(--tom) 72%,#fff);filter:drop-shadow(0 0 2px color-mix(in srgb,var(--tom) 60%,transparent));stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.2,.8,.2,1)}
 .fatAnel.alerta .faA{stroke:#f59e0b}.fatAnel.over .faA{stroke:#f43f5e}
 .fatAnel .faP{position:relative;font-size:12.5px;font-weight:700;color:var(--hd);font-variant-numeric:tabular-nums}
 .walVazio{position:relative;display:flex;align-items:center;gap:14px;margin-top:14px;padding:14px;border-radius:16px;
@@ -2211,6 +2211,12 @@ html.claro .walDet .walFat{background:radial-gradient(120% 90% at 100% 0%,color-
 html.claro .walLimGr b.alerta{color:#b45309}html.claro .walLimGr b.over{color:#be123c}
 html.preto .walDet .walFat{background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--tom) 12%,transparent),transparent 60%),var(--card)!important}
 @media(prefers-reduced-motion:reduce){.crSeg i,.fatAnel .faA{transition:none}}
+/* v10.110: contas fixas. valor em cima e editar/excluir embaixo, à direita, para o nome ganhar a largura */
+.fx-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;row-gap:4px;align-items:center}
+.fx-row>.fx-ic{grid-row:1/3}
+.fx-row>.txt{grid-column:2;grid-row:1/3}
+.fx-row>.val{grid-column:3;grid-row:1;text-align:right;align-self:end}
+.fx-row>.acts{grid-column:3;grid-row:2;justify-self:end;align-self:start;display:flex;gap:2px}
 /* v10.87: metas como cofre */
 .mtFt{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .mtF{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:12px;font-weight:600;padding:4px 10px 4px 8px;border-radius:99px;color:var(--txt);background:color-mix(in srgb,var(--fc) 13%,transparent);border:1px solid color-mix(in srgb,var(--fc) 34%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3110,7 +3116,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.109'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.110'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3134,8 +3140,8 @@ const GV_BUILD='10.109'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.109"></script>
-<script defer src="app.min.js?v=10.109"></script>
+<script defer src="planos.js?v=10.110"></script>
+<script defer src="app.min.js?v=10.110"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
