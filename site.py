@@ -8,7 +8,10 @@ P = json.loads(subprocess.check_output(['node', '-e', 'process.stdout.write(JSON
 PL, REC, LIM = P['PLANOS'], P['RECURSOS'], P['LIMITES']
 EMAIL = 'matheuswillian982018@gmail.com'
 VIGENCIA = '1º de novembro de 2026'
-VIGENCIA_TERMOS = '3 de novembro de 2026'  # v10.110: arrependimento, reembolso e identificação
+VIGENCIA_TERMOS = '3 de novembro de 2026'
+# identificação do fornecedor (Decreto 7.962/2013). Preencha e rode site.py; vazio = a linha não aparece.
+FORNECEDOR_CPF = ''        # ex.: '000.000.000-00' (o Matheus preenche direto no GitHub; não passa pelo chat)
+FORNECEDOR_ENDERECO = ''   # endereço físico completo, com CEP  # v10.110: arrependimento, reembolso e identificação
 e = html.escape
 
 def brl(v):
@@ -352,7 +355,7 @@ def termos():
 <p>Estes Termos seguem a lei brasileira, incluindo o Código de Defesa do Consumidor. Fica eleito o foro do domicílio do consumidor.</p>
 
 <h2>13. Quem fornece o serviço e contato</h2>
-<p>O GranaViva é fornecido por Matheus Willian, desenvolvedor independente, em Brasília (DF). Atendimento, pedidos de arrependimento, reembolso e reclamações: <a href="mailto:{EMAIL}">{EMAIL}</a>. Respondemos em até 5 dias úteis.</p>
+<p>O GranaViva é fornecido por Matheus Willian, desenvolvedor independente, em Brasília (DF){(", CPF nº " + e(FORNECEDOR_CPF)) if FORNECEDOR_CPF else ""}{(", com endereço em " + e(FORNECEDOR_ENDERECO)) if FORNECEDOR_ENDERECO else ""}. Atendimento, pedidos de arrependimento, reembolso e reclamações: <a href="mailto:{EMAIL}">{EMAIL}</a>. Respondemos em até 5 dias úteis.</p>
 </section>'''
     return pagina('termos.html', 'Termos de uso · GranaViva', 'Regras de uso do GranaViva: conta, planos, pagamento, cancelamento, IA e responsabilidades.', corpo)
 
