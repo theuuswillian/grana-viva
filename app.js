@@ -3636,6 +3636,7 @@ function rpAtualiza(){
   const card=document.querySelector('#view .rpCard');if(!card)return;
   const R=rpCalc(),tmp=document.createElement('div');tmp.innerHTML=rpCardHTML(R);card.replaceWith(tmp.firstElementChild);
 }
+function pctAloc(x){if(!(x>0))return '0%';if(x<1)return x<0.1?'<0,1%':num(x).replace(/0$/,'').replace(/,$/,'')+'%';return Math.round(x)+'%';}
 function viewFii(){
   const pat=patrimonio(),dm=divMensal();
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
@@ -3645,13 +3646,14 @@ function viewFii(){
   const comCusto=S.fiis.filter(f=>f.pago>0);
   const aplic=comCusto.reduce((a,f)=>a+cents(f.pago),0)/100,valCusto=comCusto.reduce((a,f)=>a+cents(f.cotas*f.preco),0)/100;
   const plT=c2(valCusto-aplic),plTp=aplic?plT/aplic*100:0;
+  const semCusto=S.fiis.filter(f=>!(f.pago>0)&&f.cotas*f.preco>0).length;
   const temRV=S.fiis.some(f=>['fii','acao','etf','bdr'].includes(tipoOf(f)));
   const temFii=S.fiis.some(f=>tipoOf(f)==='fii');
   // alocação por tipo
   const aloc={};S.fiis.forEach(f=>{const t=tipoOf(f);aloc[t]=(aloc[t]||0)+f.cotas*f.preco;});
   const al=Object.keys(aloc).filter(t=>aloc[t]>0).sort((x,y)=>aloc[y]-aloc[x]);
   const barra=pat>0?`<div class="wAloc" role="img" aria-label="distribuição da carteira">${al.map(t=>`<i style="width:${aloc[t]/pat*100}%;background:${TCOR[t]||'var(--a1)'}"></i>`).join('')}</div>
-    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${Math.round(aloc[t]/pat*100)}%</b></span>`).join('')}</div>`:'';
+    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${pctAloc(aloc[t]/pat*100)}</b></span>`).join('')}</div>`:'';
   const plPill=(v,pc)=>`<span class="plPill ${v>=0?'pos':'neg'}">${v>=0?'▲ +':'▼ '}${brl(v)} <em>${num(pc)}%</em></span>`;
   const lista=filtrados.map(f=>{
     const t=tipoOf(f),cri=t==='cripto',rf=t==='rf';
@@ -3694,7 +3696,7 @@ function viewFii(){
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
     <div class="wTot">${brl(pat)}</div>
-    ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados</small></div>`:''}
+    ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados${semCusto?` · ${semCusto} ${semCusto>1?'ativos sem':'ativo sem'} preço pago fora da conta`:''}</small></div>`:''}
     ${barra}
   </div>
   ${temRV||S.fiis.length?`<div class="wKpi${temRV?'':' semRV'}">
