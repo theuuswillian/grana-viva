@@ -1507,7 +1507,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alerta de preço','às 18h30 em dia de pregão, quando o ativo chega no preço']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -2501,10 +2501,10 @@ function irCardHTML(){
 /* avisos no sino: DARF do mês passado a pagar (do dia 1 até o vencimento) e preço que chegou no alvo */
 function irAvisos(){
   const out=[],hj=hojeISO(),pagos=(S.cfg&&S.cfg.darfPago)||{};
-  irApura().forEach(m=>{if(!(m.darf>0)||pagos[m.mes]||m.mes>=hj.slice(0,7)||m.vence<hj)return;
+  if(notifOn('darf'))irApura().forEach(m=>{if(!(m.darf>0)||pagos[m.mes]||m.mes>=hj.slice(0,7)||m.vence<hj)return;
     const d=Math.round((new Date(m.vence+'T12:00:00')-new Date(hj+'T12:00:00'))/864e5);
     out.push({id:'darf|'+m.mes+'|'+(d<=3?'3':'p'),k:d<=3?'venc':'aviso',h:`${I('receipt')} DARF das vendas de <b>${esc(irMesNome(m.mes))}</b>: ${brl(m.darf/100)} · ${d===0?'vence hoje':d===1?'vence amanhã':'vence em '+d+' dias ('+fmtData(m.vence)+')'}`});});
-  (S.fiis||[]).forEach(f=>{if(!(f.alvoP>0)||!(f.preco>0))return;const sob=f.alvoDir!=='abaixo';
+  if(notifOn('alvoPreco'))(S.fiis||[]).forEach(f=>{if(!(f.alvoP>0)||!(f.preco>0))return;const sob=f.alvoDir!=='abaixo';
     if(sob?f.preco<f.alvoP:f.preco>f.alvoP)return;
     out.push({id:'alvo|'+f.id+'|'+f.alvoDir+'|'+f.alvoP,k:'aviso',h:`${I('up')} <b>${esc(f.ticker)}</b> ${sob?'subiu':'caiu'} para ${brl(f.preco)} · seu alerta era ${sob?'acima':'abaixo'} de ${brl(f.alvoP)} <button class="btn2 sm" data-act="alvo-fii" data-id="${f.id}">ajustar</button>`});});
   return out;
@@ -2512,7 +2512,7 @@ function irAvisos(){
 function alvoForm(fid){
   const f=S.fiis.find(x=>x.id===fid);if(!f)return;
   form('Alerta de preço · '+f.ticker,[
-    {type:'html',html:`<p class="small">Preço agora: <b>${f.preco>0?brl(f.preco):'sem cotação'}</b>. O aviso aparece no sino quando a cotação atualizar e chegar no valor. Deixe em branco para tirar o alerta.</p>`},
+    {type:'html',html:`<p class="small">Preço agora: <b>${f.preco>0?brl(f.preco):'sem cotação'}</b>. O aviso aparece no sino quando a cotação chegar no valor e, com notificações ligadas, chega no celular às 18h30 em dia de pregão. Deixe em branco para tirar o alerta.</p>`},
     {name:'dir',label:'Avisar quando',type:'select',value:f.alvoDir||'acima',options:[{v:'acima',t:'subir até ou acima de'},{v:'abaixo',t:'cair até ou abaixo de'}]},
     {name:'alvo',label:'Preço (R$)',value:f.alvoP?num(f.alvoP):'',inputmode:'decimal',placeholder:'0,00'}
   ],v=>{const a=c2(parseBR(v.alvo)||0);
