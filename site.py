@@ -8,6 +8,7 @@ P = json.loads(subprocess.check_output(['node', '-e', 'process.stdout.write(JSON
 PL, REC, LIM = P['PLANOS'], P['RECURSOS'], P['LIMITES']
 EMAIL = 'matheuswillian982018@gmail.com'
 VIGENCIA = '1º de novembro de 2026'
+VIGENCIA_TERMOS = '3 de novembro de 2026'  # v10.110: arrependimento, reembolso e identificação
 e = html.escape
 
 def brl(v):
@@ -178,7 +179,7 @@ def precos():
 <li>Assinatura mensal ou anual, cobrada pelo Mercado Pago (Pix ou cartão, conforme as opções que o Mercado Pago oferecer no pagamento).</li>
 <li>O GranaViva não recebe nem guarda os dados do seu cartão.</li>
 <li>Cancele quando quiser em Ajustes. O acesso continua até o fim do período já pago.</li>
-<li>Se desistir em até 7 dias da primeira assinatura, devolvemos o valor pago.</li>
+<li>Se desistir em até 7 dias da contratação, devolvemos todo o valor pago.</li>
 <li>Ao voltar para o Grátis, nada é apagado: os recursos pagos ficam escondidos e voltam se você assinar de novo.</li>
 </ul>
 <p>Mais detalhes nos <a href="termos.html">Termos de uso</a>.</p></section>'''
@@ -288,7 +289,7 @@ def privacidade():
     return pagina('privacidade.html', 'Política de privacidade · GranaViva', 'Quais dados o GranaViva trata, para quê, com quem compartilha, por quanto tempo e como exercer seus direitos.', corpo)
 
 def termos():
-    corpo = f'''<section class="lim cab"><h1>Termos de uso</h1><p class="lead">Regras para usar o GranaViva. Vigentes a partir de {VIGENCIA}.</p></section>
+    corpo = f'''<section class="lim cab"><h1>Termos de uso</h1><p class="lead">Regras para usar o GranaViva. Vigentes a partir de {VIGENCIA_TERMOS}.</p></section>
 <section class="lim bloco texto legal">
 <h2>1. Aceitação</h2>
 <p>Ao criar uma conta ou usar o GranaViva, você concorda com estes Termos e com a <a href="privacidade.html">Política de privacidade</a>. Se não concordar, não use o app.</p>
@@ -309,40 +310,49 @@ def termos():
 <li>Contas novas recebem 14 dias do Pro para teste, sem cartão e sem cobrança. Ao fim do teste a conta passa para o Grátis.</li>
 <li>As assinaturas são cobradas de forma recorrente (mensal ou anual) pelo Mercado Pago, que processa o pagamento. O GranaViva não recebe os dados do seu cartão.</li>
 <li>Você pode cancelar a qualquer momento em Ajustes. O cancelamento interrompe as próximas cobranças e o acesso pago continua até o fim do período já pago.</li>
-<li>Você pode desistir da primeira assinatura em até 7 dias da contratação e receber de volta o valor pago, escrevendo para <a href="mailto:{EMAIL}">{EMAIL}</a>.</li>
+<li>Você pode desistir de uma assinatura em até 7 dias da contratação e receber todo o valor pago de volta. Veja a seção 5.</li>
 <li>Se um pagamento não for aprovado, a conta volta ao Grátis depois de um curto período de tolerância.</li>
 <li>Mudanças de preço serão avisadas com pelo menos 30 dias de antecedência e valem a partir da cobrança seguinte.</li>
 <li>Ao passar para um plano menor, nenhum dado é apagado: os recursos do plano anterior ficam indisponíveis até você assinar de novo.</li>
 <li>Contas criadas antes do lançamento dos planos ("contas fundadoras") mantêm acesso completo sem cobrança.</li>
 </ul>
 
-<h2>5. Cálculos, cotações e IA</h2>
+<h2>5. Direito de arrependimento e reembolso</h2>
+<ul class="lista">
+<li><strong>Arrependimento em 7 dias.</strong> Como a contratação é feita pela internet, você pode desistir de qualquer assinatura paga em até 7 dias corridos, contados da data da contratação, sem precisar dar motivo (Código de Defesa do Consumidor, art. 49). Devolvemos <strong>todo o valor pago</strong>, sem descontos, e a conta volta ao plano Grátis (ou ao teste, se ele ainda estiver valendo).</li>
+<li><strong>Como pedir.</strong> Escreva para <a href="mailto:{EMAIL}">{EMAIL}</a> com o e-mail da sua conta e diga que quer desistir. Confirmamos o recebimento do pedido assim que o lermos. Cancelar a assinatura em Ajustes interrompe as próximas cobranças, mas, sozinho, não pede o reembolso: para receber o valor de volta dentro dos 7 dias, envie o e-mail.</li>
+<li><strong>Como o dinheiro volta.</strong> O estorno é feito pelo Mercado Pago no mesmo meio de pagamento usado: no cartão de crédito, aparece na fatura atual ou na seguinte, conforme o banco emissor; no Pix ou saldo do Mercado Pago, volta para a conta de origem. Pedimos o estorno em até 5 dias úteis depois de receber o seu pedido.</li>
+<li><strong>Depois dos 7 dias.</strong> Você pode cancelar quando quiser, sem multa. As próximas cobranças param e o acesso pago continua até o fim do período já pago, sem devolução proporcional desse período, inclusive no plano anual. Renovações automáticas não reabrem o prazo de 7 dias.</li>
+<li><strong>Cobrança indevida.</strong> Se houver cobrança em duplicidade, cobrança depois do cancelamento ou falha nossa que impeça o uso do plano pago, devolvemos o valor cobrado indevidamente, a qualquer tempo, sem prejuízo dos seus outros direitos como consumidor.</li>
+</ul>
+
+<h2>6. Cálculos, cotações e IA</h2>
 <ul class="lista">
 <li>Saldos, projeções, rendimentos, impostos estimados e cotações são cálculos feitos a partir do que você registra e de fontes públicas, que podem ter atraso (as cotações da B3 têm cerca de 15 minutos de atraso). Confira valores importantes na fonte oficial (seu banco, corretora ou a Receita Federal).</li>
 <li>Os recursos de IA podem errar. A leitura de comprovante sempre abre o lançamento para você conferir antes de salvar, e o assistente não altera nada no app.</li>
 <li>Nada no GranaViva é oferta, recomendação ou consultoria de investimento.</li>
 </ul>
 
-<h2>6. Uso permitido</h2>
+<h2>7. Uso permitido</h2>
 <p>Não é permitido: tentar acessar dados de outras pessoas; contornar limites, planos ou travas de segurança; sobrecarregar ou atacar o serviço; usar o app para atividade ilegal; ou copiar e revender o serviço. Podemos suspender contas que descumpram estas regras.</p>
 
-<h2>7. Disponibilidade</h2>
+<h2>8. Disponibilidade</h2>
 <p>Trabalhamos para manter o GranaViva disponível e seus dados seguros, mas o serviço depende de internet e de fornecedores (como Supabase, Google e Mercado Pago) e pode ter interrupções. Recomendamos exportar seus dados de tempos em tempos.</p>
 
-<h2>8. Responsabilidade</h2>
+<h2>9. Responsabilidade</h2>
 <p>Respeitados os direitos que a lei garante ao consumidor, o GranaViva não se responsabiliza por decisões financeiras tomadas com base nas informações do app nem por dados registrados de forma incorreta pelo usuário.</p>
 
-<h2>9. Encerramento</h2>
+<h2>10. Encerramento</h2>
 <p>Você pode excluir sua conta a qualquer momento em Ajustes. Se o GranaViva deixar de existir, avisaremos com antecedência para que você possa exportar seus dados.</p>
 
-<h2>10. Mudanças nestes Termos</h2>
+<h2>11. Mudanças nestes Termos</h2>
 <p>Podemos atualizar estes Termos. Mudanças relevantes serão avisadas no app antes de valer.</p>
 
-<h2>11. Lei e foro</h2>
+<h2>12. Lei e foro</h2>
 <p>Estes Termos seguem a lei brasileira, incluindo o Código de Defesa do Consumidor. Fica eleito o foro do domicílio do consumidor.</p>
 
-<h2>12. Contato</h2>
-<p><a href="mailto:{EMAIL}">{EMAIL}</a></p>
+<h2>13. Quem fornece o serviço e contato</h2>
+<p>O GranaViva é fornecido por Matheus Willian, desenvolvedor independente, em Brasília (DF). Atendimento, pedidos de arrependimento, reembolso e reclamações: <a href="mailto:{EMAIL}">{EMAIL}</a>. Respondemos em até 5 dias úteis.</p>
 </section>'''
     return pagina('termos.html', 'Termos de uso · GranaViva', 'Regras de uso do GranaViva: conta, planos, pagamento, cancelamento, IA e responsabilidades.', corpo)
 
