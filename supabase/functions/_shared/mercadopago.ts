@@ -199,6 +199,22 @@ export async function criaCheckout(o: { uid: string; email: string; plano: strin
   return { url: String(j.init_point), id: String(j.id || "") };
 }
 
+// v10.109: id da assinatura desta pessoa no MP (qualquer plano pago): a autorizada mais recente, senão a mais recente; "" se não houver
+export async function ultimaAssinatura(uid: string, planos: string[], token: string, f: Fetch = fetch): Promise<string> {
+  let melhor: { id: string; t: number } | null = null;
+  for (const p of planos) {
+    const r = await mpGet("/preapproval/search?limit=20&external_reference=" + encodeURIComponent(refExterna(uid, p)), token, f);
+    if (r.status !== 200) throw new Error("mp_busca " + r.status);
+    for (const a of (r.json?.results || [])) {
+      if (lerRef(a?.external_reference)?.uid !== uid || !a?.id) continue;
+      // uma autorizada vale mais que uma pendente (checkout aberto e não pago); entre iguais, a mais recente
+      const t = (a.status === "authorized" ? 1e13 : 0) + (Date.parse(a.last_modified || a.date_created || "") || 0);
+      if (!melhor || t > melhor.t) melhor = { id: String(a.id), t };
+    }
+  }
+  return melhor ? melhor.id : "";
+}
+
 export async function cancela(id: string, token: string, f: Fetch = fetch) {
   const r = await f(API + "/preapproval/" + encodeURIComponent(id), {
     method: "PUT", signal: AbortSignal.timeout(10000),

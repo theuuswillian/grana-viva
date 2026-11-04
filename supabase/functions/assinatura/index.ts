@@ -59,5 +59,27 @@ Deno.serve(async (req) => {
     try { await MP.cancela(row.provedor_assinatura_id, token); } catch (e) { console.log("cancela", String(e)); await registraErro(sb, "assinatura", "cancelar", e); return json({ erro: "não consegui cancelar agora" }, 502); }
     return json({ ok: true, aviso: "Cancelamento enviado. Seu acesso continua até o fim do período pago." });
   }
+  // v10.109: rede de segurança para quando o aviso do Mercado Pago atrasa ou não vem (no modo de teste ele não vem).
+  // Procura no MP as assinaturas desta pessoa (external_reference gv1:<uid>:<plano>) e repassa a mais recente ao
+  // pagamento-webhook, que confere tudo de novo na API do MP e aplica as mesmas regras (fundador mantido, outra assinatura etc.).
+  // Nada vindo do navegador muda plano: o navegador só pede "confira".
+  if (acao === "sincronizar") {
+    if (!token) return json({ ok: true, resultado: "sem_pagamento" });
+    if (ef.fundador) return json({ ok: true, resultado: "fundador_mantido" });
+    const { data: okS } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "sincronizar", p_lim: 20, p_seg: 3600 });
+    if (!okS) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
+    try {
+      const id = await MP.ultimaAssinatura(user.id, GVP.PAGOS, token);
+      if (!id) return json({ ok: true, resultado: "nenhuma" });
+      const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval&data.id=" + encodeURIComponent(id), {
+        method: "POST", signal: AbortSignal.timeout(12000),
+        headers: { "content-type": "application/json", "x-request-id": "sync-" + crypto.randomUUID() },
+        body: JSON.stringify({ type: "subscription_preapproval", action: "sincronizar", data: { id } }),
+      });
+      let j: any = null; try { j = await r.json(); } catch { /* */ }
+      if (!r.ok) throw new Error("webhook " + r.status);
+      return json({ ok: true, resultado: String(j?.resultado || "") });
+    } catch (e) { console.log("sincronizar", String(e)); await registraErro(sb, "assinatura", "sincronizar", e); return json({ erro: "não consegui confirmar agora" }, 502); }
+  }
   return json({ erro: "ação desconhecida" }, 400);
 });

@@ -269,12 +269,14 @@ async function assinar(plano){
     location.href=u.href;
   }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
 }
-/* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o webhook confirmar; aqui só relemos a tabela por 1 minuto */
+/* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o servidor confirmar no MP; relemos a tabela por 1 minuto.
+   v10.109: além de esperar o aviso do MP, pedimos ao servidor que confira no MP (na 1ª, 4ª e 8ª volta), porque o aviso pode atrasar ou não vir */
 function retornoAssinatura(){
   if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;
   try{history.replaceState(null,'',location.pathname);}catch(e){}
   toast('Recebemos sua volta do pagamento. Confirmando…');
-  let n=0;const tic=async()=>{n++;const antes=JSON.stringify(PLANO_ROW);await carregaPlano();
+  const confere=()=>sb.functions.invoke('assinatura',{body:{acao:'sincronizar'}}).catch(()=>null);
+  let n=0;const tic=async()=>{n++;const antes=JSON.stringify(PLANO_ROW);if(n===1||n===4||n===8)await confere();await carregaPlano();
     if(JSON.stringify(PLANO_ROW)!==antes&&PLANO_ROW&&PLANO_ROW.status==='ativo'){toast('Plano '+GVP.PLANOS[GVP.idBase(PLANO_ROW.plano)].nome+' ativado. Obrigado!');render();return;}
     if(n<12)setTimeout(tic,5000);else toast('O pagamento ainda está sendo confirmado. O plano muda sozinho quando o Mercado Pago aprovar.');};
   setTimeout(tic,1500);
