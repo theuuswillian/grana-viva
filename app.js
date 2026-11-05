@@ -465,7 +465,7 @@ async function abreCripto(){
     if(raw==null)throw {semCopia:1};
     const d=JSON.parse(String(raw).indexOf(CR_PFX)===0?await crDecifra(raw):raw);
     const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
-    S=dono&&sess&&dono===sess&&d&&typeof d==='object'?sanea(d):Object.assign(vazio(),{cfg:S.cfg});
+    COPIA_LIDA=!!(dono&&sess&&dono===sess&&d&&typeof d==='object');S=COPIA_LIDA?sanea(d):Object.assign(vazio(),{cfg:S.cfg});
   }catch(e){
     if(e&&e.semCopia){S=Object.assign(vazio(),{cfg:S.cfg});if(LOC_BLOQ)setTimeout(()=>toast('Não foi possível abrir a cópia deste aparelho; seus dados vêm da nuvem.',true),800);}
     /* chave perdida (o sistema limpou o IndexedDB) ou cópia corrompida: descarta o cache local e baixa tudo da nuvem de novo */
@@ -475,6 +475,8 @@ async function abreCripto(){
   try{if(!S.cfg.pagDesde)S.cfg.pagDesde=hojeISO();geraRecorrentes();applyCfg();restauraAba();render();CR_TELA=!CR_FALHOU;}catch(e){}
 }
 let LEGADO=null;
+/* v10.117: só vira true quando a cópia deste aparelho, da conta da sessão, foi aberta de verdade */
+var COPIA_LIDA=false;
 function carregar(){
   try{
     const dono=localStorage.getItem(OWNER_KEY),sess=sessaoGuardadaId();
@@ -485,7 +487,7 @@ function carregar(){
     const d=JSON.parse(raw);
     if(!dono&&d&&typeof d==='object'&&Array.isArray(d.tx)){LEGADO=d;return vazio();}
     if(!dono||!sess||dono!==sess)return vazio();
-    if(d&&typeof d==='object')return sanea(d);
+    if(d&&typeof d==='object'){COPIA_LIDA=true;return sanea(d);}
   }catch(e){}
   return vazio();
 }
@@ -8560,7 +8562,7 @@ function limpaCache(){
     const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k===KEY||k===OWNER_KEY||k==='gv-cot-ts'||/^gv-snap-/.test(k))rm.push(k);}
     rm.forEach(k=>localStorage.removeItem(k));
   }catch(e){}
-  SNAP=null;LEGADO=null;
+  SNAP=null;LEGADO=null;COPIA_LIDA=false;
 }
 function marcaCampo(sel,on){const el=$(sel);if(!el)return;const f=el.closest('.fld');if(f)f.classList.toggle('bad',!!on);}
 ['#aEmail','#aPass'].forEach(sel=>$(sel).addEventListener('input',()=>marcaCampo(sel,false)));
@@ -8606,7 +8608,7 @@ async function entraComSessao(sess){
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
-    USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
     planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
@@ -8674,7 +8676,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
-    USER=sess.user;SNAP=lerSnap();pintaUsuario();escondeAuth();
+    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
     planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
