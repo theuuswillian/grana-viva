@@ -5367,12 +5367,12 @@ function empAchaOuCria(nome){nome=String(nome||'').trim().slice(0,60);const k=no
   if(!e){e={id:uid(),pessoa:nome,tel:'',prev:'',obs:'',criadoEm:hojeISO()};(S.emprestimos=S.emprestimos||[]).push(e);}return e;}
 /* v10.119: resumo do mês e empréstimos lado a lado quando os dois aparecem (sugestões de empréstimo vêm depois) */
 function blocosInicioHTML(){
-  const rc=resumoCardHTML(),ec=empCardHTML(),k=ec.indexOf('<button type="button" class="card revCard empCard"');
+  const rc=resumoCardHTML(true),ec=empCardHTML(true),k=ec.indexOf('<button type="button" class="card revCard empCard"');
   const sug=k<0?ec:ec.slice(0,k),card=k<0?'':ec.slice(k);
   if(rc&&card)return `<div class="gvDuo">${rc}${card}</div>${revisarHTML()}${concHTML()}${sug}`;
-  return rc+revisarHTML()+concHTML()+ec;
+  return resumoCardHTML()+revisarHTML()+concHTML()+empCardHTML();
 }
-function empCardHTML(){
+function empCardHTML(duo){
   const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
   const sug=empSugestoes()[0];
   let h='';
@@ -5382,7 +5382,7 @@ function empCardHTML(){
   const tot=L.reduce((a,x)=>a+cents(x.t.aberto),0)/100,atr=L.filter(x=>x.e.prev&&diasAte(x.e.prev)<0);
   // v10.119: valor em linha própria (não quebra o título) e, com uma pessoa só, "atrasado" sem repetir o nome
   const atrTx=!atr.length?'':L.length===1?'atrasado':atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' atrasado':atr.length+' atrasados';
-  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('handCoins')}</span><span class="revTx"><b>A receber de empréstimos</b><span class="empVal">${brl(tot)}</span><small>${L.length===1?esc(L[0].e.pessoa):L.length+' pessoas'}${atrTx?` · <em class="empAtr">${atrTx}</em>`:''}</small></span>${I('chevR')}</button>`;
+  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('handCoins')}</span><span class="revTx"><b>${duo?'Empréstimos':'A receber de empréstimos'}</b><span class="empVal">${brl(tot)}</span><small>${duo?'a receber · ':''}${L.length===1?esc(L[0].e.pessoa):L.length+' pessoas'}${atrTx?` · <em class="empAtr">${atrTx}</em>`:''}</small></span>${I('chevR')}</button>`;
 }
 /* receita recente com o nome de quem te deve e valor até o que falta = provável devolução */
 function empSugestoes(){
@@ -5866,10 +5866,12 @@ function dadosResumo(ym){
   return {ym,ant,r,ra,top,maior,estouros,subiu,taxa,tem:!!(r.rec||r.des)};
 }
 function nomeMesL(ym){return MESES_LONGO[+ym.slice(5,7)-1]+(ym.slice(0,4)!==String(new Date().getFullYear())?' de '+ym.slice(0,4):'');}
-function resumoCardHTML(){
+function resumoCardHTML(duo){
   const h=new Date();if(h.getDate()>10)return '';
   const ym=mesOff(1);if((S.cfg.resumoVisto||'')>=ym)return '';
   const D=dadosResumo(ym);if(!D.tem)return '';
+  // v10.120: no par lado a lado, mesma estrutura do card de empréstimos (título curto, valor grande, detalhe)
+  if(duo)return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}" aria-label="seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}"><span class="revIc">${I('report')}</span><span class="revTx"><b>${(m=>m[0].toUpperCase()+m.slice(1))(MESES_LONGO[+ym.slice(5,7)-1])}</b><span class="empVal${D.r.sal<0?' neg':''}">${brl(Math.abs(D.r.sal))}</span><small>${D.r.sal>=0?'sobrou':'faltou'}${D.taxa!=null&&D.r.sal>0?' · '+D.taxa+'% da renda':''}</small></span>${I('chevR')}</button>`;
   return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}"><span class="revIc">${I('report')}</span><span class="revTx"><b>Seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}</b><small>${D.r.sal>=0?'sobrou '+brl(D.r.sal):'faltou '+brl(-D.r.sal)}${D.taxa!=null&&D.r.sal>0?' · '+D.taxa+'% da renda':''}</small></span>${I('chevR')}</button>`;
 }
 function abreResumo(ym){
