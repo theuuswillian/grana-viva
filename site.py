@@ -10,8 +10,8 @@ EMAIL = 'matheuswillian982018@gmail.com'
 VIGENCIA = '1º de novembro de 2026'
 VIGENCIA_TERMOS = '3 de novembro de 2026'
 # identificação do fornecedor (Decreto 7.962/2013). Preencha e rode site.py; vazio = a linha não aparece.
-FORNECEDOR_CPF = ''        # ex.: '000.000.000-00' (o Matheus preenche direto no GitHub; não passa pelo chat)
-FORNECEDOR_ENDERECO = ''   # endereço físico completo, com CEP  # v10.110: arrependimento, reembolso e identificação
+FORNECEDOR_CPF = '063.907.503-74'        # ex.: '000.000.000-00' (o Matheus preenche direto no GitHub; não passa pelo chat)
+FORNECEDOR_ENDERECO = 'RUA 12 CHACARA 312A LOTE 10 LOJA 03 SETOR HABITACIONAL VICENTE PIRES 72007-730'   # endereço físico completo, com CEP  # v10.110: arrependimento, reembolso e identificação
 e = html.escape
 
 def brl(v):
