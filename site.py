@@ -179,7 +179,7 @@ def precos():
 </section>
 <section class="lim bloco"><h2>Como funciona a cobrança</h2>
 <ul class="lista">
-<li>Assinatura mensal ou anual, cobrada pelo Mercado Pago (Pix ou cartão, conforme as opções que o Mercado Pago oferecer no pagamento).</li>
+<li>Assinatura mensal ou anual, cobrada pelo Mercado Pago no cartão de crédito ou com saldo da conta Mercado Pago.</li>
 <li>O GranaViva não recebe nem guarda os dados do seu cartão.</li>
 <li>Cancele quando quiser em Ajustes. O acesso continua até o fim do período já pago.</li>
 <li>Se desistir em até 7 dias da contratação, devolvemos todo o valor pago.</li>
@@ -208,7 +208,7 @@ def sobre():
 FAQ = [
     ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, relatórios, metas, investimentos e IA.'),
     ('O que acontece depois dos 14 dias de teste?', 'Sua conta passa para o Grátis automaticamente. Nada é cobrado e nada do que você registrou é apagado. Os recursos pagos ficam escondidos e voltam se você assinar.'),
-    ('Já posso assinar?', 'Sim. No app, abra Ajustes, escolha o plano e pague pelo Mercado Pago, com as opções que ele oferecer no pagamento (como cartão ou Pix). Dá para cancelar quando quiser.'),
+    ('Já posso assinar?', 'Sim. No app, abra Ajustes, escolha o plano e pague pelo Mercado Pago, no cartão de crédito ou com saldo da conta Mercado Pago. Dá para cancelar quando quiser.'),
     ('Como cancelo a assinatura?', 'Em Ajustes, no app. O acesso continua até o fim do período já pago e você não é cobrado de novo.'),
     ('Meus dados estão seguros?', 'Os dados ficam em um banco de dados na nuvem (Supabase) com regras que deixam cada conta ver apenas os próprios dados, conexão sempre criptografada (HTTPS) e uma cópia criptografada no seu aparelho. Nenhum sistema é 100% imune a falhas, mas tratamos segurança como prioridade.'),
     ('Vocês vendem meus dados ou mostram anúncios?', 'Não. Não vendemos nem alugamos dados e não há anúncios.'),

@@ -246,7 +246,7 @@ function abrePlanos(rec){
       ${id==='pro'?`<p class="plAnual">ou ${esc(GVP.PLANOS.pro_anual.rotulo)} (2 meses grátis)</p>`:''}
       <ul>${itens.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
       ${botao(id)}${id==='pro'&&pag===true&&!(p&&p.fundador)?`<button class="btn2 full plAnBtn" data-act="assinar" data-id="pro_anual">Assinar Pro anual</button>`:''}</div>`;}).join('')}</div>
-    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui com Pix ou cartão pelo Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
+    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago, no cartão de crédito ou com saldo da conta Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
   </div>`;
   box.classList.add('on');
   if(PLANO_PAG===null&&USER)verificaPagamento().then(()=>{if($('#modal .plSheet'))abrePlanos(rec);});
@@ -5365,12 +5365,19 @@ function empAvatar(n){const c=['#f59e0b','#22d3ee','#a78bfa','#f472b6','#34d399'
 function contasOpts(sel){const A=bancosAtivos(sel);return A.length?A.map(b=>({v:'b:'+b.id,t:b.nome})):[{v:'',t:'sem conta (dinheiro)'}];}
 function empAchaOuCria(nome){nome=String(nome||'').trim().slice(0,60);const k=norm(nome);let e=(S.emprestimos||[]).find(x=>norm(x.pessoa)===k);
   if(!e){e={id:uid(),pessoa:nome,tel:'',prev:'',obs:'',criadoEm:hojeISO()};(S.emprestimos=S.emprestimos||[]).push(e);}return e;}
+/* v10.121: empréstimo atrasado ganha um atalho para lembrar a pessoa (abre a mensagem pronta com WhatsApp) */
+function empCobraHTML(){
+  const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0&&x.e.prev&&diasAte(x.e.prev)<0).sort((a,b)=>a.e.prev<b.e.prev?-1:1);
+  if(!L.length)return '';const e=L[0].e;
+  return `<button type="button" class="empCobra" data-act="emp-cobrar" data-id="${esc(e.id)}">${I('chat')}<span>Lembrar ${esc(primeiroNome(e.pessoa))} pelo WhatsApp</span>${I('chevR')}</button>`;
+}
 /* v10.119: resumo do mês e empréstimos lado a lado quando os dois aparecem (sugestões de empréstimo vêm depois) */
 function blocosInicioHTML(){
   const rc=resumoCardHTML(true),ec=empCardHTML(true),k=ec.indexOf('<button type="button" class="card revCard empCard"');
   const sug=k<0?ec:ec.slice(0,k),card=k<0?'':ec.slice(k);
-  if(rc&&card)return `<div class="gvDuo">${rc}${card}</div>${revisarHTML()}${concHTML()}${sug}`;
-  return resumoCardHTML()+revisarHTML()+concHTML()+empCardHTML();
+  const cob=card?empCobraHTML():'';
+  if(rc&&card)return `<div class="gvDuo">${rc}${card}</div>${cob}${revisarHTML()}${concHTML()}${sug}`;
+  return resumoCardHTML()+revisarHTML()+concHTML()+empCardHTML()+cob;
 }
 function empCardHTML(duo){
   const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
@@ -5871,8 +5878,11 @@ function resumoCardHTML(duo){
   const ym=mesOff(1);if((S.cfg.resumoVisto||'')>=ym)return '';
   const D=dadosResumo(ym);if(!D.tem)return '';
   // v10.120: no par lado a lado, mesma estrutura do card de empréstimos (título curto, valor grande, detalhe)
-  if(duo)return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}" aria-label="seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}"><span class="revIc">${I('report')}</span><span class="revTx"><b>${(m=>m[0].toUpperCase()+m.slice(1))(MESES_LONGO[+ym.slice(5,7)-1])}</b><span class="empVal${D.r.sal<0?' neg':''}">${brl(Math.abs(D.r.sal))}</span><small>${D.r.sal>=0?'sobrou':'faltou'}${D.taxa!=null&&D.r.sal>0?' · '+D.taxa+'% da renda':''}</small></span>${I('chevR')}</button>`;
-  return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}"><span class="revIc">${I('report')}</span><span class="revTx"><b>Seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}</b><small>${D.r.sal>=0?'sobrou '+brl(D.r.sal):'faltou '+brl(-D.r.sal)}${D.taxa!=null&&D.r.sal>0?' · '+D.taxa+'% da renda':''}</small></span>${I('chevR')}</button>`;
+  // v10.121: com 0 ou 1 receita lançada no mês, a % da renda engana; avisa em vez de mostrar a porcentagem
+  const nRec=S.tx.filter(t=>efetivo(t)&&t.tipo==='receita'&&noPer(t.data,ym)).length,pouca=nRec<=1;
+  const det=pouca?'poucas receitas lançadas':(D.taxa!=null&&D.r.sal>0?D.taxa+'% da renda':'');
+  if(duo)return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}" aria-label="seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}"><span class="revIc">${I('report')}</span><span class="revTx"><b>${(m=>m[0].toUpperCase()+m.slice(1))(MESES_LONGO[+ym.slice(5,7)-1])}</b><span class="empVal${D.r.sal<0?' neg':''}">${brl(Math.abs(D.r.sal))}</span><small>${D.r.sal>=0?'sobrou':'faltou'}${det?' · '+det:''}</small></span>${I('chevR')}</button>`;
+  return `<button type="button" class="card revCard resCard" data-act="res-abre" data-id="${ym}"><span class="revIc">${I('report')}</span><span class="revTx"><b>Seu resumo de ${MESES_LONGO[+ym.slice(5,7)-1]}</b><small>${D.r.sal>=0?'sobrou '+brl(D.r.sal):'faltou '+brl(-D.r.sal)}${det?' · '+det:''}</small></span>${I('chevR')}</button>`;
 }
 function abreResumo(ym){
   ym=ym||mesOff(1);const D=dadosResumo(ym),box=$('#modal');
