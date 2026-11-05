@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-HweB3f2XpSsaS4cHTweiQ94nnSx9t/BB1DVUJvGZJ+g=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-t3+rxA7gc31iAHtmRrf3iHssKKXkyGp4o8zHD/Yj2wE=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2211,6 +2211,17 @@ html.claro .walDet .walFat{background:radial-gradient(120% 90% at 100% 0%,color-
 html.claro .walLimGr b.alerta{color:#b45309}html.claro .walLimGr b.over{color:#be123c}
 html.preto .walDet .walFat{background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--tom) 12%,transparent),transparent 60%),var(--card)!important}
 @media(prefers-reduced-motion:reduce){.crSeg i,.fatAnel .faA{transition:none}}
+/* v10.119: bloco do início (opção C): Pergunte em destaque; resumo e empréstimos lado a lado */
+.hB-ask{padding:14px!important;border-radius:20px!important;background:linear-gradient(135deg,color-mix(in srgb,var(--a1) 16%,var(--card)),var(--card))!important;border:1px solid color-mix(in srgb,var(--a1) 35%,transparent)!important}
+.empCard .revIc{background:rgba(251,191,36,.16);color:#fbbf24}
+.empVal{font-weight:700;font-size:15px;white-space:nowrap}
+.gvDuo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+.gvDuo>.revCard{flex-direction:column;align-items:flex-start;gap:10px;padding:14px!important;margin:0!important;border-radius:20px!important;background:var(--card)!important;border:1px solid var(--line)!important;min-height:132px;min-width:0}
+.gvDuo>.revCard>svg{display:none}
+.gvDuo .revTx{min-width:0;width:100%}.gvDuo .revTx b{font-size:15px;line-height:1.25}
+.gvDuo .revTx small{white-space:normal}
+.gvDuo .empVal{display:block;font-size:20px;margin-top:2px}
+@media(min-width:1200px){#view[data-v=inicio]>.gvDuo{grid-column:span 8;margin:0!important}}
 /* v10.111: imposto das vendas (DARF) */
 .irCard{margin-top:12px}
 .irHead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
@@ -3125,7 +3136,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.118'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.119'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3149,8 +3160,8 @@ const GV_BUILD='10.118'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.118"></script>
-<script defer src="app.min.js?v=10.118"></script>
+<script defer src="planos.js?v=10.119"></script>
+<script defer src="app.min.js?v=10.119"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

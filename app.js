@@ -3093,7 +3093,7 @@ function homeTopo(v,o){
   </div>
   <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'||t==='orc'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
   <button class="hB-ask" data-act="assist">${I('chat','hB-askI')}<span><b>Pergunte sobre seu dinheiro</b><small>quanto gastei, maior categoria, parcelas, metas</small></span>${I('chevR','hB-ch')}</button>
-  ${primeirosPassosHTML()}${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${primeirosPassosHTML()}${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}${mesAntHTML(per)}
   <div class="hB-res">
     <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
@@ -3150,7 +3150,7 @@ function viewInicio(){
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
   <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${resumoCardHTML()}${revisarHTML()}${concHTML()}${empCardHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${avisoMesAnt}<div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
   <div class="relRes hmRes">
@@ -5365,6 +5365,13 @@ function empAvatar(n){const c=['#f59e0b','#22d3ee','#a78bfa','#f472b6','#34d399'
 function contasOpts(sel){const A=bancosAtivos(sel);return A.length?A.map(b=>({v:'b:'+b.id,t:b.nome})):[{v:'',t:'sem conta (dinheiro)'}];}
 function empAchaOuCria(nome){nome=String(nome||'').trim().slice(0,60);const k=norm(nome);let e=(S.emprestimos||[]).find(x=>norm(x.pessoa)===k);
   if(!e){e={id:uid(),pessoa:nome,tel:'',prev:'',obs:'',criadoEm:hojeISO()};(S.emprestimos=S.emprestimos||[]).push(e);}return e;}
+/* v10.119: resumo do mês e empréstimos lado a lado quando os dois aparecem (sugestões de empréstimo vêm depois) */
+function blocosInicioHTML(){
+  const rc=resumoCardHTML(),ec=empCardHTML(),k=ec.indexOf('<button type="button" class="card revCard empCard"');
+  const sug=k<0?ec:ec.slice(0,k),card=k<0?'':ec.slice(k);
+  if(rc&&card)return `<div class="gvDuo">${rc}${card}</div>${revisarHTML()}${concHTML()}${sug}`;
+  return rc+revisarHTML()+concHTML()+ec;
+}
 function empCardHTML(){
   const L=(S.emprestimos||[]).map(e=>({e,t:empTot(e.id)})).filter(x=>x.t.aberto>0);
   const sug=empSugestoes()[0];
@@ -5373,7 +5380,9 @@ function empCardHTML(){
   if(sug)h+=`<div class="card empSug"><div class="empSugTop">${empAvatar(sug.e.pessoa)}<div><b>${esc(primeiroNome(sug.e.pessoa))} te pagou?</b><small>entrou ${brl(sug.t.valor)} em ${fmtDataCurta(sug.t.data)} · ${esc(nomeTx(sug.t).n||sug.t.descricao||'')}</small></div></div><div class="empSugBt"><button class="btn2 sm" data-act="emp-sug-nao" data-id="${sug.t.id}">não é</button><button class="btn sm" data-act="emp-sug-ok" data-id="${sug.t.id}~${sug.e.id}">é devolução</button></div></div>`;
   if(!L.length)return h;
   const tot=L.reduce((a,x)=>a+cents(x.t.aberto),0)/100,atr=L.filter(x=>x.e.prev&&diasAte(x.e.prev)<0);
-  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('handCoins')}</span><span class="revTx"><b>A receber de empréstimos ${brl(tot)}</b><small>${L.length===1?esc(L[0].e.pessoa):L.length+' pessoas'}${atr.length?` · <em class="empAtr">${atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' atrasado':atr.length+' atrasados'}</em>`:''}</small></span>${I('chevR')}</button>`;
+  // v10.119: valor em linha própria (não quebra o título) e, com uma pessoa só, "atrasado" sem repetir o nome
+  const atrTx=!atr.length?'':L.length===1?'atrasado':atr.length===1?esc(primeiroNome(atr[0].e.pessoa))+' atrasado':atr.length+' atrasados';
+  return h+`<button type="button" class="card revCard empCard" data-act="emp-lista"><span class="revIc">${I('handCoins')}</span><span class="revTx"><b>A receber de empréstimos</b><span class="empVal">${brl(tot)}</span><small>${L.length===1?esc(L[0].e.pessoa):L.length+' pessoas'}${atrTx?` · <em class="empAtr">${atrTx}</em>`:''}</small></span>${I('chevR')}</button>`;
 }
 /* receita recente com o nome de quem te deve e valor até o que falta = provável devolução */
 function empSugestoes(){
