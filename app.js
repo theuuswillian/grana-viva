@@ -257,11 +257,29 @@ async function verificaPagamento(){
   }catch(e){PLANO_PAG=false;}
   return PLANO_PAG;
 }
-async function assinar(plano){
+/* v10.118: o Mercado Pago só aceita o pagamento se quem paga entrar com o mesmo e-mail enviado na assinatura.
+   Perguntamos o e-mail da conta do Mercado Pago (começa com o da conta GranaViva ou o último usado) antes de abrir o pagamento. */
+const MP_EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function assinar(plano){
   if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  let ult='';try{ult=localStorage.getItem('gv_mp_email')||'';}catch(e){}
+  form('Pagar com Mercado Pago',[
+    {type:'html',html:'<p class="plMot2">Digite o e-mail com que você entra no Mercado Pago. Se for outro, o Mercado Pago recusa o pagamento.</p>'},
+    {name:'e',label:'E-mail da sua conta Mercado Pago',type:'email',required:true,value:ult||USER.email||''}
+  ],v=>{
+    const e=String(v.e||'').trim().toLowerCase();
+    if(!MP_EMAIL_RE.test(e)||e.length>200)return 'confira o e-mail';
+    try{localStorage.setItem('gv_mp_email',e);}catch(x){}
+    setTimeout(()=>abreCheckout(plano,e),30);return null;
+  });
+  const bt=$('#mf button[type="submit"]');if(bt)bt.textContent='Continuar para o pagamento';
+  const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
+}
+async function abreCheckout(plano,email){
   const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
+  toast('Abrindo o pagamento…');
   try{
-    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano}});
+    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email}});
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
     if(emBreve){PLANO_PAG=false;abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');

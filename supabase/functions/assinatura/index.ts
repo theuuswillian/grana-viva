@@ -40,13 +40,17 @@ Deno.serve(async (req) => {
     if (!token) return json({ erro: "Pagamento em breve", emBreve: true }, 503);
     if (ef.fundador) return json({ erro: "Sua conta fundadora já tem acesso completo." }, 409);
     if (row?.status === "ativo" && ef.nivel > 0 && GVP.idBase(row.plano) === GVP.idBase(plano) && row.plano === plano) return json({ erro: "Você já assina este plano." }, 409);
-    if (!user.email) return json({ erro: "sua conta precisa de um e-mail" }, 400);
+    // v10.118: e-mail da conta do Mercado Pago de quem paga (o MP exige que seja o mesmo do login do pagador); padrão: e-mail da conta
+    const emIn = String(body?.email || "").trim().toLowerCase();
+    if (emIn && (emIn.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn))) return json({ erro: "confira o e-mail do Mercado Pago" }, 400);
+    const emailPagador = emIn || user.email || "";
+    if (!emailPagador) return json({ erro: "informe o e-mail da sua conta Mercado Pago" }, 400);
     const { data: okH } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "checkout", p_lim: 6, p_seg: 3600 });
     if (!okH) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
     const app = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
     try {
       const c = await MP.criaCheckout({
-        uid: user.id, email: user.email, plano, token, PLANOS: GVP.PLANOS,
+        uid: user.id, email: emailPagador, plano, token, PLANOS: GVP.PLANOS,
         notificationUrl: Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago",
         backUrl: app + "?assinatura=retorno",
       });
