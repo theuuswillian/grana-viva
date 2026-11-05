@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-nElKh35sbcsU126e2JxV9xYvaZlRIyoX51RtVf1oF3k=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-C+710g4l2Bf+DLBVL90hLowwMMfAARNlStGh2Gs02Jc=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2647,7 +2647,7 @@ html.claro .ccFmP.st-paga small{color:#16a34a}html.claro .ccFmP.st-vencida small
 /* v10.103: tour de boas-vindas */
 #tour{position:fixed;inset:0;z-index:2147483000;opacity:0;transition:opacity .25s,background .3s}
 body.tourOn:not(.tourFab) #fab{opacity:0!important;pointer-events:none!important}
-#tour.centro{background:rgba(6,10,12,.8);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#tour.centro{background:rgba(6,10,12,.8)}#tour.centro::before{content:'';position:fixed;inset:0;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}#tour .tr-card{z-index:1;isolation:isolate}
 #tour.on{opacity:1}
 #tour .tr-buraco{position:fixed;border-radius:16px;box-shadow:0 0 0 200vmax rgba(6,10,12,.72),0 0 0 3px var(--c,#10b981);transition:all .38s cubic-bezier(.2,.8,.2,1);pointer-events:none}
 #tour .tr-buraco::after{content:'';position:absolute;inset:-3px;border-radius:inherit;border:2px solid #a3e635;animation:trPulso 1.8s ease-out infinite}
@@ -3125,7 +3125,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.114'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.115'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3149,8 +3149,8 @@ const GV_BUILD='10.114'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.114"></script>
-<script defer src="app.min.js?v=10.114"></script>
+<script defer src="planos.js?v=10.115"></script>
+<script defer src="app.min.js?v=10.115"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
