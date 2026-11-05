@@ -601,7 +601,8 @@ async function upTabela(tab,arr,uid,ok){
   /* v10.65: trava de segurança. sumir mais da metade de uma tabela de uma vez só acontece de propósito por "Apagar tudo"
      ou "Importar backup". fora disso, seria um defeito: a exclusão na nuvem fica segurada e os dados continuam lá. */
   const tot=Object.keys(snap).length;
-  if(!APAGA_LIBERADO&&sair.length>=50&&sair.length>tot*0.5){
+  /* v10.116: tabelas pequenas (contas, cartões, investimentos, metas) também: 2 ou mais sumindo de uma vez, acima da metade, ficam seguradas */
+  if(!APAGA_LIBERADO&&sair.length>tot*0.5&&(sair.length>=50||(tab!=='tx'&&sair.length>=2))){
     if(!AVISO_MASSA){AVISO_MASSA=true;toast('Proteção ativada: muitas exclusões de uma vez foram seguradas. Seus dados na nuvem estão intactos.',true);}
     sair=[];
   }
