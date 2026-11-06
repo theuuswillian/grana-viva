@@ -8347,7 +8347,7 @@ async function confereVersao(){
 }
 let VERSAO_NOVA=null;
 function avisoVersao(){if(document.getElementById('gvAtu'))return;const d=document.createElement('button');d.id='gvAtu';d.type='button';d.className='gvAtu';
-  d.innerHTML=I('refresh')+'<span>Nova versão pronta</span><b>atualizar</b>';d.onclick=()=>{window.__gvRecarrega=1;location.reload();};document.body.appendChild(d);}
+  d.innerHTML=I('refresh')+'<span>Nova versão<em> pronta</em></span><b>atualizar</b>';d.onclick=()=>{window.__gvRecarrega=1;location.reload();};document.body.appendChild(d);}
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible')confereVersao();
   else if(VERSAO_NOVA&&!$('#modal').classList.contains('on')&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){window.__gvRecarrega=1;try{location.reload();}catch(e){}}
