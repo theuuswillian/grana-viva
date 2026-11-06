@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-sSni9JgVdgqlvCEcpY+dke/FxDGjwjFTjnibvdWnmtg=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-hAVt3ctHCBkBzOUpmjjq70hnf/sIPwEEroJ7T/S7N8Y=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1549,11 +1549,10 @@ html.claro .rfChip.warn{color:#b45309}
 .gvAtu{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:13.5px;box-shadow:0 12px 30px -10px rgba(0,0,0,.6);cursor:pointer;animation:rSobe .3s ease-out;white-space:nowrap;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box}
 /* v10.126: com left:50% o botão só tinha meia tela de largura e o "atualizar" vazava; agora a largura é a do conteúdo */
 .gvAtu .i{width:16px;height:16px;color:var(--a1);flex:none}.gvAtu span{overflow:hidden;text-overflow:ellipsis}.gvAtu b{flex:none;color:var(--a1);font-weight:700;margin-left:2px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--a1) 14%,transparent)}
-/* v10.132: o aviso de versão fica embaixo, à esquerda do botão +, e não cobre mais o cabeçalho */
-.gvAtu{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);left:16px;transform:none;max-width:calc(100vw - 96px);animation:gvAtuIn .3s ease-out}
-@media(max-width:379px){.gvAtu{padding:10px 10px;gap:7px}.gvAtu em{display:none}.gvAtu b{padding:4px 8px}}
+/* v10.134: aviso de versão volta para o topo (preferência do Matheus), respeitando a área do relógio */
+.gvAtu{top:calc(var(--sat,0px) + 10px);max-width:calc(100vw - 24px)}
+@media(max-width:339px){.gvAtu em{display:none}}
 .gvAtu em{font-style:normal}
-@keyframes gvAtuIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 /* v10.77: microfone estilo WhatsApp: barra própria abaixo do campo */
 .iaCampo textarea{padding-right:12px;min-height:76px}
 .iaCampo.gravando textarea{border-color:color-mix(in srgb,var(--a1) 70%,transparent)}
@@ -3208,7 +3207,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.133'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.134'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3234,8 +3233,8 @@ const GV_BUILD='10.133'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.133"></script>
-<script defer src="app.min.js?v=10.133"></script>
+<script defer src="planos.js?v=10.134"></script>
+<script defer src="app.min.js?v=10.134"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
