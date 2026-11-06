@@ -222,8 +222,8 @@ function bloqPrevia(pv){
 }
 function viewBloqueio(rec){
   const pm=GVP.planoMinimo(rec),P=GVP.PLANOS[pm],t=REC_TXT[rec]||[GVP.RECURSOS[rec].nome,''],V=REC_VENDA[rec];
-  const p=planoAgora(),pag=PLANO_PAG,g=bloqGancho(rec);
-  if(pag===null&&USER)verificaPagamento().then(()=>{if(TAB_RECURSO[TAB]===rec&&!pode(rec))render();});
+  const p=planoAgora(),pag=pagVisivel(),g=bloqGancho(rec);
+  if(PLANO_PAG===null&&USER){const ant=pag;verificaPagamento().then(v=>{if(v!==ant&&TAB_RECURSO[TAB]===rec&&!pode(rec))render();});}
   const fim=p&&p.contratado&&p.status==='teste';
   const cta=pag===true?`<button class="btn bvCta" data-act="assinar" data-id="${pm}">Assinar ${esc(P.nome)} · ${esc(P.rotulo)}</button><button class="bvLink" data-act="planos" data-id="${esc(rec)}">Comparar planos</button>`
     :`<button class="btn bvCta" data-act="planos" data-id="${esc(rec)}">Ver o plano ${esc(P.nome)}</button>`;
@@ -260,7 +260,7 @@ const PL_LISTA=[['gratis',['Lançamentos manuais','Contas e bancos','Cartões, f
 function abrePlanos(rec){
   const box=$('#modal');const p=planoAgora();const atual=p?p.plano:null;
   const pm=rec?GVP.planoMinimo(rec):null;
-  const pag=PLANO_PAG;
+  const pag=pagVisivel();
   const botao=id=>{
     if(id==='gratis')return atual==='gratis'?'<span class="plAtual">seu plano</span>':'';
     if(p&&p.fundador)return '<span class="plAtual">incluso na sua conta</span>';
@@ -280,13 +280,17 @@ function abrePlanos(rec){
     <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago, no cartão de crédito ou com saldo da conta Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
   </div>`;
   box.classList.add('on');
-  if(PLANO_PAG===null&&USER)verificaPagamento().then(()=>{if($('#modal .plSheet'))abrePlanos(rec);});
+  if(PLANO_PAG===null&&USER){const ant=pag;verificaPagamento().then(v=>{if(v!==ant&&$('#modal .plSheet'))abrePlanos(rec);});}
 }
+/* v10.135: a tela de venda não espera o servidor para mostrar "Assinar": usa o último valor conhecido
+   (guardado no aparelho) e, sem nenhum, assume pagamento ativo; se não estiver, o checkout responde "em breve" */
+function pagVisivel(){if(PLANO_PAG!==null)return PLANO_PAG;try{const c=localStorage.getItem('gv-pag');if(c==='0')return false;}catch(e){}return true;}
+function pagGuarda(){try{if(PLANO_PAG!==null)localStorage.setItem('gv-pag',PLANO_PAG?'1':'0');}catch(e){}}
 async function verificaPagamento(){
-  try{const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'status'}});PLANO_PAG=!error&&o&&o.pagamento===true;
+  try{const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'status'}});if(!error&&o){PLANO_PAG=o.pagamento===true;pagGuarda();}
     if(o&&o.assinatura!==undefined){planoAplica(o.assinatura);}
-  }catch(e){PLANO_PAG=false;}
-  return PLANO_PAG;
+  }catch(e){}
+  return pagVisivel(); /* falha de rede: não decide nada, tenta de novo na próxima vez */
 }
 /* v10.118: o Mercado Pago só aceita o pagamento se quem paga entrar com o mesmo e-mail enviado na assinatura.
    Perguntamos o e-mail da conta do Mercado Pago (começa com o da conta GranaViva ou o último usado) antes de abrir o pagamento. */
@@ -312,7 +316,7 @@ async function abreCheckout(plano,email){
   try{
     const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email}});
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
-    if(emBreve){PLANO_PAG=false;abrePlanos();toast('Pagamento em breve');return;}
+    if(emBreve){PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
     const u=new URL(o.url);if(!/(^|\.)mercadopago\.com(\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
     location.href=u.href;
