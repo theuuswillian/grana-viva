@@ -2935,7 +2935,7 @@ function render(){
     RENDER_QUIETO=quieto;
     if(!bloq&&AFTER[TAB])AFTER[TAB]();
     RENDER_QUIETO=false;
-    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();}
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();atualizaWaUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
     try{cabeNum(v);}catch(e){}
@@ -3957,6 +3957,11 @@ function viewCfg(){
     <div class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</div>
     <div class="pushBtns" id="bcBtns"></div>
   </div>
+  <div class="card bcCard waCard">
+    <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>WhatsApp</h4><small>lance por mensagem</small></div><span class="bcSt" id="waSt"></span></div>
+    <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
+    <div class="pushBtns" id="waBtns"></div>
+  </div>
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('lu_chart_candlestick')}</span><div><h4>Cotações</h4><small>preços de ações e FIIs da carteira</small></div></div>
     <div class="lkList"><button class="lkRow" data-act="brapi-token"><span class="lkRi">${I('lu_key_round')}</span><span class="lkRt"><b>Token brapi</b><small>opcional, deixa as cotações mais rápidas</small></span><span class="dkSt${S.cfg.brapi?' on':''}">${S.cfg.brapi?'configurado':'não configurado'}</span><span class="lkCh">${I('chevR')}</span></button></div>
@@ -4887,6 +4892,42 @@ async function pluggy(body){
   if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
   if(data&&data.erro)throw new Error(data.erro);
   return data;
+}
+/* v10.136: WhatsApp. O app só gera o código de ligação e mostra o estado; ler e salvar acontece no servidor (whatsapp-webhook).
+   O lançamento salvo pelo WhatsApp chega aqui na próxima sincronização (tag "whatsapp"). */
+let WA_ST=null;
+async function waChama(acao){
+  const {data,error}=await sb.functions.invoke('whatsapp-vincular',{body:{acao}});
+  if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
+  if(data&&data.erro)throw new Error(data.erro);
+  return data;
+}
+async function atualizaWaUI(){
+  const tx=$('#waTxt'),bt=$('#waBtns'),sc=$('#waSt');if(!tx||!bt)return;
+  if(!USER){bt.innerHTML='';return;}
+  try{
+    const st=(WA_ST&&WA_ST.uid===USER.id&&Date.now()-WA_ST.t<300000)?WA_ST.st:await waChama('status');
+    WA_ST={st,t:WA_ST&&WA_ST.st===st?WA_ST.t:Date.now(),uid:USER.id};
+    const t2=$('#waTxt'),b2=$('#waBtns'),s2=$('#waSt');if(!t2||!b2)return;
+    const pinta=(k,l)=>{if(s2){s2.className='bcSt'+(k?' on':'');s2.innerHTML='<i></i>'+l;}};
+    if(!st.ativo){pinta(false,'em breve');t2.textContent='mande "gastei 32 no almoço" para o WhatsApp do GranaViva e o lançamento entra aqui, já com a categoria. está chegando.';b2.innerHTML='';return;}
+    if(!st.pode){pinta(false,'Plus');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. faz parte dos planos Plus e Pro.';b2.innerHTML=`<button class="btn" data-act="planos" data-id="leitura_ia">ver planos</button>`;return;}
+    if(st.vinculado){pinta(true,'ligado');t2.textContent='ligado ao número '+st.telefone+'. mande o gasto do jeito que você falaria, como "uber 18,50 ontem", e toque em Salvar.';
+      b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`;return;}
+    pinta(false,'desligado');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. você confere e toca em Salvar.';
+    b2.innerHTML=`<button class="btn" data-act="wa-ligar">${I('link')}ligar meu WhatsApp</button>`;
+  }catch(e){const t2=$('#waTxt'),b2=$('#waBtns');if(t2)t2.textContent='o WhatsApp ainda não está disponível no servidor.';if(b2)b2.innerHTML='';}
+}
+async function waLigar(){
+  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  let o;try{o=await waChama('codigo');}catch(e){toast(e.message,true);return;}
+  WA_ST=null;
+  const url='https://wa.me/'+String(o.numero).replace(/\D/g,'')+'?text='+encodeURIComponent('GV '+o.codigo);
+  confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir'},()=>{location.href=url;});
+}
+function waDesligar(){
+  confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
+    try{await waChama('desvincular');WA_ST=null;toast('WhatsApp desligado');atualizaWaUI();}catch(e){toast(e.message,true);}});
 }
 let BC_ST=null;
 async function atualizaBancoUI(){
@@ -7986,6 +8027,9 @@ const ACT={
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
   'banco-sync':()=>bancoSync(),
+  'wa-ligar':()=>waLigar(),
+  'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
+  'wa-desligar':()=>waDesligar(),
   'parc-verif':()=>prcVerifica(),
   'banco-config':()=>bancoConfig(),
   'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
