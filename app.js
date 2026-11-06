@@ -8556,6 +8556,8 @@ function erroTraduzido(m){
   if(/valid email|invalid.*email/i.test(m))return 'confira o e-mail';
   if(/rate limit|too many/i.test(m))return 'muitas tentativas, espera um pouco';
   if(/Failed to fetch|NetworkError|network/i.test(m))return 'sem conexão com o servidor';
+  /* v10.124: falha no envio do e-mail de confirmação (SMTP) tinha a mensagem genérica */
+  if(/sending (confirmation|magic|recovery)|smtp|535|mail/i.test(m))return 'não conseguimos enviar o e-mail de confirmação agora. tenta com o Google ou daqui a pouco';
   return 'não deu pra entrar agora, tenta de novo';
 }
 document.querySelectorAll('.aTabs button').forEach(b=>b.addEventListener('click',()=>{
