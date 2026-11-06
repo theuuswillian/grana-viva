@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-D9SxhPSHQbf9cjmlLsIWagC6Qcdh4h4a8wxNyf8Nwuc=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-sSni9JgVdgqlvCEcpY+dke/FxDGjwjFTjnibvdWnmtg=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -701,7 +701,7 @@ body:has(#modal.on) #fab{display:none}
 /* iPhone: respeita a área da barra de status e do indicador inferior (app instalado em tela cheia) */
 /* --sat: área da barra de status. alguns iOS (26+) informam env()=0 mesmo desenhando a página por baixo dela; o script abaixo mede e aplica um mínimo */
 :root{--sat:max(env(safe-area-inset-top,0px),var(--sat-fb,0px))}
-body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--bg);z-index:65;pointer-events:none}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--sat-faixa,var(--sat));background:var(--bg);z-index:65;pointer-events:none}
 #app{padding-top:calc(var(--sat) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
 .side{padding-top:calc(var(--sat) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
 #auth{padding-top:calc(var(--sat) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
@@ -3208,7 +3208,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.132'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.133'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3221,8 +3221,10 @@ const GV_BUILD='10.132'; // versão publicada (./bump.sh troca aqui e no sw.js)
     var standalone=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
     /* a página vai até o topo da tela quando quase não sobra barra do Safari acima dela */
     var porBaixo=standalone||(retrato&&(alto-window.innerHeight)<140);
-    if(!porBaixo||!retrato){root.style.removeProperty('--sat-fb');return;}
+    if(!porBaixo||!retrato){root.style.removeProperty('--sat-fb');root.style.removeProperty('--sat-faixa');return;}
     root.style.setProperty('--sat-fb',(alto>=852?59:alto>=812?47:20)+'px');
+    /* v10.133: no Safari (fora do app instalado) a faixa fixa do topo ficava preta ao rolar; lá só o espaço inicial do conteúdo usa o recuo */
+    if(standalone)root.style.removeProperty('--sat-faixa');else root.style.setProperty('--sat-faixa','0px');
   }
   ajusta();addEventListener('resize',ajusta);addEventListener('orientationchange',function(){setTimeout(ajusta,300);});
   window.__ajustaSat=ajusta;
@@ -3232,8 +3234,8 @@ const GV_BUILD='10.132'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.132"></script>
-<script defer src="app.min.js?v=10.132"></script>
+<script defer src="planos.js?v=10.133"></script>
+<script defer src="app.min.js?v=10.133"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
