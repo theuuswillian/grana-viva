@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-tbjXe5AiBtcxi2TNPkLcu9E3JviHzftTqCkHQLzlfWc=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-uQIFk8OJadg9FKrk4FJw5U2wkCva1Cir/etwY2zoUfw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1871,6 +1871,31 @@ html.claro .sb-item .sbPlano[data-p=pro]{color:#b45309;background:rgba(245,158,1
 .plBloq .plNota{font-size:13px}
 .plBloqI{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--card2);border:1px solid var(--line)}
 .plBloqI .i{width:24px;height:24px}
+/* v10.129: tela de venda do recurso */
+.plEspera{padding:40px 20px;text-align:center;color:var(--mut)}
+.plBloq.bv{--pc:#4ade80;gap:12px;padding:20px 18px 22px;text-align:left;align-items:stretch;overflow:hidden}
+.plBloq.bv[data-p="plus"]{--pc:#60a5fa}.plBloq.bv[data-p="pro"]{--pc:#a855f7}
+.bvPrev{position:relative;border-radius:18px;padding:16px 16px 12px;background:linear-gradient(160deg,color-mix(in srgb,var(--pc) 16%,var(--card2)),var(--card2));border:1px solid color-mix(in srgb,var(--pc) 25%,var(--line));display:flex;flex-direction:column;gap:2px;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent);user-select:none}
+.bvPrev small{color:var(--mut);font-size:12px}
+.bvPrev strong{font-size:clamp(20px,6.5vw,26px);font-weight:800;color:var(--hd,var(--txt));letter-spacing:-.5px;overflow-wrap:anywhere}
+.bvEx{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);background:color-mix(in srgb,var(--card) 70%,transparent);padding:3px 8px;border-radius:99px}
+.bvBars{display:flex;align-items:flex-end;gap:8px;height:74px;margin-top:10px}
+.bvBars i{flex:1;border-radius:6px 6px 3px 3px;background:color-mix(in srgb,var(--pc) 30%,transparent)}.bvBars i.on{background:var(--pc)}
+.bvLb{display:flex;gap:8px;margin-top:4px}.bvLb span{flex:1;text-align:center;font-size:10px;color:var(--mut)}
+.bvRows{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.bvRow{display:grid;grid-template-columns:minmax(0,1fr) 42%;align-items:center;gap:10px;font-size:12px;color:var(--txt)}
+.bvRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bvRow b{height:8px;border-radius:99px;background:color-mix(in srgb,var(--mut) 18%,transparent);position:relative;overflow:hidden}
+.bvRow b:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--c);border-radius:99px}
+.bvTag{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--pc);background:color-mix(in srgb,var(--pc) 13%,transparent);padding:5px 10px;border-radius:99px;margin-top:-4px}.bvTag .i{width:13px;height:13px}
+.plBloq.bv h3{font-size:clamp(19px,5.6vw,23px);line-height:1.2;max-width:none;letter-spacing:-.3px}
+.bvList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.bvList li{display:flex;gap:10px;align-items:flex-start;color:var(--txt);font-size:14.5px;line-height:1.35}
+.bvList .i{flex:none;width:18px;height:18px;margin-top:1px;color:var(--pc)}
+.plBloq.bv .bvGancho{font-size:13px;color:var(--txt);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;max-width:none}
+.plBloq.bv .bvCta{width:100%;min-height:52px;font-size:16px;margin-top:4px}
+.bvLink{background:none;border:0;color:var(--mut);font-size:13.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:2px;align-self:center}
+.plBloq.bv .plNota{text-align:center;font-size:12.5px;max-width:none}
 .plCard .plTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .plCard h4{margin:0 0 4px}
 .plNome{font-size:20px;color:var(--hd)}
@@ -2742,20 +2767,20 @@ body.tourOn:not(.tourFab) #fab{opacity:0!important;pointer-events:none!important
 #mf .roda .rdSeg button.on{background:rgba(248,113,113,.14)!important;color:#f87171!important;box-shadow:inset 0 0 0 1px rgba(248,113,113,.35)}
 #mf .roda.rec .rdSeg button.on{background:rgba(74,222,128,.14)!important;color:#4ade80!important;box-shadow:inset 0 0 0 1px rgba(74,222,128,.35)}
 .rdIc{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--txt);display:grid;place-items:center;cursor:pointer}.rdIc svg{width:18px;height:18px}
-.rdWheel{position:relative;width:min(100%,300px);aspect-ratio:1;margin:8px auto 0}
+.rdWheel{position:relative;width:min(calc(100% - 24px),300px);aspect-ratio:1;margin:8px auto 18px}
 .rdRing{position:absolute;inset:12%;border-radius:50%;border:1px dashed color-mix(in srgb,var(--mut) 35%,transparent)}
-.rdOpt{position:absolute;transform:translate(-50%,-50%);width:17%;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);display:grid;place-items:center;transition:transform .18s,box-shadow .18s}
+.rdOpt{position:absolute;z-index:2;transform:translate(-50%,-50%);width:17%;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);display:grid;place-items:center;transition:transform .18s,box-shadow .18s}
 .rdOpt svg,.rdOpt .emo{width:44%;height:44%;font-size:20px}
-.rdOpt span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:10.5px;font-weight:600;color:var(--mut);white-space:nowrap;max-width:96px;overflow:visible;text-overflow:ellipsis}
+.rdOpt span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:clamp(9.5px,2.9vw,10.5px);line-height:1.15;font-weight:600;color:var(--mut);white-space:normal;width:max-content;max-width:min(76px,24vw);text-align:center;overflow-wrap:anywhere;text-shadow:0 0 6px var(--card),0 0 2px var(--card)}
 .rdOpt.on{box-shadow:0 0 0 2px var(--c),0 0 22px color-mix(in srgb,var(--c) 55%,transparent);transform:translate(-50%,-50%) scale(1.1)}.rdOpt.on span{color:var(--c)}
 .rdOpt:active{transform:translate(-50%,-50%) scale(.94)}
-.rdCen{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--card2) 60%,var(--card)),var(--card2));border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:text}
+.rdCen{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);width:42%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--card2) 60%,var(--card)),var(--card2));border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:text}
 .rdCat{color:var(--c);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;max-width:86%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #mf .rdVal{display:flex;align-items:baseline;justify-content:center;gap:3px;margin:2px 0;color:var(--mut);font-size:13px}
 #mf .rdVal input{width:4ch;max-width:7.5ch;min-width:0;background:transparent!important;border:0!important;box-shadow:none!important;padding:0;margin:0;text-align:center;font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--hd,var(--txt))}
 #mf .rdVal input::placeholder{color:color-mix(in srgb,var(--mut) 60%,transparent)}
 .rdSub{color:var(--mut);font-size:11.5px}
-.rdHint{text-align:center;color:var(--mut);font-size:12px;margin:22px 0 10px}
+.rdHint{text-align:center;color:var(--mut);font-size:12px;margin:14px 0 10px}
 #mf label.rdDesc{margin:0 0 10px}#mf label.rdDesc input{margin-top:0}
 .rdMais{border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 .rdBot{display:flex;gap:10px;align-items:stretch;margin-top:8px}.rdBot .btn{flex:1;min-height:50px;font-size:16px;margin:0}
@@ -3178,7 +3203,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.128'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.129'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3202,8 +3227,8 @@ const GV_BUILD='10.128'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.128"></script>
-<script defer src="app.min.js?v=10.128"></script>
+<script defer src="planos.js?v=10.129"></script>
+<script defer src="app.min.js?v=10.129"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

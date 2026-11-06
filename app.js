@@ -155,16 +155,16 @@ const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'}
    Sem conseguir ler o plano (sem rede, primeira vez): usa a última cópia; sem cópia, nada é bloqueado. */
 const TAB_RECURSO={orc:'orcamentos',fii:'investimentos',metas:'metas',pat:'patrimonio',plan:'planejamento',cartoes:'cartoes',rel:'relatorios'};
 const ACT_RECURSO={'ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
-let PLANO_ROW,PLANO_LIDO=false,PLANO_PAG=null;
+let PLANO_ROW,PLANO_LIDO=false,PLANO_PAG=null,PLANO_FALHA=false;
 function planoChave(){return 'gv-plano:'+(USER&&USER.id||'');}
 function planoAgora(){if(!PLANO_LIDO||!window.GVP)return null;return GVP.efetivo(PLANO_ROW,Date.now());}
 function pode(rec){const p=planoAgora();if(!p)return true;return GVP.pode(p.nivel,rec);}
-function planoZera(){PLANO_ROW=undefined;PLANO_LIDO=false;PLANO_PAG=null;pintaNavPlano();}
+function planoZera(){PLANO_ROW=undefined;PLANO_LIDO=false;PLANO_PAG=null;PLANO_FALHA=false;pintaNavPlano();}
 function planoAplica(row){PLANO_ROW=row||null;PLANO_LIDO=true;pintaNavPlano();}
 async function carregaPlano(){
   if(!USER||!window.GVP)return;
   const uid=USER.id;
-  try{const c=JSON.parse(localStorage.getItem(planoChave())||'null');if(c&&c.uid===uid&&!PLANO_LIDO)planoAplica(c.row);}catch(e){}
+  try{const c=JSON.parse(localStorage.getItem(planoChave())||'null');if(c&&c.uid===uid&&!PLANO_LIDO){planoAplica(c.row);render();}}catch(e){} // v10.129: a tela aberta antes de saber o plano precisa redesenhar já com a cópia
   try{
     const {data,error}=await sb.from('assinaturas').select('plano,status,periodo_fim,provedor').eq('user_id',uid).maybeSingle();
     if(error)throw error;
@@ -172,7 +172,7 @@ async function carregaPlano(){
     const antes=JSON.stringify(planoAgora());planoAplica(data||null);
     try{localStorage.setItem(planoChave(),JSON.stringify({uid,row:data||null,em:Date.now()}));}catch(e){}
     if(JSON.stringify(planoAgora())!==antes)render();
-  }catch(e){/* mantém a cópia (ou tudo liberado) */}
+  }catch(e){/* mantém a cópia (ou tudo liberado) */if(USER&&USER.id===uid&&!PLANO_LIDO){PLANO_FALHA=true;render();}}
 }
 function pintaNavPlano(){
   document.querySelectorAll('.sb-item[data-tab]').forEach(b=>{
@@ -195,16 +195,47 @@ const REC_TXT={
   metas:['Metas','Metas com ritmo mensal, previsão e rendimento pelo CDI.'],
   assistente:['Assistente','Pergunte sobre o seu dinheiro e receba respostas conferidas com os seus lançamentos.']
 };
+/* v10.129: tela de venda por recurso (antes: cadeado + uma frase). Prévia ilustrada com dados de exemplo, 3 ganhos, preço por dia e assinar direto. */
+const REC_VENDA={
+  planejamento:{h:'Saiba hoje se vai faltar dinheiro no fim do mês',b:['Saldo previsto dos próximos 6 meses','Simule cortes e rendas extras antes de decidir','Veja o dia exato em que o saldo aperta'],pv:{n:'Saldo previsto em março',v:'R$ 2.340',bar:[62,48,55,30,44,70],lb:['nov','dez','jan','fev','mar','abr']}},
+  orcamentos:{h:'Pare de descobrir no fim do mês que gastou demais',b:['Limite por categoria, do seu jeito','Aviso quando chegar a 80% e a 100%','Quanto ainda dá pra gastar hoje'],pv:{n:'Restam neste mês',v:'R$ 640',rows:[['Mercado',82,'#f59e0b'],['Restaurantes',104,'#f87171'],['Transporte',45,'#4ade80']]}},
+  cartoes:{h:'Nunca mais leve susto com a fatura',b:['Fatura aberta e fechada de cada cartão','Parcelas futuras somadas mês a mês','Limite usado e quanto custa atrasar'],pv:{n:'Fatura atual',v:'R$ 1.287,40',rows:[['Nubank · fecha dia 3',64,'#a855f7'],['Inter · fecha dia 10',38,'#f97316'],['Parcelas até jun',51,'#60a5fa']]}},
+  relatorios:{h:'Entenda para onde o seu dinheiro foi',b:['Comparação com o mês passado','As categorias que mais cresceram','Resumo do mês em uma tela'],pv:{n:'Gastos vs. mês passado',v:'−12%',bar:[70,58,80,52,66,47],lb:['jun','jul','ago','set','out','nov']}},
+  importar_extrato:{h:'Traga meses de lançamentos em segundos',b:['Arquivo OFX ou CSV de qualquer banco','Categorias sugeridas automaticamente','Nada duplicado, mesmo importando de novo'],pv:{n:'Extrato importado',v:'148 lançamentos',rows:[['Categorizados',92,'#4ade80'],['Duplicados ignorados',12,'#94a3b8'],['Para conferir',8,'#f59e0b']]}},
+  comprovantes:{h:'Todo comprovante no lugar certo',b:['Foto ou PDF junto de cada lançamento','Ache qualquer recibo em segundos','Guardado com segurança na sua conta'],pv:{n:'Comprovantes guardados',v:'36 este ano',rows:[['Notas fiscais',70,'#60a5fa'],['Pix e transferências',48,'#4ade80'],['Boletos',30,'#f59e0b']]}},
+  leitura_ia:{h:'Lance um gasto em 3 segundos',b:['Foto do comprovante vira lançamento','Ou diga: "gastei 32 no almoço"','Você só confere e salva'],pv:{n:'"Uber 23,90 ontem"',v:'Transporte · R$ 23,90',rows:[['Valor e data lidos',100,'#4ade80'],['Categoria sugerida',100,'#60a5fa'],['Pronto para salvar',100,'#a855f7']]}},
+  investimentos:{h:'Seus investimentos e a sua conta numa tela só',b:['FIIs e ações com cotação da B3','Renda fixa calculada pelo CDI','Proventos do mês somados'],pv:{n:'Carteira',v:'R$ 18.420',bar:[40,46,44,55,61,68],lb:['jun','jul','ago','set','out','nov']}},
+  patrimonio:{h:'Veja o seu patrimônio crescer mês a mês',b:['Contas, investimentos e bens somados','Dívidas descontadas automaticamente','Gráfico da sua evolução'],pv:{n:'Patrimônio líquido',v:'R$ 47.900',bar:[38,42,47,51,58,66],lb:['jun','jul','ago','set','out','nov']}},
+  metas:{h:'Chegue lá mais rápido',b:['Quanto guardar por mês para cada meta','Previsão de quando você chega','Rendimento pelo CDI incluído'],pv:{n:'Viagem · faltam 5 meses',v:'68%',rows:[['Viagem',68,'#4ade80'],['Reserva de emergência',41,'#60a5fa'],['Carro',22,'#f59e0b']]}},
+  assistente:{h:'Pergunte qualquer coisa sobre o seu dinheiro',b:['"Quanto gastei com delivery em outubro?"','Respostas conferidas com os seus lançamentos','Dicas para fechar o mês no azul'],pv:{n:'Você perguntou',v:'R$ 412 em delivery',rows:[['Outubro',100,'#f87171'],['Setembro',73,'#94a3b8'],['Média 6 meses',64,'#94a3b8']]}}
+};
+function precoDia(P){const d=P.preco/30;return d<0.95?'R$ '+d.toFixed(2).replace('.',',')+' por dia':'cerca de R$ '+Math.round(d)+' por dia';}
+function bloqGancho(rec){try{const n=(S.tx||[]).length;
+  if(rec==='patrimonio'||rec==='investimentos'){const nb=(S.bancos||[]).length;if(nb)return 'Você já tem '+nb+(nb>1?' contas cadastradas':' conta cadastrada')+'. Elas entram na conta na hora.';}
+  if(n>=10&&/orcamentos|relatorios|planejamento|assistente/.test(rec))return 'Você já tem '+n+' lançamentos. Isso funciona com eles desde o primeiro minuto.';
+  if(rec==='cartoes'&&(S.cartoes||[]).length)return 'Seus cartões já cadastrados aparecem aqui na hora.';
+}catch(e){}return '';}
+function bloqPrevia(pv){
+  const corpo=pv.bar?`<div class="bvBars">${pv.bar.map((h,i)=>`<i style="height:${h}%"${i===pv.bar.length-1?' class="on"':''}></i>`).join('')}</div><div class="bvLb">${pv.lb.map(x=>`<span>${x}</span>`).join('')}</div>`
+    :`<div class="bvRows">${pv.rows.map(r=>`<div class="bvRow"><span>${esc(r[0])}</span><b style="--w:${Math.min(r[1],100)}%;--c:${r[2]}"></b></div>`).join('')}</div>`;
+  return `<div class="bvPrev" aria-hidden="true"><span class="bvEx">exemplo</span><small>${esc(pv.n)}</small><strong>${esc(pv.v)}</strong>${corpo}</div>`;
+}
 function viewBloqueio(rec){
-  const pm=GVP.planoMinimo(rec),P=GVP.PLANOS[pm],t=REC_TXT[rec]||[GVP.RECURSOS[rec].nome,''];
-  const p=planoAgora();
+  const pm=GVP.planoMinimo(rec),P=GVP.PLANOS[pm],t=REC_TXT[rec]||[GVP.RECURSOS[rec].nome,''],V=REC_VENDA[rec];
+  const p=planoAgora(),pag=PLANO_PAG,g=bloqGancho(rec);
+  if(pag===null&&USER)verificaPagamento().then(()=>{if(TAB_RECURSO[TAB]===rec&&!pode(rec))render();});
+  const fim=p&&p.contratado&&p.status==='teste';
+  const cta=pag===true?`<button class="btn bvCta" data-act="assinar" data-id="${pm}">Assinar ${esc(P.nome)} · ${esc(P.rotulo)}</button><button class="bvLink" data-act="planos" data-id="${esc(rec)}">Comparar planos</button>`
+    :`<button class="btn bvCta" data-act="planos" data-id="${esc(rec)}">Ver o plano ${esc(P.nome)}</button>`;
   return `<div class="head"><h2>${esc(TAB_NOME[TAB]||t[0])}</h2></div>
-  <div class="card plBloq">
-    <span class="plBloqI">${I('lock')}</span>
-    <h3>${esc(t[0])} faz parte do plano ${esc(P.nome)}</h3>
-    <p>${esc(t[1])}</p>
-    ${p&&p.contratado&&p.status==='teste'?'<p class="plNota">Seu teste do Pro terminou. Seus dados continuam guardados e voltam a aparecer quando você assinar.</p>':'<p class="plNota">Seus dados continuam guardados. Nada é apagado.</p>'}
-    <button class="btn" data-act="planos" data-id="${esc(rec)}">Ver planos</button>
+  <div class="card plBloq bv" data-p="${pm}">
+    ${V?bloqPrevia(V.pv):''}
+    <span class="bvTag">${I('lock')}Plano ${esc(P.nome)}</span>
+    <h3>${esc(V?V.h:t[0])}</h3>
+    ${V?`<ul class="bvList">${V.b.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>`:`<p>${esc(t[1])}</p>`}
+    ${g?`<p class="bvGancho">${esc(g)}</p>`:''}
+    ${cta}
+    <p class="plNota">${P.periodo?esc(precoDia(P))+' · cancele quando quiser. ':''}${fim?'Seu teste terminou, mas seus dados continuam guardados.':'Seus dados continuam guardados.'}</p>
   </div>`;
 }
 function planoStatusTxt(p){
@@ -2866,7 +2897,8 @@ function render(){
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
   if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
   const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
-  let html;try{html=bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
+  const espera=!!(recT&&USER&&!PLANO_LIDO&&!PLANO_FALHA&&window.GVP); // v10.129: logado e plano ainda não lido: não mostra a aba paga liberada
+  let html;try{html=espera?`<div class="head"><h2>${esc(TAB_NOME[TAB]||'')}</h2></div><div class="card plEspera" aria-busy="true">Carregando…</div>`:bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
   /* v10.91: sem "piscar". a mesma tela redesenhada (sync, cotações, CDI, volta ao app) só troca o que mudou:
      HTML igual = nada é tocado (nem os nós, nem a rolagem, nem os gráficos); HTML diferente = troca só os blocos
      de primeiro nível que mudaram, sem a animação de entrada e mantendo a rolagem. a animação fica só para troca de aba. */
@@ -6183,9 +6215,10 @@ function novoTx(id,tipoPre,base){
     {name:'data',label:'Data',type:'date',value:P?P.data:hojeISO(),required:true},
     {name:'status',label:'Situação',type:'select',value:P?(P.status||'pago'):'pago',options:[{v:'pago',t:'pago / recebido'},{v:'previsto',t:'previsto (ainda vai acontecer)'}].concat(t?[{v:'cancelado',t:'cancelado (não conta em nada)'}]:[])},
     {name:'obs',label:'Observação (opcional)',type:'textarea',value:P?(P.obs||''):'',placeholder:'detalhes, número do pedido…',maxlength:300},
+    ...(t&&(t.multa||t.juros||t.desconto)?[ // v10.129: escondido por enquanto; só aparece ao editar um lançamento que já tem multa, juros ou desconto
     {name:'multa',label:'Multa incluída no valor (R$, opcional)',value:t&&t.multa?num(t.multa):'',inputmode:'decimal',placeholder:'0,00'},
     {name:'juros',label:'Juros incluídos no valor (R$, opcional)',value:t&&t.juros?num(t.juros):'',inputmode:'decimal',placeholder:'0,00'},
-    {name:'desconto',label:'Desconto obtido (R$, opcional)',value:t&&t.desconto?num(t.desconto):'',inputmode:'decimal',placeholder:'0,00'},
+    {name:'desconto',label:'Desconto obtido (R$, opcional)',value:t&&t.desconto?num(t.desconto):'',inputmode:'decimal',placeholder:'0,00'}]:[]),
   ].concat(t?[]:[{name:'fixa',label:'repete todo mês (vira conta fixa)',type:'checkbox',value:false}]),v=>{
     const valor=parseBR(v.valor);
     if(!String(v.valor).trim())return 'Informe o valor';
@@ -6412,7 +6445,7 @@ function rodaInit(mf,selT,selC,selF,listaDo,ia){
     let vis=lista.length>8?lista.slice(0,7):lista.slice(0,8);
     if(lista.length>8&&cur&&!vis.includes(cur))vis[6]=cur;
     const slots=vis.map(c=>({c})).concat(lista.length>8?[{outras:1}]:[]),n=slots.length;
-    opts.innerHTML=slots.map((o,k)=>{const a=k*2*Math.PI/n,x=50+38*Math.sin(a),y=50-38*Math.cos(a);
+    opts.innerHTML=slots.map((o,k)=>{const a=k*2*Math.PI/n,x=50+37*Math.sin(a),y=50-37*Math.cos(a);
       if(o.outras)return `<button type="button" class="rdOpt rdOut" data-outras="1" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--c:#94a3b8" aria-label="outras categorias"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Outras</span></button>`;
       const on=o.c===cur,cor=corCat(o.c);
       return `<button type="button" class="rdOpt${on?' on':''}" role="radio" aria-checked="${on}" data-c="${esc(o.c)}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--c:${cor}" aria-label="${esc(o.c)}">${I(catIcon(o.c))}<span>${esc(o.c)}</span></button>`;}).join('');
