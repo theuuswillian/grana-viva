@@ -3029,17 +3029,30 @@ function semanasHTML(){
 function semLegenda(W,i){const w=W[i];const f=d=>d.slice(8,10)+'/'+d.slice(5,7);
   return `<span>${i===W.length-1?'esta semana':f(w.ini)+' a '+f(w.fim)}</span><span><i class="hB-dot g"></i>${OCULTO?'•••':brl(w.e/100)}</span><span><i class="hB-dot r"></i>${OCULTO?'•••':brl(w.s/100)}</span>`;}
 /* v10.67: primeiros passos para conta nova */
-function primeirosPassosHTML(){
-  if(S.cfg.onbOk)return '';
+/* v10.122: primeiro uso com cara de boas-vindas: anel de progresso, passos numerados e o próximo passo em destaque.
+   Conta vazia (nada feito) mostra o card no topo, antes do saldo zerado. */
+function ppEstado(){
+  if(S.cfg.onbOk)return null;
   const m=mesAtual(),P=[
     ['bank','Adicione sua conta','o banco onde seu dinheiro fica','novo-banco',(S.bancos||[]).length>0],
     ['plus','Registre um gasto ou receita','ou conecte o banco e importe sozinho','q-gasto',S.tx.length>0],
     ['receipt','Cadastre uma conta fixa','aluguel, internet, salário','nova-fixa',(S.fixas||[]).length>0],
     ['gauge','Defina um orçamento','um limite por categoria no mês','hm-go-orc',Object.values(limOrc(m)).some(v=>v>0)]];
-  const ok=P.filter(p=>p[4]).length;if(ok===P.length||S.tx.length>=30)return '';
-  return `<div class="card pp-card"><div class="pp-h"><div><h4>Comece por aqui</h4><small>${ok} de ${P.length} feitos</small></div><button class="x" data-act="pp-ok" aria-label="dispensar">${I('close')}</button></div>
-    <div class="pp-bar"><i style="width:${ok/P.length*100}%"></i></div>
-    ${P.map(([ic,t,d,act,f])=>`<button class="pp-i${f?' ok':''}" ${f?'disabled':`data-act="${act}"`}><span class="pp-ic">${I(f?'check':ic)}</span><span class="pp-t"><b>${t}</b><small>${d}</small></span>${f?'':I('chevR','pp-ch')}</button>`).join('')}</div>`;
+  const ok=P.filter(p=>p[4]).length;if(ok===P.length||S.tx.length>=30)return null;
+  return {P,ok};
+}
+function primeirosPassosHTML(topo){
+  const E=ppEstado();if(!E)return '';const {P,ok}=E,n=P.length;
+  if(!!topo!==(ok===0))return '';
+  const R=22,C=2*Math.PI*R,prox=P.findIndex(p=>!p[4]);
+  const tit=ok===0?'Vamos deixar seu GranaViva pronto':ok===n-1?'Só falta um passo':'Falta pouco';
+  const sub=ok===0?'4 passos rápidos, uns 2 minutos':`${ok} de ${n} feitos`;
+  return `<div class="card pp-card${ok===0?' pp-novo':''}"><div class="pp-h">
+      <div class="pp-ring" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="${R}" class="pp-rt"/><circle cx="26" cy="26" r="${R}" class="pp-rv" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-ok/n)).toFixed(1)}"/></svg><b>${ok}/${n}</b></div>
+      <div class="pp-ht"><h4>${tit}</h4><small>${sub}</small></div>
+      <button class="x" data-act="pp-ok" aria-label="dispensar">${I('close')}</button></div>
+    <div class="pp-l">${P.map(([ic,t,d,act,f],i)=>{const nx=i===prox;
+      return `<button class="pp-i${f?' ok':''}${nx?' nx':''}" ${f?'disabled':`data-act="${act}"`} aria-label="${f?'feito: ':''}${t}"><span class="pp-ic">${f?I('check'):I(ic)}</span><span class="pp-t"><b>${t}</b><small>${d}</small></span>${f?'':nx?'<span class="pp-go">começar</span>':I('chevR','pp-ch')}</button>`;}).join('')}</div></div>`;
 }
 /* v10.67: estado vazio com ícone, título, texto e ação */
 function vazioHTML(ic,tit,txt,acts){return `<div class="card vz"><span class="vz-ic">${I(ic)}</span><b>${tit}</b><p>${txt}</p>${acts?`<div class="vz-a">${acts}</div>`:''}</div>`;}
@@ -3077,6 +3090,7 @@ function homeTopo(v,o){
   const R=34,C=2*Math.PI*R;
   // variante B: cartão vibrante
   return `
+  ${primeirosPassosHTML(true)}
   <div class="hB-hero${saldo<0?' hNeg':''}">
     <div class="hB-blob b1"></div><div class="hB-blob b2"></div><div class="hB-noise"></div>
     <div class="hB-top">${saldo<0?'<span class="hB-brand hB-brandNeg"><i class="hB-led"></i>Saldo negativo</span>':`<span class="hB-brand">${I('wallet')}Saldo total</span>`}${eye}</div>
