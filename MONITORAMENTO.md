@@ -30,3 +30,11 @@ Tudo vem de `Deno.env.get` (secrets das funções) ou do Supabase Vault:
 `SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `PLUGGY_ENC_KEY`, `GEMINI_API_KEY`, `CRON_SECRET`,
 `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY`. O job diário do `alertas-push` lê o `x-cron-secret` do Vault (`gv_cron_secret`).
 O app (navegador) só tem a chave publicável (`sb_publishable_…`), protegida pelas regras RLS.
+
+## Alarme por push (v10.126)
+
+- Job `granaviva-saude` (pg_cron, a cada 30 min) chama `alertas-push` com `{so:'saude'}`.
+- Se `erros_fn` tiver falha nos últimos 35 min em `pagamento-webhook` (inclusive assinatura inválida), `assinatura`, `auth` ou `minha-conta`,
+  manda um push para o dono (`GV_ADMIN_UID`, padrão = conta Fundadora). Repete no máximo uma vez a cada 6 h por função+etapa (`push_log`).
+- O app avisa falha de cadastro/login do lado do servidor (ex.: SMTP) com `{so:'erro-auth'}`, sem e-mail. Grava em `erros_fn` com função `auth`.
+  Limite global de 30 por hora.

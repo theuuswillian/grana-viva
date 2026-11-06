@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-mXn1S6saLHEUb1VoJo6nsYFs+TGKOvwiCKcUVEA9wlw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-/FEHGToSNHKA8nK0dHMKc1ZYwMPmuWQrD0xKut1IBqU=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1859,7 +1859,11 @@ a.lkRow{text-decoration:none}
 .aterms{font-size:12px;line-height:1.45;color:var(--mut);text-align:center;margin-top:10px}
 .aterms a,.asite a{color:var(--a1);text-decoration:underline;text-underline-offset:2px}
 .asite{font-size:12px;color:var(--mut);text-align:center;margin-top:6px}
-.sbPlano{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mut);text-transform:uppercase}
+/* v10.126: selo do plano com largura fixa, sempre colado à direita (antes herdava flex:1 do span do item e esticava) */
+.sb-item .sbPlano{flex:none;margin-left:auto;width:50px;box-sizing:border-box;text-align:center;font-size:10px;line-height:1;font-weight:800;letter-spacing:.06em;padding:5px 8px;border-radius:999px;text-transform:uppercase;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.32)}
+.sb-item .sbPlano[data-p=pro]{color:#fcd34d;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.32)}
+html.claro .sb-item .sbPlano{color:#6d28d9;background:rgba(139,92,246,.10);border-color:rgba(139,92,246,.28)}
+html.claro .sb-item .sbPlano[data-p=pro]{color:#b45309;background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.30)}
 .plBloq{text-align:center;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px}
 .plBloq h3{font-size:18px;color:var(--hd);margin:0;max-width:30ch}
 .plBloq p{color:var(--mut);margin:0;max-width:44ch;line-height:1.5}
@@ -3147,7 +3151,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.125'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.126'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3171,8 +3175,8 @@ const GV_BUILD='10.125'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.125"></script>
-<script defer src="app.min.js?v=10.125"></script>
+<script defer src="planos.js?v=10.126"></script>
+<script defer src="app.min.js?v=10.126"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

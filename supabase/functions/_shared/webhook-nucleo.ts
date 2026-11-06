@@ -43,7 +43,7 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   if (xs) {
     if (d.env.MP_WEBHOOK_SECRET) {
       const v = await MP.validaAssinatura({ xSignature: xs, xRequestId: n.reqId, dataId: n.dataIdQuery || n.dataId, secret: d.env.MP_WEBHOOK_SECRET });
-      if (!v.ok) { log("assinatura inválida", v.motivo); return resp({ erro: "assinatura inválida" }, 401); }
+      if (!v.ok) { log("assinatura inválida", v.motivo); await d.erro?.("assinatura", "assinatura inválida " + v.motivo); return resp({ erro: "assinatura inválida" }, 401); } // v10.126: vira alarme
     } else log("x-signature recebido sem MP_WEBHOOK_SECRET configurado: seguindo pela consulta à API");
   }
 

@@ -179,7 +179,7 @@ function pintaNavPlano(){
     const rec=TAB_RECURSO[b.dataset.tab];let tag=b.querySelector('.sbPlano');
     const bloq=rec&&!pode(rec);
     if(bloq&&!tag){tag=document.createElement('span');tag.className='sbPlano';b.appendChild(tag);}
-    if(tag){if(bloq)tag.textContent=GVP.PLANOS[GVP.planoMinimo(rec)].nome;else tag.remove();}
+    if(tag){if(bloq){const pm=GVP.planoMinimo(rec);tag.textContent=GVP.PLANOS[pm].nome;tag.dataset.p=pm;}else tag.remove();} // v10.126: data-p pinta a cor do plano
   });
 }
 const REC_TXT={
@@ -1644,9 +1644,9 @@ function assinNome(n){
    fora: dinheiro, variação acima de ~40%, e lazer/restaurante/delivery que não são assinatura. o alerta "subiu X%" é só das assinaturas.
    as chaves salvas continuam as mesmas: f.assinatura, f.assinKey, cfg.assinIgnora, cfg.assinVisto. */
 const ASSIN_VAR=0.4;
-const ASSIN_CONTA_CAT=/moradia|contas? da casa|aluguel|condom|mercado|supermerc|feira|educa|escola|faculdade|plano de saude|seguro|imposto|agua|luz|energia|\bgas\b|internet e celular/;
-const ASSIN_CONTA_KW=/aluguel|condominio|\bluz\b|energia|eletric|enel\b|cemig|copel|light\b|neoenergia|celpe|coelba|cosern|equatorial|energisa|\bagua\b|saneamento|sabesp|caesb|copasa|cedae|embasa|compesa|sanepar|\bgas\b|comgas|naturgy|iptu|ipva|supermerc|mercado|atacad|assai|carrefour|hortifruti|sacolao|escola|colegio|faculdade|mensalidade|plano de saude|unimed|amil|hapvida|seguro|financiamento|consorcio/;
-const ASSIN_LAZER=/lazer|restaurant|delivery|lanche|lanchonete|\bbar\b|ifood|rappi|cinema|ingresso|pizza|burger|padaria|cafe\b|cafeteria|entretenimento|viagem|uber|99 ?app|taxi/;
+const ASSIN_CONTA_CAT=/moradia|contas? da casa|aluguel|condom|educa|escola|faculdade|plano de saude|seguro|imposto|agua|luz|energia|\bgas\b|internet e celular/;
+const ASSIN_CONTA_KW=/aluguel|condominio|\bluz\b|energia|eletric|enel\b|cemig|copel|light\b|neoenergia|celpe|coelba|cosern|equatorial|energisa|\bagua\b|saneamento|sabesp|caesb|copasa|cedae|embasa|compesa|sanepar|\bgas\b|comgas|naturgy|iptu|ipva|escola|colegio|faculdade|mensalidade|plano de saude|unimed|amil|hapvida|seguro|financiamento|consorcio/;
+const ASSIN_LAZER=/lazer|mercado|supermerc|feira|atacad|assai|carrefour|hortifruti|sacolao|alimenta|restaurant|delivery|lanche|lanchonete|\bbar\b|ifood|rappi|cinema|ingresso|pizza|burger|padaria|cafe\b|cafeteria|entretenimento|viagem|uber|99 ?app|taxi/;
 const ASSIN_SERV=/netflix|spotify|disney|hbo|\bmax\b|prime ?video|amazon ?prime|youtube|apple|icloud|google ?one|google ?storage|deezer|globoplay|paramount|crunchyroll|chatgpt|openai|microsoft|office ?365|adobe|canva|smart ?fit|academia|gympass|wellhub|assinatura|streaming|\bvivo\b|\bclaro\b|\btim\b|\boi\b/;
 function assinDinheiro(t){if(t.forma==='dinheiro')return true;const c=t.conta||contaDoLanc(t);if(!c)return false;const b=(S.bancos||[]).find(x=>x.id===c);return !!(b&&b.tipo==='Dinheiro');}
 function assinCartaoDeb(t){if(t.cartao||t.forma==='cartao'||t.forma==='debito')return true;const n=norm((t.descricao||'')+' '+(t.sub||''));return /debito|compra no cartao|nupay/.test(n)&&!/\bpix\b|boleto/.test(n);}
@@ -1678,7 +1678,9 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     const k=assinChave(t.descricao||'');if(k.length<3||ign.has(k))return;
     /* v10.52: pix para pessoa (chave aleatória, cpf/cnpj, "pix enviado para") e posto de combustível não são assinatura */
     const nTx=norm(t.descricao||'')+' '+norm(t.sub||'');
-    if(/pix (enviado|para|tef)|chave aleat|\bcpf\b|\bcnpj\b|[0-9a-f]{16,}/.test(nTx))return;
+    /* v10.126: pix de aluguel/escola/conta da casa (categoria ou nome de conta) continua valendo como conta do mês */
+    const ehConta=ASSIN_CONTA_CAT.test(norm(t.categoria||''))||ASSIN_CONTA_KW.test(nTx);
+    if(!ehConta&&/pix (enviado|para|tef)|chave aleat|\bcpf\b|\bcnpj\b|[0-9a-f]{16,}/.test(nTx))return;
     if(/posto|combust|gasolina|etanol|\balcool\b|ipiranga|shell|petrobras|br mania|ale combust/.test(nTx))return;
     if(assinDinheiro(t))return; // v10.95: compra em dinheiro (ou numa conta do tipo Dinheiro) não é cobrança recorrente
     (G[k]=G[k]||[]).push(t);
@@ -1708,7 +1710,7 @@ function detectaAssinaturas0(tx,fixas,cfg,hoje){
     const vA=+ult.valor,prev=seq.length>1?+seq[seq.length-2].valor:null;
     let vAnt=null;for(let i=seq.length-2;i>=0;i--){if(Math.round(seq[i].valor*100)!==Math.round(vA*100)){vAnt=+seq[i].valor;break;}}
     const aumento=prev&&vA>prev*1.03&&vA-prev>=0.5?Math.floor((vA/prev-1)*100):0;
-    out.push({key:k,nome:assinNome(String(nomeU||k))||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento:grupo==='assin'?aumento:0,grupo});
+    out.push({key:k,nome:assinNome(String(nomeU||k).replace(/^\s*(pix|transfer[eê]ncia)\s+(enviad[oa]|para)\s*(para\s*)?/i,''))||k,valorAtual:vA,valorAnterior:vAnt,dia,ultimo:ult.data,mesesVistos:meses.length,categoria:ult.categoria||'Outros',sub:ult.sub||'',totalAno:Math.round(vA*1200)/100,aumento:grupo==='assin'?aumento:0,grupo});
   });
   return out.sort((a,b)=>b.valorAtual-a.valorAtual);
 }
@@ -8221,7 +8223,7 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,lockDesconecta,numExt,temPendencia,csvCel,dataValida,aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -8548,6 +8550,15 @@ function mostraAuth(){$('#auth').classList.add('on');$('#fab').style.display='no
 function escondeAuth(){$('#auth').classList.remove('on');$('#fab').style.display='';}
 /* v10.104: o servidor exige letras e números em senha nova (cadastro e troca); o login com senha antiga continua igual */
 const senhaForte=p=>/[A-Za-zÀ-ÿ]/.test(p)&&/\d/.test(p);
+/* v10.126: falha de cadastro/login que é do servidor (e-mail de confirmação, erro genérico) vira alarme para o dono do app.
+   manda só o tipo e a mensagem técnica (sem e-mail nem senha); o servidor limpa, limita e junta os avisos */
+function avisaFalhaAuth(modo,err,msg){
+  try{
+    if(!/e-mail de confirmação|não deu pra entrar agora/.test(msg||''))return;
+    const tec=String(err&&(err.message||err.code)||'').replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g,'<email>').slice(0,200);
+    fetch(SB_URL+'/functions/v1/alertas-push',{method:'POST',headers:{'content-type':'application/json',apikey:SB_KEY},body:JSON.stringify({so:'erro-auth',modo:modo==='up'?'cadastro':'login',msg:tec})}).catch(()=>{});
+  }catch(e){}
+}
 function erroTraduzido(m){
   m=String(m||'');
   if(/Invalid login/i.test(m))return 'email ou senha incorretos';
@@ -8605,6 +8616,7 @@ $('#authForm').addEventListener('submit',async ev=>{
   }catch(err){
     const msg=erroTraduzido(err&&err.message);
     $('#aErr').textContent=msg;
+    avisaFalhaAuth(aMode,err,msg);
     /* v10.52: cadastro fechado no Supabase → some com a aba "Criar conta" (antes ficava visível e falhava) */
     if(/sign ?ups? (not|are)|signup.*(disabled|not allowed)|cadastro.*(fechado|desativ)/i.test(err&&err.message||'')){
       document.querySelectorAll('.aTabs button[data-m=up]').forEach(b=>{b.style.display='none';});

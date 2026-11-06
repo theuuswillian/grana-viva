@@ -10,6 +10,11 @@
 // - {dry:true} com o segredo do cron: calcula tudo e devolve o que seria enviado, sem mandar push e sem gravar push_log.
 //   {hoje:'AAAA-MM-DD'} junto com dry simula outro dia (para conferir o resumo de domingo).
 // - chamada pelo app com o login do usuário e {teste:true}: manda uma notificação de teste.
+// - v10.126 {so:'saude'} (pg_cron a cada 30 min, com o segredo do cron): olha public.erros_fn dos últimos 35 min e, se houver
+//   falha de pagamento (pagamento-webhook, assinatura) ou de cadastro/login, manda um push para o dono do app (GV_ADMIN_UID,
+//   padrão = conta Fundadora). um aviso por função+etapa a cada 6 h (push_log "saude|função|etapa|bloco").
+// - v10.126 {so:'erro-auth'} chamada pelo app sem login quando cadastro/login falha do lado do servidor (ex.: SMTP).
+//   grava em erros_fn (função "auth"), sem e-mail; limite global de 30 por hora.
 // verify_jwt desligado: a função confere o segredo do cron ou o token do usuário por conta própria.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -66,6 +71,32 @@ async function precos(dry: boolean, hoje: string, porUser: Record<string, any[]>
   return dry ? { hoje, so: "precos", dry: true, usuarios, simulado } : { hoje, so: "precos", usuarios, enviados };
 }
 
+const ADMIN = Deno.env.get("GV_ADMIN_UID") || "2d3e59d8-37fc-413f-b688-e7c1348d19b0";
+const RL_GLOBAL = "00000000-0000-0000-0000-000000000000";
+const SAUDE_FN = ["pagamento-webhook", "assinatura", "auth", "minha-conta"];
+const ROTULO: Record<string, string> = { "pagamento-webhook": "avisos de pagamento do Mercado Pago", assinatura: "checkout da assinatura", auth: "cadastro/login", "minha-conta": "conta do usuário" };
+async function saude(dry: boolean) {
+  const desde = new Date(Date.now() - 35 * 60000).toISOString();
+  const { data: E } = await sb.from("erros_fn").select("funcao,etapa,codigo,mensagem,ts").gte("ts", desde).in("funcao", SAUDE_FN).order("ts", { ascending: false }).limit(200);
+  const G = new Map<string, { funcao: string; etapa: string; n: number; msg: string }>();
+  for (const e of E || []) { const k = e.funcao + "|" + e.etapa; const g = G.get(k); if (g) g.n++; else G.set(k, { funcao: e.funcao, etapa: e.etapa, n: 1, msg: String(e.mensagem || "").slice(0, 90) }); }
+  if (!G.size) return { so: "saude", ok: true, falhas: 0 };
+  const bloco = new Date().toISOString().slice(0, 10) + "-" + Math.floor(new Date().getUTCHours() / 6);
+  const chaves = [...G.keys()].map((k) => "saude|" + k + "|" + bloco);
+  const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", ADMIN).in("chave", chaves);
+  const feitos = new Set((ja || []).map((r: any) => r.chave));
+  const novos = [...G.entries()].filter(([k]) => !feitos.has("saude|" + k + "|" + bloco));
+  if (!novos.length) return { so: "saude", falhas: G.size, avisados: 0, motivo: "já avisado neste bloco de 6 h" };
+  const linhas = novos.slice(0, 4).map(([, g]) => `${ROTULO[g.funcao] || g.funcao}: ${g.n}× (${g.etapa}) ${g.msg}`);
+  const payload = { title: "GranaViva · algo falhou no servidor", body: linhas.join("\n"), url: "./", tag: "gv-saude-" + bloco };
+  if (dry) return { so: "saude", dry: true, payload, chaves: novos.map(([k]) => "saude|" + k + "|" + bloco) };
+  const { data: subs } = await sb.from("push_subs").select("*").eq("user_id", ADMIN);
+  const n = subs?.length ? await enviar(subs, payload) : 0;
+  if (n) await sb.from("push_log").upsert(novos.map(([k]) => ({ user_id: ADMIN, chave: "saude|" + k + "|" + bloco })));
+  return { so: "saude", falhas: G.size, avisados: novos.length, enviados: n };
+}
+const limpaTxt = (m: unknown) => String(m ?? "").replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "<email>").replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, "<jwt>").replace(/[A-Za-z0-9_\-]{32,}/g, "<longo>").replace(/[\r\n\t]+/g, " ").slice(0, 200);
+
 async function enviar(subs: any[], payload: object) {
   let ok = 0;
   for (const s of subs) {
@@ -81,6 +112,16 @@ Deno.serve(async (req) => {
   if (og && !origemOk(og)) return new Response("origem não permitida", { status: 403 });
   if (req.method === "OPTIONS") return new Response("ok", { headers: { ...CORS } });
   const body: any = await req.json().catch(() => ({}));
+  // v10.126: falha de cadastro/login avisada pelo app (sem login; só tipo e mensagem técnica limpa)
+  if (body?.so === "erro-auth" && !req.headers.get("x-cron-secret")) {
+    const { data: ok } = await sb.rpc("rl_conta", { p_uid: RL_GLOBAL, p_k: "erro-auth", p_lim: 30, p_seg: 3600 });
+    if (ok === false) return json({ ok: false }, 429);
+    const etapa = body?.modo === "login" ? "login" : "cadastro";
+    const msg = limpaTxt(body?.msg);
+    if (!msg) return json({ ok: false }, 400);
+    await sb.from("erros_fn").insert({ funcao: "auth", etapa, mensagem: msg, codigo: (msg.match(/\b([45]\d\d)\b/) || [])[1] || null });
+    return json({ ok: true });
+  }
   // teste pedido pelo app
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const cron = req.headers.get("x-cron-secret");
@@ -102,6 +143,7 @@ Deno.serve(async (req) => {
   const hj = dry && typeof body?.hoje === "string" ? body.hoje : (Deno.env.get("GV_HOJE_TESTE") || "");
   const hoje = ISO_RE.test(hj) ? hj : hojeBR();
   const domingo = diaSemana(hoje) === 0;
+  if (body?.so === "saude") return json(await saude(dry));
   const { data: subs } = await sb.from("push_subs").select("*");
   const porUser: Record<string, any[]> = {};
   for (const s of subs || []) (porUser[s.user_id] = porUser[s.user_id] || []).push(s);
