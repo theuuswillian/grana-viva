@@ -4698,7 +4698,7 @@ function form(titulo,campos,onSubmit){
     }
     closeModal();
   };
-  const first=box.querySelector('input,select');if(first&&first.type!=='date')setTimeout(()=>{const a=document.activeElement;if(!(a&&box.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))first.focus();},60);
+  const first=box.querySelector('input,select');if(first&&first.type!=='date')setTimeout(()=>{if(box.querySelector('.roda'))return;const a=document.activeElement;if(!(a&&box.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))first.focus();},60);
 }
 let focoAntes=null;
 /* ---------- importar extrato (OFX / CSV) ---------- */
@@ -6375,7 +6375,62 @@ function novoTx(id,tipoPre,base){
       ea.innerHTML=`<span class="empAtL">${I('handCoins')}<span>${r?'Dinheiro de empréstimo?':'Emprestou pra alguém?'}<small>não conta como ${r?'receita':'gasto'} nem entra no orçamento</small></span></span><div class="empAtB">${r?bV+bE:bE+bV}</div>`;};
     pe();selT.addEventListener('change',pe);
   }
+  /* v10.128: Roda (escolhida pelo Matheus em 05/11/2026): lançamento novo com as categorias em círculo em volta do valor; o resto do formulário fica atrás do + */
+  if(!t)rodaInit(mf,selT,selC,selF,listaDo,!base&&USER);
 }
+function rodaUso(tipo,lista){const n={};(S.tx||[]).forEach(x=>{if(x.tipo===tipo&&!x.faturaKey&&x.categoria)n[x.categoria]=(n[x.categoria]||0)+1;});return lista.slice().sort((a,b)=>(n[b]||0)-(n[a]||0)||lista.indexOf(a)-lista.indexOf(b));}
+function rodaInit(mf,selT,selC,selF,listaDo,ia){
+  const inV=mf.querySelector('input[name="valor"]'),inD=mf.querySelector('[name="data"]'),sub=mf.querySelector('button[type="submit"]');
+  const lDs=mf.querySelector('input[name="descricao"]').closest('label'),lV=inV.closest('label');
+  const R=document.createElement('div');R.className='roda';
+  R.innerHTML=`<div class="rdTop"><div class="seg rdSeg" role="radiogroup" aria-label="tipo"><button type="button" role="radio" data-t="despesa">Saiu</button><button type="button" role="radio" data-t="receita">Entrou</button></div><span class="sp"></span>${ia?`<button type="button" class="rdIc" data-act="ia-frase" aria-label="falar ou escrever">${I('mic')}</button><button type="button" class="rdIc" data-act="ia-ler" aria-label="ler comprovante">${I('receipt')}</button>`:''}</div>
+   <div class="rdWheel"><div class="rdRing"></div><div class="rdOpts" role="radiogroup" aria-label="categoria"></div><div class="rdCen"><b class="rdCat"></b><label class="rdVal"><span>R$</span></label><small class="rdSub"></small></div></div>
+   <p class="rdHint">toque na categoria · valor no centro</p>`;
+  const iaB=mf.querySelector('.iaBtns');if(iaB&&ia)iaB.remove();
+  const nota=mf.querySelector('.iaNota');
+  /* tudo que já existia vai para "mais opções", na mesma ordem */
+  const mais=document.createElement('div');mais.className='rdMais';mais.hidden=true;
+  [...mf.children].forEach(el=>{if(el===sub||el===nota||el.type==='hidden')return;mais.appendChild(el);});
+  mf.insertBefore(R,mf.firstChild);if(nota)mf.insertBefore(nota,R);
+  inV.placeholder='0,00';R.querySelector('.rdVal').appendChild(inV);lV.remove();
+  const larg=()=>{inV.style.width=Math.max(4,Math.min(10,(inV.value||'0,00').length+.5))+'ch';};inV.addEventListener('input',larg);inV.addEventListener('blur',()=>setTimeout(larg,0));larg();
+  const lT=selT.closest('label');if(lT)lT.style.display='none';
+  lDs.classList.add('rdDesc');inDsPh(lDs);R.appendChild(lDs);
+  R.appendChild(mais);
+  const bot=document.createElement('div');bot.className='rdBot';
+  bot.innerHTML=`<button type="button" class="rdMaisB" aria-expanded="false" aria-label="mais opções">${I('plus')}</button>`;
+  mf.appendChild(bot);bot.appendChild(sub);sub.classList.remove('full');sub.textContent='Lançar';
+  const bM=bot.querySelector('.rdMaisB');
+  const abreMais=on=>{mais.hidden=!on;bM.setAttribute('aria-expanded',on?'true':'false');bM.classList.toggle('on',on);};
+  bM.onclick=()=>abreMais(mais.hidden);
+  const cen=R.querySelector('.rdCen'),opts=R.querySelector('.rdOpts'),rCat=R.querySelector('.rdCat'),rSub=R.querySelector('.rdSub');
+  const pintaSub=()=>{const f=selF.value==='cartao'?'cartão':selF.value,d=inD&&inD.value;rSub.textContent=f+' · '+(!d||d===hojeISO()?'hoje':fmtDataCurta(d));};
+  const pinta=()=>{
+    R.querySelectorAll('.rdSeg button').forEach(b=>{const on=b.dataset.t===selT.value;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
+    R.classList.toggle('rec',selT.value==='receita');
+    const lista=rodaUso(selT.value,listaDo(selT.value)),cur=selC.value;
+    let vis=lista.length>8?lista.slice(0,7):lista.slice(0,8);
+    if(lista.length>8&&cur&&!vis.includes(cur))vis[6]=cur;
+    const slots=vis.map(c=>({c})).concat(lista.length>8?[{outras:1}]:[]),n=slots.length;
+    opts.innerHTML=slots.map((o,k)=>{const a=k*2*Math.PI/n,x=50+38*Math.sin(a),y=50-38*Math.cos(a);
+      if(o.outras)return `<button type="button" class="rdOpt rdOut" data-outras="1" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--c:#94a3b8" aria-label="outras categorias"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Outras</span></button>`;
+      const on=o.c===cur,cor=corCat(o.c);
+      return `<button type="button" class="rdOpt${on?' on':''}" role="radio" aria-checked="${on}" data-c="${esc(o.c)}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;--c:${cor}" aria-label="${esc(o.c)}">${I(catIcon(o.c))}<span>${esc(o.c)}</span></button>`;}).join('');
+    rCat.textContent=cur||'';cen.style.setProperty('--c',cur?corCat(cur):'var(--mut)');pintaSub();};
+  R.querySelector('.rdSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.t===selT.value)return;selT.value=b.dataset.t;selT.dispatchEvent(new Event('change',{bubbles:true}));};
+  opts.onclick=e=>{const b=e.target.closest('.rdOpt');if(!b)return;
+    if(b.dataset.outras){abreMais(true);setTimeout(()=>{try{selC.focus();selC.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}},30);return;}
+    selC.value=b.dataset.c;selC.dispatchEvent(new Event('change',{bubbles:true}));};
+  cen.onclick=e=>{if(e.target!==inV)inV.focus();};
+  [selT,selC].forEach(el=>el.addEventListener('change',()=>setTimeout(pinta,0)));
+  selF.addEventListener('change',pintaSub);if(inD){inD.addEventListener('change',pintaSub);inD.addEventListener('input',pintaSub);}
+  /* a sugestão de categoria pela descrição muda o select sem evento: acompanha */
+  lDs.querySelector('input').addEventListener('input',()=>setTimeout(()=>{if(rCat.textContent!==selC.value)pinta();},0));
+  /* se o envio achar erro num campo escondido, abre as opções para mostrar */
+  sub.addEventListener('click',()=>setTimeout(()=>{if(mais.querySelector('label.bad'))abreMais(true);},0));
+  pinta();
+}
+function inDsPh(l){const i=l.querySelector('input');if(i)i.placeholder='descrição (opcional)';const tn=[...l.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(tn)tn.textContent='';}
 function pagarFatura(id){
   const t=S.tx.find(x=>x.id===id&&x.faturaKey);if(!t)return;
   const resta=restanteFatura(t)||t.valor;

@@ -2,14 +2,14 @@
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v10.127'; // troque junto com GV_BUILD no index.html (./bump.sh)
+const V='gv-v10.128'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
 /* v10.99: dois caches.
    - V (troca a cada versão): página, app.min.js, planos.js, partes sob demanda (tour.min.js) e manifesto.
    - FIXO (não troca): fontes, ícones, logos e bibliotecas. Esses arquivos mudam de nome quando o conteúdo muda
      (inter-400-lat.woff2, vendor/*.min.js com SRI), então a cópia salva vale entre versões e não é baixada de novo a cada publicação. */
 const FIXO='gv-fixo';
-const PRE=['./','./index.html','./manifest.webmanifest','./app.min.js?v=10.127','./planos.js?v=10.127','./tour.min.js?v=10.127']; // v10.107: app minificado + partes sob demanda (tour) também offline
+const PRE=['./','./index.html','./manifest.webmanifest','./app.min.js?v=10.128','./planos.js?v=10.128','./tour.min.js?v=10.128']; // v10.107: app minificado + partes sob demanda (tour) também offline
 const PRE_FIXO=['./fonts/inter-400-lat.woff2','./fonts/inter-600-lat.woff2','./fonts/inter-700-lat.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/supabase.min.js'];
 const abs=u=>new URL(u,self.location).href;
 self.addEventListener('install',e=>{
