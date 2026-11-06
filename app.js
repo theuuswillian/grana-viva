@@ -557,7 +557,16 @@ const SYNC_SVG={
   syncing:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 10.9 1.06A3.9 3.9 0 0 1 17 18.2z"/><path class="sgM" d="M12 16v-4.6M10 13.2l2-2 2 2"/>',
   pend:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 10.9 1.06A3.9 3.9 0 0 1 17 18.2z"/><path class="sgM" d="M12 11.6v2.6l1.6 1"/>',
   offline:'<path class="sgN" d="M7.2 18.2a4.4 4.4 0 0 1-.6-8.76 5.6 5.6 0 0 1 2.7-3.7M12.4 4.9a5.6 5.6 0 0 1 5.1 5.6A3.9 3.9 0 0 1 19.7 17"/><path class="sgM" d="M4 4l16 16"/>'};
+/* v10.131: sem piscar. 'sincronizando' só aparece se o envio passar de 1,2s (salvar rápido fica verde o tempo todo),
+   e o ícone só é redesenhado quando o estado muda de fato */
+let SYNC_ESP=null;
 function setSync(t){
+  const el=document.getElementById('syncTxt');if(!el)return;
+  clearTimeout(SYNC_ESP);SYNC_ESP=null;
+  if(t&&/sincronizando|carregando/.test(t)&&SYNC_EST.k&&SYNC_EST.k!=='syncing'&&SYNC_EST.k!=='offline'){SYNC_ESP=setTimeout(()=>{SYNC_ESP=null;setSyncJa(t);},1200);return;}
+  setSyncJa(t);
+}
+function setSyncJa(t){
   const el=document.getElementById('syncTxt');if(!el)return;
   if(!t){el.className='syncPill';el.innerHTML='';el.hidden=true;SYNC_EST={k:'',det:'',em:SYNC_EST.em};return;}
   let k,lab;
@@ -565,7 +574,9 @@ function setSync(t){
   else if(/pendente/.test(t)){k='pend';lab='sincronização pendente, tenta de novo em instantes';}
   else if(/sincronizando|carregando/.test(t)){k='syncing';lab='sincronizando com a nuvem';}
   else {k='synced';lab='sincronizado com a nuvem';SYNC_EST.em=Date.now();}
+  const igual=SYNC_EST.k===k&&!el.hidden&&el.firstChild;
   SYNC_EST.k=k;SYNC_EST.det=t;el.hidden=false;
+  if(igual)return;
   el.className='syncPill '+k;el.dataset.st=k;
   el.innerHTML='<svg class="syncRing" viewBox="0 0 44 44" aria-hidden="true"><circle class="srT" cx="22" cy="22" r="19"/><circle class="srA" cx="22" cy="22" r="19" pathLength="100"/></svg><svg class="syncIc" viewBox="0 0 24 24" aria-hidden="true">'+SYNC_SVG[k]+'</svg><span class="sr">'+lab+'</span>';
   el.title=lab.charAt(0).toUpperCase()+lab.slice(1);el.setAttribute('aria-label','status da sincronização: '+lab);
