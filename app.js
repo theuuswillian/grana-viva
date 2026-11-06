@@ -8573,7 +8573,7 @@ $('#aGoogle').addEventListener('click',async ()=>{
   try{
     /* depois de sair pela tela de bloqueio (esqueci o PIN / muitas tentativas), o Google pede a conta e a senha de novo */
     let reauth=false;try{reauth=localStorage.getItem('gv-reauth')==='1';}catch(e){}
-    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:Object.assign({redirectTo:window.location.origin+window.location.pathname},reauth?{queryParams:{prompt:'select_account',max_age:'0'}}:{})});
+    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:Object.assign({redirectTo:window.location.origin+window.location.pathname},reauth?{queryParams:{prompt:'select_account',max_age:'0'}}:{queryParams:{prompt:'select_account'}})});
     if(error)throw error;
   }catch(err){
     $('#aErr').textContent=erroTraduzido(err&&err.message)||'não deu pra entrar com o google agora';
