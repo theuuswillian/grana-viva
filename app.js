@@ -254,9 +254,9 @@ function cardPlanoCfg(){
     <button class="btn2 sm" data-act="planos">Ver planos</button></div><p class="plSt">${esc(planoStatusTxt(p))}</p>
     ${PLANO_ROW&&PLANO_ROW.status==='ativo'&&PLANO_ROW.provedor==='mercadopago'?'<button class="btn2 sm danger plCanc" data-act="ass-cancelar">Cancelar assinatura</button>':''}</div>`;
 }
-const PL_LISTA=[['gratis',['Lançamentos manuais','Contas e bancos','Categorias','Início com resumo do mês','Alertas de vencimento']],
-  ['plus',['Tudo do Grátis','Planejamento e projeções','Orçamentos por categoria','Cartões e faturas','Relatórios completos','Importar extrato e anexar comprovantes','Lançar com IA (15 por dia)']],
-  ['pro',['Tudo do Plus','Investimentos e patrimônio','Metas com CDI','Assistente com IA (30 perguntas por dia)','Lançar com IA (40 por dia)']]];
+const PL_LISTA=[['gratis',['Lançamentos manuais','Contas e bancos','Cartões, faturas e parcelas','Categorias','Início com resumo do mês','Alertas de vencimento']], // v10.130: igual a planos.js (cartões no Grátis, metas no Plus)
+  ['plus',['Tudo do Grátis','Planejamento e projeções','Orçamentos por categoria','Metas com CDI','Relatórios completos','Importar extrato e anexar comprovantes','Lançar com IA (15 por dia)']],
+  ['pro',['Tudo do Plus','Investimentos e patrimônio','Assistente com IA (30 perguntas por dia)','Lançar com IA (40 por dia)']]];
 function abrePlanos(rec){
   const box=$('#modal');const p=planoAgora();const atual=p?p.plano:null;
   const pm=rec?GVP.planoMinimo(rec):null;
