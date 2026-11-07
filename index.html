@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-HEnWys3JW8yfjagY62k/MgxUQDCDG07hp7UVC3C6rKk=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-qWKb+7dfGbL3eI86EgEKobOcUbTLDHaTTebnBXzjQ+w=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2893,6 +2893,27 @@ html.claro .rdGrp{background:#fff}
 .rdKm{width:auto;flex:none;color:var(--txt);white-space:nowrap}.rdMs{flex:1;text-align:right;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rdMaisB.on .rdCh{transform:rotate(90deg)}
 .rdGone{display:none!important}
+.roda>.rdGrp .rdLr>select,.roda>.rdGrp .rdLr>input{text-align:left;text-align-last:left}
+.roda>.rdGrp .rdLr .rdK{width:86px}
+/* v10.152: mesmas regras das outras telas (fundo neutro, cor só nos ícones e nos números) */
+.ptHero,.ptHero.ptNeg{background:var(--card2);border:1px solid var(--line);box-shadow:none;color:var(--txt)}
+.ptHero,.ptHero *{color:inherit!important}
+.ptHero .ptLb,.ptHero .ptSplit span,.ptHero .ptDif{color:var(--mut)!important;opacity:1}
+.ptHero .ptBig{color:var(--hd,var(--txt))!important}
+.ptHero.ptNeg .ptBig{color:var(--neg,#f87171)!important}
+.ptHero .ptChip{background:color-mix(in srgb,var(--txt) 7%,transparent);color:var(--mut)!important}
+.ptHero .ptChip .i{stroke:#22c55e}.ptHero .ptChip.warn .i{stroke:#f59e0b}.ptHero .ptChip.alto .i{stroke:#f43f5e}
+.ptHero .ptSplit>div{background:color-mix(in srgb,var(--txt) 5%,transparent)}
+html.claro .ptHero{background:#fff}
+.sumcard,html.claro .sumcard{background:var(--card2);border:1px solid var(--line);box-shadow:none}
+html.claro .sumcard{background:#fff}
+.sumcard::before{display:none}
+.aviso-card{border:1px solid var(--line);border-left:1px solid var(--line)}
+.aviso-card .aviso{color:var(--txt);font-weight:500}
+html.claro .aviso-card .aviso{color:var(--txt)}
+.rsPill.on{background:var(--txt);color:var(--bg,#111);border-color:transparent}
+.rsPill.on small{color:color-mix(in srgb,var(--bg,#111) 70%,transparent)}
+
 #mf .rdLr.trabCampo{flex-wrap:wrap;row-gap:0;padding-top:6px;padding-bottom:6px}
 #mf .rdLr.trabCampo>input{min-height:44px}
 #mf .rdLr .trabSug{flex-basis:100%;order:5;margin:0 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--txt) 6%,transparent);font-size:13px;line-height:1.4;color:var(--mut);display:flex;gap:8px;align-items:flex-start}
@@ -3340,7 +3361,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.151'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.152'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3366,8 +3387,8 @@ const GV_BUILD='10.151'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.151"></script>
-<script defer src="app.min.js?v=10.151"></script>
+<script defer src="planos.js?v=10.152"></script>
+<script defer src="app.min.js?v=10.152"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
