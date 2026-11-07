@@ -88,7 +88,7 @@ async function leTexto(tel: string, uid: string, msg: string) {
   const { error: pe } = await sb.from("wa_pendente").insert({ id: pid, user_id: uid, telefone: tel, lanc: l });
   if (pe) { await registraErro(sb, FN, "pendente", pe); await texto(tel, "Não consegui guardar agora. Tente de novo em instantes."); return; }
   const forma = { pix: "Pix", cartao: "cartão", dinheiro: "dinheiro", boleto: "boleto" }[l.forma] || l.forma;
-  const corpo = `${l.tipo === "receita" ? "Receita" : "Despesa"} de *${brl(l.valor)}*\n${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n${dataBR(l.data, hoje)} · ${forma}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}`;
+  const corpo = `${l.tipo === "receita" ? "Receita" : "Despesa"} de *${brl(l.valor)}*\n${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n${dataBR(l.data, hoje)} · ${forma}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "\n🔁 Conta fixa: repete todo dia " + parseInt(l.data.slice(8, 10), 10) + " no app" : ""}`;
   await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo }, action: { buttons: [
     { type: "reply", reply: { id: "ok:" + pid, title: "Salvar" } },
     { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } });
@@ -104,9 +104,10 @@ async function botao(tel: string, uid: string, bid: string) {
   if (m[1] === "no") { await texto(tel, "Cancelado. Nada foi salvo."); return; }
   const l = p.lanc as Lanc, id = novoId();
   const data = { id, tipo: l.tipo, valor: l.valor, categoria: l.categoria, descricao: l.descricao, sub: "", tags: ["whatsapp"], obs: "", data: l.data, cartao: "", forma: l.forma, conta: "", pagoCom: "", status: "pago", multa: 0, juros: 0, desconto: 0 };
+  if (l.recorrente && !(l.parcelas > 1)) (data as any).waFixa = 1; // v10.153: o app transforma em conta fixa mensal na próxima sincronização
   const { error } = await sb.from("tx").insert({ user_id: uid, id, data, updated_at: new Date().toISOString() });
   if (error) { await registraErro(sb, FN, "salvar", error); await texto(tel, "Não consegui salvar agora. Mande de novo em instantes."); return; }
-  await texto(tel, `Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}. Aparece no app na próxima vez que você abrir.`);
+  await texto(tel, `Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}${l.recorrente && !(l.parcelas > 1) ? ", como conta fixa todo mês" : ""}. Aparece no app na próxima vez que você abrir.`);
 }
 
 async function trata(m: any) {

@@ -3,7 +3,7 @@
 export const CATS_RECEITA = ["Salário", "Horas extras", "Freelance", "Vendas", "Reembolso", "Aluguel recebido", "Presentes recebidos", "Aposentadoria", "Dividendos", "Bônus/Promoções", "Rendimentos", "Outros"];
 export const CATS_PADRAO = ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Educação", "Mercado", "Restaurantes", "Delivery", "Combustível", "Uber e táxi", "Transporte público", "Manutenção do carro", "Contas da casa", "Internet e celular", "Assinaturas", "Compras", "Roupas", "Beleza", "Farmácia", "Academia", "Pets", "Viagem", "Presentes", "Doações", "Impostos e taxas", "Tarifas e juros", "Filhos", "Casa e reformas", "Eletrônicos", "Outros"];
 
-export type Lanc = { valor: number; data: string; tipo: "despesa" | "receita"; descricao: string; categoria: string; forma: string; parcelas: number; confianca: number };
+export type Lanc = { valor: number; data: string; tipo: "despesa" | "receita"; descricao: string; categoria: string; forma: string; parcelas: number; confianca: number; recorrente?: boolean };
 
 export async function leLancamento(texto: string, catsDesp: string[], hoje: string): Promise<{ ok: true; l: Lanc } | { ok: false; erro: string }> {
   const key = Deno.env.get("GEMINI_API_KEY");
@@ -21,6 +21,7 @@ Extraia o lançamento financeiro principal.
 - categoria: para despesa, escolha exatamente uma destas: ${cats.join(", ")}. Para receita, uma destas: ${CATS_RECEITA.join(", ")}.
 - forma: "pix", "cartao", "dinheiro" ou "boleto" (cartão de crédito/débito = "cartao"); se não citar, "pix".
 - parcelas: número de parcelas se houver (1 se à vista).
+- recorrente: true só se a pessoa disser que se repete todo mês ("conta fixa", "fixa", "todo mês", "mensal", "mensalidade", "assinatura", "salário fixo"); senão false.
 - confianca: 0 a 1, o quanto você tem certeza do valor.
 Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), devolva valor 0 e confianca 0.`;
   let r: Response;
@@ -35,7 +36,7 @@ Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), 
           responseSchema: { type: "OBJECT", properties: {
             valor: { type: "NUMBER" }, data: { type: "STRING" }, tipo: { type: "STRING", enum: ["despesa", "receita"] },
             descricao: { type: "STRING" }, categoria: { type: "STRING" }, forma: { type: "STRING", enum: ["pix", "cartao", "dinheiro", "boleto"] },
-            parcelas: { type: "INTEGER" }, confianca: { type: "NUMBER" } },
+            parcelas: { type: "INTEGER" }, confianca: { type: "NUMBER" }, recorrente: { type: "BOOLEAN" } },
             required: ["valor", "data", "tipo", "descricao", "categoria", "forma", "parcelas", "confianca"] },
         },
       }),
@@ -56,6 +57,7 @@ Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), 
     forma: ["pix", "cartao", "dinheiro", "boleto"].includes(o.forma) ? o.forma : "pix",
     parcelas: Math.max(1, Math.min(24, parseInt(o.parcelas, 10) || 1)),
     confianca: Math.max(0, Math.min(1, Number(o.confianca) || 0)),
+    recorrente: o.recorrente === true,
   };
   return { ok: true, l };
 }
