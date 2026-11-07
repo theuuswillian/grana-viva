@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-wxtvKnCJMX/pPeeH79x3yfH1nXnTT6JHXOgXYChbicI=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-BJgJ6YRH3OaSbEy/DJsE9ER5QUwh+J7wUMah7yIzIFA=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2893,11 +2893,27 @@ html.claro .rdGrp{background:#fff}
 .rdKm{width:auto;flex:none;color:var(--txt);white-space:nowrap}.rdMs{flex:1;text-align:right;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rdMaisB.on .rdCh{transform:rotate(90deg)}
 .rdGone{display:none!important}
+#mf .rdMais .rdLr{cursor:text;font-size:inherit;font-weight:inherit;color:var(--txt)}
+#mf .rdLr>input,#mf .rdLr>select,#mf .rdLr>textarea{flex:1;min-width:0;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;height:auto;font:inherit;font-size:15.5px;font-weight:600;color:var(--txt);text-align:right}
+#mf .rdLr>select{-webkit-appearance:none;appearance:none;background-image:none!important;text-align:right;text-align-last:right;text-overflow:ellipsis}
+#mf .rdLr>input::placeholder,#mf .rdLr>textarea::placeholder{font-weight:400;color:var(--mut)}
+#mf .rdLr.rdTa{align-items:flex-start;padding-top:16px;padding-bottom:12px}#mf .rdLr.rdTa>textarea{text-align:left;resize:none;min-height:44px}
+#mf .rdLr.bad{box-shadow:inset 3px 0 0 var(--neg,#ef4444)}
+.rdMais .rdK{width:104px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdGrp:not(:has(>.rdRow:not([style*="none"]))){display:none}
+.rdGrp>.rdRow[style*="none"]+.rdRow{border-top:0}
+#mf .rdMais label.ckrow span{font-weight:500}
+.rdMais .empAt{border:1px solid var(--line);border-style:solid;background:var(--card2);border-radius:18px;padding:14px}
+html.claro .rdMais .empAt{background:#fff}
+.rdMais .empAtB button{background:color-mix(in srgb,var(--txt) 7%,transparent)!important;border:0!important}
+#mf .rdMais label.ckrow{border-radius:18px;min-height:56px}
+.rdMais .spLink{margin:0 4px 12px}
+
 #mf .rdDsV input::placeholder{font-weight:400;color:var(--mut)}
 #mf .rdSl select{text-transform:capitalize}
 .rdMais{padding-top:4px}
 .rdBot{margin-top:6px}.rdBot .btn{min-height:52px;font-size:16px;margin:0}
-@media (max-width:360px){#mf .rdRow{padding:0 12px;gap:10px}.rdK{width:70px;font-size:13.5px}.rdMs{display:none}.rdKm{flex:1}.rdDc{gap:4px}.rdDc button{padding:5px 9px;font-size:13px}.rdIcC{width:30px;height:30px}}
+@media (max-width:360px){.rdMais .rdK{width:90px}#mf .rdRow{padding:0 12px;gap:10px}.rdK{width:70px;font-size:13.5px}.rdMs{display:none}.rdKm{flex:1}.rdDc{gap:4px}.rdDc button{padding:5px 9px;font-size:13px}.rdIcC{width:30px;height:30px}}
 #mf label.rdVal.bad input{color:#f87171}
 </style>
 <style id="orc101">
@@ -3316,7 +3332,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.149'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.150'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3342,8 +3358,8 @@ const GV_BUILD='10.149'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.149"></script>
-<script defer src="app.min.js?v=10.149"></script>
+<script defer src="planos.js?v=10.150"></script>
+<script defer src="app.min.js?v=10.150"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

@@ -6563,6 +6563,20 @@ function rodaInit(mf,selT,selC,selF,listaDo,ia){
   if(inD){inD.addEventListener('change',pintaD);inD.addEventListener('input',pintaD);}
   inDs.addEventListener('input',()=>setTimeout(pinta,0));
   sub.addEventListener('click',()=>setTimeout(()=>{if(mais.querySelector('label.bad'))abreMais(true);},0));
+  /* v10.150: "mais opções" no mesmo padrão de linhas agrupadas */
+  let g=null;
+  [...mais.children].forEach(el=>{
+    const row=el.tagName==='LABEL'&&!el.classList.contains('rdGone')&&!el.classList.contains('ckrow')&&el.querySelector('input,select,textarea');
+    if(!row){g=null;return;}
+    const tn=[...el.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim());
+    const txt=tn.map(n=>n.textContent).join(' ').trim();tn.forEach(n=>n.remove());
+    const k=document.createElement('span');k.className='rdK';k.textContent=txt.replace(/\s*\(opcional[^)]*\)/i,'').replace(/\s*\(R\$\)/,'').replace(/^Conta bancária$/i,'Conta');
+    const ctl=el.querySelector('input,select,textarea');
+    if(/opcional/i.test(txt)&&ctl&&ctl.tagName==='INPUT')ctl.placeholder='opcional';
+    el.prepend(k);el.classList.add('rdRow','rdLr');if(ctl&&ctl.tagName==='TEXTAREA')el.classList.add('rdTa');
+    if(!g){g=document.createElement('div');g.className='rdGrp';mais.insertBefore(g,el);}
+    g.appendChild(el);
+  });
   pinta();
 }
 function inDsPh(l){const i=l.querySelector('input');if(i)i.placeholder='descrição (opcional)';const tn=[...l.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(tn)tn.textContent='';}
