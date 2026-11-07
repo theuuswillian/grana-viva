@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-TLowPNhKQSfO+PErwZs0W8uPYXCjN3+LVFSc7nuuFPg=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-wxtvKnCJMX/pPeeH79x3yfH1nXnTT6JHXOgXYChbicI=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -35,7 +35,7 @@ html.claro{--bg:#f2f5fb;--card:#ffffff;--card2:#eef2fa;--txt:#1b2236;--mut:#6570
 *{box-sizing:border-box;margin:0;padding:0}
 button,input,select,textarea,optgroup{font-family:inherit;font-size:inherit}
 .cc-num,.big,.mono{font-family:Inter,sans-serif}
-html,body{background:var(--bg);color:var(--txt);font-family:Inter,sans-serif;font-feature-settings:"cv11","ss01";letter-spacing:-.005em;line-height:1.45;transition:background .3s,color .3s}
+html,body{background:var(--bg);color:var(--txt);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.45;transition:background .3s,color .3s}
 body{min-height:100vh;padding-bottom:150px;-webkit-font-smoothing:antialiased}
 #app{max-width:720px;margin:0 auto;padding:18px 14px}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-top:10px;position:relative;z-index:1;overflow:visible}
@@ -3316,7 +3316,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.148'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.149'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3342,8 +3342,8 @@ const GV_BUILD='10.148'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.148"></script>
-<script defer src="app.min.js?v=10.148"></script>
+<script defer src="planos.js?v=10.149"></script>
+<script defer src="app.min.js?v=10.149"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
