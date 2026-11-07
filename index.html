@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-zmoXBFI190lxKIpP9vuZf20pn2p/R6Kr9WCj3DH6R2I=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-z4ygT5eI2Oyprfv8oyHgVV9arOywtIhK3jif9DM9QuM=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2862,16 +2862,22 @@ html.claro .topBar{box-shadow:0 1px 2px rgba(15,23,42,.05)!important}
 #mf .roda .rdSeg button.on{background:rgba(248,113,113,.14)!important;color:#f87171!important;box-shadow:inset 0 0 0 1px rgba(248,113,113,.35)}
 #mf .roda.rec .rdSeg button.on{background:rgba(74,222,128,.14)!important;color:#4ade80!important;box-shadow:inset 0 0 0 1px rgba(74,222,128,.35)}
 .rdIc{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--txt);display:grid;place-items:center;cursor:pointer}.rdIc svg{width:18px;height:18px}
-.rdCen{margin:10px 0 12px;padding:14px 12px 12px;border-radius:16px;background:var(--card2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;text-align:center;cursor:text}
-.rdOpts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
-.rdOpt{position:relative;min-width:0;border-radius:14px;border:1px solid var(--line);background:var(--card2);padding:10px 2px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--txt);transition:transform .15s,border-color .15s}
-.rdOpt>svg,.rdOpt>.emo{width:34px;height:34px;padding:8px;box-sizing:border-box;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);font-size:17px;display:grid;place-items:center}
-.rdOpt span{font-size:11px;line-height:1.2;font-weight:600;color:var(--mut);max-width:100%;text-align:center;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em}
-.rdOpt.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}.rdOpt.on span{color:var(--txt)}
-.rdOpt:active{transform:scale(.95)}
-.rdCat{color:var(--c);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;max-width:86%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#mf .rdVal{display:flex;align-items:baseline;justify-content:center;gap:3px;margin:2px 0;color:var(--mut);font-size:13px}
-#mf .rdVal input{width:4ch;max-width:10ch;min-width:0;background:transparent!important;border:0!important;box-shadow:none!important;padding:0;margin:0;text-align:center;font-size:36px;font-weight:800;letter-spacing:-.5px;color:var(--hd,var(--txt))}
+.rdCen{display:flex;align-items:center;gap:14px;margin:12px 0 4px;padding:16px;border-radius:20px;background:var(--card2);border:1px solid var(--line);cursor:text;text-align:left}
+.rdCenIc{width:52px;height:52px;flex:none;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);transition:background .2s,color .2s}
+.rdCenIc .i,.rdCenIc svg{width:24px;height:24px;stroke:currentColor}.rdCenIc .emo{font-size:24px}
+.rdCenTx{min-width:0;flex:1;display:flex;flex-direction:column;align-items:flex-start}
+.rdSec{margin:14px 2px 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mut)}
+.rdOpts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.rdOpt{min-width:0;display:flex;align-items:center;gap:9px;height:50px;padding:0 12px 0 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--txt) 9%,transparent);background:var(--card2);color:var(--txt);cursor:pointer;font:inherit;text-align:left;transition:transform .15s,border-color .15s}
+html.claro .rdOpt{background:#fff}
+.rdOpt>svg,.rdOpt>.emo{width:38px;height:38px;flex:none;padding:10px;box-sizing:border-box;border-radius:50%;background:color-mix(in srgb,var(--c) 18%,transparent);stroke:var(--c);color:var(--c);font-size:17px;display:grid;place-items:center}
+.rdOpt span{min-width:0;font-size:14px;font-weight:600;line-height:1.15;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rdOpt.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.rdOpt:active{transform:scale(.96)}
+@media (max-width:360px){.rdOpt{gap:7px;height:46px;padding:0 8px 0 4px}.rdOpt>svg,.rdOpt>.emo{width:34px;height:34px;padding:9px}.rdOpt span{font-size:12.5px;letter-spacing:-.01em}}
+.rdCat{color:var(--mut);font-size:12.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mf .rdVal{display:flex;align-items:baseline;justify-content:flex-start;gap:4px;margin:1px 0;color:var(--mut);font-size:13px}
+#mf .rdVal input{width:4ch;max-width:10ch;min-width:0;background:transparent!important;border:0!important;box-shadow:none!important;padding:0;margin:0;text-align:left;font-size:32px;font-weight:800;letter-spacing:-.5px;color:var(--hd,var(--txt))}
 #mf .rdVal input::placeholder{color:color-mix(in srgb,var(--mut) 60%,transparent)}
 .rdSub{color:var(--mut);font-size:11.5px}
 .rdHint{text-align:center;color:var(--mut);font-size:12px;margin:14px 0 10px}
@@ -3297,7 +3303,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.146'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.147'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3323,8 +3329,8 @@ const GV_BUILD='10.146'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.146"></script>
-<script defer src="app.min.js?v=10.146"></script>
+<script defer src="planos.js?v=10.147"></script>
+<script defer src="app.min.js?v=10.147"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

@@ -6504,7 +6504,7 @@ function novoTx(id,tipoPre,base){
       ea.innerHTML=`<span class="empAtL">${I('handCoins')}<span>${r?'Dinheiro de empréstimo?':'Emprestou pra alguém?'}<small>não conta como ${r?'receita':'gasto'} nem entra no orçamento</small></span></span><div class="empAtB">${r?bV+bE:bE+bV}</div>`;};
     pe();selT.addEventListener('change',pe);
   }
-  /* v10.128: Roda (05/11/2026). v10.146: o Matheus pediu quadro em vez do círculo: valor em cima e categorias em grade 4x2; o resto do formulário fica atrás do + */
+  /* v10.128: Roda (05/11/2026). v10.146/147: o Matheus pediu quadro em vez do círculo, no estilo da folha Adicionar: cartão do valor e categorias em pílulas 2 colunas; o resto do formulário fica atrás do + */
   if(!t)rodaInit(mf,selT,selC,selF,listaDo,!base&&USER);
 }
 function rodaUso(tipo,lista){const n={};(S.tx||[]).forEach(x=>{if(x.tipo===tipo&&!x.faturaKey&&x.categoria)n[x.categoria]=(n[x.categoria]||0)+1;});return lista.slice().sort((a,b)=>(n[b]||0)-(n[a]||0)||lista.indexOf(a)-lista.indexOf(b));}
@@ -6513,7 +6513,8 @@ function rodaInit(mf,selT,selC,selF,listaDo,ia){
   const lDs=mf.querySelector('input[name="descricao"]').closest('label'),lV=inV.closest('label');
   const R=document.createElement('div');R.className='roda';
   R.innerHTML=`<div class="rdTop"><div class="seg rdSeg" role="radiogroup" aria-label="tipo"><button type="button" role="radio" data-t="despesa">Saiu</button><button type="button" role="radio" data-t="receita">Entrou</button></div><span class="sp"></span>${ia?`<button type="button" class="rdIc" data-act="ia-frase" aria-label="falar ou escrever">${I('mic')}</button><button type="button" class="rdIc" data-act="ia-ler" aria-label="ler comprovante">${I('receipt')}</button>`:''}</div>
-   <div class="rdCen"><b class="rdCat"></b><label class="rdVal"><span>R$</span></label><small class="rdSub"></small></div>
+   <div class="rdCen"><span class="rdCenIc"></span><div class="rdCenTx"><b class="rdCat"></b><label class="rdVal"><span>R$</span></label><small class="rdSub"></small></div></div>
+   <p class="rdSec">categoria</p>
    <div class="rdOpts" role="radiogroup" aria-label="categoria"></div>`;
   const iaB=mf.querySelector('.iaBtns');if(iaB&&ia)iaB.remove();
   const nota=mf.querySelector('.iaNota');
@@ -6545,7 +6546,7 @@ function rodaInit(mf,selT,selC,selF,listaDo,ia){
       if(o.outras)return `<button type="button" class="rdOpt rdOut" data-outras="1" style="--c:#94a3b8" aria-label="outras categorias"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Outras</span></button>`;
       const on=o.c===cur,cor=corCat(o.c);
       return `<button type="button" class="rdOpt${on?' on':''}" role="radio" aria-checked="${on}" data-c="${esc(o.c)}" style="--c:${cor}" aria-label="${esc(o.c)}">${I(catIcon(o.c))}<span>${esc(o.c)}</span></button>`;}).join('');
-    rCat.textContent=cur||'';cen.style.setProperty('--c',cur?corCat(cur):'var(--mut)');pintaSub();};
+    rCat.textContent=cur||'escolha a categoria';R.querySelector('.rdCenIc').innerHTML=I(cur?catIcon(cur):'wallet');cen.style.setProperty('--c',cur?corCat(cur):'var(--mut)');pintaSub();};
   R.querySelector('.rdSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.t===selT.value)return;selT.value=b.dataset.t;selT.dispatchEvent(new Event('change',{bubbles:true}));};
   opts.onclick=e=>{const b=e.target.closest('.rdOpt');if(!b)return;
     if(b.dataset.outras){abreMais(true);setTimeout(()=>{try{selC.focus();selC.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}},30);return;}
