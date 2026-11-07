@@ -4,6 +4,9 @@
 // "Salvar" grava o lançamento na tabela tx da pessoa (o app recebe na próxima sincronização).
 // Secrets: WA_VERIFY_TOKEN (verificação do webhook), WA_APP_SECRET (assinatura X-Hub-Signature-256),
 //          WA_TOKEN e WA_PHONE_ID (envio). Sem WA_TOKEN, o que seria enviado vai para a tabela wa_saida_teste.
+// v10.153: modo sandbox da 360dialog (teste sem conta na Meta): WA_SB_TOKEN (vai na URL do webhook, ?sb=...) e
+//          WA_D360_KEY (chave do sandbox, enviada no cabeçalho D360-API-KEY). O sandbox não assina as mensagens.
+//          Limite do sandbox: 25 envios no total; quem fala com ele é só o número dono da chave.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
@@ -11,6 +14,8 @@ import { leLancamento, CATS_PADRAO, type Lanc } from "../_shared/ia-lancamento.t
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
+const D360 = "https://waba-sandbox.360dialog.io/v1/messages";
+let viaSandbox = false;
 const FN = "whatsapp-webhook";
 
 const enc = new TextEncoder();
@@ -27,7 +32,16 @@ async function assinaturaOk(raw: string, cab: string | null): Promise<boolean> {
 }
 
 async function envia(tel: string, corpo: Record<string, unknown>) {
-  const msg = { messaging_product: "whatsapp", recipient_type: "individual", to: tel, ...corpo };
+  const dest = tel.startsWith("u:") ? { recipient: tel.slice(2) } : { to: tel };
+  const msg = { messaging_product: "whatsapp", recipient_type: "individual", ...dest, ...corpo };
+  const dk = Deno.env.get("WA_D360_KEY");
+  if (viaSandbox && dk) {
+    try {
+      const r = await fetch(D360, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "D360-API-KEY": dk, "content-type": "application/json" }, body: JSON.stringify(msg) });
+      if (!r.ok) await registraErro(sb, FN, "enviar-sandbox", (await r.text()).slice(0, 200), r.status);
+    } catch (e) { await registraErro(sb, FN, "enviar-sandbox", e); }
+    return;
+  }
   const tok = Deno.env.get("WA_TOKEN"), pid = Deno.env.get("WA_PHONE_ID");
   if (!tok || !pid) { await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg }); return; }
   try {
@@ -96,7 +110,7 @@ async function botao(tel: string, uid: string, bid: string) {
 }
 
 async function trata(m: any) {
-  const tel = String(m?.from || "").replace(/\D/g, "");
+  const tel = m?.from ? String(m.from).replace(/\D/g, "") : (m?.from_user_id ? "u:" + String(m.from_user_id).slice(0, 80) : "");
   const mid = String(m?.id || "");
   if (!tel || !mid) return;
   const { error: de } = await sb.from("wa_msg").insert({ id: mid.slice(0, 200) });
@@ -122,7 +136,11 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return new Response("método", { status: 405 });
   const raw = await req.text();
-  if (!(await assinaturaOk(raw, req.headers.get("x-hub-signature-256")))) return new Response("assinatura inválida", { status: 401 });
+  const sbt = Deno.env.get("WA_SB_TOKEN"), sbq = u.searchParams.get("sb") || "";
+  let sbOk = false;
+  if (sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
+  viaSandbox = sbOk;
+  if (!sbOk && !(await assinaturaOk(raw, req.headers.get("x-hub-signature-256")))) return new Response("assinatura inválida", { status: 401 });
   let b: any; try { b = JSON.parse(raw); } catch { return new Response("ok"); }
   const msgs: any[] = [];
   for (const e of b?.entry || []) for (const c of e?.changes || []) for (const m of c?.value?.messages || []) msgs.push(m);
