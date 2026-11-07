@@ -2766,6 +2766,15 @@ function abreInvest(){
 }
 /* v10.85: folha "Adicionar" com personalidade — bloco "com IA" (hero + dois cards) e "manual" (3 tiles com cor própria).
    mesmos data-act de antes; o campo do hero é falso (decorativo) e troca de exemplo sozinho. */
+/* v10.141: ícones da folha Adicionar */
+Object.assign(ICONS,{
+  qkGasto:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  qkReceita:'<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>',
+  qkScan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8h8"/><path d="M7 12h10"/><path d="M7 16h6"/>',
+  qkAsk:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M12 7.5l1.1 2.9 2.9 1.1-2.9 1.1-1.1 2.9-1.1-2.9-2.9-1.1 2.9-1.1z"/>',
+  qkInv:'<path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>',
+  qkDeNovo:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'
+});
 const QK_EX=['gastei 45 no iFood ontem…','uber 23,90 hoje no débito…','mercado 182 no cartão…','recebi 3.200 de salário…','farmácia 37,50 no pix…'];
 let QK_T=0;
 function abreRapido(){
@@ -2781,7 +2790,7 @@ function abreRapido(){
     const T=(S.tx||[]).filter(t=>t&&(t.tipo==='despesa'||t.tipo==='receita')&&!t.faturaKey&&!t.emp&&!(t.parcelas>1)&&t.descricao&&+t.valor>0&&t.data<=hojeISO())
       .sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(String(y.criadoEm||'')).localeCompare(String(x.criadoEm||'')));
     for(const t of T){const k=t.tipo+'|'+norm(t.descricao);if(vis.has(k))continue;vis.add(k);L.push(t);if(L.length>=6)break;}
-    if(L.length)rec=`<div class="qkSec qkSecRec" style="--d:2">${I('refresh')}lançar de novo</div><div class="qkRec" role="group" aria-label="lançar de novo">${L.map((t,i)=>{const c=corCat(t.categoria);return `<button type="button" class="qkRc ${t.tipo==='receita'?'rc-in':''}" data-act="dup-tx" data-id="${esc(t.id)}" style="--d:${3+i};--cc:${c}" aria-label="lançar de novo: ${esc(t.descricao)}, ${esc(brl(t.valor))}"><span class="qkRcIc" aria-hidden="true">${I(catIcon(t.categoria))}</span><span class="qkRcTx"><b>${esc(String(t.descricao).replace(/ \(\d+\/\d+\)$/,''))}</b><small>${t.tipo==='receita'?'+ ':''}${esc(brl(t.valor))}</small></span></button>`;}).join('')}</div>`;
+    if(L.length)rec=`<div class="qkSec qkSecRec" style="--d:2">${I('qkDeNovo')}lançar de novo</div><div class="qkRec" role="group" aria-label="lançar de novo">${L.map((t,i)=>{const c=corCat(t.categoria);return `<button type="button" class="qkRc ${t.tipo==='receita'?'rc-in':''}" data-act="dup-tx" data-id="${esc(t.id)}" style="--d:${3+i};--cc:${c}" aria-label="lançar de novo: ${esc(t.descricao)}, ${esc(brl(t.valor))}"><span class="qkRcIc" aria-hidden="true">${I(catIcon(t.categoria))}</span><span class="qkRcTx"><b>${esc(String(t.descricao).replace(/ \(\d+\/\d+\)$/,''))}</b><small>${t.tipo==='receita'?'+ ':''}${esc(brl(t.valor))}</small></span></button>`;}).join('')}</div>`;
   }catch(e){rec='';}
   box.innerHTML=`<div class="sheet qk2">
     <div class="sh-head qkHead"><div class="qkTit"><small>${esc((d=>d.charAt(0).toUpperCase()+d.slice(1))(DATA_HOJE()))}</small><h3>O que vamos lançar?</h3></div><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
@@ -2795,11 +2804,11 @@ function abreRapido(){
     </div>
     ${rec}
     <div class="qkCor" role="group" aria-label="lançar">
-      ${cor('q-gasto','g','down','Gasto','pix, cartão, dinheiro',USER?2:1)}
-      ${cor('q-receita','r','up','Receita','salário, extra, pix',USER?3:2)}
-      ${USER?cor('ia-ler','f','receipt','Comprovante','foto vira lançamento',4):''}
-      ${cor('assist','a','chat','Perguntar','“quanto gastei?”',USER?5:3)}
-      ${cor('q-inv','i','chart','Investimentos','ações, FIIs, renda fixa e cripto',USER?6:4,!!USER)}
+      ${cor('q-gasto','g','qkGasto','Gasto','pix, cartão, dinheiro',USER?2:1)}
+      ${cor('q-receita','r','qkReceita','Receita','salário, extra, pix',USER?3:2)}
+      ${USER?cor('ia-ler','f','qkScan','Comprovante','foto vira lançamento',4):''}
+      ${cor('assist','a','qkAsk','Perguntar','“quanto gastei?”',USER?5:3)}
+      ${cor('q-inv','i','qkInv','Investimentos','ações, FIIs, renda fixa e cripto',USER?6:4,!!USER)}
     </div></div>`;
   box.classList.add('on');
   const sh=box.querySelector('.qk2');
