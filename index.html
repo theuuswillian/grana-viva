@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-tRJGq99MbIseeOC3Snwz7ZvrVqxXuphbaLY1KGCcjPk=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-WsIh9hp/cqTzJsCj9R/BRgA1+j1s/97sTGJuVE3sir4=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2117,6 +2117,26 @@ html.claro .qkT{background:#fff;border-color:rgba(15,23,42,.08);box-shadow:0 4px
 html.claro .qkMini b,html.claro .qkT b{color:#1e293b}
 html.preto .qkMini,html.preto .qkT{background-color:#0b0b0d}
 @media (prefers-reduced-motion:reduce){.qkHero,.qkMini,.qkT,.qkSec,.qkAur i,.qkSpk,.qkHero::after,.qkPh::after{animation:none!important}.qkHero,.qkMini,.qkT{transition:none}}
+/* v10.137: cartões coloridos da folha Adicionar */
+.qkCor{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.qkC{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;min-width:0;height:108px;padding:14px;border-radius:20px;border:0;color:#fff;font:inherit;text-align:left;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);animation:qkIn .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d,0) * 55ms);transition:transform .18s cubic-bezier(.2,.8,.2,1),filter .2s}
+.qkC::after{content:"";position:absolute;right:-26px;top:-26px;width:86px;height:86px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none}
+.qkC .i{width:24px;height:24px;stroke:#fff;stroke-width:2.2;flex-shrink:0}
+.qkC span{display:block;min-width:0;max-width:100%}
+.qkC b{display:block;font-size:16px;font-weight:700;line-height:1.15;letter-spacing:-.01em}
+.qkC small{display:block;margin-top:2px;font-size:11.5px;font-weight:500;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qkC-g{background:linear-gradient(140deg,#e11d48,#f97316)}
+.qkC-r{background:linear-gradient(140deg,#16a34a,#0d9488)}
+.qkC-f{background:linear-gradient(140deg,#7c3aed,#4f46e5)}
+.qkC-a{background:linear-gradient(140deg,#0891b2,#2563eb)}
+.qkC-i{background:linear-gradient(140deg,#d97706,#ca8a04)}
+.qkC.lg{grid-column:1/-1;height:72px;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px}
+.qkC.lg small{margin-top:1px}
+.qkC:active{transform:scale(.965)}
+.qkC:focus-visible{outline:2px solid var(--a2);outline-offset:2px}
+@media (hover:hover){.qkC:hover{filter:brightness(1.08)}}
+@media (max-width:340px){.qkC{height:100px;padding:12px}.qkC b{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.qkC{animation:none!important;transition:none}}
 /* ---------- v10.86: topo refinado (status de sync, botões alinhados, data com hierarquia, fio mais fino) ---------- */
 .topBar{padding:7px!important;gap:10px!important}
 .topBar .ham,.topBar .bell,.topBar .syncPill{width:44px!important;height:44px!important;border-radius:15px!important;padding:0!important;display:grid!important;place-items:center;
@@ -3207,7 +3227,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.136'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.137'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3233,8 +3253,8 @@ const GV_BUILD='10.136'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.136"></script>
-<script defer src="app.min.js?v=10.136"></script>
+<script defer src="planos.js?v=10.137"></script>
+<script defer src="app.min.js?v=10.137"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

@@ -2772,31 +2772,30 @@ function abreRapido(){
   const box=$('#modal');clearInterval(QK_T);
   const mic='<span class="qkHeroIc" aria-hidden="true">'+I('mic')+'<svg class="qkSpk" viewBox="0 0 24 24"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg></span>';
   const mini=(act,ic,t,s,d)=>`<button type="button" class="qkMini" data-act="${act}" style="--d:${d}"><span class="qkMiniIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small>${s}</small></button>`;
+  /* v10.137: cartões coloridos e cheios (gasto, receita, foto, perguntar e investimentos), todos no mesmo estilo */
+  const cor=(act,k,ic,t,s,d,lg)=>`<button type="button" class="qkC qkC-${k}${lg?' lg':''}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}">${I(ic)}<span><b>${t}</b><small aria-hidden="true">${s}</small></span></button>`;
   const tile=(act,k,ic,t,s,d)=>`<button type="button" class="qkT qkT-${k}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}"><span class="qkTIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small aria-hidden="true">${s}</small></button>`;
   box.innerHTML=`<div class="sheet qk2">
     <div class="sh-head"><h3>Adicionar</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <div class="qkSec" id="qkSecIA" style="--d:0"><svg class="qkSecIc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>com IA</div>
+    ${USER?'':'<!--'}<div class="qkSec" id="qkSecIA" style="--d:0"><svg class="qkSecIc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>com IA</div>${USER?'':'-->'}
     <div class="qkIA" role="group" aria-labelledby="qkSecIA">
       ${USER?`<button type="button" class="qkHero" data-act="ia-frase" style="--d:1" aria-label="falar ou escrever: diga o gasto numa frase e a IA preenche o lançamento">
         <span class="qkAur" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="qkHeroTop">${mic}<span class="qkHeroTx"><b>falar ou escrever</b><small>diga numa frase, a IA preenche</small></span></span>
         <span class="qkFake" aria-hidden="true"><span class="qkPh">${QK_EX[0]}</span><span class="qkGo">${I('arrowUp')}</span></span>
       </button>`:''}
-      <div class="qkDuo${USER?'':' so'}">
-        ${USER?mini('ia-ler','receipt','foto do comprovante','a IA lê valor, data e loja',2):''}
-        ${mini('assist','chat','perguntar ao assistente','“quanto gastei com alimentação?”',USER?3:1)}
-      </div>
     </div>
-    <div class="qkSec" id="qkSecMan" style="--d:4">manual</div>
-    <div class="qkGrid" role="group" aria-labelledby="qkSecMan">
-      ${tile('q-gasto','g','down','gasto','o que sai',5)}
-      ${tile('q-receita','r','up','receita','o que entra',6)}
-      ${tile('q-inv','i','chart','investimentos','FII, ações, cripto',7)}
+    <div class="qkCor" role="group" aria-label="lançar">
+      ${cor('q-gasto','g','down','gasto','o que sai',USER?2:1)}
+      ${cor('q-receita','r','up','receita','o que entra',USER?3:2)}
+      ${USER?cor('ia-ler','f','receipt','foto do comprovante','a IA lê pra você',4):''}
+      ${cor('assist','a','chat','perguntar','ao assistente',USER?5:3)}
+      ${cor('q-inv','i','chart','investimentos','FII, ações, cripto',USER?6:4,!!USER)}
     </div></div>`;
   box.classList.add('on');
   const sh=box.querySelector('.qk2');
   /* toque: leve vibração (Android; o iOS ignora) */
-  sh.addEventListener('pointerdown',e=>{if(e.target.closest('.qkHero,.qkMini,.qkT'))vibra(8);});
+  sh.addEventListener('pointerdown',e=>{if(e.target.closest('.qkHero,.qkMini,.qkT,.qkC'))vibra(8);});
   /* exemplos no campo falso: troca a cada 2,8 s com fade; parado se o sistema pede menos movimento */
   const ph=sh.querySelector('.qkPh');
   if(ph&&ccMov()){let i=0;QK_T=setInterval(()=>{if(!document.contains(ph)){clearInterval(QK_T);return;}
