@@ -49,6 +49,37 @@ Deno.serve(async (req) => {
   if (ue) return json({ erro: "não foi possível conferir o limite agora" }, 503);
   if (!ok) return json({ erro: "Você chegou ao limite de " + LIMITE_DIA + " leituras por dia. Amanhã libera de novo." }, 429);
 
+  // v10.145: extrato ou fatura em PDF/foto vira lista de lançamentos para a tela de importar
+  if (body?.extrato) {
+    if (!img) return json({ erro: "envie o PDF ou a foto do extrato" }, 400);
+    const pe = `Você lê extratos bancários e faturas de cartão brasileiros (PDF ou foto). Hoje é ${hoje}.
+Liste TODOS os lançamentos (compras, pix, transferências, tarifas, pagamentos, estornos, créditos), um por linha, na ordem do documento.
+- data: AAAA-MM-DD. Se o documento só tem dia/mês, deduza o ano pelo período do extrato/fatura (nunca depois de ${hoje}).
+- desc: a descrição como está no documento, sem o valor (inclua "PARC 03/10" ou "Parcela 3/10" quando houver).
+- valor: em reais, NEGATIVO para saída/compra/débito/tarifa e POSITIVO para entrada/crédito/estorno/pagamento recebido na fatura.
+Não inclua saldos, totais, limites, resumos, juros futuros nem parcelas futuras que ainda não foram cobradas.
+cartao: true se for fatura de cartão de crédito; false se for extrato de conta.`;
+    let re: Response;
+    try { re = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + (Deno.env.get("GEMINI_MODEL_EXTRATO") || "gemini-flash-latest") + ":generateContent", {
+      method: "POST", signal: AbortSignal.timeout(110000),
+      headers: { "content-type": "application/json", "x-goog-api-key": Deno.env.get("GEMINI_API_KEY") || "" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: pe }, { inline_data: { mime_type: mime, data: img } }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 30000, responseMimeType: "application/json",
+          responseSchema: { type: "OBJECT", properties: { cartao: { type: "BOOLEAN" }, linhas: { type: "ARRAY", items: { type: "OBJECT", properties: {
+            data: { type: "STRING" }, desc: { type: "STRING" }, valor: { type: "NUMBER" } }, required: ["data", "desc", "valor"] } } }, required: ["cartao", "linhas"] } } }),
+    }); } catch { return json({ erro: "a IA demorou demais, tente um arquivo menor" }, 504); }
+    if (!re.ok) { const t = (await re.text()).slice(0, 300); console.log("gemini-extrato", re.status, t); return json({ erro: re.status === 429 ? "a IA está ocupada, tente em 1 minuto" : "a IA não respondeu, tente de novo" }, 502); }
+    const ge = await re.json();
+    let oe: any;
+    try { oe = JSON.parse(ge?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return json({ erro: "não consegui ler esse extrato" }, 422); }
+    const linhas = (Array.isArray(oe.linhas) ? oe.linhas : []).slice(0, 1500).map((l: any) => ({
+      data: /^\d{4}-\d\d-\d\d$/.test(l?.data) && l.data <= hoje ? l.data : "",
+      desc: String(l?.desc || "").replace(/\s+/g, " ").trim().slice(0, 120),
+      valor: Math.round(Number(l?.valor) * 100) / 100,
+    })).filter((l: any) => l.data && isFinite(l.valor) && l.valor !== 0 && Math.abs(l.valor) < 1e7);
+    return json({ cartao: !!oe.cartao, linhas });
+  }
+
   const dsem = ["domingo","segunda","terça","quarta","quinta","sexta","sábado"][new Date(hoje + "T12:00:00").getDay()];
   const prompt = (texto ? `O usuário descreveu um lançamento financeiro com as próprias palavras (pode ter erros de ditado): """${texto.replace(/"""/g, "")}"""
 Interprete datas relativas ("ontem", "sexta", "dia 5") a partir de hoje, ${hoje} (${dsem}). Valores como "45", "45 conto", "R$ 45,90", "mil e duzentos" são em reais.
