@@ -2773,10 +2773,18 @@ function abreRapido(){
   const mic='<span class="qkHeroIc" aria-hidden="true">'+I('mic')+'<svg class="qkSpk" viewBox="0 0 24 24"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg></span>';
   const mini=(act,ic,t,s,d)=>`<button type="button" class="qkMini" data-act="${act}" style="--d:${d}"><span class="qkMiniIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small>${s}</small></button>`;
   /* v10.137: cartões coloridos e cheios (gasto, receita, foto, perguntar e investimentos), todos no mesmo estilo */
-  const cor=(act,k,ic,t,s,d,lg)=>`<button type="button" class="qkC qkC-${k}${lg?' lg':''}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}"><span class="qkCIc" aria-hidden="true">${I(ic)}</span><span class="qkCTx"><b>${t}</b><small aria-hidden="true">${s}</small></span><span class="qkCWm" aria-hidden="true">${I(ic)}</span></button>`;
+  const cor=(act,k,ic,t,s,d,lg)=>`<button type="button" class="qkC qkC-${k}${lg?' lg':''}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}"><span class="qkCIc" aria-hidden="true">${I(ic)}</span><span class="qkCTx"><b>${t}</b><small aria-hidden="true">${s}</small></span><span class="qkCWm" aria-hidden="true">${I(ic)}</span><span class="qkCGo" aria-hidden="true">${I('chevR')}</span></button>`;
   const tile=(act,k,ic,t,s,d)=>`<button type="button" class="qkT qkT-${k}" data-act="${act}" style="--d:${d}" aria-label="${t}: ${s}"><span class="qkTIc" aria-hidden="true">${I(ic)}</span><b>${t}</b><small aria-hidden="true">${s}</small></button>`;
+  /* v10.140: "lançar de novo": os últimos gastos/receitas diferentes viram atalhos (abre o formulário já preenchido, com a data de hoje) */
+  let rec='';
+  try{const vis=new Set(),L=[];
+    const T=(S.tx||[]).filter(t=>t&&(t.tipo==='despesa'||t.tipo==='receita')&&!t.faturaKey&&!t.emp&&!(t.parcelas>1)&&t.descricao&&+t.valor>0&&t.data<=hojeISO())
+      .sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(String(y.criadoEm||'')).localeCompare(String(x.criadoEm||'')));
+    for(const t of T){const k=t.tipo+'|'+norm(t.descricao);if(vis.has(k))continue;vis.add(k);L.push(t);if(L.length>=6)break;}
+    if(L.length)rec=`<div class="qkSec qkSecRec" style="--d:2">${I('refresh')}lançar de novo</div><div class="qkRec" role="group" aria-label="lançar de novo">${L.map((t,i)=>{const c=corCat(t.categoria);return `<button type="button" class="qkRc ${t.tipo==='receita'?'rc-in':''}" data-act="dup-tx" data-id="${esc(t.id)}" style="--d:${3+i};--cc:${c}" aria-label="lançar de novo: ${esc(t.descricao)}, ${esc(brl(t.valor))}"><span class="qkRcIc" aria-hidden="true">${I(catIcon(t.categoria))}</span><span class="qkRcTx"><b>${esc(String(t.descricao).replace(/ \(\d+\/\d+\)$/,''))}</b><small>${t.tipo==='receita'?'+ ':''}${esc(brl(t.valor))}</small></span></button>`;}).join('')}</div>`;
+  }catch(e){rec='';}
   box.innerHTML=`<div class="sheet qk2">
-    <div class="sh-head"><h3>Adicionar</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <div class="sh-head qkHead"><div class="qkTit"><small>${esc((d=>d.charAt(0).toUpperCase()+d.slice(1))(DATA_HOJE()))}</small><h3>O que vamos lançar?</h3></div><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     ${USER?'':'<!--'}<div class="qkSec" id="qkSecIA" style="--d:0"><svg class="qkSecIc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg>com IA</div>${USER?'':'-->'}
     <div class="qkIA" role="group" aria-labelledby="qkSecIA">
       ${USER?`<button type="button" class="qkHero" data-act="ia-frase" style="--d:1" aria-label="falar ou escrever: diga o gasto numa frase e a IA preenche o lançamento">
@@ -2785,6 +2793,7 @@ function abreRapido(){
         <span class="qkFake" aria-hidden="true"><span class="qkPh">${QK_EX[0]}</span><span class="qkGo">${I('arrowUp')}</span></span>
       </button>`:''}
     </div>
+    ${rec}
     <div class="qkCor" role="group" aria-label="lançar">
       ${cor('q-gasto','g','down','Gasto','pix, cartão, dinheiro',USER?2:1)}
       ${cor('q-receita','r','up','Receita','salário, extra, pix',USER?3:2)}
@@ -2795,7 +2804,7 @@ function abreRapido(){
   box.classList.add('on');
   const sh=box.querySelector('.qk2');
   /* toque: leve vibração (Android; o iOS ignora) */
-  sh.addEventListener('pointerdown',e=>{if(e.target.closest('.qkHero,.qkMini,.qkT,.qkC'))vibra(8);});
+  sh.addEventListener('pointerdown',e=>{if(e.target.closest('.qkHero,.qkMini,.qkT,.qkC,.qkRc'))vibra(8);});
   /* exemplos no campo falso: troca a cada 2,8 s com fade; parado se o sistema pede menos movimento */
   const ph=sh.querySelector('.qkPh');
   if(ph&&ccMov()){let i=0;QK_T=setInterval(()=>{if(!document.contains(ph)){clearInterval(QK_T);return;}

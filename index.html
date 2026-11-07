@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-3WWXnaLprZMOC7neNkY9NCU5fzzic3DbLjFJ9FmhZrc=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-Ehx0RiJrOzQUnaysGHGVhSpijl0ghj6OV8ToVPgJMcU=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -2141,6 +2141,30 @@ html.preto .qkMini,html.preto .qkT{background-color:#0b0b0d}
 @media (hover:hover){.qkC:hover{filter:brightness(1.08)}.qkC:hover .qkCWm{transform:rotate(-4deg) scale(1.08)}}
 html.claro .qkC{box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 12px 22px -14px var(--qcS)}
 @media (max-width:340px){.qkC{height:108px;padding:12px}.qkC b{font-size:15px}.qkC small{font-size:11.5px}}
+/* v10.140: folha Adicionar, cabeçalho, "lançar de novo" e detalhes */
+.qkHead{align-items:flex-start}
+.qkTit{display:flex;flex-direction:column;gap:2px;min-width:0}
+.qkTit small{font-size:12px;font-weight:600;color:var(--mut);animation:qkIn .5s cubic-bezier(.2,.8,.2,1) both}
+.qk2 .qkTit h3{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.15;background:linear-gradient(100deg,var(--txt) 40%,var(--a1) 75%,var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent;animation:qkIn .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:40ms}
+html.claro .qk2 .qkTit h3{background:linear-gradient(100deg,var(--hd,#0f172a) 40%,var(--a1) 75%,var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.qkFake{width:100%;box-sizing:border-box}
+.qkSec .i{width:13px;height:13px;stroke:currentColor;stroke-width:2.4}
+.qkRec{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -16px;padding:2px 16px 4px;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 24px),transparent)}
+.qkRec::-webkit-scrollbar{display:none}
+.qkRc{flex:0 0 auto;display:flex;align-items:center;gap:9px;max-width:190px;height:50px;padding:0 14px 0 6px;border-radius:999px;background:color-mix(in srgb,var(--cc) 12%,var(--card2));border:1px solid color-mix(in srgb,var(--cc) 30%,transparent);color:var(--txt);font:inherit;text-align:left;scroll-snap-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent;animation:qkIn .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d,0) * 55ms);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.qkRc:active{transform:scale(.95)}
+.qkRcIc{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--cc);flex-shrink:0;box-shadow:0 4px 12px -6px var(--cc)}
+.qkRcIc .i{width:18px;height:18px;stroke:#fff;stroke-width:2.1}.qkRcIc .emo{font-size:18px}
+.qkRcTx{display:flex;flex-direction:column;min-width:0}
+.qkRcTx b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:128px}
+.qkRcTx small{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.qkRc.rc-in .qkRcTx small{color:var(--qr)}
+html.claro .qkRc{background:color-mix(in srgb,var(--cc) 8%,#fff)}
+.qkCGo{position:absolute;top:12px;right:12px;display:flex;opacity:.55;transition:transform .2s,opacity .2s}
+.qkCGo .i{width:16px;height:16px;stroke:#fff;stroke-width:2.4}
+.qkC.lg .qkCGo{top:50%;right:16px;transform:translateY(-50%)}
+.qkC:active .qkCGo{opacity:1;transform:translateX(2px)}.qkC.lg:active .qkCGo{transform:translate(2px,-50%)}
+@media (prefers-reduced-motion:reduce){.qkRc,.qkTit small,.qk2 .qkTit h3{animation:none!important;transition:none}}
 /* v10.139: cartões translúcidos (vidro colorido) */
 .qkC{--qa1:.58;--qa2:.42;border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4)}
 html.preto .qkC{--qa1:.52;--qa2:.36}
@@ -3236,7 +3260,7 @@ html.claro .side::before,html:not(.claro):not(.preto) .side::before{opacity:0}
 </div>
 
 <script>
-const GV_BUILD='10.139'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.140'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3262,8 +3286,8 @@ const GV_BUILD='10.139'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.139"></script>
-<script defer src="app.min.js?v=10.139"></script>
+<script defer src="planos.js?v=10.140"></script>
+<script defer src="app.min.js?v=10.140"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
