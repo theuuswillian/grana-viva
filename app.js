@@ -6509,54 +6509,59 @@ function novoTx(id,tipoPre,base){
 }
 function rodaUso(tipo,lista){const n={};(S.tx||[]).forEach(x=>{if(x.tipo===tipo&&!x.faturaKey&&x.categoria)n[x.categoria]=(n[x.categoria]||0)+1;});return lista.slice().sort((a,b)=>(n[b]||0)-(n[a]||0)||lista.indexOf(a)-lista.indexOf(b));}
 function rodaInit(mf,selT,selC,selF,listaDo,ia){
+  /* v10.148: formulário no padrão dos apps de mercado (Mobills/Organizze/YNAB): valor grande no topo, sugestões, campos em linhas e "mais opções" recolhido */
   const inV=mf.querySelector('input[name="valor"]'),inD=mf.querySelector('[name="data"]'),sub=mf.querySelector('button[type="submit"]');
-  const lDs=mf.querySelector('input[name="descricao"]').closest('label'),lV=inV.closest('label');
+  const lDs=mf.querySelector('input[name="descricao"]').closest('label'),inDs=lDs.querySelector('input'),lV=inV.closest('label');
+  const ch=`<svg class="i rdCh" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
   const R=document.createElement('div');R.className='roda';
-  R.innerHTML=`<div class="rdTop"><div class="seg rdSeg" role="radiogroup" aria-label="tipo"><button type="button" role="radio" data-t="despesa">Saiu</button><button type="button" role="radio" data-t="receita">Entrou</button></div><span class="sp"></span>${ia?`<button type="button" class="rdIc" data-act="ia-frase" aria-label="falar ou escrever">${I('mic')}</button><button type="button" class="rdIc" data-act="ia-ler" aria-label="ler comprovante">${I('receipt')}</button>`:''}</div>
-   <div class="rdCen"><span class="rdCenIc"></span><div class="rdCenTx"><b class="rdCat"></b><label class="rdVal"><span>R$</span></label><small class="rdSub"></small></div></div>
-   <p class="rdSec">categoria</p>
-   <div class="rdOpts" role="radiogroup" aria-label="categoria"></div>`;
+  R.innerHTML=`<div class="rdTop"><div class="seg rdSeg" role="radiogroup" aria-label="tipo"><button type="button" role="radio" data-t="despesa">Despesa</button><button type="button" role="radio" data-t="receita">Receita</button></div><span class="sp"></span>${ia?`<button type="button" class="rdIc" data-act="ia-frase" aria-label="falar ou escrever">${I('mic')}</button><button type="button" class="rdIc" data-act="ia-ler" aria-label="ler comprovante">${I('receipt')}</button>`:''}</div>
+   <div class="rdCen"><small class="rdCat">Valor</small><label class="rdVal"><span>R$</span></label></div>
+   <div class="rdOpts" role="radiogroup" aria-label="categorias mais usadas"></div>
+   <p class="rdSec">Detalhes</p>
+   <div class="rdGrp">
+    <label class="rdRow rdRC"><span class="rdK">Categoria</span><span class="rdV"><span class="rdIcC"></span><span class="rdSl"></span></span>${ch}</label>
+    <label class="rdRow rdRF"><span class="rdK">Pago com</span><span class="rdV"><span class="rdIcC rdIcF">${I('wallet')}</span><span class="rdSl"></span></span>${ch}</label>
+    <div class="rdRow rdRD"><span class="rdK">Data</span><span class="rdV rdDc"><button type="button" data-d="0">Hoje</button><button type="button" data-d="1">Ontem</button><button type="button" data-d="x">Outra</button><span class="rdDt"></span></span></div>
+    <label class="rdRow rdRS"><span class="rdK">Descrição</span><span class="rdV rdDsV"></span></label>
+   </div>
+   <div class="rdGrp"><button type="button" class="rdRow rdMaisB" aria-expanded="false"><span class="rdK rdKm">Mais opções</span><span class="rdMs">parcelas, repetir, tags</span>${ch}</button></div>`;
   const iaB=mf.querySelector('.iaBtns');if(iaB&&ia)iaB.remove();
   const nota=mf.querySelector('.iaNota');
-  /* tudo que já existia vai para "mais opções", na mesma ordem */
   const mais=document.createElement('div');mais.className='rdMais';mais.hidden=true;
   [...mf.children].forEach(el=>{if(el===sub||el===nota||el.type==='hidden')return;mais.appendChild(el);});
   mf.insertBefore(R,mf.firstChild);if(nota)mf.insertBefore(nota,R);
   inV.placeholder='0,00';R.querySelector('.rdVal').appendChild(inV);lV.remove();
-  const larg=()=>{inV.style.width=Math.max(4,Math.min(10,(inV.value||'0,00').length+.5))+'ch';};inV.addEventListener('input',larg);inV.addEventListener('blur',()=>setTimeout(larg,0));larg();
   const lT=selT.closest('label');if(lT)lT.style.display='none';
-  lDs.classList.add('rdDesc');inDsPh(lDs);R.appendChild(lDs);
+  /* os campos de verdade vão para dentro das linhas (o iPhone abre o seletor nativo) */
+  const wC=selC.closest('label'),wF=selF.closest('label');
+  R.querySelector('.rdRC .rdSl').appendChild(selC);R.querySelector('.rdRF .rdSl').appendChild(selF);
+  [wC,wF].forEach(w=>{if(w&&!w.querySelector('input,select,textarea'))w.classList.add('rdGone');});
+  inDs.placeholder='opcional';R.querySelector('.rdDsV').appendChild(inDs);lDs.classList.add('rdGone');
+  const wD=inD&&inD.closest('label');if(inD){R.querySelector('.rdDt').appendChild(inD);if(wD)wD.classList.add('rdGone');}
   R.appendChild(mais);
-  const bot=document.createElement('div');bot.className='rdBot';
-  bot.innerHTML=`<button type="button" class="rdMaisB" aria-expanded="false" aria-label="mais opções">${I('plus')}</button>`;
-  mf.appendChild(bot);bot.appendChild(sub);sub.classList.remove('full');sub.textContent='Lançar';
-  const bM=bot.querySelector('.rdMaisB');
+  const bot=document.createElement('div');bot.className='rdBot';mf.appendChild(bot);bot.appendChild(sub);sub.classList.add('full');
+  const bM=R.querySelector('.rdMaisB');
   const abreMais=on=>{mais.hidden=!on;bM.setAttribute('aria-expanded',on?'true':'false');bM.classList.toggle('on',on);};
   bM.onclick=()=>abreMais(mais.hidden);
-  const cen=R.querySelector('.rdCen'),opts=R.querySelector('.rdOpts'),rCat=R.querySelector('.rdCat'),rSub=R.querySelector('.rdSub');
-  const pintaSub=()=>{const f=selF.value==='cartao'?'cartão':selF.value,d=inD&&inD.value;rSub.textContent=f+' · '+(!d||d===hojeISO()?'hoje':fmtDataCurta(d));};
+  const opts=R.querySelector('.rdOpts'),icC=R.querySelector('.rdRC .rdIcC'),dc=R.querySelector('.rdDc');
+  const ontem=()=>{const d=new Date(hojeISO()+'T12:00:00');d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);};
+  const pintaD=()=>{if(!inD)return;const v=inD.value,h=hojeISO(),o=ontem(),k=v===h?'0':v===o?'1':'x';
+    dc.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.d===k));dc.classList.toggle('outra',k==='x');};
+  dc.onclick=e=>{const b=e.target.closest('button');if(!b||!inD)return;
+    if(b.dataset.d==='x'){dc.classList.add('outra');dc.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));try{inD.showPicker?inD.showPicker():inD.focus();}catch(_){inD.focus();}return;}
+    inD.value=b.dataset.d==='0'?hojeISO():ontem();inD.dispatchEvent(new Event('change',{bubbles:true}));pintaD();};
   const pinta=()=>{
     R.querySelectorAll('.rdSeg button').forEach(b=>{const on=b.dataset.t===selT.value;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
     R.classList.toggle('rec',selT.value==='receita');
     const lista=rodaUso(selT.value,listaDo(selT.value)),cur=selC.value;
-    let vis=lista.length>8?lista.slice(0,7):lista.slice(0,8);
-    if(lista.length>8&&cur&&!vis.includes(cur))vis[6]=cur;
-    const slots=vis.map(c=>({c})).concat(lista.length>8?[{outras:1}]:[]);
-    opts.innerHTML=slots.map(o=>{
-      if(o.outras)return `<button type="button" class="rdOpt rdOut" data-outras="1" style="--c:#94a3b8" aria-label="outras categorias"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Outras</span></button>`;
-      const on=o.c===cur,cor=corCat(o.c);
-      return `<button type="button" class="rdOpt${on?' on':''}" role="radio" aria-checked="${on}" data-c="${esc(o.c)}" style="--c:${cor}" aria-label="${esc(o.c)}">${I(catIcon(o.c))}<span>${esc(o.c)}</span></button>`;}).join('');
-    rCat.textContent=cur||'escolha a categoria';R.querySelector('.rdCenIc').innerHTML=I(cur?catIcon(cur):'wallet');cen.style.setProperty('--c',cur?corCat(cur):'var(--mut)');pintaSub();};
+    opts.innerHTML=lista.slice(0,6).map(c=>{const on=c===cur;return `<button type="button" class="rdOpt${on?' on':''}" role="radio" aria-checked="${on}" data-c="${esc(c)}" style="--c:${corCat(c)}"><span class="rdOi">${I(catIcon(c))}</span><span>${esc(c)}</span></button>`;}).join('');
+    icC.innerHTML=I(cur?catIcon(cur):'tag');icC.style.setProperty('--c',cur?corCat(cur):'#94a3b8');pintaD();};
   R.querySelector('.rdSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.t===selT.value)return;selT.value=b.dataset.t;selT.dispatchEvent(new Event('change',{bubbles:true}));};
-  opts.onclick=e=>{const b=e.target.closest('.rdOpt');if(!b)return;
-    if(b.dataset.outras){abreMais(true);setTimeout(()=>{try{selC.focus();selC.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}},30);return;}
-    selC.value=b.dataset.c;selC.dispatchEvent(new Event('change',{bubbles:true}));};
-  cen.onclick=e=>{if(e.target!==inV)inV.focus();};
+  opts.onclick=e=>{const b=e.target.closest('.rdOpt');if(!b)return;selC.value=b.dataset.c;selC.dispatchEvent(new Event('change',{bubbles:true}));};
+  R.querySelector('.rdCen').onclick=e=>{if(e.target!==inV)inV.focus();};
   [selT,selC].forEach(el=>el.addEventListener('change',()=>setTimeout(pinta,0)));
-  selF.addEventListener('change',pintaSub);if(inD){inD.addEventListener('change',pintaSub);inD.addEventListener('input',pintaSub);}
-  /* a sugestão de categoria pela descrição muda o select sem evento: acompanha */
-  lDs.querySelector('input').addEventListener('input',()=>setTimeout(()=>{if(rCat.textContent!==selC.value)pinta();},0));
-  /* se o envio achar erro num campo escondido, abre as opções para mostrar */
+  if(inD){inD.addEventListener('change',pintaD);inD.addEventListener('input',pintaD);}
+  inDs.addEventListener('input',()=>setTimeout(pinta,0));
   sub.addEventListener('click',()=>setTimeout(()=>{if(mais.querySelector('label.bad'))abreMais(true);},0));
   pinta();
 }
