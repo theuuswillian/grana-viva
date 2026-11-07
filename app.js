@@ -6486,7 +6486,7 @@ function novoTx(id,tipoPre,base){
      const sg=sugereReceb(w,selC.value,inDesc.value,t&&t.id);
      if(pode){if(sg){inD.value=sg.data;auto=true;}else{inD.value='';auto=true;}pintaS();}
      tDica.hidden=false;
-     tDica.innerHTML=sg?`${I('star')}<span>${pode?'Recebo em sugerido':'sugestão'}: <b>${fmtDataCurta(sg.data)}</b> · ${sugTxt(sg)} de ${esc(selC.value)} (${fmtDataCurta(sg.ref.data)})</span>`:`${I('calendar')}<span>${pode||!inD.value?'sem recebimento anterior de '+esc(selC.value)+' para comparar: informe abaixo quando vai cair':'confira abaixo quando vai cair'}</span>`;
+     tDica.innerHTML=sg?`${I('star')}<span>${pode?'Recebo em sugerido':'sugestão'}: <b>${fmtDataCurta(sg.data)}</b> · ${sugTxt(sg)} de ${esc(selC.value)} (${fmtDataCurta(sg.ref.data)})</span>`:`${I('calendar')}<span>${pode||!inD.value?'sem recebimento anterior de '+esc(selC.value)+' para comparar: informe em Data quando vai cair':'confira em Data quando vai cair'}</span>`;
      pintaT();};
    tLink.onclick=()=>{abriu=true;pintaT();try{inT.focus();}catch(e){}};
    inT.addEventListener('change',sugT);inT.addEventListener('input',sugT);
@@ -6545,7 +6545,8 @@ function rodaInit(mf,selT,selC,selF,listaDo,ia){
   bM.onclick=()=>abreMais(mais.hidden);
   const opts=R.querySelector('.rdOpts'),icC=R.querySelector('.rdRC .rdIcC'),dc=R.querySelector('.rdDc');
   const ontem=()=>{const d=new Date(hojeISO()+'T12:00:00');d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);};
-  const pintaD=()=>{if(!inD)return;const v=inD.value,h=hojeISO(),o=ontem(),k=v===h?'0':v===o?'1':'x';
+  const kD=R.querySelector('.rdRD .rdK');
+  const pintaD=()=>{if(!inD)return;if(wD&&wD.firstChild&&wD.firstChild.nodeType===3)kD.textContent=wD.firstChild.nodeValue.trim()||'Data';const v=inD.value,h=hojeISO(),o=ontem(),k=v===h?'0':v===o?'1':'x';
     dc.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.d===k));dc.classList.toggle('outra',k==='x');};
   dc.onclick=e=>{const b=e.target.closest('button');if(!b||!inD)return;
     if(b.dataset.d==='x'){dc.classList.add('outra');dc.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));try{inD.showPicker?inD.showPicker():inD.focus();}catch(_){inD.focus();}return;}
