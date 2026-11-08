@@ -10,7 +10,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
-import { leLancamento, CATS_PADRAO, type Lanc } from "../_shared/ia-lancamento.ts";
+import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -67,31 +67,81 @@ async function vincula(tel: string, codigo: string) {
   await texto(tel, "Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
 }
 
-async function leTexto(tel: string, uid: string, msg: string) {
+type Entrada = { texto: string; midia: Midia | null };
+async function leMsg(tel: string, uid: string, e: Entrada) {
   let ef: any;
   try { const { data } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle(); ef = GVP.efetivo(data); }
-  catch (e) { await registraErro(sb, FN, "plano", e); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
+  catch (er) { await registraErro(sb, FN, "plano", er); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
   const lim = GVP.limite(ef.nivel, "leitura_ia_dia");
   if (!GVP.pode(ef.nivel, "leitura_ia") || lim <= 0) { await texto(tel, "Lançar pelo WhatsApp faz parte dos planos Plus e Pro. Você pode assinar pelo app, em Planos."); return; }
   const hoje = hojeBR();
   const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: hoje, p_k: "leitura", p_lim: lim });
   if (ue) { await registraErro(sb, FN, "limite", ue); await texto(tel, "Não consegui conferir seu limite agora. Tente de novo em instantes."); return; }
   if (!ok) { await texto(tel, `Você chegou ao limite de ${lim} leituras por dia. Amanhã libera de novo, ou lance pelo app.`); return; }
-  const { data: st } = await sb.from("settings").select("data").eq("user_id", uid).maybeSingle();
+  const [{ data: st }, { data: kc }, { data: bc }] = await Promise.all([
+    sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
+    sb.from("cartoes").select("data").eq("user_id", uid), sb.from("bancos").select("data").eq("user_id", uid)]);
   const cats: string[] = Array.isArray(st?.data?.cats) && st.data.cats.length ? st.data.cats.map(String) : CATS_PADRAO;
-  const r = await leLancamento(msg, cats, hoje);
+  const nomes = [...(kc || []), ...(bc || [])].filter((x: any) => x?.data?.nome && !x.data.arq).map((x: any) => String(x.data.nome).slice(0, 40)).slice(0, 30);
+  const r = await leMensagem(e.texto, e.midia, cats, nomes, hoje);
   if (!r.ok) { await registraErro(sb, FN, "ia", r.erro); await texto(tel, "Não consegui ler agora (" + r.erro + "). Tente de novo em 1 minuto."); return; }
-  const l = r.l;
-  if (!(l.valor > 0) || l.confianca < 0.3) { await texto(tel, "Não entendi o valor. 🤔\n\n" + AJUDA); return; }
+  const L = r.r;
+  if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta); return; }
+  if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await texto(tel, (e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
   const pid = novoId();
   await sb.from("wa_pendente").delete().eq("user_id", uid).lt("criado_em", new Date(Date.now() - 24 * 3600e3).toISOString());
-  const { error: pe } = await sb.from("wa_pendente").insert({ id: pid, user_id: uid, telefone: tel, lanc: l });
+  const { error: pe } = await sb.from("wa_pendente").insert({ id: pid, user_id: uid, telefone: tel, lanc: { itens: L.itens } });
   if (pe) { await registraErro(sb, FN, "pendente", pe); await texto(tel, "Não consegui guardar agora. Tente de novo em instantes."); return; }
-  const forma = { pix: "Pix", cartao: "cartão", dinheiro: "dinheiro", boleto: "boleto" }[l.forma] || l.forma;
-  const corpo = `${l.tipo === "receita" ? "Receita" : "Despesa"} de *${brl(l.valor)}*\n${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n${dataBR(l.data, hoje)} · ${forma}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "\n🔁 Conta fixa: repete todo dia " + parseInt(l.data.slice(8, 10), 10) + " no app" : ""}`;
-  await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo }, action: { buttons: [
-    { type: "reply", reply: { id: "ok:" + pid, title: "Salvar" } },
+  const FM: Record<string, string> = { pix: "Pix", cartao: "cartão", dinheiro: "dinheiro", boleto: "boleto" };
+  const linha = (l: Item) => {
+    const pag = [l.forma ? FM[l.forma] : (l.pagoCom ? "" : "Pix"), l.pagoCom].filter(Boolean).join(" ");
+    return `${l.tipo === "receita" ? "➕" : "➖"} *${brl(l.valor)}* · ${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n   ${dataBR(l.data, hoje)}${pag ? " · " + pag : ""}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "\n   🔁 conta fixa, todo dia " + parseInt(l.data.slice(8, 10), 10) : ""}`;
+  };
+  const n = L.itens.length, tot = L.itens.reduce((a, l) => a + (l.tipo === "receita" ? 0 : l.valor), 0);
+  const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}\n\n` : "") + L.itens.map(linha).join("\n\n");
+  await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo.slice(0, 1000) }, action: { buttons: [
+    { type: "reply", reply: { id: "ok:" + pid, title: n > 1 ? "Salvar todos" : "Salvar" } },
     { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } });
+}
+
+async function responde(tel: string, uid: string, p: Pergunta) {
+  const { data: rows, error } = await sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", p.de).lte("data->>data", p.ate).limit(5000);
+  if (error) { await registraErro(sb, FN, "pergunta", error); await texto(tel, "Não consegui consultar agora. Tente de novo em instantes."); return; }
+  const txs = (rows || []).map((x: any) => x.data || {}).filter((t: any) => t.status !== "previsto" && !t.faturaKey && (t.tipo === "despesa" || t.tipo === "receita"));
+  const casa = (t: any) => (!p.categoria || t.categoria === p.categoria) && (!p.busca || String(t.descricao || "").toLowerCase().includes(p.busca));
+  const soma = (tp: string) => txs.filter((t: any) => t.tipo === tp && casa(t)).reduce((a: number, t: any) => a + (Number(t.valor) || 0), 0);
+  const h = hojeBR();
+  const per = p.rotulo || (p.de === p.ate ? "em " + dataBR(p.de, h) : `de ${dataBR(p.de, h)} a ${dataBR(p.ate, h)}`);
+  const filtro = [p.categoria, p.busca ? `"${p.busca}"` : ""].filter(Boolean).join(" · ");
+  let msg: string;
+  if (p.tipo === "saldo") {
+    const r = soma("receita"), d = soma("despesa");
+    msg = `${per[0].toUpperCase() + per.slice(1)}: entrou ${brl(r)} e saiu ${brl(d)}. Saldo ${r - d < 0 ? "−" : ""}*${brl(Math.abs(r - d))}*.`;
+  } else {
+    const v = soma(p.tipo), qt = txs.filter((t: any) => t.tipo === p.tipo && casa(t)).length;
+    msg = `${p.tipo === "receita" ? "Você recebeu" : "Você gastou"} *${brl(v)}*${filtro ? " com " + filtro : ""} ${per} (${qt} lançamento${qt === 1 ? "" : "s"}).`;
+    if (!filtro && p.tipo === "despesa" && v > 0) {
+      const pc: Record<string, number> = {};
+      for (const t of txs) if (t.tipo === "despesa") pc[t.categoria || "Outros"] = (pc[t.categoria || "Outros"] || 0) + (Number(t.valor) || 0);
+      msg += "\n\nOnde mais foi:\n" + Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, x]) => `• ${c}: ${brl(x)}`).join("\n");
+    }
+  }
+  await texto(tel, msg);
+}
+
+async function baixaMidia(id: string): Promise<Midia | null> {
+  const tok = Deno.env.get("WA_TOKEN");
+  if (!tok || !/^[0-9]{5,30}$/.test(id)) return null;
+  try {
+    const m = await fetch(`${GRAPH}/${id}`, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(10000) }).then((r) => r.json());
+    if (!m?.url || (m.file_size && m.file_size > 8e6)) return null;
+    const r = await fetch(m.url, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) return null;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length > 8e6) return null;
+    let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    return { mime: String(m.mime_type || "").split(";")[0] || "image/jpeg", b64: btoa(bin) };
+  } catch (e) { await registraErro(sb, FN, "midia", e); return null; }
 }
 
 async function botao(tel: string, uid: string, bid: string) {
@@ -102,11 +152,19 @@ async function botao(tel: string, uid: string, bid: string) {
   const p = pd?.[0];
   if (!p) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (m[1] === "no") { await texto(tel, "Cancelado. Nada foi salvo."); return; }
-  const l = p.lanc as Lanc, id = novoId();
-  const data = { id, tipo: l.tipo, valor: l.valor, categoria: l.categoria, descricao: l.descricao, sub: "", tags: ["whatsapp"], obs: "", data: l.data, cartao: "", forma: l.forma, conta: "", pagoCom: "", status: "pago", multa: 0, juros: 0, desconto: 0 };
-  if (l.recorrente && !(l.parcelas > 1)) (data as any).waFixa = 1; // v10.153: o app transforma em conta fixa mensal na próxima sincronização
-  const { error } = await sb.from("tx").insert({ user_id: uid, id, data, updated_at: new Date().toISOString() });
+  const itens: any[] = Array.isArray(p.lanc?.itens) ? p.lanc.itens : [p.lanc];
+  const agora = new Date().toISOString(), base = novoId();
+  const linhas = itens.map((l: any, k: number) => {
+    const id = itens.length > 1 ? base + k : base;
+    const data: any = { id, tipo: l.tipo, valor: l.valor, categoria: l.categoria, descricao: l.descricao, sub: "", tags: ["whatsapp"], obs: "", data: l.data, cartao: "", forma: l.forma || (l.pagoCom ? "" : "pix"), conta: "", pagoCom: "", status: "pago", multa: 0, juros: 0, desconto: 0 };
+    if (l.pagoCom) data.waPago = l.pagoCom; // v10.154: o app acha o cartão/banco pelo nome na próxima sincronização
+    if (l.recorrente && !(l.parcelas > 1)) data.waFixa = 1; // v10.153: o app transforma em conta fixa mensal
+    return { user_id: uid, id, data, updated_at: agora };
+  });
+  const { error } = await sb.from("tx").insert(linhas);
   if (error) { await registraErro(sb, FN, "salvar", error); await texto(tel, "Não consegui salvar agora. Mande de novo em instantes."); return; }
+  if (itens.length > 1) { await texto(tel, `Salvos! ✅ ${itens.length} lançamentos. Aparecem no app na próxima vez que você abrir.`); return; }
+  const l = itens[0];
   await texto(tel, `Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}${l.recorrente && !(l.parcelas > 1) ? ", como conta fixa todo mês" : ""}. Aparece no app na próxima vez que você abrir.`);
 }
 
@@ -123,9 +181,16 @@ async function trata(m: any) {
   if (!v) { await texto(tel, "Olá! Para lançar seus gastos por aqui, abra o GranaViva, vá em Ajustes > WhatsApp e mande o código de 6 dígitos que aparece lá."); return; }
   if (m.type === "interactive" && m.interactive?.type === "button_reply") { await botao(tel, v.user_id, String(m.interactive.button_reply?.id || "")); return; }
   if (m.type === "button") { return; }
-  if (m.type !== "text") { await texto(tel, "Por enquanto eu só leio mensagens de texto. Foto de comprovante e áudio estão chegando.\n\n" + AJUDA); return; }
-  if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|\?)\W*$/i.test(t)) { await texto(tel, AJUDA); return; }
-  await leTexto(tel, v.user_id, t);
+  if (m.type === "image" || m.type === "audio" || (m.type === "document" && /^image\//.test(m.document?.mime_type || ""))) {
+    const md = m.image || m.audio || m.document;
+    if (viaSandbox) { await texto(tel, "Foto e áudio funcionam quando o número oficial do GranaViva estiver ligado. Por enquanto, mande por texto. 🙂"); return; }
+    const midia = await baixaMidia(String(md?.id || ""));
+    if (!midia) { await texto(tel, "Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
+    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia }); return;
+  }
+  if (m.type !== "text") { await texto(tel, "Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
+  if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await texto(tel, AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
+  await leMsg(tel, v.user_id, { texto: t, midia: null });
 }
 
 Deno.serve(async (req) => {

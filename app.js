@@ -1435,9 +1435,16 @@ function geraRecorrentes(){
   if(!S.gerados)S.gerados={};
   if(!S.fixas)S.fixas=[];
   if(dedupFixas())mudou=true;
+  /* v10.154: cartão/banco citado no WhatsApp ("uber 18 no nubank") vira o cartão ou a conta cadastrada com esse nome */
+  S.tx.forEach(t=>{if(t.waPago===undefined)return;const n=norm(t.waPago);delete t.waPago;mudou=true;
+    const casa=x=>{const a=norm(x&&x.nome);return !!(a&&n&&(a.includes(n)||n.includes(a)));};
+    const k=t.forma==='pix'||t.forma==='dinheiro'||t.forma==='boleto'?null:(S.cartoes||[]).find(c=>!c.arq&&casa(c));
+    if(k){t.forma='cartao';t.cartao=k.id;return;}
+    const b=(S.bancos||[]).find(casa);
+    if(b){if(!t.forma||t.forma==='cartao')t.forma='pix';t.conta=b.id;}else if(!t.forma)t.forma='pix';});
   /* v10.153: lançamento do WhatsApp marcado como fixo vira conta fixa mensal (id determinístico = sem duplicar entre aparelhos) */
   S.tx.forEach(t=>{if(!t.waFixa)return;delete t.waFixa;mudou=true;const fxId='wa'+t.id;if(S.fixas.some(f=>f.id===fxId)||!ISO_RE.test(t.data||''))return;
-    S.fixas.push({id:fxId,nome:t.descricao||t.categoria||'conta fixa',valor:t.valor,dia:parseInt(t.data.slice(8,10),10)||1,tipo:t.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:t.categoria||'Outros',criadoEm:t.data<hoje?t.data:hoje,forma:t.forma||'pix'});
+    S.fixas.push({id:fxId,nome:t.descricao||t.categoria||'conta fixa',valor:t.valor,dia:parseInt(t.data.slice(8,10),10)||1,tipo:t.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:t.categoria||'Outros',criadoEm:t.data<hoje?t.data:hoje,forma:t.forma||'pix',conta:t.conta||'',cartao:t.cartao||''});
     S.gerados['fx|'+fxId+'|'+t.data.slice(0,7)]=1;});
   /* remove duplicatas de lançamentos automáticos (ex.: gerados em dois aparelhos antes do id determinístico) */
   const vistos=new Set(),antes=S.tx.length;
