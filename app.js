@@ -3981,9 +3981,16 @@ function rdDataHora(iso){const d=new Date(iso);if(isNaN(d))return '';return pad(
 const RD_TL={acao:'Ação',fii:'FII',etf:'ETF',bdr:'BDR',cripto:'Cripto'};
 function rdIco(it){return assetIco(it.t,it.k);}
 /* lista de busca: B3_LIST + ativos da carteira + CRIPTO_LIST */
+/* v10.156: todos os códigos da B3 (função radar-precos {lista:true}), guardados 7 dias. antes a busca só achava os ~50 da B3_LIST */
+let RD_TODOS=null;
+function rdTodos(){if(RD_TODOS)return RD_TODOS;try{const o=JSON.parse(localStorage.getItem('gv-b3-todos')||'null');if(o&&Array.isArray(o.t)&&Date.now()-o.ts<7*864e5)RD_TODOS=o.t.filter(x=>typeof x==='string'&&/^[A-Z0-9]{4}[0-9]{1,2}$/.test(x));}catch(e){}return RD_TODOS||[];}
+let RD_TODOS_P=null;
+function rdTodosBaixa(cb){if(rdTodos().length||RD_TODOS_P||!USER||!navigator.onLine)return;
+  RD_TODOS_P=sb.functions.invoke('radar-precos',{body:{lista:true}}).then(({data:o})=>{if(o&&Array.isArray(o.t)&&o.t.length>100){RD_TODOS=o.t.filter(x=>typeof x==='string'&&/^[A-Z0-9]{4}[0-9]{1,2}$/.test(x));try{localStorage.setItem('gv-b3-todos',JSON.stringify({ts:Date.now(),t:RD_TODOS}));}catch(e){}if(cb)cb();}}).catch(()=>{}).finally(()=>{RD_TODOS_P=null;});}
 function rdCatalogo(){
   const L=B3_LIST.map(x=>({t:x.t,k:x.tipo,n:x.n}));
   (S.fiis||[]).forEach(f=>{const k=tipoOf(f);if(k==='rf'||!f.ticker)return;if(k==='cripto'){return;}if(!L.some(x=>x.t===f.ticker))L.push({t:f.ticker,k,n:f.nome||''});});
+  {const ja=new Set(L.map(x=>x.t));rdTodos().forEach(t=>{if(!ja.has(t))L.push({t,k:rdAdivinha(t),n:''});});}
   CRIPTO_LIST.forEach(x=>L.push({t:x.t,k:'cripto',n:x.n,cg:x.id}));
   return L;
 }
@@ -4022,8 +4029,9 @@ async function radarCota(forca){
     }catch(x){}
   }finally{RD_COT_RODANDO=false;}
   try{localStorage.setItem(RD_Q_KEY,JSON.stringify(RD_Q));}catch(e){}
-  if(TAB==='fii'&&FMODO==='radar'&&!document.querySelector('#modal.on'))render();
+  if(TAB==='fii'&&FMODO==='radar'){if(!document.querySelector('#modal.on'))render();else RD_RENDER_PEND=true;} // v10.156: cotação que chegou com a busca/alertas abertos aparece ao fechar
 }
+var RD_RENDER_PEND=false;
 /* disparos gravados pelo servidor (só leitura; RLS: as próprias linhas) */
 async function radarDisparos(forca){
   if(!USER||!radarL().length||!navigator.onLine)return;
@@ -4166,6 +4174,7 @@ function radarBuscaAbre(){
     sug.innerHTML=extra+L.map(linha).join('')||`<p class="small rrNada">Nada encontrado. Digite o código da B3 (ex.: ${tp==='fii'?'HGLG11':'PETR4'}).</p>`;
   };
   inp.addEventListener('input',pinta);
+  rdTodosBaixa(()=>{if(inp.isConnected)pinta();});
   box.querySelector('.rrTps').addEventListener('click',e=>{const b=e.target.closest('[data-tp]');if(!b)return;tp=b.dataset.tp;box.querySelectorAll('.rrTps button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-checked',on);});pinta();});
   sug.addEventListener('click',e=>{const b=e.target.closest('[data-rs]');if(!b)return;
     const t=b.dataset.rs,k=b.dataset.rk,c=k==='cripto'?CRIPTO_LIST.find(x=>x.t===t):null,bl=B3_LIST.find(x=>x.t===t);
@@ -6505,7 +6514,7 @@ function abreResumo(ym){
   </div>`;
   box.classList.add('on');
 }
-function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;}
+function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(TAB==='fii'&&FMODO==='radar')setTimeout(render,0);}}
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if($('#modal').classList.contains('on')){closeModal();return;}if($('#side').classList.contains('open'))toggleSide(false);}
