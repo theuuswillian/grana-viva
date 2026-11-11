@@ -154,7 +154,7 @@ const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'}
    Aqui o plano só decide o que aparece; os limites de IA são conferidos de novo no servidor.
    Sem conseguir ler o plano (sem rede, primeira vez): usa a última cópia; sem cópia, nada é bloqueado. */
 const TAB_RECURSO={orc:'orcamentos',fii:'investimentos',metas:'metas',pat:'patrimonio',plan:'planejamento',cartoes:'cartoes',rel:'relatorios'};
-const ACT_RECURSO={'ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
+const ACT_RECURSO={'fmodo':'investimentos','rd-busca':'investimentos','rd-alertas':'investimentos','rd-reativa':'investimentos','rd-comprei':'investimentos','rd-add-rapido':'investimentos','alvo-fii':'investimentos','ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
 let PLANO_ROW,PLANO_LIDO=false,PLANO_PAG=null,PLANO_FALHA=false;
 function planoChave(){return 'gv-plano:'+(USER&&USER.id||'');}
 function planoAgora(){if(!PLANO_LIDO||!window.GVP)return null;return GVP.efetivo(PLANO_ROW,Date.now());}
@@ -190,7 +190,7 @@ const REC_TXT={
   importar_extrato:['Importar extrato','Traga o extrato em PDF, OFX ou CSV do seu banco, com categorias sugeridas e sem duplicar.'],
   comprovantes:['Comprovantes','Guarde fotos e PDFs dos comprovantes junto de cada lançamento.'],
   leitura_ia:['Lançar com IA','Tire foto do comprovante ou diga o gasto em uma frase e o lançamento vem preenchido para você conferir.'],
-  investimentos:['Investimentos','FIIs, renda fixa pelo CDI, cotações da B3 e proventos.'],
+  investimentos:['Investimentos','FIIs, renda fixa pelo CDI, cotações da B3, proventos e o Radar com alertas de preço.'],
   patrimonio:['Patrimônio','Seu patrimônio líquido: contas, investimentos e bens menos dívidas, mês a mês.'],
   metas:['Metas','Metas com ritmo mensal, previsão e rendimento pelo CDI.'],
   assistente:['Assistente','Pergunte sobre o seu dinheiro e receba respostas conferidas com os seus lançamentos.']
@@ -204,7 +204,7 @@ const REC_VENDA={
   importar_extrato:{h:'Traga meses de lançamentos em segundos',b:['PDF da fatura ou do extrato, OFX ou CSV','Categorias sugeridas automaticamente','Nada duplicado, mesmo importando de novo'],pv:{n:'Extrato importado',v:'148 lançamentos',rows:[['Categorizados',92,'#4ade80'],['Duplicados ignorados',12,'#94a3b8'],['Para conferir',8,'#f59e0b']]}},
   comprovantes:{h:'Todo comprovante no lugar certo',b:['Foto ou PDF junto de cada lançamento','Ache qualquer recibo em segundos','Guardado com segurança na sua conta'],pv:{n:'Comprovantes guardados',v:'36 este ano',rows:[['Notas fiscais',70,'#60a5fa'],['Pix e transferências',48,'#4ade80'],['Boletos',30,'#f59e0b']]}},
   leitura_ia:{h:'Lance um gasto em 3 segundos',b:['Foto do comprovante vira lançamento','Ou diga: "gastei 32 no almoço"','Você só confere e salva'],pv:{n:'"Uber 23,90 ontem"',v:'Transporte · R$ 23,90',rows:[['Valor e data lidos',100,'#4ade80'],['Categoria sugerida',100,'#60a5fa'],['Pronto para salvar',100,'#a855f7']]}},
-  investimentos:{h:'Seus investimentos e a sua conta numa tela só',b:['FIIs e ações com cotação da B3','Renda fixa calculada pelo CDI','Proventos do mês somados'],pv:{n:'Carteira',v:'R$ 18.420',bar:[40,46,44,55,61,68],lb:['jun','jul','ago','set','out','nov']}},
+  investimentos:{h:'Seus investimentos e a sua conta numa tela só',b:['FIIs e ações com cotação da B3','Radar: alertas de preço no celular','Renda fixa calculada pelo CDI'],pv:{n:'Carteira',v:'R$ 18.420',bar:[40,46,44,55,61,68],lb:['jun','jul','ago','set','out','nov']}},
   patrimonio:{h:'Veja o seu patrimônio crescer mês a mês',b:['Contas, investimentos e bens somados','Dívidas descontadas automaticamente','Gráfico da sua evolução'],pv:{n:'Patrimônio líquido',v:'R$ 47.900',bar:[38,42,47,51,58,66],lb:['jun','jul','ago','set','out','nov']}},
   metas:{h:'Chegue lá mais rápido',b:['Quanto guardar por mês para cada meta','Previsão de quando você chega','Rendimento pelo CDI incluído'],pv:{n:'Viagem · faltam 5 meses',v:'68%',rows:[['Viagem',68,'#4ade80'],['Reserva de emergência',41,'#60a5fa'],['Carro',22,'#f59e0b']]}},
   assistente:{h:'Pergunte qualquer coisa sobre o seu dinheiro',b:['"Quanto gastei com delivery em outubro?"','Respostas conferidas com os seus lançamentos','Dicas para fechar o mês no azul'],pv:{n:'Você perguntou',v:'R$ 412 em delivery',rows:[['Outubro',100,'#f87171'],['Setembro',73,'#94a3b8'],['Média 6 meses',64,'#94a3b8']]}}
@@ -358,6 +358,7 @@ function sanea(d){
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
   o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
   /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
@@ -617,6 +618,12 @@ function agendaSync(ms){clearTimeout(syncT);syncT=setTimeout(enviar,ms==null?700
    com cópia antiga apagava registros criados no primeiro. */
 const SNAP_KEY=()=>'gv-snap-'+(USER?USER.id:'');
 let SNAP=null,syncFalhas=0;
+/* v10.155 (C1): BASE_OK só fica true depois de um baixar() completo (ou quando a cópia deste aparelho abriu: COPIA_LIDA).
+   sem isso, o snapshot antigo do localStorage NUNCA é usado para decidir exclusões na nuvem. */
+let BASE_OK=false;
+/* v10.155 (A1): ids que a trava de exclusão em massa segurou, por tabela. ficam fora de temPendencia (senão o aparelho
+   ficava "pendente" para sempre e nunca mais baixava a nuvem) até a pessoa escolher restaurar ou confirmar a exclusão */
+let SEGURA={},TRAVA_T=null;
 function hashObj(o){const t=JSON.stringify(o);let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return t.length+':'+h;}
 function lerSnap(){try{const x=JSON.parse(localStorage.getItem(SNAP_KEY())||'null');if(x&&typeof x==='object')return x;}catch(e){}return null;}
 function gravaSnap(){try{localStorage.setItem(SNAP_KEY(),JSON.stringify(SNAP));}catch(e){}}
@@ -656,7 +663,7 @@ async function juntaCfgRemoto(){
   setTimeout(()=>{if(!document.querySelector('#modal.on')){try{applyCfg();render();}catch(e){}}},0);
   return true;
 }
-let APAGA_LIBERADO=false,AVISO_MASSA=false;
+let APAGA_LIBERADO=false;
 async function upTabela(tab,arr,uid,ok){
   uid=uid||USER.id;ok=ok||(()=>true);
   const snap=SNAP[tab]||(SNAP[tab]={});
@@ -669,7 +676,7 @@ async function upTabela(tab,arr,uid,ok){
   const tot=Object.keys(snap).length;
   /* v10.116: tabelas pequenas (contas, cartões, investimentos, metas) também: 2 ou mais sumindo de uma vez, acima da metade, ficam seguradas */
   if(!APAGA_LIBERADO&&sair.length>tot*0.5&&(sair.length>=50||(tab!=='tx'&&sair.length>=2))){
-    if(!AVISO_MASSA){AVISO_MASSA=true;toast('Proteção ativada: muitas exclusões de uma vez foram seguradas. Seus dados na nuvem estão intactos.',true);}
+    SEGURA[tab]=sair.slice();travaAgenda(); // v10.155 (A1): baixa a nuvem de volta e pergunta o que fazer
     sair=[];
   }
   for(let i=0;i<mudou.length;i+=500){
@@ -690,8 +697,21 @@ async function enviar(){
   if(!USER||!CR_OK)return;
   if(syncBusy){syncPend=true;return;}
   if(!navigator.onLine){setSync('offline, salvo no aparelho');return;}
-  if(!SNAP)SNAP=lerSnap()||{};
+  /* v10.155 (C1): o snapshot do localStorage só vale com a cópia deste aparelho aberta (COPIA_LIDA) ou depois de um
+     download completo (BASE_OK). antes, um lançamento feito com a tela ainda vazia (cópia sumiu, rede lenta ou
+     download falhou) enviava DELETE de tudo que estava no snapshot antigo. */
+  if(!SNAP&&(COPIA_LIDA||BASE_OK))SNAP=lerSnap()||{};
   syncBusy=true;setSync('sincronizando…');
+  try{
+    /* sem base: baixa a nuvem e junta as edições deste aparelho (só upserts de ids novos/alterados, zero deletes) */
+    if(!SNAP){await baixar({junta:true});if(!SNAP)throw new Error('sem base para sincronizar');}
+  }catch(e){
+    syncBusy=false;syncFalhas++;
+    const espera=Math.min(300,15*Math.pow(2,syncFalhas-1));
+    setSync('pendente, tenta de novo em '+espera+'s');agendaSync(espera*1000);
+    if(syncPend){syncPend=false;}
+    return;
+  }
   /* v10.103: a conta é fixada no começo do envio; se sair ou trocar de conta no meio, o envio para sem gravar nada na outra */
   const uid=USER.id,S0=S,SN0=SNAP,ok=()=>!!USER&&USER.id===uid&&S===S0&&SNAP===SN0;
   try{
@@ -720,21 +740,27 @@ async function enviar(){
 }
 function temPendencia(){
   if(!USER||!SNAP)return false;
-  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set();for(const x of S[t]||[]){const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)))return true;}
+  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set(),seg=new Set(SEGURA[t]||[]);for(const x of S[t]||[]){const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)&&!seg.has(id)))return true;}
   return SNAP.__cfg!==hashObj(cfgNuvem());
 }
-async function baixar(){
+async function baixar(o){
   const q=t=>sb.from(t).select('id,data').eq('user_id',USER.id);
-  const m0=MUDANCAS;
+  const m0=MUDANCAS,uid0=USER.id;
   const [a,b,c,d,e,s]=await Promise.all([q('tx'),q('fiis'),q('metas'),q('cartoes'),q('bancos'),sb.from('settings').select('data,updated_at').eq('user_id',USER.id).maybeSingle()]);
   for(const r of [a,b,c,d,e,s])if(r.error)throw r.error;
-  /* houve edição neste aparelho durante o download: a cópia baixada está velha. descarta e envia o que mudou aqui */
-  if(MUDANCAS!==m0){agendaSync(0);return;}
+  if(!USER||USER.id!==uid0)return; // trocou de conta no meio do download
   const res={tx:a,fiis:b,metas:c,cartoes:d,bancos:e};
   const nuvem={};TABELAS.forEach(t=>{nuvem[t]=res[t].data.map(r=>r.data).filter(Boolean);});
+  /* v10.155 (C1): sem base (a cópia deste aparelho não abriu e nenhum download terminou), o que está na tela são só
+     edições feitas desde a abertura. junta com a nuvem em vez de descartar: a nuvem é a base, as edições daqui entram
+     como upserts (ids novos ou alterados) e nada é apagado. */
+  const semBase=!SNAP&&!COPIA_LIDA&&!BASE_OK;
+  if(semBase&&s.data&&(MUDANCAS!==m0||(o&&o.junta)||TABELAS.some(t=>(S[t]||[]).length))){juntaBase(res,s.data);return 'junta';}
+  /* houve edição neste aparelho durante o download: a cópia baixada está velha. descarta e envia o que mudou aqui */
+  if(MUDANCAS!==m0){agendaSync(0);return;}
   const vazioNuvem=!s.data&&TABELAS.every(t=>!nuvem[t].length);
   if(vazioNuvem){
-    SNAP={};gravaSnap();
+    SNAP={};gravaSnap();BASE_OK=true;
     const temLocal=TABELAS.some(t=>(S[t]||[]).length);
     if(temLocal&&localStorage.getItem(OWNER_KEY)===USER.id){await enviar();return;}
     S=Object.assign(vazio(),{cfg:S.cfg});
@@ -751,7 +777,7 @@ async function baixar(){
       const o=SNAP[t];if(!o)return false;const rows=res[t].data.filter(r=>r.data),n=Object.keys(o).length;
       if(rows.length!==n||(S[t]||[]).length!==n)return false;
       return rows.every(r=>o[String(r.id)]===hashObj(r.data));})){
-    LEGADO=null;setSync('sincronizado');
+    LEGADO=null;BASE_OK=true;setSync('sincronizado');
     try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
     return 'igual';
   }
@@ -763,12 +789,65 @@ async function baixar(){
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
   /* registros que o saneamento corrigiu ficam com hash diferente do que veio da nuvem e são reenviados */
   TABELAS.forEach(t=>{const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});Object.keys(SNAP[t]).forEach(id=>{if(orig[id]!==SNAP[t][id])SNAP[t][id]='x';});});
-  gravaSnap();
+  gravaSnap();BASE_OK=true;
+  /* v10.155 (A1): a nuvem foi a base; ids segurados que voltaram não estão mais "sumidos" */
+  TABELAS.forEach(t=>{if(SEGURA[t]){const ids=new Set(S[t].map(x=>String(x.id)));SEGURA[t]=SEGURA[t].filter(id=>!ids.has(id)&&id in SNAP[t]);if(!SEGURA[t].length)delete SEGURA[t];}});
   try{localStorage.setItem(OWNER_KEY,USER.id);}catch(err){}
   gravaLocal();
   setSync('sincronizado');
   /* v10.68: renda fixa recalcula com o que veio da nuvem */
   try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
+}
+/* v10.155 (C1): junta a nuvem (base) com as edições feitas neste aparelho sem base. nunca gera exclusão. */
+function juntaBase(res,sd){
+  const cfgRem=(sd&&sd.data)||{},loc=S;
+  const nuvem={};TABELAS.forEach(t=>{nuvem[t]=res[t].data.map(r=>r.data).filter(Boolean);});
+  const junta={};
+  TABELAS.forEach(t=>{const m=new Map(nuvem[t].map(x=>[String(x.id),x]));(loc[t]||[]).forEach(x=>{m.set(String(x.id),x);});junta[t]=[...m.values()];});
+  /* ajustes: a nuvem vence; chaves que só existem aqui ficam; listas com id (fixas, empréstimos, bens, passivos) viram união */
+  const cl=cfgNuvem(),cr=Object.assign({},cfgRem);
+  ['fixas','emprestimos','bens','passivos'].forEach(k=>{const r=Array.isArray(cr[k])?cr[k]:[],l=Array.isArray(cl[k])?cl[k]:[];const ids=new Set(r.map(x=>x&&String(x.id)));cr[k]=r.concat(l.filter(x=>x&&x.id!=null&&!ids.has(String(x.id))));});
+  const cfg=Object.assign({},cl.cfg||{},cfgRem.cfg||{});
+  LEGADO=null;
+  S=sanea(Object.assign({},cr,junta,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfg)}));zeraCfgH();
+  /* snapshot = o que está na nuvem; o que veio daqui (novo ou diferente) fica marcado para subir */
+  const remS=sanea(Object.assign({},cfgRem,nuvem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));
+  SNAP={};
+  TABELAS.forEach(t=>{SNAP[t]={};const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});S[t].forEach(x=>{const id=String(x.id);if(id in orig)SNAP[t][id]=orig[id]===hashObj(x)?orig[id]:'x';});});
+  const hr=hashObj({cats:remS.cats,catIcons:remS.catIcons||{},catCores:remS.catCores||{},orc:remS.orc,orcMes:remS.orcMes||{},bens:remS.bens||[],passivos:remS.passivos||[],patHist:remS.patHist||{},cfg:remS.cfg,cfgTs:remS.cfgTs||{},fixas:remS.fixas||[],emprestimos:remS.emprestimos||[],gerados:remS.gerados||{}});
+  SNAP.__cfg=hashObj(cfgNuvem())===hr?hr:'';SNAP.__cfgAt=sd.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());
+  gravaSnap();BASE_OK=true;
+  try{localStorage.setItem(OWNER_KEY,USER.id);}catch(err){}
+  gravaLocal();
+  try{errRegistra('aviso','sincronização sem base: edições locais juntadas à nuvem (sem exclusões)','','');}catch(e){}
+  if(temPendencia())agendaSync(0);else setSync('sincronizado');
+  setTimeout(()=>{if(!document.querySelector('#modal.on')){try{applyCfg();render();}catch(e){}}},0);
+}
+/* v10.155 (A1): a trava segurou exclusões. baixa a nuvem (os dados voltam para este aparelho) e pergunta:
+   "Restaurar da nuvem" (padrão, nada é apagado) ou "Confirmar exclusão de N itens". */
+const TRAVA_NOME={tx:['lançamento','lançamentos'],fiis:['investimento','investimentos'],metas:['meta','metas'],cartoes:['cartão','cartões'],bancos:['conta','contas']};
+function travaAgenda(ms){clearTimeout(TRAVA_T);TRAVA_T=setTimeout(travaResolve,ms==null?400:ms);}
+async function travaResolve(){
+  if(!USER||!Object.keys(SEGURA).length)return;
+  if(syncBusy||document.querySelector('#modal.on')||!navigator.onLine){travaAgenda(1500);return;}
+  const seg=JSON.parse(JSON.stringify(SEGURA));
+  syncBusy=true;setSync('sincronizando…');
+  try{await baixar();}catch(e){syncBusy=false;setSync('pendente, tenta de novo em 15s');travaAgenda(15000);return;}
+  finally{syncBusy=false;if(syncPend){syncPend=false;agendaSync();}}
+  try{applyCfg();render();}catch(e){}
+  SEGURA={};
+  /* só pergunta sobre o que de fato voltou da nuvem (se outro aparelho apagou, não há o que restaurar) */
+  const volt={};let n=0;TABELAS.forEach(t=>{if(!seg[t])return;const ids=new Set(S[t].map(x=>String(x.id)));const v=seg[t].filter(id=>ids.has(id));if(v.length){volt[t]=v;n+=v.length;}});
+  if(!n)return;
+  const partes=TABELAS.filter(t=>volt[t]).map(t=>volt[t].length+' '+TRAVA_NOME[t][volt[t].length>1?1:0]);
+  const lista=partes.length>1?partes.slice(0,-1).join(', ')+' e '+partes[partes.length-1]:partes[0];
+  try{errRegistra('aviso','trava de exclusão em massa segurou '+n+' itens','','');}catch(e){}
+  confirma({titulo:'Protegemos seus dados',texto:lista+' sumiram deste aparelho de uma vez. Para sua segurança, nada foi apagado da nuvem e eles já voltaram para cá. Se você quis mesmo apagar, confirme a exclusão.',
+    ok:'Restaurar da nuvem',alt:'Confirmar exclusão de '+n+' '+(n>1?'itens':'item'),altPerigo:true,semNao:true,
+    altCb:()=>{confirma({titulo:'Apagar '+n+' '+(n>1?'itens':'item')+'?',texto:'Vai apagar '+lista+' deste aparelho e da nuvem, em todos os aparelhos. Não dá para desfazer.',ok:'Apagar',perigo:true},()=>{
+      TABELAS.forEach(t=>{if(volt[t]){const del=new Set(volt[t]);S[t]=S[t].filter(x=>!del.has(String(x.id)));}});
+      APAGA_LIBERADO=true;salvar();render();toast(n+(n>1?' itens apagados':' item apagado'));});},
+    },()=>toast('Tudo certo: seus dados foram restaurados da nuvem'));
 }
 window.addEventListener('online',()=>{if(USER)enviar();});
 /* ao voltar para a aba: envia o que estiver pendente e puxa o que outro aparelho mudou */
@@ -782,6 +861,7 @@ async function puxar(){
     syncBusy=true;setSync('sincronizando…');
     const igual=(await baixar())==='igual';
     const ger=geraRecorrentes();if(ger)salvar();
+    if(radarMigra())salvar(); // v10.155
     if(!igual||ger)render();
   }catch(e){setSync('offline, usando cópia deste aparelho');}
   finally{syncBusy=false;}
@@ -1361,6 +1441,9 @@ const DOW_L=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
 /* datas (ISO) em que a conta fixa acontece entre ini e fim. chaves: mensal fx|id|AAAA-MM (compatível), semanal fx|id|AAAA-MM-DD, anual fx|id|AAAA */
 function ocorrenciasFixa(f,ini,fim){
   if(f.fim&&ISO_RE.test(f.fim)&&f.fim<fim)fim=f.fim;
+  /* v10.155: nada antes da primeira cobrança (antes só a regra por intervalo respeitava f.inicio: mensal, semanal e anual
+     marcavam "vence hoje" no mês atual mesmo com a primeira cobrança no mês seguinte) */
+  if(ISO_RE.test(f.inicio||'')&&f.inicio>ini)ini=f.inicio;
   if(fim<ini)return [];
   const out=[],fr=f.freq||'mensal',cr=f.criadoEm||'';
   const ri=regraIntervalo(f);
@@ -1462,6 +1545,8 @@ function geraRecorrentes(){
       S.tx.push(tx);S.gerados[o.key]=1;mudou=true;
     });
   });
+  /* v10.155: prevista gerada antes da primeira cobrança (bug acima) sai; paga fica */
+  {const n0=S.tx.length;S.tx=S.tx.filter(t=>{if(!t.fixaKey||t.status!=='previsto')return true;const f=S.fixas.find(x=>x.id===t.fixaKey.split('|')[1]);return !(f&&ISO_RE.test(f.inicio||'')&&t.data<f.inicio);});if(S.tx.length!==n0)mudou=true;}
   S.tx.forEach(t=>{
     if(!t.fixaKey||t.status!=='previsto')return;
     const f=S.fixas.find(x=>x.id===t.fixaKey.split('|')[1]);
@@ -1586,7 +1671,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alerta de preço','às 18h30 em dia de pregão, quando o ativo chega no preço']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -2588,6 +2673,7 @@ function irAvisos(){
   if(notifOn('alvoPreco'))(S.fiis||[]).forEach(f=>{if(!(f.alvoP>0)||!(f.preco>0))return;const sob=f.alvoDir!=='abaixo';
     if(sob?f.preco<f.alvoP:f.preco>f.alvoP)return;
     out.push({id:'alvo|'+f.id+'|'+f.alvoDir+'|'+f.alvoP,k:'aviso',h:`${I('up')} <b>${esc(f.ticker)}</b> ${sob?'subiu':'caiu'} para ${brl(f.preco)} · seu alerta era ${sob?'acima':'abaixo'} de ${brl(f.alvoP)} <button class="btn2 sm" data-act="alvo-fii" data-id="${f.id}">ajustar</button>`});});
+  try{if(pode('investimentos'))out.push(...rdAvisos());}catch(e){} // v10.155: Radar
   return out;
 }
 function alvoForm(fid){
@@ -2762,7 +2848,7 @@ function historico(fid){
       <div class="card mini"><small>lucro realizado (vendas)</small><b class="${(f.realizado||0)>=0?'pos':'neg'}">${(f.realizado||0)>=0?'+':''}${brl(f.realizado||0)}</b></div>
       <div class="card mini"><small>proventos recebidos</small><b class="pos">${brl(f.proventos||0)}</b></div>
     </div>
-    <div class="opBtns"><button class="btn" data-act="op-compra" data-id="${f.id}">+ compra</button><button class="btn2" data-act="op-venda" data-id="${f.id}" ${f.cotas>0?'':'disabled'}>venda</button>${cri?'':`<button class="btn2" data-act="op-provento" data-id="${f.id}">provento</button>`}<button class="btn2" data-act="alvo-fii" data-id="${f.id}">${f.alvoP?'alerta '+(f.alvoDir==='abaixo'?'≤ ':'≥ ')+brl(f.alvoP):'alerta de preço'}</button></div>
+    <div class="opBtns"><button class="btn" data-act="op-compra" data-id="${f.id}">+ compra</button><button class="btn2" data-act="op-venda" data-id="${f.id}" ${f.cotas>0?'':'disabled'}>venda</button>${cri?'':`<button class="btn2" data-act="op-provento" data-id="${f.id}">provento</button>`}<button class="btn2" data-act="alvo-fii" data-id="${f.id}">${(()=>{const it=radarL().find(x=>x.t===f.ticker&&(x.k==='cripto')===cri);return it&&it.al.length?'Radar · '+it.al.length+(it.al.length>1?' alertas':' alerta'):f.alvoP?'alerta '+(f.alvoDir==='abaixo'?'≤ ':'≥ ')+brl(f.alvoP):'alerta de preço';})()}</button></div>
     <div class="lista opList">${ops.length?ops.map(linha).join(''):'<p class="vazio">nenhuma operação ainda. a posição atual vira a "posição inicial" quando você registrar a primeira.</p>'}</div>
   </div>`;
   box.classList.add('on');
@@ -2936,6 +3022,7 @@ function render(){
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)&&/[?&]gvtest\b/.test(location.search)))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
+  if(!window.__rdOk&&USER&&/[?&]radar=1/.test(location.search)){window.__rdOk=1;history.replaceState(null,'',location.pathname);FMODO='radar';try{localStorage.setItem('gv-fmodo','radar');}catch(e){}setTimeout(()=>go('fii'),200);} // v10.155: push do Radar
   const v=$('#view');
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
   if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
@@ -2991,7 +3078,7 @@ const AFTER={
     if(bc)drawBars(bc,1);if(dc)drawDonut(dc,1);
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
   },
-  fii:()=>{updCountdown();},
+  fii:()=>{updCountdown();if(FMODO==='radar')radarAtualiza(false);},
   rel:()=>{const c=$('#cRel'),d=$('#cRelDia');if(c||d)animar(800,p=>{if(c)drawRel(c,p);if(d)drawRelDia(d,p);});const ps=$('#rsPills');if(ps){const on=ps.querySelector('.on');if(on)ps.scrollLeft=on.offsetLeft-ps.clientWidth/2+on.clientWidth/2;}}
 };
 
@@ -3751,6 +3838,13 @@ function rpAtualiza(){
 }
 function pctAloc(x){if(!(x>0))return '0%';if(x<1)return x<0.1?'<0,1%':num(x).replace(/0$/,'').replace(/,$/,'')+'%';return Math.round(x)+'%';}
 function viewFii(){
+  /* v10.155: Carteira | Radar */
+  const nR=radarL().length;
+  const modo=`<div class="seg rrModo" role="tablist" aria-label="Investimentos"><button type="button" role="tab" data-act="fmodo" data-id="carteira" class="${FMODO==='radar'?'':'on'}" aria-selected="${FMODO!=='radar'}">Carteira</button><button type="button" role="tab" data-act="fmodo" data-id="radar" class="${FMODO==='radar'?'on':''}" aria-selected="${FMODO==='radar'}">Radar${nR?`<span class="rrModoN">${nR}</span>`:''}</button></div>`;
+  if(FMODO==='radar')return `<div class="head fiiHead"><h2>Investimentos</h2></div>${modo}${viewRadar()}`;
+  return viewFiiCarteira(modo);
+}
+function viewFiiCarteira(modo){
   const pat=patrimonio(),dm=divMensal();
   const patFii=S.fiis.reduce((a,f)=>a+(tipoOf(f)==='fii'?f.cotas*f.preco:0),0);
   const yld=patFii?dm/patFii*100:0;
@@ -3806,6 +3900,7 @@ function viewFii(){
   const cotAuto=COT.st==='auto';
   return `
   <div class="head fiiHead"><h2>Investimentos</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
+  ${modo}
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
     <div class="wTot">${brl(pat)}</div>
@@ -3826,6 +3921,352 @@ function viewFii(){
   ${al.length>1||FTAB!=='todos'?tabs:''}
   <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>`;
 }
+
+/* ---------- v10.155: Radar (Investimentos) ----------
+   Acompanhar ativos sem ter: ações, FIIs, ETFs, BDRs (B3) e cripto, com até 3 alertas cada (acima de R$ X, abaixo de R$ X,
+   queda de X% no dia). Fica em S.cfg.radar (sincroniza chave a chave pelos ajustes, cfgTs). Formato de cada item:
+     {t:'PETR4', k:'acao'|'fii'|'etf'|'bdr'|'cripto', cg:'bitcoin' (só cripto), n:'Petrobras PN', em:'AAAA-MM-DD',
+      al:[{id:'a1', tp:'acima'|'abaixo'|'queda', v:40.5, g:<geração>, leg:'alvo|<fii>|<dir>|<preço>' (migrado)}]}
+   Disparo: o servidor (função radar-precos, pg_cron) confere e grava em radar_disparos (chave 'r|b|PETR4|a1|g'); todos os
+   aparelhos leem de lá e mostram "atingido em". Cada alerta dispara uma vez; "Reativar" (ou editar) troca a geração g.
+   Cotações dos cartões (preço, variação do dia, 30 dias) vêm da mesma função, com o login da pessoa. */
+const RD_MAX=30,RD_AL=3,RD_TIPOS=['acao','fii','etf','bdr','cripto'];
+/* sem CRIPTO_LIST/B3_LIST aqui: sanea roda antes delas existirem (carregar() no começo do arquivo) */
+function radarSaneia(r){
+  if(!Array.isArray(r))return [];
+  const out=[],vistos=new Set();
+  for(const x of r){
+    if(out.length>=RD_MAX)break;
+    if(!x||typeof x!=='object')continue;
+    const k=RD_TIPOS.includes(x.k)?x.k:'',t=String(x.t||'').toUpperCase().trim(),cri=k==='cripto';
+    if(!k||(cri?!/^[A-Z0-9]{2,10}$/.test(t):!/^[A-Z0-9]{4,7}$/.test(t)))continue;
+    const cg=cri?String(x.cg||''):'';if(cri&&!/^[a-z0-9-]{2,60}$/.test(cg))continue;
+    const kk=(cri?'c|':'b|')+t;if(vistos.has(kk))continue;vistos.add(kk);
+    const al=[],ids=new Set();
+    (Array.isArray(x.al)?x.al:[]).forEach(a=>{
+      if(al.length>=RD_AL||!a||typeof a!=='object')return;
+      const tp=['acima','abaixo','queda'].includes(a.tp)?a.tp:'',v=Number(a.v),id=String(a.id||''),g=Math.floor(Number(a.g));
+      if(!tp||!(v>0)||!isFinite(v)||(tp==='queda'&&v>=100)||!/^[a-z0-9]{1,12}$/.test(id)||ids.has(id)||!(g>=0)||!isFinite(g))return;
+      ids.add(id);
+      const o={id,tp,v:tp==='queda'?Math.round(v*100)/100:Math.round(v*1e8)/1e8,g};
+      if(typeof a.leg==='string'&&/^alvo\|[\w-]{1,40}\|(acima|abaixo)\|[\d.]{1,16}$/.test(a.leg))o.leg=a.leg;
+      al.push(o);
+    });
+    const it={t,k,n:String(x.n==null?'':x.n).replace(/[\u0000-\u001f]/g,'').slice(0,60),em:/^\d{4}-\d{2}-\d{2}$/.test(String(x.em||''))?x.em:'',al};
+    if(cri)it.cg=cg;
+    out.push(it);
+  }
+  return out;
+}
+let FMODO=(()=>{try{return localStorage.getItem('gv-fmodo')==='radar'?'radar':'carteira';}catch(e){return 'carteira';}})();
+const RD_Q_KEY='gv-radar-q';
+let RD_Q=(()=>{try{const c=JSON.parse(localStorage.getItem(RD_Q_KEY)||'null');return c&&c.q?c:{ts:0,q:{}};}catch(e){return {ts:0,q:{}};}})();
+let RD_D={uid:'',ts:0,d:{}},RD_COT_RODANDO=false,RD_ST='';
+const radarL=()=>Array.isArray(S.cfg.radar)?S.cfg.radar:[];
+const rdCri=it=>it.k==='cripto';
+const rdQKey=it=>rdCri(it)?'c:'+it.cg:it.t;
+const rdChave=(it,a)=>'r|'+(rdCri(it)?'c':'b')+'|'+it.t+'|'+a.id+'|'+a.g;
+function rdId(){return Math.random().toString(36).slice(2,8);}
+function rdQ(it){const q=RD_Q.q[rdQKey(it)];if(q&&q.p>0)return q;
+  /* reserva: preço que o app já tem (ativo da carteira ou cache do CoinGecko) */
+  if(rdCri(it)){const p=cgCache().p[it.cg];return p>0?{p,varPct:null}:null;}
+  const f=(S.fiis||[]).find(x=>x.ticker===it.t&&x.preco>0&&tipoOf(x)!=='cripto');
+  return f?{p:f.preco,varPct:f.ant>0?(f.preco-f.ant)/f.ant*100:null}:null;}
+function rdDisp(it,a){return RD_D.uid===(USER&&USER.id)?RD_D.d[rdChave(it,a)]||null:null;}
+const rdPreco=p=>!(p>0)?'—':OCULTO?'R$ •••':p>=1?brl(p):'R$ '+Number(p).toLocaleString('pt-BR',{maximumSignificantDigits:4});
+const rdPct=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+const rdNumTxt=v=>Number(v).toLocaleString('pt-BR',{maximumFractionDigits:v<1?8:2});
+const rdValTxt=(v,tp)=>tp==='queda'?rdNumTxt(v):v>=1?Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):rdNumTxt(v);
+function rdDataHora(iso){const d=new Date(iso);if(isNaN(d))return '';return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+const RD_TL={acao:'Ação',fii:'FII',etf:'ETF',bdr:'BDR',cripto:'Cripto'};
+function rdIco(it){return assetIco(it.t,it.k);}
+/* lista de busca: B3_LIST + ativos da carteira + CRIPTO_LIST */
+function rdCatalogo(){
+  const L=B3_LIST.map(x=>({t:x.t,k:x.tipo,n:x.n}));
+  (S.fiis||[]).forEach(f=>{const k=tipoOf(f);if(k==='rf'||!f.ticker)return;if(k==='cripto'){return;}if(!L.some(x=>x.t===f.ticker))L.push({t:f.ticker,k,n:f.nome||''});});
+  CRIPTO_LIST.forEach(x=>L.push({t:x.t,k:'cripto',n:x.n,cg:x.id}));
+  return L;
+}
+/* tipo provável de um ticker digitado que não está na lista */
+function rdAdivinha(t){if(/^[A-Z]{4}3[2-5]$/.test(t))return 'bdr';if(/^[A-Z]{4}11$/.test(t))return 'fii';return 'acao';}
+function rdBusca(q,tp){
+  q=norm(q).toUpperCase();const L=rdCatalogo().filter(x=>!tp||tp==='todos'||x.k===tp);
+  if(!q)return L.slice(0,40);
+  const comeca=[],contem=[];
+  L.forEach(x=>{const nm=norm(x.n).toUpperCase();if(x.t.startsWith(q))comeca.push(x);else if(x.t.includes(q)||nm.includes(q))contem.push(x);});
+  return comeca.concat(contem).slice(0,30);
+}
+/* ---------- cotações e disparos ---------- */
+async function radarCota(forca){
+  const L=radarL();if(!L.length||RD_COT_RODANDO||!USER||!navigator.onLine)return;
+  const temB3=L.some(x=>!rdCri(x)),falta=L.some(x=>!RD_Q.q[rdQKey(x)]);
+  const idade=Date.now()-RD_Q.ts,lim=temB3&&b3Aberta()?55e3:5*60e3;
+  if(!forca&&!falta&&idade<lim)return;
+  RD_COT_RODANDO=true;
+  try{
+    const {data:o,error}=await sb.functions.invoke('radar-precos',{body:{cotar:L.map(x=>({t:x.t,k:x.k,cg:x.cg}))}});
+    if(error||!o||!o.q)throw error||new Error('sem cotações');
+    const q=Object.assign({},RD_Q.q);
+    Object.entries(o.q).forEach(([k,v])=>{if(v&&Number(v.p)>0)q[k]={p:+v.p,varPct:v.varPct==null||!isFinite(+v.varPct)?null:+v.varPct,serie:Array.isArray(v.serie)?v.serie.map(Number).filter(n=>n>0).slice(-31):(q[k]&&q[k].serie)||null,t:v.t||o.em||null};});
+    RD_Q={ts:Date.now(),q};RD_ST='ok';
+  }catch(e){
+    /* reserva: B3 pela função cotacoes (sem histórico), cripto pelo CoinGecko do app */
+    RD_ST='reserva';
+    try{
+      const b3=[...new Set(L.filter(x=>!rdCri(x)).map(x=>x.t))];
+      if(b3.length){const {data:o}=await sb.functions.invoke('cotacoes',{body:{tickers:b3}});
+        if(o&&o.q)Object.entries(o.q).forEach(([k,v])=>{if(v&&v.p>0)RD_Q.q[k]=Object.assign({},RD_Q.q[k]||{},{p:+v.p,varPct:v.varPct==null?null:+v.varPct,t:v.t||null});});}
+      const cg=[...new Set(L.filter(rdCri).map(x=>x.cg))];
+      if(cg.length){const p=await cgPrecos(cg,false);cg.forEach(id=>{if(p[id]>0)RD_Q.q['c:'+id]=Object.assign({},RD_Q.q['c:'+id]||{},{p:p[id]});});}
+      RD_Q.ts=Date.now();
+    }catch(x){}
+  }finally{RD_COT_RODANDO=false;}
+  try{localStorage.setItem(RD_Q_KEY,JSON.stringify(RD_Q));}catch(e){}
+  if(TAB==='fii'&&FMODO==='radar'&&!document.querySelector('#modal.on'))render();
+}
+/* disparos gravados pelo servidor (só leitura; RLS: as próprias linhas) */
+async function radarDisparos(forca){
+  if(!USER||!radarL().length||!navigator.onLine)return;
+  if(!forca&&RD_D.uid===USER.id&&Date.now()-RD_D.ts<60e3)return;
+  const uid0=USER.id;
+  try{
+    const {data,error}=await sb.from('radar_disparos').select('chave,em,preco').eq('user_id',uid0).limit(500);
+    if(error||!Array.isArray(data)||!USER||USER.id!==uid0)return;
+    const d={};data.forEach(r=>{if(r&&typeof r.chave==='string')d[r.chave]={em:String(r.em||''),preco:Number(r.preco)||0};});
+    const mudou=JSON.stringify(d)!==JSON.stringify(RD_D.uid===uid0?RD_D.d:{});
+    RD_D={uid:uid0,ts:Date.now(),d};
+    if(mudou){try{atualizaSino();}catch(e){}if(TAB==='fii'&&FMODO==='radar'&&!document.querySelector('#modal.on'))render();}
+  }catch(e){}
+}
+function radarAtualiza(forca){radarCota(forca);radarDisparos(forca);}
+setInterval(()=>{if(TAB==='fii'&&FMODO==='radar'&&document.visibilityState==='visible')radarAtualiza(false);},60000);
+/* ---------- migração do alerta antigo por ativo (fiis.alvoP/alvoDir, v10.111) ---------- */
+function radarMigra(){
+  let mudou=false;
+  (S.fiis||[]).forEach(f=>{
+    if(!(f.alvoP>0))return;
+    const k=tipoOf(f);if(k==='rf')return;
+    const t=String(f.ticker||'').toUpperCase(),cri=k==='cripto';
+    if(cri?!(f.cgId&&/^[A-Z0-9]{2,10}$/.test(t)):!/^[A-Z0-9]{4,7}$/.test(t))return;
+    const dir=f.alvoDir==='abaixo'?'abaixo':'acima',leg='alvo|'+f.id+'|'+dir+'|'+f.alvoP;
+    if(!/^alvo\|[\w-]{1,40}\|(acima|abaixo)\|[\d.]{1,16}$/.test(leg))return;
+    const L=radarL().slice();let it=L.find(x=>x.t===t&&(x.k==='cripto')===cri);
+    if(!it){if(L.length>=RD_MAX)return;it={t,k,n:String(f.nome||'').slice(0,60),em:hojeISO(),al:[]};if(cri)it.cg=f.cgId;L.push(it);}
+    if(!it.al.some(a=>a.leg===leg||(a.tp===dir&&a.v===f.alvoP))){if(it.al.length>=RD_AL)return;it.al=it.al.concat([{id:rdId(),tp:dir,v:f.alvoP,g:Date.now(),leg}]);}
+    S.cfg.radar=radarSaneia(L);delete f.alvoP;delete f.alvoDir;mudou=true;
+  });
+  return mudou;
+}
+/* ---------- desenho ---------- */
+function rdSpark(it,q){
+  const s=q&&Array.isArray(q.serie)?q.serie.filter(n=>n>0):[];
+  if(s.length<3)return `<div class="rrSpk vazio"><small>${q&&q.p>0?'histórico de 30 dias indisponível':'buscando cotação…'}</small></div>`;
+  const W=300,H=56,P=3;
+  const alvos=it.al.filter(a=>a.tp!=='queda'&&!rdDisp(it,a)).map(a=>a.v);
+  let mn=Math.min(...s),mx=Math.max(...s);
+  alvos.forEach(v=>{if(v>=mn*0.8&&v<=mx*1.2){mn=Math.min(mn,v);mx=Math.max(mx,v);}});
+  if(mx-mn<mx*0.004){mx+=mx*0.004||1;mn-=mn*0.004||1;}
+  const x=i=>P+(W-2*P)*i/(s.length-1),y=v=>P+(H-2*P)*(1-(v-mn)/(mx-mn));
+  const d=s.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  const sobe=s[s.length-1]>=s[0],cor=sobe?'var(--rrUp)':'var(--rrDn)',gid='rdg'+it.t+(rdCri(it)?'c':'');
+  const linhas=alvos.filter(v=>v>=mn&&v<=mx).map(v=>`<line x1="${P}" x2="${W-P}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="rrAlvoL"/>`).join('');
+  const var30=(s[s.length-1]-s[0])/s[0]*100;
+  return `<div class="rrSpk" role="img" aria-label="30 dias: ${esc(rdPct(var30))}"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${cor}" stop-opacity=".22"/><stop offset="1" stop-color="${cor}" stop-opacity="0"/></linearGradient></defs>${linhas}<path d="${d} L${x(s.length-1).toFixed(1)} ${H} L${P} ${H}Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${cor}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${x(s.length-1).toFixed(1)}" cy="${y(s[s.length-1]).toFixed(1)}" r="2.6" fill="${cor}"/></svg><span class="rrSpkL"><span>30 dias <b class="${var30>=0?'up':'dn'}">${esc(rdPct(var30))}</b></span>${linhas?'<em><i></i>seus alvos</em>':''}</span></div>`;
+}
+/* "quanto falta" até o alvo mais perto (só alertas ainda não atingidos) */
+function rdRegua(it,q){
+  const ativos=it.al.filter(a=>!rdDisp(it,a));
+  if(!it.al.length)return `<button type="button" class="rrSem" data-act="rd-alertas" data-id="${esc(rdQKey(it))}">${I('bell')}<span>Crie um alerta de preço</span>${I('chevR')}</button>`;
+  if(!ativos.length)return '';
+  if(!q||!(q.p>0))return `<div class="rrReg"><div class="rrRegT"><span>esperando cotação</span></div><div class="rrBar"><i style="width:0"></i></div></div>`;
+  const cand=ativos.map(a=>{
+    if(a.tp==='queda'){const v=q.varPct;if(v==null)return {a,dist:99,fill:0,txt:'queda de '+rdNumTxt(a.v)+'% '+(rdCri(it)?'em 24 h':'no dia'),alvo:'variação indisponível'};
+      const caiu=Math.max(0,-v);return {a,dist:Math.max(0,a.v-caiu),fill:Math.min(1,caiu/a.v),txt:caiu>=a.v?'caiu '+rdNumTxt(a.v)+'% ou mais':'faltam '+rdNumTxt(Math.round((a.v-caiu)*10)/10)+'% de queda',alvo:'alerta em −'+rdNumTxt(a.v)+'%',ok:caiu>=a.v};}
+    const d=(a.v-q.p)/q.p*100,ok=a.tp==='acima'?q.p>=a.v:q.p<=a.v,dist=ok?0:Math.abs(d);
+    return {a,dist,fill:ok?1:Math.max(0.04,1-dist/20),txt:ok?'chegou no alvo':'faltam '+rdNumTxt(Math.round(dist*10)/10)+'%',alvo:(a.tp==='acima'?'↑ ':'↓ ')+rdPreco(a.v),ok};
+  }).sort((x,y)=>x.dist-y.dist);
+  const c=cand[0],quase=!c.ok&&c.dist<=1.5;
+  return `<div class="rrReg${c.ok?' ok':quase?' quase':''}"><div class="rrRegT"><span>${esc(c.txt)}${c.ok?' · confirmando…':''}</span><b>${esc(c.alvo)}</b></div><div class="rrBar" role="progressbar" aria-label="${esc(c.txt)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(c.fill*100)}"><i style="width:${(c.fill*100).toFixed(1)}%"></i></div></div>`;
+}
+function rdAlChip(it,a){
+  const d=rdDisp(it,a),lab=a.tp==='queda'?'queda de '+rdNumTxt(a.v)+'% '+(rdCri(it)?'em 24 h':'no dia'):(a.tp==='acima'?'acima de ':'abaixo de ')+rdPreco(a.v);
+  return `<span class="rrChip${d?' hit':''}">${d?I('check'):I(a.tp==='acima'?'up':'down')}${esc(lab)}</span>`;
+}
+function rdCardHTML(it){
+  const q=rdQ(it),key=rdQKey(it),hits=it.al.filter(a=>rdDisp(it,a));
+  const ult=hits.map(a=>({a,d:rdDisp(it,a)})).sort((x,y)=>String(y.d.em).localeCompare(String(x.d.em)))[0];
+  const tem=(S.fiis||[]).some(f=>f.ticker===it.t&&(tipoOf(f)==='cripto')===rdCri(it));
+  const vp=q&&q.varPct!=null&&isFinite(q.varPct)?q.varPct:null;
+  return `<article class="rrC${hits.length?' temHit':''}" data-rk="${esc(key)}" style="--tc:${TCOR[it.k]||'var(--a1)'}">
+    <div class="rrTop">${rdIco(it)}
+      <div class="rrNm"><b>${esc(it.t)}</b><span class="astTag">${RD_TL[it.k]||''}</span><small>${esc([it.n||'',tem?'na carteira':''].filter(Boolean).join(' · '))}</small></div>
+      <div class="rrPr"><b>${rdPreco(q&&q.p)}</b>${vp==null?'<small class="rrVar z">—</small>':`<small class="rrVar ${vp>=0?'up':'dn'}">${vp>=0?'▲':'▼'} ${esc(rdPct(vp).replace(/^[+−]/,''))}<em>${rdCri(it)?'24 h':'hoje'}</em></small>`}</div>
+    </div>
+    ${rdSpark(it,q)}
+    ${ult?`<div class="rrHit">${I('check')}<span><b>Atingido em ${esc(rdDataHora(ult.d.em))}</b>${ult.d.preco>0?' · '+rdPreco(ult.d.preco):''}<small>${esc(ult.a.tp==='queda'?'queda de '+rdNumTxt(ult.a.v)+'% no dia':(ult.a.tp==='acima'?'acima de ':'abaixo de ')+rdPreco(ult.a.v))}</small></span><button type="button" class="rrReat" data-act="rd-reativa" data-id="${esc(key+'#'+ult.a.id)}">Reativar</button></div>`:''}
+    ${rdRegua(it,q)}
+    ${(L=>L.length?`<div class="rrChips">${L.map(a=>rdAlChip(it,a)).join('')}</div>`:'')(it.al.filter(a=>!ult||a!==ult.a))}
+    <div class="rrFoot"><button type="button" class="rrB" data-act="rd-alertas" data-id="${esc(key)}">${I('bell')}<span>Alertas${it.al.length?' · '+it.al.length:''}</span></button><button type="button" class="rrB" data-act="rd-comprei" data-id="${esc(key)}">${I('plus')}<span>Comprei</span></button><button type="button" class="rrB ic" data-act="rd-remove" data-id="${esc(key)}" aria-label="parar de seguir ${esc(it.t)}" title="parar de seguir">${I('trash')}</button></div>
+  </article>`;
+}
+const RD_RADAR_SVG='<svg class="rrRadarSvg" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="r1"/><circle cx="60" cy="60" r="38" class="r2"/><circle cx="60" cy="60" r="21" class="r3"/><path d="M60 60 L60 6 A54 54 0 0 1 106.8 33z" class="rrSweep"/><circle cx="60" cy="60" r="3.5" class="rc"/><circle cx="84" cy="34" r="4.5" class="p1"/><circle cx="37" cy="78" r="3.5" class="p2"/><circle cx="82" cy="86" r="3" class="p3"/></svg>';
+function viewRadar(){
+  const L=radarL();
+  if(!L.length)return `<section class="rrVazio">
+    ${RD_RADAR_SVG}
+    <h3>Seu radar de oportunidades</h3>
+    <p>Acompanhe ações, FIIs, ETFs, BDRs e cripto que você ainda não tem. Defina o preço que faz sentido pra você e o GranaViva avisa quando chegar.</p>
+    <ul class="rrBen"><li>${I('bell')}<span><b>Alertas no celular</b> acima ou abaixo de um preço, ou queda forte no dia</span></li><li>${I('chart')}<span><b>30 dias num relance</b> preço, variação e quanto falta para o alvo</span></li><li>${I('plus')}<span><b>Comprou?</b> leve para a carteira com um toque</span></li></ul>
+    <button type="button" class="btn rrCta" data-act="rd-busca">${I('search')}<span>Seguir um ativo</span></button>
+    <div class="rrEx"><small>sugestões</small>${['PETR4','MXRF11','IVVB11','BTC'].map(t=>`<button type="button" data-act="rd-add-rapido" data-id="${t}">${t}</button>`).join('')}</div>
+  </section>`;
+  const nAl=L.reduce((a,x)=>a+x.al.filter(y=>!rdDisp(x,y)).length,0),nHit=L.reduce((a,x)=>a+x.al.filter(y=>rdDisp(x,y)).length,0);
+  const temB3=L.some(x=>!rdCri(x));
+  const st=RD_Q.ts?(temB3?(b3Aberta()?'B3 com até 15 min de atraso':'B3 fechada · último preço'):'cripto ao vivo')+' · '+pad(new Date(RD_Q.ts).getHours())+':'+pad(new Date(RD_Q.ts).getMinutes()):'buscando cotações…';
+  return `<div class="rrHead"><div><b>${L.length} ${L.length===1?'ativo':'ativos'}</b><small>${nAl} ${nAl===1?'alerta ativo':'alertas ativos'}${nHit?` · <span class="rrHitN">${nHit} ${nHit===1?'atingido':'atingidos'}</span>`:''}</small></div><button type="button" class="btn2 sm rrAdd" data-act="rd-busca">${I('plus')}<span>Seguir</span></button></div>
+  <button type="button" class="rrSt" data-act="rd-atualiza"><i class="${RD_ST==='reserva'?'res':RD_Q.ts?'on':''}"></i>${esc(st)}<span>${I('cloud')}</span></button>
+  <div class="rrList">${L.map(rdCardHTML).join('')}</div>
+  ${L.length>=RD_MAX?`<p class="small rrLim">Limite de ${RD_MAX} ativos no Radar.</p>`:''}`;
+}
+/* ---------- ações ---------- */
+function rdAcha(key){return radarL().find(x=>rdQKey(x)===key);}
+function rdSalva(L){S.cfg.radar=radarSaneia(L);salvar();}
+function radarAdd(x){
+  const L=radarL().slice();
+  const t=String(x.t||'').toUpperCase();
+  const ex=L.find(i=>i.t===t&&rdCri(i)===(x.k==='cripto'));
+  if(ex)return ex;
+  if(L.length>=RD_MAX){toast('Limite de '+RD_MAX+' ativos no Radar. Remova um para seguir outro.',true);return null;}
+  const it={t,k:x.k,n:String(x.n||'').slice(0,60),em:hojeISO(),al:[]};if(x.k==='cripto')it.cg=x.cg;
+  const s=radarSaneia([it])[0];if(!s){toast('Ticker inválido',true);return null;}
+  L.unshift(s);rdSalva(L);
+  setTimeout(()=>radarCota(true),30);
+  return radarL().find(i=>rdQKey(i)===rdQKey(s));
+}
+function rdModoSet(m){FMODO=m==='radar'?'radar':'carteira';try{localStorage.setItem('gv-fmodo',FMODO);}catch(e){}render();if(FMODO==='radar')radarAtualiza(false);}
+function radarBuscaAbre(){
+  if(!pode('investimentos')){abrePlanos('investimentos');return;}
+  const box=$('#modal');let tp='todos';
+  const TPS=[['todos','Tudo'],['acao','Ações'],['fii','FIIs'],['etf','ETFs'],['bdr','BDRs'],['cripto','Cripto']];
+  box.innerHTML=`<div class="sheet rrSh" role="dialog" aria-modal="true" aria-label="Seguir um ativo"><div class="sh-head"><h3>Seguir um ativo</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <label class="rrBusca"><span aria-hidden="true">${I('search')}</span><input id="rrQ" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ticker ou nome: PETR4, Vale, bitcoin…" aria-label="buscar ativo"></label>
+    <div class="rrTps" role="radiogroup" aria-label="tipo">${TPS.map(([k,l],i)=>`<button type="button" role="radio" data-tp="${k}" class="${i?'':'on'}" aria-checked="${!i}">${l}</button>`).join('')}</div>
+    <div class="rrSug" id="rrSug" role="listbox" aria-label="sugestões"></div>
+    <p class="small rrNota">Cotações da B3 com até 15 min de atraso. Cripto pelo CoinGecko.</p></div>`;
+  box.classList.add('on');
+  const inp=$('#rrQ'),sug=$('#rrSug');
+  const segue=x=>radarL().some(i=>i.t===x.t&&rdCri(i)===(x.k==='cripto'));
+  const linha=x=>{const s=segue(x);return `<div class="rrSugR" role="option" aria-selected="false">${assetIco(x.t,x.k)}<div class="rrSugT"><b>${esc(x.t)}</b><small>${esc(x.n||'')}</small></div><span class="astTag">${RD_TL[x.k]}</span>${s?`<span class="rrJa">${I('check')}<span>seguindo</span></span>`:`<button type="button" class="rrFol" data-rs="${esc(x.t)}" data-rk="${x.k}" aria-label="seguir ${esc(x.t)}">${I('plus')}<span>Seguir</span></button>`}</div>`;};
+  const pinta=()=>{
+    const q=inp.value.trim().toUpperCase().replace(/[^A-Z0-9 À-ÿ.-]/gi,'');
+    const L=rdBusca(q,tp);
+    let extra='';
+    const tk=q.replace(/\s/g,'');
+    if(tp!=='cripto'&&/^[A-Z]{4}[0-9]{1,2}[A-Z]?$/.test(tk)&&!L.some(x=>x.t===tk&&x.k!=='cripto')){const k=tp!=='todos'?tp:rdAdivinha(tk);extra=linha({t:tk,k,n:'código digitado'});}
+    sug.innerHTML=extra+L.map(linha).join('')||`<p class="small rrNada">Nada encontrado. Digite o código da B3 (ex.: ${tp==='fii'?'HGLG11':'PETR4'}).</p>`;
+  };
+  inp.addEventListener('input',pinta);
+  box.querySelector('.rrTps').addEventListener('click',e=>{const b=e.target.closest('[data-tp]');if(!b)return;tp=b.dataset.tp;box.querySelectorAll('.rrTps button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-checked',on);});pinta();});
+  sug.addEventListener('click',e=>{const b=e.target.closest('[data-rs]');if(!b)return;
+    const t=b.dataset.rs,k=b.dataset.rk,c=k==='cripto'?CRIPTO_LIST.find(x=>x.t===t):null,bl=B3_LIST.find(x=>x.t===t);
+    const it=radarAdd({t,k,cg:c&&c.id,n:c?c.n:bl?bl.n:((S.fiis||[]).find(f=>f.ticker===t)||{}).nome||''});
+    if(!it)return;closeModal();render();toast(it.t+' entrou no seu Radar');setTimeout(()=>radarAlertasAbre(rdQKey(it),true),250);});
+  pinta();setTimeout(()=>{try{inp.focus({preventScroll:true});}catch(e){}},80);
+}
+function radarAlertasAbre(key,novo){
+  if(!pode('investimentos')){abrePlanos('investimentos');return;}
+  const it=rdAcha(key);if(!it)return;
+  const q=rdQ(it),p=q&&q.p>0?q.p:0;
+  let A=it.al.map(a=>Object.assign({},a));
+  const box=$('#modal');
+  const sug=[['acima',5],['abaixo',5],['queda',3]];
+  const linha=(a,i)=>{const d=rdDisp(it,a);
+    const ref=p>0&&a.tp!=='queda'&&a.v>0?((a.v-p)/p*100):null;
+    return `<div class="rrAl${d?' hit':''}" data-i="${i}">
+      <div class="rrAlTop"><div class="seg rrAlTp" role="radiogroup" aria-label="tipo do alerta ${i+1}">${[['acima','Acima de'],['abaixo','Abaixo de'],['queda','Queda no dia']].map(([k,l])=>`<button type="button" role="radio" data-tp="${k}" class="${a.tp===k?'on':''}" aria-checked="${a.tp===k}">${l}</button>`).join('')}</div><button type="button" class="rrAlDel" data-del="${i}" aria-label="remover alerta ${i+1}">${I('trash')}</button></div>
+      <label class="rrAlV${a.tp==='queda'?' q':''}">${a.tp==='queda'?'':`<span class="rrUn">R$</span>`}<input inputmode="decimal" data-v="${i}" value="${a.vTxt!=null?esc(a.vTxt):a.v>0?esc(rdValTxt(a.v,a.tp)):''}" placeholder="${a.tp==='queda'?'3':p>0?esc(rdNumTxt(Math.round(p*(a.tp==='acima'?1.05:0.95)*100)/100)):'0,00'}" aria-label="valor do alerta ${i+1}">${a.tp==='queda'?'<span class="rrUn">% de queda</span>':''}</label>
+      <small class="rrAlH">${a.tp==='queda'?(rdCri(it)?'variação nas últimas 24 h':'variação desde o fechamento de ontem'):ref==null?'':(Math.abs(ref)<0.005?'igual ao preço de agora':esc(rdPct(ref))+' do preço de agora')}</small>
+      ${d?`<div class="rrAlHit">${I('check')}<span>Atingido em ${esc(rdDataHora(d.em))}${d.preco>0?' · '+rdPreco(d.preco):''}</span><button type="button" class="rrReat" data-reat="${i}">Reativar</button></div>`:''}
+    </div>`;};
+  const pinta=()=>{
+    box.querySelector('#rrAls').innerHTML=A.length?A.map(linha).join(''):`<p class="small rrAlVz">Nenhum alerta ainda. Escolha um atalho abaixo ou toque em “Adicionar alerta”.</p>`;
+    box.querySelector('#rrAlAdd').hidden=A.length>=RD_AL;
+    box.querySelector('#rrAlSug').hidden=A.length>=RD_AL;
+    box.querySelector('#rrAlN').textContent=A.length+' de '+RD_AL;
+  };
+  const vp=q&&q.varPct!=null?q.varPct:null;
+  box.innerHTML=`<div class="sheet rrSh rrAlSh" role="dialog" aria-modal="true" aria-label="Alertas de ${esc(it.t)}"><div class="sh-head"><h3>Alertas · ${esc(it.t)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <div class="rrAlAt">${rdIco(it)}<div><small>preço agora</small><b>${rdPreco(p)}</b></div>${vp==null?'':`<span class="rrVar ${vp>=0?'up':'dn'}">${vp>=0?'▲':'▼'} ${esc(rdPct(vp).replace(/^[+−]/,''))}<em>${rdCri(it)?'24 h':'hoje'}</em></span>`}</div>
+    <div class="rrAlCab"><span>Seus alertas</span><small id="rrAlN"></small></div>
+    <div id="rrAls"></div>
+    <div class="rrAlSug" id="rrAlSug">${sug.map(([tp,v])=>`<button type="button" data-sg="${tp}|${v}">${tp==='queda'?I('down'):I(tp==='acima'?'up':'down')}<span>${tp==='queda'?'queda de '+v+'% no dia':(tp==='acima'?'+':'−')+v+'% do preço'}</span></button>`).join('')}</div>
+    <button type="button" class="btn2 full rrAlAddB" id="rrAlAdd">${I('plus')}<span>Adicionar alerta</span></button>
+    <p class="small rrAlNota">Cada alerta avisa uma vez. Ações, FIIs, ETFs e BDRs são conferidos a cada 15 min no pregão (cotação com até 15 min de atraso); cripto, de hora em hora.${notifOn('alvoPreco')?'':' <b>As notificações de alerta de preço estão desligadas em Ajustes › Notificações.</b>'}</p>
+    <button type="button" class="btn full" id="rrAlOk">Salvar alertas</button></div>`;
+  box.classList.add('on');
+  const lerV=()=>{box.querySelectorAll('[data-v]').forEach(i=>{const a=A[+i.dataset.v];if(a)a.vTxt=i.value;});};
+  box.querySelector('#rrAls').addEventListener('click',e=>{
+    const tb=e.target.closest('[data-tp]');
+    if(tb){lerV();const i=+tb.closest('.rdAl').dataset.i;if(A[i].tp!==tb.dataset.tp){A[i].tp=tb.dataset.tp;A[i].v=0;A[i].vTxt='';}pinta();return;}
+    const dl=e.target.closest('[data-del]');if(dl){lerV();A.splice(+dl.dataset.del,1);pinta();return;}
+    const re=e.target.closest('[data-reat]');if(re){lerV();const a=A[+re.dataset.reat];a.g=Date.now();a.reat=1;pinta();toast('Alerta reativado: salve para valer');}
+  });
+  box.querySelector('#rrAls').addEventListener('input',e=>{const i=e.target.closest('[data-v]');if(!i)return;const a=A[+i.dataset.v];a.vTxt=i.value;
+    if(a.tp!=='queda'&&p>0){const v=parseBR(i.value),h=i.closest('.rrAl').querySelector('.rrAlH');if(h)h.textContent=v>0?(Math.abs((v-p)/p*100)<0.005?'igual ao preço de agora':rdPct((v-p)/p*100)+' do preço de agora'):'';}});
+  box.querySelector('#rrAlAdd').onclick=()=>{lerV();if(A.length>=RD_AL)return;A.push({id:rdId(),tp:A.some(a=>a.tp==='acima')?'abaixo':'acima',v:0,g:0,novo:1});pinta();const ins=box.querySelectorAll('[data-v]');const l=ins[ins.length-1];if(l)l.focus();};
+  box.querySelector('#rrAlSug').onclick=e=>{const b=e.target.closest('[data-sg]');if(!b)return;lerV();if(A.length>=RD_AL)return;const [tp,v]=b.dataset.sg.split('|');
+    const val=tp==='queda'?+v:p>0?Math.round(p*(tp==='acima'?1+v/100:1-v/100)*(p<1?1e6:100))/(p<1?1e6:100):0;A.push({id:rdId(),tp,v:val,vTxt:val?rdValTxt(val,tp):'',g:0,novo:1});pinta();};
+  box.querySelector('#rrAlOk').onclick=()=>{
+    lerV();const out=[];
+    for(let i=0;i<A.length;i++){const a=A[i];const v=a.vTxt!=null?parseBR(String(a.vTxt)):a.v;
+      if(!(v>0)){toast('Informe o valor do alerta '+(i+1)+'.',true);const el=box.querySelector('[data-v="'+i+'"]');if(el)el.focus();return;}
+      if(a.tp==='queda'&&v>=100){toast('A queda no dia vai de 0,1% a 99%.',true);return;}
+      const orig=it.al.find(x=>x.id===a.id),mudou=!orig||orig.tp!==a.tp||Math.abs(orig.v-v)>1e-9;
+      const o={id:a.id,tp:a.tp,v,g:mudou||a.reat||!(a.g>0)?Date.now()+i:a.g};
+      if(a.leg&&!mudou)o.leg=a.leg; // alerta migrado sem mudança continua com a chave antiga (não avisa de novo)
+      out.push(o);}
+    const L=radarL().map(x=>x===it?Object.assign({},x,{al:out}):x);
+    rdSalva(L);closeModal();render();toast(out.length?'Alertas de '+it.t+' salvos':'Alertas de '+it.t+' removidos');
+  };
+  if(novo&&!A.length&&p>0){A.push({id:rdId(),tp:'acima',v:Math.round(p*1.05*(p<1?1e6:100))/(p<1?1e6:100),g:0,novo:1});A[0].vTxt=rdValTxt(A[0].v,'acima');}
+  pinta();
+}
+function rdReativa(arg){
+  const [key,id]=String(arg||'').split('#');const it=rdAcha(key);if(!it)return;
+  const L=radarL().map(x=>x===it?Object.assign({},x,{al:x.al.map(a=>a.id===id?Object.assign({},a,{g:Date.now()}):a)}):x);
+  rdSalva(L);render();toast('Alerta reativado: avisa de novo quando chegar no preço');
+}
+function rdRemove(key){
+  const it=rdAcha(key);if(!it)return;
+  confirma({titulo:'Parar de seguir '+it.t+'?',texto:it.al.length?'Os '+it.al.length+(it.al.length>1?' alertas':' alerta')+' deste ativo também saem do Radar.':'O ativo sai do seu Radar.',ok:'Parar de seguir',perigo:true},()=>{rdSalva(radarL().filter(x=>x!==it));render();toast(it.t+' saiu do Radar');});
+}
+/* "Comprei": já tem o ativo -> registra a compra no histórico; não tem -> abre o cadastro do ativo já preenchido */
+function rdComprei(key){
+  const it=rdAcha(key);if(!it)return;
+  const f=(S.fiis||[]).find(x=>x.ticker===it.t&&(tipoOf(x)==='cripto')===rdCri(it)&&tipoOf(x)!=='rf');
+  if(f){opForm(f.id,'compra');return;}
+  fiiForm(null,it.k);
+  const mf=$('#mf');if(!mf)return;
+  const inp=mf.querySelector('input[name="ticker"]');if(inp){inp.value=it.t;inp.dispatchEvent(new Event('change',{bubbles:true}));}
+  const q=rdQ(it),pr=mf.querySelector('[name="preco"]');if(pr&&q&&q.p>0&&!rdCri(it)&&!pr.value)pr.value=num(Math.round(q.p*100)/100);
+  const ab=mf.querySelector('[name="cotas"]');if(ab)setTimeout(()=>{try{ab.focus();}catch(e){}},60);
+}
+/* alerta de preço antigo no cartão do ativo -> Radar */
+function rdDoAtivo(fid){
+  const f=(S.fiis||[]).find(x=>x.id===fid);if(!f)return;
+  const k=tipoOf(f);if(k==='rf')return;
+  const it=radarAdd({t:f.ticker,k,cg:f.cgId,n:f.nome||''});if(!it)return;
+  radarAlertasAbre(rdQKey(it),!it.al.length);
+}
+/* sino: alertas que o servidor marcou como atingidos (últimos 7 dias) */
+function rdAvisos(){
+  const out=[];if(!notifOn('alvoPreco'))return out;
+  const lim=Date.now()-7*864e5;
+  radarL().forEach(it=>it.al.forEach(a=>{const d=rdDisp(it,a);if(!d||!(new Date(d.em).getTime()>lim))return;
+    out.push({id:rdChave(it,a),k:'aviso',h:`${I(a.tp==='acima'?'up':'down')} <b>${esc(it.t)}</b> ${a.tp==='queda'?'caiu mais de '+esc(rdNumTxt(a.v))+'% no dia':(a.tp==='acima'?'chegou acima de ':'chegou abaixo de ')+rdPreco(a.v)}${d.preco>0?' ('+rdPreco(d.preco)+')':''} · ${esc(rdDataHora(d.em))} <button class="btn2 sm" data-act="rd-ver" data-id="${esc(rdQKey(it))}">ver no Radar</button>`});}));
+  return out;
+}
+function rdVer(){closeModal();if(TAB!=='fii')go('fii');rdModoSet('radar');}
 
 function updCountdown(){
   const el=document.getElementById('cd');if(!el)return;
@@ -6458,11 +6899,13 @@ function novoTx(id,tipoPre,base){
    const estado=()=>{const el=spB.querySelector('.spSt');if(!el)return;const d=totC()-somaSp();
      el.className='spSt'+(d===0&&totC()>0?' ok':' bad');
      el.innerHTML=d===0&&totC()>0?I('check')+'<span>fechou o total</span>':`<span>${d>0?'faltam':'passaram'} <b>${FMT_BRL.format(Math.abs(d)/100)}</b></span>${SP.length?`<button type="button" class="spAjusta" data-sp="ajusta">ajustar ${esc(SP[0].cat)}</button>`:''}`;};
+   /* v10.155: no formulário novo (v10.148) o seletor de categoria mora na linha "Categoria" (.rdRC); dividido, ela some também */
+   const mostraC=on=>{wC.style.display=on?'':'none';const r=selC.closest('.rdRC');if(r&&r!==wC)r.style.display=on?'':'none';};
    const pinta=()=>{const desp=selT.value==='despesa';
-     if(!desp){spB.hidden=true;wC.style.display='';return;}
+     if(!desp){spB.hidden=true;mostraC(true);return;}
      spB.hidden=false;
-     if(!SP){wC.style.display='';spB.innerHTML=`<button type="button" class="spLink" data-sp="abre">${I('split')}<span>dividir entre categorias</span></button>`;return;}
-     wC.style.display='none';
+     if(!SP){mostraC(true);spB.innerHTML=`<button type="button" class="spLink" data-sp="abre">${I('split')}<span>dividir entre categorias</span></button>`;return;}
+     mostraC(false);
      spB.innerHTML=`<div class="spHd"><b>${I('split')}Dividido entre categorias</b><button type="button" class="spX" data-sp="fecha">não dividir</button></div>
        ${SP.map((p,i)=>`<div class="spRow"><select data-spc="${i}" aria-label="categoria da parte ${i+1}">${opts(p.cat)}</select><input data-spv="${i}" inputmode="decimal" placeholder="0,00" aria-label="valor da parte ${i+1}" value="${p.v>0?num(p.v):''}"><button type="button" class="spDel" data-sp="del" data-i="${i}" aria-label="remover parte ${i+1}"${SP.length<=2?' disabled':''}>${I('close')}</button></div>`).join('')}
        <div class="spFoot">${SP.length<SPLIT_MAX?`<button type="button" class="spAdd" data-sp="add">${I('plus')}parte</button>`:'<small>máximo de '+SPLIT_MAX+' partes</small>'}<div class="spSt"></div></div>`;
@@ -7846,7 +8289,7 @@ function confirma(o,cb){
     <div class="sh-head"><h3>${esc(o.titulo)}</h3></div>
     <p class="cfTxt">${esc(o.texto||'')}</p>
     ${o.digitar?`<label class="fld"><input id="cfIn" autocomplete="off" placeholder="${esc(o.digitar)}"></label><p class="cfHint">digite ${esc(o.digitar)} para confirmar</p>`:''}
-    <div class="cfBtns${o.alt?' tres':''}">${o.alt?`<button class="btn2${o.altPerigo?' danger':''}" type="button" id="cfAlt" data-cf="alt">${esc(o.alt)}</button>`:''}<button class="btn2" type="button" data-cf="no">Cancelar</button><button class="btn${o.perigo?' perigo':''}" type="button" id="cfOk" data-cf="ok"${o.digitar?' disabled':''}>${esc(o.ok||'Confirmar')}</button></div>
+    <div class="cfBtns${o.alt?' tres':''}">${o.alt?`<button class="btn2${o.altPerigo?' danger':''}" type="button" id="cfAlt" data-cf="alt">${esc(o.alt)}</button>`:''}${o.semNao?'':'<button class="btn2" type="button" data-cf="no">Cancelar</button>'}<button class="btn${o.perigo?' perigo':''}" type="button" id="cfOk" data-cf="ok"${o.digitar?' disabled':''}>${esc(o.ok||'Confirmar')}</button></div>
   </div>`;
   box.classList.add('on');
   const inp=$('#cfIn'),ok=$('#cfOk');
@@ -8200,7 +8643,16 @@ const ACT={
   'rf-ap':id=>rfMovForm(id,'ap'),
   'rf-res':id=>rfMovForm(id,'res'),
   'op-compra':id=>opForm(id,'compra'),
-  'alvo-fii':id=>alvoForm(id),
+  'alvo-fii':id=>rdDoAtivo(id), // v10.155: o alerta de preço do ativo agora vive no Radar (alvoForm fica só para referência)
+  'fmodo':id=>rdModoSet(id),
+  'rd-busca':()=>radarBuscaAbre(),
+  'rd-alertas':id=>radarAlertasAbre(id),
+  'rd-reativa':id=>rdReativa(id),
+  'rd-remove':id=>rdRemove(id),
+  'rd-comprei':id=>rdComprei(id),
+  'rd-atualiza':()=>{radarAtualiza(true);toast('Atualizando cotações…');},
+  'rd-ver':()=>rdVer(),
+  'rd-add-rapido':t=>{const x=rdCatalogo().find(c=>c.t===t);if(!x)return;const it=radarAdd(x);if(it){render();setTimeout(()=>radarAlertasAbre(rdQKey(it),true),250);}},
   'darf-pago':m=>darfPago(m),
   'op-venda':id=>opForm(id,'venda'),
   'op-provento':id=>opForm(id,'provento'),
@@ -8447,7 +8899,7 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,planoAplica,geraRecorrentes,getS:()=>S,lockDesconecta,numExt,temPendencia,csvCel,dataValida,aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -8859,7 +9311,7 @@ function limpaCache(){
     const rm=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k===KEY||k===OWNER_KEY||k==='gv-cot-ts'||/^gv-snap-/.test(k))rm.push(k);}
     rm.forEach(k=>localStorage.removeItem(k));
   }catch(e){}
-  SNAP=null;LEGADO=null;COPIA_LIDA=false;
+  SNAP=null;LEGADO=null;COPIA_LIDA=false;BASE_OK=false;SEGURA={};
 }
 function marcaCampo(sel,on){const el=$(sel);if(!el)return;const f=el.closest('.fld');if(f)f.classList.toggle('bad',!!on);}
 ['#aEmail','#aPass'].forEach(sel=>$(sel).addEventListener('input',()=>marcaCampo(sel,false)));
@@ -8905,7 +9357,7 @@ async function entraComSessao(sess){
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
-    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
+    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;BASE_OK=false;SEGURA={};/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
     planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
@@ -8925,6 +9377,7 @@ async function entraComSessao(sess){
     finally{syncBusy=false;}
     if(!S.cfg.pagDesde){S.cfg.pagDesde=hojeISO();salvar();}
     const ger=geraRecorrentes();if(ger)salvar();
+    if(radarMigra())salvar(); // v10.155
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
     prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
@@ -8973,7 +9426,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       // cache de outra conta (ou sem dono): nunca exibir nem enviar para esta conta
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
-    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
+    USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;BASE_OK=false;SEGURA={};/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
     planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
@@ -8993,6 +9446,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     finally{syncBusy=false;}
     if(!S.cfg.pagDesde){S.cfg.pagDesde=hojeISO();salvar();}
     const ger=geraRecorrentes();if(ger)salvar();
+    if(radarMigra())salvar(); // v10.155
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
     prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
