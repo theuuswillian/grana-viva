@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-ayd+dsCCvcI6IodA2y/ZqtsGcX7DFQQ7LQOw6mephIw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-6W2FVoo4Du6R2SfIdKPj2HuDkYlb/P/RNcoY+neh3ho=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -3462,6 +3462,71 @@ html.claro #modal .rrAlTp button.on{background:#fff!important;box-shadow:0 1px 3
 .rrAlNota{margin:4px 2px 12px;font-size:12px;line-height:1.45}
 @media (max-width:360px){.rrB{font-size:12.5px;gap:4px}.rrB.ic{width:36px}#modal .rrAlTp button{font-size:11.5px}.rrPr b{font-size:15px}}
 </style>
+<style id="v157">
+/* ===== v10.157 ===== */
+/* botão + nunca por cima de folha aberta, nem do app borrado em segundo plano (sem depender de :has) */
+html.modalOn .fab,html.modalOn #fab{display:none!important}
+html.privado .fab{visibility:hidden!important}
+#modal.on:empty{display:none}
+/* formulários no celular: lista de bancos não encolhe as linhas (WebKit), select com aparência própria (texto sempre visível),
+   data vazia no iPhone não perde a altura (o campo seguinte subia por cima) */
+.bkList{display:flex!important;flex-direction:column;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.bkList>*{flex:none!important}
+#mf label{position:relative;min-width:0}
+#mf input,#mf select,#mf textarea{box-sizing:border-box;max-width:100%}
+#mf label>select,#mf .fld select{-webkit-appearance:none;appearance:none;min-height:46px;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 14px center!important;background-size:14px!important;text-overflow:ellipsis}
+#mf input[type=date],#mf input[type=month],#mf input[type=time]{min-height:46px;line-height:22px}
+#mf input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:22px}
+#mf input[type=checkbox]{min-height:0}
+/* Início: Pagar / Recebi direto na linha */
+.rmRowPay{flex-wrap:nowrap}
+.rmPay{flex:none;min-height:44px;min-width:76px;padding:0 14px;margin-left:2px;border-radius:12px;border:0;background:linear-gradient(90deg,var(--a1),var(--a2));color:#0a0a0c;font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px -8px var(--a2)}
+.rmPay:active{transform:scale(.97)}
+@media(max-width:380px){.rmRowPay .hvR .hvQ{display:none}.rmPay{min-width:68px;padding:0 10px}}
+/* Início: carteira */
+.hcCard{cursor:pointer}
+.hcTop{margin:6px 0 12px}
+.hcTop>small,.hcK small,.hcPt small{display:block;font-size:12px;font-weight:600;color:var(--mut);letter-spacing:0;text-transform:none}
+.hcLn{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}
+.hcVal{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--txt);font-variant-numeric:tabular-nums}
+.hcDia{display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:700;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,currentColor 12%,transparent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hcDia .i{width:13px;height:13px}.hcDia em{font-style:normal;font-weight:600;opacity:.85}
+.hcGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hcK{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 13px;min-width:0}
+.hcK b{display:block;font-size:17px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcK b.pos{color:#4ade80}.hcK b.neg{color:#f87171}
+.hcK span{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.hcProx{display:flex;align-items:center;gap:12px;margin-top:10px;padding:11px 13px;border-radius:14px;background:var(--card2);border:1px solid var(--line)}
+.hcIc{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#a78bfa;background:rgba(139,92,246,.14)}.hcIc .i{width:17px;height:17px}
+.hcPt{flex:1;min-width:0}.hcPt b{display:block;font-size:15px;font-weight:700;color:var(--txt);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcQd{flex:none;text-align:right;font-size:15px;font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}.hcQd small{display:block;font-size:12px;font-weight:600;color:var(--mut)}
+html.claro .hcK b.pos,html.claro .hcPt .pos,html.claro .hcDia.pos{color:#15803d}html.claro .hcK b.neg,html.claro .hcDia.neg{color:#b91c1c}
+/* acessibilidade: alvos de toque */
+#btnClose,#btnOut,.sbClose{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+#modal .x{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;margin:-10px -10px -10px 0;border-radius:12px}
+.txMore{width:40px!important;height:40px!important}
+.btn2.sm,.stLine .btn2,[data-act=pagar-fat],[data-act=prov-receber],[data-act=tx-pagar]{min-height:40px}
+.wSt,[data-act=cot-now]{min-height:40px}
+[data-act=set-tipo]{min-height:40px}
+.ccLink{min-height:40px;display:inline-flex;align-items:center}
+.ptAdd{min-height:36px;padding-left:10px;padding-right:10px}
+/* o botão + não cobre o fim da página */
+#view{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+@media(min-width:900px){#view{padding-bottom:40px}}
+/* títulos e textos cortados */
+#view .fiiHead h2{font-size:clamp(24px,7.7vw,30px)!important}
+.ccChips>.ccTi small{letter-spacing:.04em;white-space:nowrap}
+.ohM{flex:none;min-width:44px;white-space:nowrap}
+.hmH h4{min-width:0}.hmSub{white-space:normal;text-align:right;min-width:0}
+/* contraste no tema claro */
+html.claro{--mut:#566275!important}
+html.claro .sb-sec{opacity:1}
+html.claro .ccLink,html.claro .catMaisBtn,html.claro .hmLink{color:color-mix(in srgb,var(--a1) 52%,#000)}
+html.claro .pos,html.claro small.ok,html.claro em.ok,html.claro .orcSt.ok,html.claro b.up,html.claro .rrVar.up,html.claro .up{color:#15803d!important}
+html.claro{--rrUp:#15803d}
+html.claro .pvMes{color:color-mix(in srgb,var(--tc) 45%,#000)}
+html.claro .ccChips>.ccTi small,html.claro .ccChips>.ccTi em{color:#566275}
+</style>
 </head>
 <body>
 <aside class="side" id="side">
@@ -3505,7 +3570,7 @@ html.claro #modal .rrAlTp button.on{background:#fff!important;box-shadow:0 1px 3
 </div>
 
 <script>
-const GV_BUILD='10.156'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.157'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3531,8 +3596,8 @@ const GV_BUILD='10.156'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.156"></script>
-<script defer src="app.min.js?v=10.156"></script>
+<script defer src="planos.js?v=10.157"></script>
+<script defer src="app.min.js?v=10.157"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

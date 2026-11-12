@@ -277,7 +277,7 @@ function abrePlanos(rec){
       ${id==='pro'?`<p class="plAnual">ou ${esc(GVP.PLANOS.pro_anual.rotulo)} (2 meses grátis)</p>`:''}
       <ul>${itens.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
       ${botao(id)}${id==='pro'&&pag===true&&!(p&&p.fundador)?`<button class="btn2 full plAnBtn" data-act="assinar" data-id="pro_anual">Assinar Pro anual</button>`:''}</div>`;}).join('')}</div>
-    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago, no cartão de crédito ou com saldo da conta Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
+    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago; a forma de pagamento é escolhida na tela do Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
   </div>`;
   box.classList.add('on');
   if(PLANO_PAG===null&&USER){const ant=pag;verificaPagamento().then(v=>{if(v!==ant&&$('#modal .plSheet'))abrePlanos(rec);});}
@@ -652,6 +652,9 @@ async function juntaCfgRemoto(){
     if(k==='gerados'){toma.gerados=Object.assign({},rem.gerados||{},loc.gerados||{});return;} // marcas: união
     if(k in loc&&hashV(loc[k])!==hashV(rem[k])&&daNuvem(k,loc[k]))toma[k]=rem[k];
   });
+  /* v10.157: "controle de pagamentos desde" só volta no tempo. um aparelho novo que marcou hoje não pode empurrar a data
+     para frente, senão faturas vencidas entre as duas datas passariam a contar como pagas sem sair de conta nenhuma */
+  {const a=String((rem.cfg||{}).pagDesde||''),b=String(loc.cfg.pagDesde||'');if(DATA_OK.test(a)&&DATA_OK.test(b)&&a!==b){const mn=a<b?a:b;if(mn!==b)tomaCfg.pagDesde=mn;else delete tomaCfg.pagDesde;}}
   {const ts=Object.assign({},tL);Object.keys(tR).forEach(k=>{if((+tR[k]||0)>(+ts[k]||0))ts[k]=+tR[k];});if(hashV(ts)!==hashV(tL)){S.cfgTs=ts;toma.cfgTs=ts;}}
   if(!Object.keys(toma).length&&!Object.keys(tomaCfg).length)return false;
   const z=sanea(Object.assign({},loc,toma,{metaFii:rem.metaFii,cfg:Object.assign({},loc.cfg,tomaCfg)})); // v10.95: aparelho antigo ainda grava metaFii
@@ -744,7 +747,9 @@ function temPendencia(){
   return SNAP.__cfg!==hashObj(cfgNuvem());
 }
 async function baixar(o){
-  const q=t=>sb.from(t).select('id,data').eq('user_id',USER.id);
+  /* v10.157: o PostgREST devolve no máximo 1000 linhas por pedido. sem .range(), quem tinha mais de 1000 lançamentos recebia
+     só os 1000 primeiros (e o resto parecia apagado). agora lê em páginas de 1000, em ordem de id, até a última vir incompleta */
+  const q=async t=>{const out=[];for(let de=0;de<500000;de+=1000){const r=await sb.from(t).select('id,data').eq('user_id',USER.id).order('id',{ascending:true}).range(de,de+999);if(r.error)return r;const d=r.data||[];out.push(...d);if(d.length<1000)break;}const vi=new Set();return {data:out.filter(r=>{const k=String(r.id);if(vi.has(k))return false;vi.add(k);return true;}),error:null};};
   const m0=MUDANCAS,uid0=USER.id;
   const [a,b,c,d,e,s]=await Promise.all([q('tx'),q('fiis'),q('metas'),q('cartoes'),q('bancos'),sb.from('settings').select('data,updated_at').eq('user_id',USER.id).maybeSingle()]);
   for(const r of [a,b,c,d,e,s])if(r.error)throw r.error;
@@ -808,6 +813,7 @@ function juntaBase(res,sd){
   const cl=cfgNuvem(),cr=Object.assign({},cfgRem);
   ['fixas','emprestimos','bens','passivos'].forEach(k=>{const r=Array.isArray(cr[k])?cr[k]:[],l=Array.isArray(cl[k])?cl[k]:[];const ids=new Set(r.map(x=>x&&String(x.id)));cr[k]=r.concat(l.filter(x=>x&&x.id!=null&&!ids.has(String(x.id))));});
   const cfg=Object.assign({},cl.cfg||{},cfgRem.cfg||{});
+  {const a=(cl.cfg||{}).pagDesde,b=(cfgRem.cfg||{}).pagDesde;if(DATA_OK.test(a||'')&&DATA_OK.test(b||''))cfg.pagDesde=a<b?a:b;} // v10.157: só volta no tempo
   LEGADO=null;
   S=sanea(Object.assign({},cr,junta,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfg)}));zeraCfgH();
   /* snapshot = o que está na nuvem; o que veio daqui (novo ou diferente) fica marcado para subir */
@@ -1513,6 +1519,14 @@ function dedupFixas(){
   });
   return mudou;
 }
+/* lançamento de uma ocorrência de conta fixa (id e chave determinísticos = sem duplicar entre aparelhos).
+   v10.157: função própria, usada também pelo "Pagar" do Início quando a ocorrência ainda não virou lançamento */
+function txDaOcorrencia(f,o,hoje){
+  const tx={id:idGerado(o.key),tipo:f.tipo==='receita'?'receita':'despesa',valor:f.valor,categoria:f.categoria||'Outros',descricao:f.nome+' (fixa)',data:o.data,fixaKey:o.key};
+  if(f.forma){tx.forma=f.forma;if(f.conta)tx.conta=f.conta;if(f.cartao)tx.cartao=f.cartao;if(f.pagoCom)tx.pagoCom=f.pagoCom;} // v10.51: mesma forma, conta e cartão da fixa
+  if(o.data>(hoje||hojeISO())||f.auto===false){tx.status='previsto';if(f.auto!==false)tx.fxAuto=1;}
+  return tx;
+}
 function geraRecorrentes(){
   const h=new Date(),hoje=hojeISO();let mudou=false;
   if(!S.gerados)S.gerados={};
@@ -1527,7 +1541,7 @@ function geraRecorrentes(){
     if(b){if(!t.forma||t.forma==='cartao')t.forma='pix';t.conta=b.id;}else if(!t.forma)t.forma='pix';});
   /* v10.153: lançamento do WhatsApp marcado como fixo vira conta fixa mensal (id determinístico = sem duplicar entre aparelhos) */
   S.tx.forEach(t=>{if(!t.waFixa)return;delete t.waFixa;mudou=true;const fxId='wa'+t.id;if(S.fixas.some(f=>f.id===fxId)||!ISO_RE.test(t.data||''))return;
-    S.fixas.push({id:fxId,nome:t.descricao||t.categoria||'conta fixa',valor:t.valor,dia:parseInt(t.data.slice(8,10),10)||1,tipo:t.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:t.categoria||'Outros',criadoEm:t.data<hoje?t.data:hoje,forma:t.forma||'pix',conta:t.conta||'',cartao:t.cartao||''});
+    S.fixas.push({id:fxId,nome:t.descricao||t.categoria||'Conta fixa',valor:t.valor,dia:parseInt(t.data.slice(8,10),10)||1,tipo:t.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:t.categoria||'Outros',inicio:t.data,criadoEm:t.data<hoje?t.data:hoje,forma:t.forma||'pix',conta:t.conta||'',cartao:t.cartao||''});
     S.gerados['fx|'+fxId+'|'+t.data.slice(0,7)]=1;});
   /* remove duplicatas de lançamentos automáticos (ex.: gerados em dois aparelhos antes do id determinístico) */
   const vistos=new Set(),antes=S.tx.length;
@@ -1539,10 +1553,7 @@ function geraRecorrentes(){
   S.fixas.forEach(f=>{
     ocorrenciasFixa(f,iniJ,fimJ).forEach(o=>{
       if(S.gerados[o.key])return;
-      const tx={id:idGerado(o.key),tipo:f.tipo==='receita'?'receita':'despesa',valor:f.valor,categoria:f.categoria||'Outros',descricao:f.nome+' (fixa)',data:o.data,fixaKey:o.key};
-      if(f.forma){tx.forma=f.forma;if(f.conta)tx.conta=f.conta;if(f.cartao)tx.cartao=f.cartao;if(f.pagoCom)tx.pagoCom=f.pagoCom;} // v10.51: mesma forma, conta e cartão da fixa
-      if(o.data>hoje||f.auto===false){tx.status='previsto';if(f.auto!==false)tx.fxAuto=1;}
-      S.tx.push(tx);S.gerados[o.key]=1;mudou=true;
+      S.tx.push(txDaOcorrencia(f,o,hoje));S.gerados[o.key]=1;mudou=true;
     });
   });
   /* v10.155: prevista gerada antes da primeira cobrança (bug acima) sai; paga fica */
@@ -1960,6 +1971,9 @@ function fixaForm(id){
       Object.assign(f,obj);
       // regra mudou: previstos futuros da regra antiga saem e a nova gera os seus
       if(mudouRegra){const hj=hojeISO();S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.status==='previsto'&&t.data>hj;if(out)delete S.gerados[t.fixaKey];return !out;});f.criadoEm=mudouInicio?inicio:(f.criadoEm&&f.criadoEm>hj?f.criadoEm:hj);}
+      /* v10.157: primeira cobrança empurrada para frente: o que o app gerou sozinho antes dela some (inclusive a ocorrência
+         que já tinha "entrado hoje" como paga). lançamento feito ou editado à mão (id diferente do gerado) fica. */
+      if(mudouInicio&&inicio>inicioAnt){S.tx=S.tx.filter(t=>{const out=t.fixaKey&&t.fixaKey.split('|')[1]===f.id&&t.data<inicio&&t.id===idGerado(t.fixaKey)&&!t.pagoManual;if(out)delete S.gerados[t.fixaKey];return !out;});}
     }else{if(!S.fixas)S.fixas=[];S.fixas.push(Object.assign({id:uid(),criadoEm:inicio},obj));}
     if(f){
       /* v10.52: conta fixa manual ("confirmar manualmente") com valor editado: o previsto futuro que ainda
@@ -3188,8 +3202,8 @@ function semanasHTML(){
   if(!W.some(w=>w.e||w.s))return '<div class="hB-sem vazio0"><span>sem movimento nas últimas 8 semanas</span></div>';
   const H=52,bw=7,gap=3,gw=bw*2+gap,step=300/8,hh=v=>v?Math.max(3,Math.round(v/mx*(H-4))):2;
   const bars=W.map((w,i)=>{const x=i*step+(step-gw)/2,he=hh(w.e),hs=hh(w.s),cur=i===W.length-1;
-    return `<g class="sg${cur?' cur':''}" data-act="hm-sem" data-id="${i}"><rect x="${(i*step).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"/><rect class="be" x="${x.toFixed(1)}" y="${H-he}" width="${bw}" height="${he}" rx="2.5"/><rect class="bs" x="${(x+bw+gap).toFixed(1)}" y="${H-hs}" width="${bw}" height="${hs}" rx="2.5"/></g>`;}).join('');
-  return `<div class="hB-sem"><svg viewBox="0 0 300 ${H}" role="img" aria-label="entrou e saiu nas últimas 8 semanas">${bars}</svg><div class="hB-semL" id="hbSemL">${semLegenda(W,W.length-1)}</div></div>`;
+    return `<g class="sg${cur?' cur':''}" data-act="hm-sem" data-id="${i}" role="button" tabindex="0" aria-label="semana de ${fmtDataCurta(w.ini)}: entrou ${brl(w.e/100)}, saiu ${brl(w.s/100)}"><rect x="${(i*step).toFixed(1)}" y="0" width="${step.toFixed(1)}" height="${H}" fill="transparent"/><rect class="be" x="${x.toFixed(1)}" y="${H-he}" width="${bw}" height="${he}" rx="2.5"/><rect class="bs" x="${(x+bw+gap).toFixed(1)}" y="${H-hs}" width="${bw}" height="${hs}" rx="2.5"/></g>`;}).join('');
+  return `<div class="hB-sem"><svg viewBox="0 0 300 ${H}" role="group" aria-label="entrou e saiu nas últimas 8 semanas">${bars}</svg><div class="hB-semL" id="hbSemL">${semLegenda(W,W.length-1)}</div></div>`;
 }
 function semLegenda(W,i){const w=W[i];const f=d=>d.slice(8,10)+'/'+d.slice(5,7);
   return `<span>${i===W.length-1?'esta semana':f(w.ini)+' a '+f(w.fim)}</span><span><i class="hB-dot g"></i>${OCULTO?'•••':brl(w.e/100)}</span><span><i class="hB-dot r"></i>${OCULTO?'•••':brl(w.s/100)}</span>`;}
@@ -3316,8 +3330,8 @@ function viewInicio(){
     <p class="hmNota">estimativa com o que já está lançado como previsto.</p></div>`:'';
   /* carteira só aparece se houver investimentos */
   const patr=patrimonio(),dm=divMensal();
-  const cartHTML=(patr||dm||p)?`<div class="card hmCart"><div class="hmH"><h4>carteira</h4><button class="hmLink" data-act="ir-pat">ver${I('chevR')}</button></div>
-    <div class="carteiraGrid"><div class="cw"><small>patrimônio investido</small><b>${brl(patr)}</b></div><div class="cw"><small>dividendo mensal estimado</small><b class="pos">${brl(dm)}</b></div><div class="cw cw-full"><small>próximo pagamento</small><b>${p?esc(p.f.ticker)+' em '+fmtDate(p.date):'sem data'}</b></div></div></div>`:'';
+  /* v10.157: card da carteira redesenhado (rótulos curtos, variação do dia, resultado, próximo provento com valor e prazo; toque abre a Carteira) */
+  const cartHTML=(patr||dm||p)?carteiraInicioHTML(patr,dm,p):'';
   const HV=homeVar();
   const TOPO=HV?homeTopo(HV,{saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}):null;
   const avisoMesAnt=mesAntHTML(per);
@@ -3414,14 +3428,41 @@ function orcVigia(){
   if(msg&&notifOn('orc')){clearTimeout(ORC_T);ORC_T=setTimeout(()=>{toast(msg);try{atualizaSino();}catch(e){}},2600);}
   return msg;
 }
+function carteiraInicioHTML(patr,dm,p){
+  const hj=hojeISO(),ativos=S.fiis.filter(f=>f.cotas*f.preco>0).length;
+  /* variação do dia: só ativos com fechamento anterior conhecido (f.ant, gravado na atualização de cotações) */
+  let vd=0,base=0;S.fiis.forEach(f=>{if(f.ant>0&&f.preco>0&&f.cotas>0){vd+=f.cotas*(f.preco-f.ant);base+=f.cotas*f.ant;}});
+  const vdP=base>0?vd/base*100:null;
+  /* resultado: mesma conta da aba Carteira (só ativos com custo informado) */
+  const cc=S.fiis.filter(f=>f.pago>0),aplic=cc.reduce((a,f)=>a+cents(f.pago),0)/100,val=cc.reduce((a,f)=>a+cents(f.cotas*f.preco),0)/100,pl=c2(val-aplic),plP=aplic?pl/aplic*100:null;
+  const sg=v=>v>=0?'+':'−',pc=v=>num(Math.abs(v))+'%';
+  const vdTxt=vdP!=null&&Math.abs(vd)>=0.005?`<span class="hcDia ${vd>=0?'pos':'neg'}" title="variação de hoje">${I(vd>=0?'arrowUp':'arrowDown')}${sg(vd)}${brl(Math.abs(vd))} <em>${pc(vdP)}</em></span>`:'';
+  let prox='';
+  if(p){const dias=Math.round((new Date(p.date.getFullYear(),p.date.getMonth(),p.date.getDate())-new Date(hj+'T00:00'))/864e5);
+    const est=tipoOf(p.f)==='fii'?c2((+p.f.cotas||0)*(+p.f.dpc||0)):0;
+    const qd=dias<=0?'hoje':dias===1?'amanhã':'em '+dias+' dias';
+    prox=`<div class="hcProx"><span class="hcIc">${I('calendar')}</span><div class="hcPt"><small>Próximo provento</small><b>${esc(p.f.ticker)}${est>0?' · <span class="pos nw">'+brl(est)+'</span>':''}</b></div><span class="hcQd">${pad(p.date.getDate())}/${pad(p.date.getMonth()+1)}<small>${qd}</small></span></div>`;}
+  return `<div class="card hmCart hcCard tap" data-act="cart-abre" role="button" tabindex="0" aria-label="abrir a carteira de investimentos">
+    <div class="hmH"><h4>carteira</h4><span class="hmSub">${ativos} ${ativos===1?'ativo':'ativos'}${I('chevR','tapCh')}</span></div>
+    <div class="hcTop"><small>Investido</small><div class="hcLn"><b class="hcVal nw">${brl(patr)}</b>${vdTxt}</div></div>
+    <div class="hcGrid">
+      <div class="hcK"><small>Resultado</small><b class="nw ${plP==null?'':pl>=0?'pos':'neg'}">${plP==null?'—':sg(pl)+brl(Math.abs(pl))}</b>${plP==null?'<span>informe o custo</span>':`<span>${sg(pl)}${pc(plP)}</span>`}</div>
+      <div class="hcK"><small>Proventos/mês</small><b class="nw pos">${brl(dm)}</b><span>${patr>0&&dm>0?num(dm*12/patr*100)+'% ao ano':'estimado'}</span></div>
+    </div>${prox}</div>`;
+}
 function proxVencHTML(){
-  const L=proximosVenc(30);if(!L.length)return '';
-  const hj=hojeISO(),tot=L.reduce((a,x)=>a+x.valor,0);
+  const L=proximosVenc(30),hj=hojeISO(),tot=L.reduce((a,x)=>a+x.valor,0);
+  /* v10.157: receita prevista que já devia ter entrado (hoje ou atrasada) aparece com "Recebi" */
+  S.tx.forEach(t=>{if(t.status==='previsto'&&t.tipo==='receita'&&t.data&&t.data<=hj)L.push({data:t.data,nome:String(t.descricao||t.categoria||'receita').replace(/\s*\(fixa\)\s*$/i,''),valor:+t.valor||0,cat:t.categoria,tipo:t.fixaKey?'fixa':'conta',tx:t.id,rec:true});});
+  if(!L.length)return '';L.sort((a,b)=>a.data<b.data?-1:a.data>b.data?1:0);
   const quando=d=>{const n=Math.round((new Date(d+'T12:00')-new Date(hj+'T12:00'))/864e5);return n<0?{t:'atrasada',c:'late'}:n===0?{t:'hoje',c:'now'}:n===1?{t:'amanhã',c:'now'}:n<=avisoDias()?{t:'em '+n+' dias',c:'soon'}:{t:d.slice(8,10)+'/'+d.slice(5,7),c:''};};
   return `<div class="card hmVenc"><div class="hmH tap" data-act="nav-aberto" role="button" tabindex="0" aria-label="ver tudo que está em aberto"><h4>próximos vencimentos</h4><span class="hmSub">30 dias · ${brl(tot)}${I('chevR','tapCh')}</span></div>
     ${L.slice(0,6).map(x=>{const q=quando(x.data),ic=x.tipo==='fatura'?'card':x.cat?catIcon(x.cat):'receipt',cc=x.tipo==='fatura'?'#60a5fa':x.cat?corCat(x.cat):'#fbbf24';
       const ref=x.fat?`data-act="fat-abre" data-id="${esc(x.fat)}"`:x.tx?`data-act="tx-menu" data-id="${esc(x.tx)}"`:x.fx?`data-act="edit-fixa" data-id="${esc(x.fx)}"`:'';
-      return `<div class="rmRow${ref?' tap':''}" ${ref}${ref?' role="button" tabindex="0"':''}><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(x.nome)}</b><small>${x.tipo==='fatura'?'fatura do cartão':x.tipo==='fixa'?'conta fixa':'conta prevista'}</small></div><div class="hvR"><span class="rmV nw">${brl(x.valor)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('')}
+      /* v10.157: vence hoje ou atrasada = botão "Pagar" (receita: "Recebi") direto na linha */
+      const pid=x.data<=hj?(x.fat?'fat:'+x.fat:x.tx?'tx:'+x.tx:x.fx?'fx:'+x.fx+':'+x.data:''):'',rec=x.rec;
+      const pay=pid?`<button type="button" class="rmPay" data-act="vc-pagar" data-id="${esc(pid)}" aria-label="${rec?'marcar como recebido':'pagar'} ${esc(x.nome)}">${rec?'Recebi':'Pagar'}</button>`:'';
+      return `<div class="rmRow${ref?' tap':''}${pay?' rmRowPay':''}" ${ref}${ref?' role="button" tabindex="0"':''}><span class="rmI" style="--cc:${cc}">${I(ic)}</span><div class="rmT"><b>${esc(x.nome)}</b><small>${x.rec?(x.tipo==='fixa'?'receita fixa':'receita prevista'):x.tipo==='fatura'?'fatura do cartão':x.tipo==='fixa'?'conta fixa':'conta prevista'}</small></div><div class="hvR"><span class="rmV nw${x.rec?' pos':''}">${x.rec?'+':''}${brl(x.valor)}</span><span class="hvQ ${q.c}">${x.rec&&q.c==='late'?'atrasada':q.t}</span></div>${pay}</div>`;}).join('')}
     ${L.length>6?`<button type="button" class="hmLink hmMais" data-act="nav-aberto">+${L.length-6} ${L.length-6>1?'vencimentos':'vencimento'} nos próximos 30 dias${I('chevR')}</button>`:''}
   </div>`;
 }
@@ -3626,7 +3667,7 @@ function viewOrc(){
   }).join('');
   const semHTML=semLim.length?`<div class="card orcSem"><div class="catHead"><h4>Gastos sem limite <span class="catQt">${semLim.length}</span></h4></div><p class="small" style="margin:0 0 6px">sugestão pela média dos últimos meses. dá pra mudar o valor antes de salvar</p>
     ${semLim.map(c=>{const g=somaMes(m,'despesa',c,true),s=sug(c);return `<div class="orcSr" style="--cc:${corCat(c)}"><span class="orcIc">${I(catIcon(c))}</span><span class="orcNm tap" data-act="nav-cat-orc" data-id="${esc(c)}" role="button" tabindex="0"><b>${esc(c)}</b><small>gastou <span class="nw">${brl(g)}</span></small></span><button class="btn2 sm" data-act="def-orc-sug" data-id="${esc(c)}|${s}">definir <span class="nw">${OCULTO?'R$ •••':'R$ '+s.toLocaleString('pt-BR')}</span></button></div>`;}).join('')}</div>`:'';
-  const outrasHTML=vazias.length?`<details class="card orcMais"><summary><span>${I('plus')}Adicionar limite a outras categorias</span><span class="catQt">${vazias.length}</span>${I('chevR','tapCh')}</summary><div class="catList">${vazias.map(c=>`<button type="button" class="catRow" data-act="def-orc" data-id="${esc(c)}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${I('plus')}</span></button>`).join('')}</div></details>`:'';
+  const outrasHTML=vazias.length?`<details class="card orcMais"><summary><span>${I('plus')}Adicionar limite a outras categorias</span><span class="catQt">${vazias.length}</span>${I('chevR','tapCh')}</summary><div class="catList">${vazias.map(c=>`<button type="button" class="catRow" data-act="def-orc" data-id="${esc(c)}" aria-label="definir limite de ${esc(c)}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${I('plus')}</span></button>`).join('')}</div></details>`:'';
   return `
   <div class="head"><h2>Orçamentos</h2></div>
   <div class="mesNav"><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,-1)}" aria-label="mês anterior">‹</button><b>${nomeMes(m)}${m===atual?' · atual':''}</b><button class="btn2" data-act="orc-mes" data-id="${mesMais(m,1)}" aria-label="próximo mês">›</button></div>
@@ -4913,7 +4954,7 @@ function ccFatHTML(c){
   const lbl=E.tipo==='fechada'?(E.st==='vencida'?'vencida':'fechada'):'aberta';
   const ccTi=(ic,k,d,n,w)=>`<span class="ccChip2 ccTi${w?' warn':''}" role="group" aria-label="${k} ${ccDM(d)}, ${ccEmDias(n)}">${ic}<span aria-hidden="true"><small>${k}</small><b>${ccDM(d)}</b><em>${ccEmDias(n)}</em></span></span>`;
   const chips=E.tipo==='fechada'
-    ?ccTi(CC_IC_PAY,'vence',E.vence,dV,dV<=3)+ccTi(CC_IC_CAL,'próxima fecha',E.prox.fecha,ccDiasEntre(hojeISO(),E.prox.fecha),false)
+    ?ccTi(CC_IC_PAY,'vence',E.vence,dV,dV<=3)+ccTi(CC_IC_CAL,'fecha',E.prox.fecha,ccDiasEntre(hojeISO(),E.prox.fecha),false)
     :ccTi(CC_IC_CAL,'fecha',E.fecha,dF,dF<=7)+ccTi(CC_IC_PAY,'vence',E.vence,dV,false);
   const badge=E.t&&E.tipo==='fechada'&&E.st!=='aberta'?faturaBadge(E.t):'';
   return `<div class="card ccFat" data-id="${c.id}" style="--tom:${tom}">
@@ -6515,6 +6556,8 @@ function abreResumo(ym){
   box.classList.add('on');
 }
 function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(TAB==='fii'&&FMODO==='radar')setTimeout(render,0);}}
+/* v10.157: html.modalOn esconde o botão + sem depender de :has (iOS antigo) */
+new MutationObserver(()=>{document.documentElement.classList.toggle('modalOn',$('#modal').classList.contains('on'));}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']});
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if($('#modal').classList.contains('on')){closeModal();return;}if($('#side').classList.contains('open'))toggleSide(false);}
@@ -6836,7 +6879,9 @@ function novoTx(id,tipoPre,base){
       /* v10.51: a fixa nasce só depois de tudo validado e guarda como foi paga (cartão entra na fatura, pix sai da conta certa) */
       if(!S.fixas)S.fixas=[];
       const dia=parseInt(v.data.slice(8,10),10)||1,fxId=uid();
-      S.fixas.push({id:fxId,nome:obj.descricao||'conta fixa',valor,dia,tipo:v.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:v.categoria,criadoEm:v.data<hojeISO()?v.data:hojeISO(),forma,conta:obj.conta,cartao:obj.cartao,pagoCom});
+      /* v10.157: a primeira ocorrência é a data escolhida (inicio), nada antes. antes só criadoEm=hoje: salário com data 10/12
+         lançado em 10/11 virava fixa "todo dia 10" e já entrava em novembro. nome = descrição, senão a categoria */
+      S.fixas.push({id:fxId,nome:obj.descricao||String(v.categoria||'').trim()||'Conta fixa',valor,dia,tipo:v.tipo==='receita'?'receita':'despesa',freq:'mensal',auto:true,categoria:v.categoria,inicio:v.data,criadoEm:v.data<hojeISO()?v.data:hojeISO(),forma,conta:obj.conta,cartao:obj.cartao,pagoCom});
       if(!S.gerados)S.gerados={};S.gerados['fx|'+fxId+'|'+v.data.slice(0,7)]=1;
     }
     if(!t&&isDesp){if(!S.cfg)S.cfg={};S.cfg.ultLanc={forma,cartao:obj.cartao||'',conta:obj.conta||''};} // v10.152: lembra como pagou da última vez
@@ -7066,6 +7111,46 @@ function pagarFatura(id){
     t.pagamentos.push({valor:c2(val),data:v.data,conta:v.conta||''});fechaPagamentos(t);
     salvar();render();toast(restanteFatura(t)>0?'Pagamento parcial registrado':'Fatura paga');
   });
+}
+/* v10.157: "Pagar"/"Recebi" do Início. confirma como pagou (forma, conta ou cartão), data e valor.
+   fatura usa o pagamento de fatura que já existe; conta prevista vira paga no próprio lançamento; ocorrência de conta fixa
+   ainda sem lançamento ganha o lançamento da ocorrência (txDaOcorrencia, mesma chave da geração automática) já pago. */
+function pagarConta(ref){
+  ref=String(ref||'');
+  if(ref.indexOf('fat:')===0)return pagarFatura(ref.slice(4));
+  let t=null,f=null,o=null;
+  if(ref.indexOf('tx:')===0){t=S.tx.find(x=>x.id===ref.slice(3));if(!t)return;}
+  else if(ref.indexOf('fx:')===0){const p=ref.slice(3).split(':');f=(S.fixas||[]).find(x=>x.id===p[0]);if(!f||!ISO_RE.test(p[1]||''))return;
+    o=ocorrenciasFixa(f,p[1],p[1])[0];if(!o)return;t=S.tx.find(x=>x.fixaKey===o.key)||null;}
+  else return;
+  const base=t||txDaOcorrencia(f,o),rec=base.tipo==='receita',ult=(!rec&&S.cfg&&S.cfg.ultLanc)||{};
+  const princ=(S.bancos.find(b=>b.principal)||{}).id||'';
+  const formas=rec?[['pix','Pix, transferência ou depósito'],['dinheiro','Dinheiro']]:[['pix','Pix ou débito na conta'],['dinheiro','Dinheiro'],['boleto','Boleto'],['cartao','Cartão de crédito']];
+  const f0=formas.some(x=>x[0]===base.forma)?base.forma:(formas.some(x=>x[0]===ult.forma)?ult.forma:'pix');
+  const cartoes=(S.cartoes||[]).filter(c=>!c.arq);
+  const nome=String(base.descricao||base.categoria||'conta').replace(/\s*\(fixa\)\s*$/i,'');
+  form((rec?'Recebi ':'Pagar ')+nome,[
+    {name:'valor',label:rec?'Valor recebido (R$)':'Valor pago (R$)',value:num(base.valor),required:true,inputmode:'decimal'},
+    {name:'forma',label:rec?'Como recebeu':'Como pagou',type:'select',value:f0,options:formas.map(x=>({v:x[0],t:x[1]}))},
+    {name:'conta',label:rec?'Entrou na conta':'Saiu da conta',type:'select',value:base.conta||ult.conta||princ,options:[{v:'',t:S.bancos.length?'não mexer em nenhuma conta':'nenhuma conta cadastrada'}].concat(bancosAtivos().map(b=>({v:b.id,t:b.nome})))},
+    {name:'cartao',label:'Cartão',type:'select',value:base.cartao||ult.cartao||(cartoes[0]||{}).id||'',options:cartoes.length?cartoes.map(c=>({v:c.id,t:c.nome})):[{v:'',t:'nenhum cartão cadastrado'}]},
+    {name:'data',label:rec?'Data do recebimento':'Data do pagamento',type:'date',value:hojeISO(),required:true}
+  ],v=>{
+    const val=parseBR(v.valor),fm=formas.some(x=>x[0]===v.forma)?v.forma:'pix',dt=String(v.data||'');
+    if(!(val>0))return 'Informe o valor.';
+    if(!ISO_RE.test(dt))return 'Informe a data.';
+    if(dt>hojeISO())return rec?'A data do recebimento não pode ser no futuro.':'A data do pagamento não pode ser no futuro.';
+    if(fm==='cartao'&&!v.cartao)return 'Escolha o cartão.';
+    let x=t;
+    if(!x){x=S.tx.find(y=>y.fixaKey===o.key);if(!x){x=txDaOcorrencia(f,o);S.tx.push(x);if(!S.gerados)S.gerados={};S.gerados[o.key]=1;}}
+    Object.assign(x,{valor:c2(val),data:dt,status:'pago',forma:fm,conta:(fm==='pix'||fm==='boleto')?(v.conta||''):'',cartao:fm==='cartao'?v.cartao:'',pagoCom:fm==='boleto'?'conta':'',pagoManual:1});
+    delete x.fxAuto;
+    if(!rec&&S.cfg)S.cfg.ultLanc={forma:fm,cartao:x.cartao||'',conta:x.conta||''};
+    salvar();render();toast(rec?'Recebimento registrado':'Pagamento registrado');
+  });
+  const mf=$('#mf'),q=n=>mf.querySelector('[name="'+n+'"]');
+  const pinta=()=>{const fm=q('forma').value;q('conta').closest('label').style.display=(fm==='pix'||fm==='boleto')?'':'none';q('cartao').closest('label').style.display=fm==='cartao'?'':'none';};
+  q('forma').addEventListener('change',pinta);pinta();
 }
 function desfazPagamento(id){
   const t=S.tx.find(x=>x.id===id&&x.faturaKey);if(!t)return;
@@ -8752,7 +8837,9 @@ const ACT={
   'sim-add':id=>{if(!SIM_TIPOS[id])return;if(PLAN.itens.length>=8){toast('até 8 itens na simulação');return;}PLAN.itens.push({t:id,v:0,n:id==='parc'?10:0,k:id==='gun'||id==='run'||id==='parc'?0:1});render();setTimeout(()=>{const ins=document.querySelectorAll('[data-sim$="|v"]');const el=ins[ins.length-1];if(el)el.focus();},60);},
   'sim-del':id=>{PLAN.itens.splice(+id,1);render();},
   'sim-dia':()=>{PLAN.dia=!PLAN.dia;render();},
-  'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
+  'vc-pagar':id=>pagarConta(id),
+  'cart-abre':()=>{FMODO='carteira';try{localStorage.setItem('gv-fmodo','carteira');}catch(e){}go('fii');},
+  'tx-pagar':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;const hj=hojeISO();t.status='pago';delete t.fxAuto;t.pagoManual=1;if(t.data>hj)t.data=hj;salvar();render();toast(t.tipo==='receita'?'Marcado como recebido':'Marcado como pago');},
   'del-fixa':id=>confirma({titulo:'Remover conta fixa?',texto:'Os lançamentos já pagos continuam no extrato. Os previstos que ainda não venceram saem.',ok:'Remover',perigo:true},()=>{S.fixas=(S.fixas||[]).filter(x=>x.id!==id);const hj=hojeISO();S.tx=S.tx.filter(t=>!(t.fixaKey&&t.fixaKey.split('|')[1]===id&&t.status==='previsto'&&t.data>hj));salvar();render();toast('Conta fixa removida');}),
   'cot-now':()=>{atualizaCotacoes(true);atualizaCripto(true);atualizaCDI(true);},
   'ftab':id=>{FTAB=id;render();},
@@ -9153,14 +9240,26 @@ document.addEventListener('visibilitychange',()=>{
     if(LK.o&&LK.o.modo!=='abrir')lockFecha();
     if(!c.atraso)lockAbre();else document.documentElement.classList.add('privado');
   }else{
-    document.documentElement.classList.remove('privado');
+    tiraPrivado();
     if(LK.saiu){const d=Date.now()-LK.saiu;if(d<0||d>=(c.atraso||0)*60000)lockAbre();}
     LK.saiu=0;
     /* "na hora": a tela travou com o app em segundo plano, quando o Face ID não pode abrir. pede agora */
     if(!c.atraso&&c.bio&&LK.o&&LK.o.modo==='abrir')setTimeout(()=>{if(LK.o&&LK.o.modo==='abrir'&&document.visibilityState==='visible')lockBio(true);},350);
   }
 });
-window.addEventListener('pageshow',e=>{if(e.persisted&&lockCfg()&&!lockDentroDoPrazo())lockAbre();});
+window.addEventListener('pageshow',e=>{tiraPrivado();if(e.persisted&&lockCfg()&&!lockDentroDoPrazo())lockAbre();});
+/* v10.157: tela "embaçada" com só o botão + nítido. html.privado borra o app (blur 18px) enquanto ele está em segundo plano;
+   no iPhone (app na tela de início) a volta às vezes não dispara visibilitychange "visible" ou o WebKit não repinta a camada
+   com filtro, e o app ficava borrado. agora a marca sai em qualquer sinal de que a tela está visível (pageshow, focus,
+   toque, resize) e o app é repintado à força. */
+function tiraPrivado(){
+  if(document.visibilityState==='hidden')return;
+  const h=document.documentElement;if(!h.classList.contains('privado'))return;
+  h.classList.remove('privado');
+  const a=document.getElementById('app');if(a){a.style.transform='translateZ(0)';requestAnimationFrame(()=>{a.style.transform='';});}
+}
+['focus','resize'].forEach(ev=>window.addEventListener(ev,tiraPrivado));
+['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,tiraPrivado,{capture:true,passive:true}));
 window.addEventListener('pagehide',()=>{if(lockCfg()&&!(LK.o&&LK.o.modo==='abrir'))lockMarcaSaida();});
 if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');document.documentElement.classList.remove('travado');lockInerte(false);}
 /* ---------- arrastar da esquerda para a direita abre o menu lateral; da direita para a esquerda fecha (celular) ---------- */
