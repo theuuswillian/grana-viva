@@ -65,7 +65,7 @@ h3{color:var(--hd);font-size:17px;margin:0 0 6px}
 .legal h2{font-size:20px;margin-top:28px}
 .faq{max-width:780px}
 .faqI{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:0 0 10px}
-.faqI summary{cursor:pointer;font-weight:600;color:var(--hd);padding:12px 0;list-style-position:outside}
+.faqI summary{cursor:pointer;font-weight:600;color:var(--hd);padding:12px 0;list-style-position:inside}
 .faqI p{margin:0 0 14px;color:var(--txt)}
 .final{text-align:center;padding-bottom:48px}
 .rodape{border-top:1px solid var(--line);margin-top:40px;padding:28px 0 calc(28px + env(safe-area-inset-bottom,0))}
@@ -155,3 +155,16 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset
 @keyframes sobe{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @supports (animation-timeline:view()){.revela{animation:sobe linear both;animation-timeline:view();animation-range:entry 0% entry 35%}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* ===== 10/11/2026 (site157): como funciona, transparência, rodapé ===== */
+.passos{list-style:none;counter-reset:p;padding:0;margin:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.passos li{counter-increment:p;position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px 18px 64px}
+.passos li:before{content:counter(p);position:absolute;left:18px;top:18px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:rgba(163,230,53,.12);color:var(--lime);font-weight:800}
+.passos b{display:block;color:var(--hd);font-size:17px;margin-bottom:4px}
+.passos span{color:var(--mut);font-size:15px}
+.franco{margin:16px 0 0;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:16px;padding:16px 18px}
+.franco h3{margin:0 0 4px}
+.franco .lista{margin:6px 0 0;color:var(--txt);font-size:15px}
+.ctas.cen{justify-content:center}
+.rodIn p.forn{max-width:44ch;font-size:13px}
+.rodIn p.forn a{color:var(--mut)}
