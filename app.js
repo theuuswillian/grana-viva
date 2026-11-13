@@ -4374,15 +4374,16 @@ function viewPat(){
     ${dif!=null?`<div class="ptDif">${dif>=0?'+':''}${brl(dif)} desde ${MESES[+ant.m.slice(5,7)-1]}</div>`:''}
     <div class="ptSplit"><div><span>você tem</span><b class="pv">${brl(P.ativos)}</b></div><div><span>você deve</span><b class="pv">${brl(P.passivos)}</b></div></div>
   </div>
-  <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você tem</span><button class="ptAdd" data-act="novo-bem">+ bem</button></div>
+  <div class="ptGrid"><div class="card ptCard"><div class="ptHd"><span class="ptT">O que você tem</span><button class="ptAdd" data-act="novo-bem">+ bem</button></div>
     ${itA('chart','#a3e635','Investimentos',P.inv)}${itA('wallet','#22d3ee',S.bancos.length?'Contas':'Saldo',Math.max(0,P.contas))}${itA('casa','#a78bfa','Bens',P.bens)}${P.rec>0?itA('handCoins','#fbbf24','A receber (empréstimos)',P.rec):''}</div>
   <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você deve</span><button class="ptAdd" data-act="novo-pas">+ dívida</button></div>
     ${itP('card','#f87171','Cartões','faturas e parcelas a vencer',P.cartoes).replace(/<span class="ptIc" style="--c:#f87171">[\s\S]*?<\/span>/,m=>cartoesAtivos().length?'<span class="ptIc ptCc" aria-hidden="true">'+cartoesAtivos().slice(0,2).map(c=>cartaoMini(c)).join('')+'</span>':m)}${itP('receipt','#fb923c','Dívidas e empréstimos',parcelas?'parcelas: '+brl(parcelas)+'/mês':'',P.dividas)}${P.contas<0?itP('bank','#f43f5e','Contas no negativo','',-P.contas):''}</div>
+  </div>
   ${evo?`<div class="card"><h4 style="margin:0 0 10px">Evolução do patrimônio líquido</h4>${evo}</div>`:''}
-  <div class="head" style="margin-top:8px"><h3 style="margin:0">Bens</h3><button class="btn2" data-act="novo-bem">+ bem</button></div>
-  ${bens||'<div class="card"><p class="vazio">imóvel, carro ou outro bem que entra no patrimônio.</p></div>'}
-  <div class="head" style="margin-top:8px"><h3 style="margin:0">Dívidas e empréstimos</h3><button class="btn2" data-act="novo-pas">+ dívida</button></div>
-  ${pas||'<div class="card"><p class="vazio">empréstimo, financiamento ou outra dívida (o cartão já entra automaticamente).</p></div>'}`;
+  <div class="ptGrid"><div><div class="head" style="margin-top:8px"><h3 style="margin:0">Bens</h3><button class="btn2" data-act="novo-bem">+ bem</button></div>
+  ${bens||'<div class="card"><p class="vazio">imóvel, carro ou outro bem que entra no patrimônio.</p></div>'}</div>
+  <div><div class="head" style="margin-top:8px"><h3 style="margin:0">Dívidas e empréstimos</h3><button class="btn2" data-act="novo-pas">+ dívida</button></div>
+  ${pas||'<div class="card"><p class="vazio">empréstimo, financiamento ou outra dívida (o cartão já entra automaticamente).</p></div>'}</div></div>`;
 }
 function bemForm(id){
   const b=(S.bens||[]).find(x=>x.id===id)||{};
