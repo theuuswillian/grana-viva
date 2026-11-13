@@ -2886,7 +2886,7 @@ Object.assign(ICONS,{
   qkInv:'<path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>',
   qkDeNovo:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'
 });
-const QK_EX=['gastei 45 no iFood ontem…','uber 23,90 hoje no débito…','mercado 182 no cartão…','recebi 3.200 de salário…','farmácia 37,50 no pix…'];
+const QK_EX=['gastei 45 no iFood ontem…','uber 23,90 hoje no débito…','comprei 10 MXRF11 a 10,15…','mercado 182 no cartão…','recebi 3.200 de salário…','farmácia 37,50 no pix…'];
 let QK_T=0;
 function abreRapido(){
   const box=$('#modal');clearInterval(QK_T);
@@ -3337,6 +3337,7 @@ function viewInicio(){
   const avisoMesAnt=mesAntHTML(per);
   return `
   <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
+  ${omniHTML()}
   ${TOPO!==null?TOPO+'<!--':''}<div class="hmHero ${saldo<0?'neg':''}">
     <div class="hmHeroTop"><span>saldo total</span><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
     <div class="hmSaldo nw">${brl(saldo)}</div>
@@ -3428,6 +3429,41 @@ function orcVigia(){
   if(msg&&notifOn('orc')){clearTimeout(ORC_T);ORC_T=setTimeout(()=>{toast(msg);try{atualizaSino();}catch(e){}},2600);}
   return msg;
 }
+/* ---------- v10.159: renda passiva no topo do patrimônio ----------
+   quanto a carteira gera por mês em proventos, com o que o app já sabe de cada ativo (FII, ação, ETF, BDR com cotas):
+   1) FII com dividendo por cota cadastrado (f.dpc, o mesmo da "renda mensal"): cotas × dpc;
+   2) senão, proventos registrados nos últimos 12 meses (mesma conta do yield on cost), ÷ 12;
+   3) senão, só para FII com preço: estimativa de DY_FII_PADRAO (0,8% ao mês) sobre o valor de hoje, marcada como estimativa.
+   ação/ETF/BDR sem provento registrado fica de fora. renda fixa e cripto não entram (não pagam dividendos).
+   a equivalência usa as contas fixas de despesa mensais ativas: a maior que a renda cobre inteira;
+   se não cobre nenhuma, quanto falta para cobrir a menor. */
+const DY_FII_PADRAO=0.008;
+function rendaPassivaEst(){
+  const yc=yocCalc(),porId={};yc.lista.forEach(x=>{porId[x.f.id]=x;});
+  let tot=0,est=0,n=0;
+  (S.fiis||[]).forEach(f=>{const t=tipoOf(f);if(!RP_TIPOS.includes(t)||!(f.cotas>0))return;const y=porId[f.id];
+    if(t==='fii'&&f.dpc>0){tot+=cents(f.cotas*f.dpc);n++;}
+    else if(y&&y.renda>0){tot+=cents(y.renda/12);n++;}
+    else if(t==='fii'&&f.preco>0){const v=cents(f.cotas*f.preco*DY_FII_PADRAO);tot+=v;est+=v;n++;}});
+  return {v:tot/100,est:est/100,n};
+}
+function fixasMensaisDespesa(){
+  const hj=hojeISO();
+  return (S.fixas||[]).filter(f=>f&&f.tipo==='despesa'&&(f.freq||'mensal')==='mensal'&&+f.valor>0&&(!f.fim||f.fim>=hj)&&(!f.inicio||f.inicio<=hj))
+    .map(f=>({nome:String(f.nome||f.categoria||'conta fixa').replace(/\s*\(fixa\)\s*$/i,'').trim()||'conta fixa',valor:+f.valor}));
+}
+function rendaPassivaHTML(cls){
+  if(!(patrimonio()>0))return '';
+  const R=rendaPassivaEst();if(!(R.v>=0.01))return '';
+  const L=fixasMensaisDespesa(),cob=L.filter(x=>x.valor<=R.v).sort((a,b)=>b.valor-a.valor)[0];
+  const menor=cob?null:L.slice().sort((a,b)=>a.valor-b.valor)[0];
+  const nota=R.est>0?`<em class="rpaEst" title="FIIs sem dividendo cadastrado nem provento registrado entram com ${num(DY_FII_PADRAO*100)}% ao mês sobre o valor de hoje">estimativa</em>`:'';
+  let eq='';
+  if(cob)eq=`<p class="rpaEq">${I('check')}<span>cobre sua conta de <b>${esc(cob.nome)}</b> <span class="nw">(${brl(cob.valor)})</span></span></p>`;
+  else if(menor){const pc=Math.max(2,Math.min(100,R.v/menor.valor*100));
+    eq=`<p class="rpaEq">${I('flag')}<span>falta <b class="nw">${brl(menor.valor-R.v)}</b>/mês para cobrir sua conta de <b>${esc(menor.nome)}</b> <span class="nw">(${brl(menor.valor)})</span></span></p><span class="rpaBar" aria-hidden="true"><i style="width:${pc.toFixed(1)}%"></i></span>`;}
+  return `<div class="rpa ${cls||''}" role="note"><p class="rpaT">${I('chart')}<span>Seu patrimônio gera aprox. <b class="nw pos">${brl(R.v)}/mês</b> em dividendos</span>${nota}</p>${eq}</div>`;
+}
 function carteiraInicioHTML(patr,dm,p){
   const hj=hojeISO(),ativos=S.fiis.filter(f=>f.cotas*f.preco>0).length;
   /* variação do dia: só ativos com fechamento anterior conhecido (f.ant, gravado na atualização de cotações) */
@@ -3444,6 +3480,7 @@ function carteiraInicioHTML(patr,dm,p){
     prox=`<div class="hcProx"><span class="hcIc">${I('calendar')}</span><div class="hcPt"><small>Próximo provento</small><b>${esc(p.f.ticker)}${est>0?' · <span class="pos nw">'+brl(est)+'</span>':''}</b></div><span class="hcQd">${pad(p.date.getDate())}/${pad(p.date.getMonth()+1)}<small>${qd}</small></span></div>`;}
   return `<div class="card hmCart hcCard tap" data-act="cart-abre" role="button" tabindex="0" aria-label="abrir a carteira de investimentos">
     <div class="hmH"><h4>carteira</h4><span class="hmSub">${ativos} ${ativos===1?'ativo':'ativos'}${I('chevR','tapCh')}</span></div>
+    ${rendaPassivaHTML('rpaHm')}
     <div class="hcTop"><small>Investido</small><div class="hcLn"><b class="hcVal nw">${brl(patr)}</b>${vdTxt}</div></div>
     <div class="hcGrid">
       <div class="hcK"><small>Resultado</small><b class="nw ${plP==null?'':pl>=0?'pos':'neg'}">${plP==null?'—':sg(pl)+brl(Math.abs(pl))}</b>${plP==null?'<span>informe o custo</span>':`<span>${sg(pl)}${pc(plP)}</span>`}</div>
@@ -3466,18 +3503,33 @@ function proxVencHTML(){
     ${L.length>6?`<button type="button" class="hmLink hmMais" data-act="nav-aberto">+${L.length-6} ${L.length-6>1?'vencimentos':'vencimento'} nos próximos 30 dias${I('chevR')}</button>`:''}
   </div>`;
 }
+/* ---------- v10.159: termômetro de ritmo dos orçamentos ----------
+   compara quanto do limite já foi usado com quanto do mês já passou. o orçamento segue o mês do calendário
+   (o app não tem início de ciclo próprio), então o ritmo é dia de hoje ÷ dias do mês.
+   cor da barra no mês atual: normal até o ritmo + RITMO_MARGEM pontos; acima disso, âmbar; passou do limite, vermelho.
+   meses passados e futuros: sem marcador e com a regra antiga (âmbar a partir de 80%). */
+const RITMO_MARGEM=10;
+function ritmoMes(m){
+  if(m!==mesAtual())return null;
+  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),dia=+hojeISO().slice(8,10);
+  return {dia,dMes,pct:dia/dMes*100};
+}
+function ritmoCls(pct,r,over){if(over)return 'over';if(r)return pct>r.pct+RITMO_MARGEM?'warn':'';return pct>=80?'warn':'';}
+function ritmoTxt(pct,r){return `Dia ${r.dia} de ${r.dMes} (${Math.round(r.pct)}%) · ${Math.round(pct)}% do orçamento usado`;}
+function ritmoMarca(r){return r?`<b class="orcPace" style="left:${Math.min(100,r.pct).toFixed(1)}%" title="hoje: dia ${r.dia} de ${r.dMes}" aria-hidden="true"></b>`:'';}
 function orcInicioHTML(){
-  const m=mesAtual();
+  const m=mesAtual(),r=ritmoMes(m);
   const LO=limOrc(m),lst=S.cats.filter(c=>LO[c]>0).map(c=>{const lim=LO[c],gasto=somaMes(m,'despesa',c,true);return {c,lim,gasto,pct:gasto/lim*100};}).sort((a,b)=>b.pct-a.pct).slice(0,4);
   if(!lst.length)return '';
   return `<div class="card hmOrc">
-    <div class="hmH tap" data-act="nav-orc" role="button" tabindex="0" aria-label="abrir orçamentos"><h4>Orçamentos do mês</h4>${I('chevR','tapCh')}</div>
+    <div class="hmH tap" data-act="nav-orc" role="button" tabindex="0" aria-label="abrir orçamentos"><h4>Orçamentos do mês</h4><span class="hmSub">${r?`dia ${r.dia} de ${r.dMes} · ${Math.round(r.pct)}% do mês`:''}${I('chevR','tapCh')}</span></div>
     ${lst.map(x=>{
-      const badge=x.pct>=100?'<span class="badge over">estourou</span>':x.pct>=80?`<span class="badge warn">atenção · ${Math.round(x.pct)}%</span>`:'';
+      const cl=ritmoCls(x.pct,r,x.pct>=100);
+      const badge=x.pct>=100?'<span class="badge over">estourou</span>':cl==='warn'?`<span class="badge warn">acima do ritmo · ${Math.round(x.pct)}%</span>`:'';
       return `<div class="orcRow tap" data-act="nav-cat-orc" data-id="${esc(x.c)}" role="button" tabindex="0" aria-label="ver gastos de ${esc(x.c)} no mês">
         <div class="row small"><span class="catName"><span class="ic despesa" style="color:${corCat(x.c)}">${I(catIcon(x.c))}</span><b>${esc(x.c)}</b></span>${badge}</div>
         <div class="row small"><span>${brl(x.gasto)} de ${brl(x.lim)}</span><span>${Math.round(x.pct)}%</span></div>
-        <div class="bar ${x.pct>=100?'over':x.pct>=80?'warn':''}"><i data-w="${Math.min(100,x.pct)}"></i></div>
+        <div class="ritBar"><div class="bar ${cl}"><i data-w="${Math.min(100,x.pct)}"></i></div>${ritmoMarca(r)}</div>
       </div>`;}).join('')}
   </div>`;
 }
@@ -3639,14 +3691,16 @@ function viewOrc(){
   const comLim=S.cats.filter(c=>(L[c]||0)>0),semLim=S.cats.filter(c=>!(L[c]||0)&&!vazias.includes(c));
   const gLim=comLim.reduce((s,c)=>s+cents(somaMes(m,'despesa',c,true)),0)/100;
   const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),hj=hojeISO(),dia=m===atual?+hj.slice(8,10):passado?dMes:0;
-  const ritmo=dMes?dia/dMes*100:0,pctT=totLim?gLim/totLim*100:0,rest=c2(totLim-gLim),dRest=m===atual?dMes-dia+1:0;
-  const st=!totLim?'':gLim>totLim?['over','estourou']:m===atual&&pctT>ritmo+5?['warn','acima do ritmo']:passado?['ok','dentro do limite']:['ok','no ritmo'];
-  const marca=p=>m===atual?`<b class="orcPace" style="left:${Math.min(100,p).toFixed(1)}%" title="hoje"></b>`:'';
+  const pctT=totLim?gLim/totLim*100:0,rest=c2(totLim-gLim),dRest=m===atual?dMes-dia+1:0;
+  /* v10.159: termômetro de ritmo (ritmoMes/ritmoCls): marcador de hoje, cor pela comparação com o mês e texto de apoio */
+  const rit=ritmoMes(m),clT=ritmoCls(pctT,rit,gLim>totLim);
+  const st=!totLim?'':gLim>totLim?['over','estourou']:clT==='warn'&&rit?['warn','acima do ritmo']:passado?['ok','dentro do limite']:['ok','no ritmo'];
   const sug=c=>{let s=0,n=0;for(let k=1;k<=3;k++){const v=somaMes(mesMais(m,-k),'despesa',c,true);if(v>0){s+=v;n++;}}const b=n?s/n:somaMes(m,'despesa',c,true);return Math.max(50,Math.ceil(b/50)*50);};
   const hero=`<div class="card orcHero">
     <div class="orcHt"><small>orçamento de ${MESES[+m.slice(5,7)-1].toLowerCase()}</small>${st?`<span class="orcSt ${st[0]}">${st[1]}</span>`:''}</div>
     ${totLim?`<div class="orcHv"><b class="nw">${brl(gLim)}</b><span>de ${brl(totLim)}</span></div>
-    <div class="orcHb"><div class="bar ${gLim>totLim?'over':pctT>=80?'warn':''}"><i data-w="${Math.min(100,pctT)}"></i></div>${marca(ritmo)}</div>
+    <div class="orcHb"><div class="bar ${clT}"><i data-w="${Math.min(100,pctT)}"></i></div>${ritmoMarca(rit)}</div>
+    ${rit?`<p class="orcRit ${clT}">${I('clock')}<span>${ritmoTxt(pctT,rit)}${clT==='warn'?' · acima do ritmo do mês':''}</span></p>`:''}
     <div class="orcHs">
       <span><small>${rest>=0?'disponível':'passou'}</small><b class="nw ${rest<0?'neg':''}">${brl(Math.abs(rest))}</b></span>
       ${dRest&&rest>0?`<span><small>por dia</small><b class="nw">${brl(rest/dRest)}</b></span>`:`<span><small>usado</small><b>${Math.round(pctT)}%</b></span>`}
@@ -3655,13 +3709,14 @@ function viewOrc(){
   </div>`;
   const aviso=`<div class="orcInfo">${I('calendar')}<span>${proprio?'limites definidos para este mês':'limites herdados do mês anterior'}. Mudar um limite vale para ${nomeMes(m)} e os seguintes.</span><button class="btn2 sm" data-act="orc-copia">copiar limites de ${nomeMes(mesMais(m,-1))}</button>${m!==atual?`<button class="btn2 sm" data-act="orc-mes" data-id="${atual}">voltar ao mês atual</button>`:''}</div>`;
   const cards=comLim.map(c=>{
-    const lim=L[c],gasto=somaMes(m,'despesa',c,true),pct=gasto/lim*100,over=gasto>lim,cl=over?'over':pct>=80?'warn':'ok';
+    const lim=L[c],gasto=somaMes(m,'despesa',c,true),pct=gasto/lim*100,over=gasto>lim,clB=ritmoCls(pct,rit,over),cl=clB||'ok';
     const sub=over?`estourou ${brl(gasto-lim)}`:passado?`sobrou ${brl(lim-gasto)}`:`restam ${brl(lim-gasto)}`;
     return `<div class="card orc hov ${over?'alerta':''} ${cl}" style="--cc:${corCat(c)}">
       <div class="orcTop"><span class="orcIc">${I(catIcon(c))}</span><span class="orcNm"><b>${esc(c)}</b><small class="${cl}">${sub}</small></span><button class="orcEd" data-act="def-orc" data-id="${esc(c)}" aria-label="editar limite de ${esc(c)}" title="editar limite">${I('edit')}</button></div>
       <div class="orcTap tap" data-act="nav-cat-orc" data-id="${esc(c)}" role="button" tabindex="0" aria-label="ver gastos de ${esc(c)}">
         <div class="orcVals"><span><b class="nw">${brl(gasto)}</b> de ${brl(lim)}</span><em class="${cl}">${Math.round(pct)}%</em></div>
-        <div class="orcHb"><div class="bar ${over?'over':pct>=80?'warn':''}"><i data-w="${Math.min(100,pct)}"></i></div>${marca(ritmo)}</div>
+        <div class="orcHb"><div class="bar ${clB}"><i data-w="${Math.min(100,pct)}"></i></div>${ritmoMarca(rit)}</div>
+        ${rit&&clB==='warn'?`<small class="orcRitC">acima do ritmo: ${Math.round(pct)}% usado com ${Math.round(rit.pct)}% do mês</small>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3945,6 +4000,7 @@ function viewFiiCarteira(modo){
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
     <div class="wTot">${brl(pat)}</div>
+    ${rendaPassivaHTML('rpaW')}
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados${semCusto?` · ${semCusto} ${semCusto>1?'ativos sem':'ativo sem'} preço pago fora da conta`:''}</small></div>`:''}
     ${barra}
   </div>
@@ -4374,6 +4430,7 @@ function viewPat(){
     ${dif!=null?`<div class="ptDif">${dif>=0?'+':''}${brl(dif)} desde ${MESES[+ant.m.slice(5,7)-1]}</div>`:''}
     <div class="ptSplit"><div><span>você tem</span><b class="pv">${brl(P.ativos)}</b></div><div><span>você deve</span><b class="pv">${brl(P.passivos)}</b></div></div>
   </div>
+  ${(h=>h?`<div class="card rpaCard tap" data-act="nav-fii" role="button" tabindex="0" aria-label="abrir investimentos">${h}</div>`:'')(rendaPassivaHTML('rpaPt'))}
   <div class="ptGrid"><div class="card ptCard"><div class="ptHd"><span class="ptT">O que você tem</span><button class="ptAdd" data-act="novo-bem">+ bem</button></div>
     ${itA('chart','#a3e635','Investimentos',P.inv)}${itA('wallet','#22d3ee',S.bancos.length?'Contas':'Saldo',Math.max(0,P.contas))}${itA('casa','#a78bfa','Bens',P.bens)}${P.rec>0?itA('handCoins','#fbbf24','A receber (empréstimos)',P.rec):''}</div>
   <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você deve</span><button class="ptAdd" data-act="novo-pas">+ dívida</button></div>
@@ -6662,7 +6719,7 @@ function fraseIA(){
     <p class="iaDica">Diga do seu jeito: valor, onde, quando e como pagou.</p>
     <div class="iaCampo"><textarea id="iaTxt" rows="3" maxlength="600" placeholder="ex: gastei 45 no iFood ontem no cartão"></textarea></div>
     ${SR_API?`<div class="iaVoz"><div class="iaPill"><span class="pIdle">${I('mic')}Segure para falar</span><span class="pRec"><button type="button" class="rCanc" aria-label="cancelar gravação">${I('trash')}</button><span class="rDot"></span><span class="rTempo">0:00</span><span class="rOnda">${'<i></i>'.repeat(18)}</span><span class="rDesl">${I('chevL')}deslize para cancelar</span></span></div><div class="iaLock" aria-hidden="true">${I('lock')}${I('chevU')}</div><button type="button" class="iaMic" aria-label="segure para falar">${I('mic')}${I('send')}</button></div>`:''}
-    <div class="iaEx">${['almoço 32 reais hoje no pix','uber 18,50 ontem no cartão','recebi 1200 do freela sexta'].map(x=>`<button type="button" class="chipEx" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    <div class="iaEx">${['almoço 32 reais hoje no pix','uber 18,50 ontem no cartão','recebi 1200 do freela sexta','comprei 10 MXRF11 a 10,15'].map(x=>`<button type="button" class="chipEx" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     <button type="button" class="btn full" data-act="ia-frase-ok">${I('sparkle')} Preencher lançamento</button>
     <p class="iaDica sm">${SR_API?'':'Para ditar, toque no microfone do teclado. '}A frase é enviada para a IA do Google só para montar o lançamento.</p>
   </div>`;
@@ -6759,10 +6816,141 @@ function cancelaRec(quieto){
   micUI();if(!quieto){vibra([10,40,10]);const c=document.querySelector('.iaVoz');if(c){c.classList.remove('lixo');void c.offsetWidth;c.classList.add('lixo');}}
 }
 function micIA(){} // compatibilidade: o microfone agora usa os eventos de segurar (ligaMic)
+/* ---------- v10.159: Omnibox de lançamento ----------
+   um campo só, no topo da Início (e o mesmo campo de "Falar ou escrever" do +): a frase decide para onde vai.
+   "Comprei 10 MXRF11 a 10,15" (verbo comprei/vendi/aportei/investi + ticker da B3 + quantidade + preço) é lido aqui no
+   aparelho, sem IA, e abre a compra/venda do ativo em Investimentos já preenchida para conferir antes de salvar.
+   qualquer outra frase ("Uber 28 pix") segue o fluxo de sempre: IA (ler-comprovante) e o formulário de despesa/receita
+   preenchido para conferir. nada é salvo sem a pessoa tocar em confirmar. */
+let OMNI_TXT='';
+const OMNI_VERBO=/^\s*(comprei|compra|comprar|comprando|aportei|aporte|aportar|investi|vendi|venda|vender|vendendo)\b\s*/i;
+const OMNI_NUM='(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)';
+function omniData(t){
+  const n=norm(t),d=new Date();
+  if(/\banteontem\b/.test(n)){d.setDate(d.getDate()-2);return isoDe(d);}
+  if(/\bontem\b/.test(n)){d.setDate(d.getDate()-1);return isoDe(d);}
+  const m=n.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if(m){let y=m[3]?+m[3]:d.getFullYear();if(y<100)y+=2000;const iso=y+'-'+pad(+m[2])+'-'+pad(+m[1]);
+    if(DATA_OK.test(iso)&&!isNaN(new Date(iso+'T12:00:00'))&&new Date(iso+'T12:00:00').getDate()===+m[1]&&iso<=hojeISO())return iso;}
+  return hojeISO();
+}
+/* devolve {tipo:'compra'|'venda',ticker,qtd,preco,total,data} ou null quando a frase não é de investimento */
+function omniIntencaoInv(txt){
+  const s=String(txt||'').replace(/\s+/g,' ').trim();
+  const mv=s.match(OMNI_VERBO);if(!mv)return null;
+  /* ticker da B3: 4 letras + final de ações (3 a 8), units/FIIs/ETFs (11) ou BDRs (31 a 35, 39); "F" do fracionário é ignorado */
+  const tk=s.match(/(?:^|[\s,.;:(])([A-Za-z]{4}(?:3[1-59]|11|[3-8]))F?(?=$|[\s,.;:)])/);if(!tk)return null;
+  const ticker=tk[1].toUpperCase();
+  const venda=/^vend/i.test(mv[1]);
+  const ti=s.indexOf(tk[1],tk.index);if(ti<mv[0].length)return null;
+  let resto=s.slice(mv[0].length,ti)+' # '+s.slice(ti+tk[1].length).replace(/^F(?=$|[\s,.;:)])/,'');
+  resto=resto.replace(/\b(anteontem|ontem|hoje)\b/gi,' ').replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ');
+  let preco=0,qtd=0,total=0;
+  /* preço por cota: "a 10,15", "por R$ 10,15", "@10.15", "cada 10,15", "preço 10,15", "pm 10,15" */
+  const mp=resto.match(new RegExp('(?:\\ba\\b|\\bpor\\b|@|\\bcada\\b|\\bpre[cç]o(?:\\s+m[eé]dio)?(?:\\s+de)?|\\bpm\\b|\\bcotad[oa]\\s+a)\\s*(?:r\\$\\s*)?'+OMNI_NUM+'(?!\\d)(?![.,]\\d)(?!\\s*(?:cotas?|a[cç][oõ]es|a[cç][aã]o|unidades?))','i'));
+  if(mp){preco=parseBR(mp[1]);resto=resto.replace(mp[0],' ');}
+  /* valor total: "R$ 1000 em MXRF11", "1000 reais", "total de 101,50" */
+  const mt=resto.match(new RegExp('(?:\\btotal(?:\\s+de)?\\s*(?:r\\$\\s*)?'+OMNI_NUM+')|(?:r\\$\\s*'+OMNI_NUM+')|(?:'+OMNI_NUM+'\\s*(?:reais|conto|pila)\\b)','i'));
+  /* quantidade: número com "cotas/ações/unidades", senão o primeiro número que sobrar */
+  const mq=resto.match(new RegExp(OMNI_NUM+'\\s*(?:cotas?|a[cç][oõ]es|a[cç][aã]o|unidades?|pap[eé]is|x)\\b','i'));
+  if(mq){qtd=parseBR(mq[1]);resto=resto.replace(mq[0],' ');}
+  const vT=mt?parseBR(mt[1]||mt[2]||mt[3]):0;if(mt)resto=resto.replace(mt[0],' ');
+  const nums=(resto.match(new RegExp(OMNI_NUM,'g'))||[]).map(parseBR).filter(v=>v>0);
+  if(!qtd&&nums.length){qtd=nums.shift();}
+  /* "10 MXRF11 R$ 10,15": com quantidade, o valor em reais é o preço por cota; sem quantidade (ou com "total"), é o total */
+  if(vT>0){if(!preco&&qtd>0&&!/total/i.test(mt[0]))preco=vT;else total=vT;}
+  if(!preco&&nums.length){preco=nums.shift();}
+  /* "aportei 1000 em MXRF11": número solto antes do ticker, com "em", sem preço, é valor e não quantidade */
+  if(!preco&&!total&&qtd>0&&/^(aport|invest)/i.test(mv[1])&&/\bem\s*#/i.test(resto.replace(/\d[\d.,]*/g,''))){total=qtd;qtd=0;}
+  return {tipo:venda?'venda':'compra',ticker,qtd:qtd>0?qtd:0,preco:preco>0?c2(preco):0,total:total>0?c2(total):0,data:omniData(s)};
+}
+function omniTipoAtivo(t){const b=B3_LIST.find(x=>x.t===t);return b&&b.tipo&&['fii','acao','etf','bdr'].includes(b.tipo)?b.tipo:rdAdivinha(t);}
+/* true quando a frase era de investimento (e já abriu a confirmação ou avisou) */
+function omniInv(texto){
+  const iv=omniIntencaoInv(texto);if(!iv)return false;
+  if(!pode('investimentos')){abrePlanos('investimentos');return true;}
+  omniInvConfirma(iv);return true;
+}
+function omniInvResumo(iv,f,tipo){
+  const tot=iv.qtd>0&&iv.preco>0?c2(iv.qtd*iv.preco):0;
+  const q=iv.qtd>0?num(iv.qtd).replace(/,00$/,''):'';
+  return `<div class="omniPrev">${assetIco(iv.ticker,tipo)}<div><small>${iv.tipo==='venda'?'venda':'compra'} entendida · confira e salve</small><b>${q?q+' ':''}${esc(iv.ticker)}${iv.preco>0?' a '+brl(iv.preco):''}${tot?' = '+brl(tot):''}</b>${f?'':'<em>ativo novo na carteira</em>'}${iv.precoCot?'<em>preço da última cotação</em>':''}</div></div>`;
+}
+function omniInvConfirma(iv){
+  const f=(S.fiis||[]).find(x=>x.ticker===iv.ticker&&!['cripto','rf'].includes(tipoOf(x)));
+  if(iv.tipo==='venda'&&!(f&&f.cotas>0)){toast('Não achei '+iv.ticker+' na sua carteira para vender.',true);return;}
+  if(!iv.preco&&f&&f.preco>0){iv.preco=c2(f.preco);iv.precoCot=true;}
+  if(!iv.qtd&&iv.total>0&&iv.preco>0)iv.qtd=Math.floor(iv.total/iv.preco);
+  if(TAB!=='fii')go('fii');if(FMODO==='radar')rdModoSet('carteira');
+  const tipo=f?tipoOf(f):omniTipoAtivo(iv.ticker);
+  if(f){
+    opForm(f.id,iv.tipo,true);
+    const mf=$('#mf');if(!mf)return;
+    const set=(n,v)=>{const el=mf.querySelector('[name="'+n+'"]');if(el&&v)el.value=v;};
+    if(iv.qtd>0)set('qtd',num(iv.qtd).replace(/,00$/,''));if(iv.preco>0)set('preco',num(iv.preco));set('data',iv.data);
+    mf.insertAdjacentHTML('afterbegin',omniInvResumo(iv,f,tipo));
+    const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent=iv.tipo==='venda'?'Confirmar venda':'Confirmar compra';
+    return;
+  }
+  /* ativo que ainda não está na carteira: cria o ativo com a compra no histórico (preço médio e cotas vêm das operações) */
+  const b=B3_LIST.find(x=>x.t===iv.ticker);
+  form('Compra · '+iv.ticker,[
+    {type:'html',html:omniInvResumo(iv,null,tipo)},
+    {name:'tipo',label:'Tipo de ativo',type:'select',value:tipo,options:TIPOS.filter(x=>['fii','acao','etf','bdr'].includes(x.k)).map(x=>({v:x.k,t:x.l}))},
+    {name:'qtd',label:'Cotas',value:iv.qtd>0?num(iv.qtd).replace(/,00$/,''):'',required:true,inputmode:'decimal',placeholder:'0'},
+    {name:'preco',label:'Preço por cota (R$)',value:iv.preco>0?num(iv.preco):'',required:true,inputmode:'decimal',placeholder:'0,00'},
+    {name:'taxas',label:'Taxas e corretagem (R$)',inputmode:'decimal',placeholder:'0,00'},
+    {name:'data',label:'Data',type:'date',value:iv.data,required:true},
+    contaCampo('compra')
+  ],v=>{
+    if(!DATA_OK.test(String(v.data)))return 'Informe a data.';
+    if(v.data>hojeISO())return 'A data não pode ser no futuro.';
+    const tp=['fii','acao','etf','bdr'].includes(v.tipo)?v.tipo:tipo;
+    const op={id:uid(),tipo:'compra',data:v.data,qtd:parseBR(v.qtd),preco:parseBR(v.preco),taxas:c2(parseBR(v.taxas)||0),valor:0,custo:0};
+    if(!(op.qtd>0))return 'Informe a quantidade.';
+    if(tp!=='etf'&&Math.round(op.qtd)!==op.qtd)return 'Cotas devem ser um número inteiro.';
+    if(!(op.preco>0))return 'Informe o preço.';
+    if(op.taxas<0)return 'Taxas não podem ser negativas.';
+    if(v.conta&&S.bancos.some(x=>x.id===v.conta))op.conta=v.conta;
+    if((S.fiis||[]).some(x=>x.ticker===iv.ticker&&!['cripto','rf'].includes(tipoOf(x))))return iv.ticker+' já está na carteira. Feche e lance de novo.';
+    const nf={id:uid(),tipo:tp,ticker:iv.ticker,nome:b?b.n:'',cotas:0,preco:op.preco,dpc:0,diaPag:0,pago:0,cotEm:'',cotFonte:'manual',ops:[op]};
+    aplicaOps(nf);
+    if(!S.fiis)S.fiis=[];S.fiis.push(nf);
+    salvar();render();toast('Compra de '+iv.ticker+' registrada');
+    localStorage.removeItem('gv-cot-ts');setTimeout(()=>atualizaCotacoes(true),50);
+  });
+  const mf=$('#mf');if(mf){const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Confirmar compra';}
+}
+function omniHTML(){
+  return `<form class="omni" id="omniF" role="search" aria-label="lançar numa frase" autocomplete="off" novalidate>
+    <span class="omniIc" aria-hidden="true">${I('sparkle')}</span>
+    <input id="omniTxt" type="text" enterkeyhint="send" maxlength="600" value="${esc(OMNI_TXT)}" placeholder="Uber 28 pix · Comprei 10 MXRF11 a 10,15" aria-label="o que você gastou, recebeu ou investiu">
+    <button type="submit" class="omniGo" aria-label="lançar">${I('arrowUp')}</button>
+  </form>`;
+}
+async function omniEnvia(){
+  const inp=$('#omniTxt'),fm=$('#omniF');if(!inp||(fm&&fm.classList.contains('busy')))return;
+  const texto=inp.value.trim();
+  if(texto.length<3){toast('Escreva o que você gastou, recebeu ou investiu.',true);inp.focus();return;}
+  if(omniInv(texto)){OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';return;}
+  if(!USER){toast('Entre na sua conta para lançar despesas por frase.',true);return;}
+  if(!pode('leitura_ia')){abrePlanos('leitura_ia');return;}
+  if(fm){fm.classList.add('busy');inp.readOnly=true;}
+  try{
+    const o=await chamaIA({texto},()=>toast(IA_OCUPADA));
+    if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
+    OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';
+    abreTxIA(o);
+  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);}
+  finally{const f2=$('#omniF'),i3=$('#omniTxt');if(f2)f2.classList.remove('busy');if(i3)i3.readOnly=false;}
+}
+document.addEventListener('submit',e=>{if(e.target&&e.target.id==='omniF'){e.preventDefault();omniEnvia();}});
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='omniTxt')OMNI_TXT=e.target.value;});
 async function enviaFraseIA(){
   const ta=$('#iaTxt'),btn=document.querySelector('[data-act="ia-frase-ok"]');if(!ta)return;
   const texto=ta.value.trim();
   if(texto.length<3){toast('Escreva o que você gastou ou recebeu.',true);ta.focus();return;}
+  if(omniIntencaoInv(texto)){if(RS)cancelaRec(true);omniInv(texto);return;} // v10.159: compra/venda de ativo vai para Investimentos (sem IA)
   if(RS){const st=RS;RS=null;clearInterval(st.tm);clearTimeout(st.esp);const r=REC;REC=null;if(r){try{r.abort();}catch(e){}}micUI();} // mantém o que já foi transcrito
   if(btn){btn.disabled=true;btn.innerHTML=I('sparkle')+' Entendendo…';}
   try{
