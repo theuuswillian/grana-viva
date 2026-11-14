@@ -1,4 +1,4 @@
-# site.py (v10.82; revisado em 10/11/2026 para o app v10.156): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
+# site.py (v10.82; revisado em 10/11/2026 para o app v10.156; v10.160: MVP sem Open Finance nem imposto das vendas, destaque para IA, recibo e WhatsApp): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
 # Gera TODAS as páginas .html (inclusive index e funcionalidades, que voltaram a ser geradas aqui). site/site.css é editado à mão e não é sobrescrito.
 # uso: python3 site.py          (rodar de novo sempre que planos.js ou estes textos mudarem)
 # O app continua em ./ (start_url do app instalado). As páginas ficam em ./site/ e não usam JavaScript.
@@ -67,8 +67,8 @@ def card_plano(id, destaque=False):
     p = PL[id]
     itens = {
         'gratis': ['Lançamentos de receitas, despesas e transferências', 'Contas fixas e recorrências', 'Contas e bancos, com saldo de cada uma', 'Cartões, faturas e parcelas', 'Início com o resumo do mês e assinaturas detectadas', 'Alertas de vencimento no celular', 'PIN e Face ID, exportar e excluir seus dados'],
-        'plus': ['Tudo do Grátis', 'Planejamento e projeção de saldo', 'Orçamentos por categoria e plano pela renda', 'Metas com ritmo e rendimento pelo CDI', 'Relatórios completos e resumo do mês', 'Importar extrato (PDF, OFX ou CSV) e anexar comprovantes', f'Lançar com IA por foto ou frase ({L_IA1} por dia)'],
-        'pro': ['Tudo do Plus', 'Investimentos: FIIs, ações, BDRs, ETFs, cripto e renda fixa pelo CDI', f'Radar de preços: até {RADAR_MAX} ativos, com alertas no celular', 'Patrimônio líquido mês a mês', f'Assistente com IA ({L_AS2} perguntas por dia)', f'Lançar com IA ({L_IA2} por dia)'],
+        'plus': ['Tudo do Grátis', 'Planejamento e projeção de saldo', 'Orçamentos por categoria e plano pela renda', 'Metas com ritmo e rendimento pelo CDI', 'Relatórios completos e resumo do mês', 'Importar extrato (PDF, OFX ou CSV) e anexar comprovantes', f'Lançar com IA por foto do recibo ou frase ({L_IA1} por dia)', 'Lançar pelo WhatsApp'],
+        'pro': ['Tudo do Plus', 'Investimentos: FIIs, ações, BDRs, ETFs, cripto e renda fixa pelo CDI', f'Alertas de preço na carteira e em até {RADAR_MAX} ativos, no celular', 'Patrimônio líquido mês a mês', f'Assistente com IA ({L_AS2} perguntas por dia)', f'Lançar com IA ({L_IA2} por dia)'],
     }[id]
     preco = 'R$ 0' if id == 'gratis' else brl(p['preco'])
     sufixo = 'para sempre' if id == 'gratis' else '/mês'
@@ -97,7 +97,7 @@ def landing():
     ld = json.dumps({"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "GranaViva", "applicationCategory": "FinanceApplication",
         "operatingSystem": "Web, Android, iOS (PWA)", "inLanguage": "pt-BR", "url": "https://theuuswillian.github.io/grana-viva/site/",
         "image": "https://theuuswillian.github.io/grana-viva/site/img/og.jpg",
-        "description": "Controle financeiro pessoal: lançamentos, cartões e faturas, orçamentos, planejamento, metas, investimentos com Radar de preços e IA.",
+        "description": "Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.",
         "offers": [{"@type": "Offer", "name": PL[k]['nome'], "price": f'{PL[k]["preco"]:.2f}', "priceCurrency": "BRL"} for k in ('gratis', 'plus', 'pro', 'pro_anual')],
         "author": {"@type": "Person", "name": "Matheus Willian"}}, ensure_ascii=False)
     cabeca = f'''<link rel="canonical" href="https://theuuswillian.github.io/grana-viva/site/">
@@ -105,7 +105,7 @@ def landing():
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="GranaViva">
 <meta property="og:title" content="GranaViva · seu dinheiro organizado, sem planilha">
-<meta property="og:description" content="Gastos, cartões, orçamento pela renda, metas e investimentos em um só app brasileiro. Comece grátis.">
+<meta property="og:description" content="Lance em segundos pela IA no app, pela foto do recibo ou pelo WhatsApp. Cartões, faturas e patrimônio com alertas de preço. Comece grátis.">
 <meta property="og:url" content="https://theuuswillian.github.io/grana-viva/site/">
 <meta property="og:image" content="https://theuuswillian.github.io/grana-viva/site/img/og.jpg">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -119,7 +119,7 @@ def landing():
   <div>
     <p class="selo2 sobe"><i></i>Feito no Brasil, em português</p>
     <h1 class="sobe d1">Saiba quanto vai <em>sobrar</em> antes do mês acabar.</h1>
-    <p class="lead sobe d2">Gastos, cartões e faturas, orçamento pela sua renda, metas e investimentos no mesmo app. Lance um gasto pela foto do comprovante ou por uma frase, digitada ou falada, e veja o saldo previsto de cada dia até o fim do mês.</p>
+    <p class="lead sobe d2"><strong>Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.</strong> Escreva "Almoço 45 crédito", tire foto do recibo ou mande uma mensagem no WhatsApp, e veja se o mês está no ritmo da sua meta.</p>
     <div class="ctas sobe d3"><a class="btn btnP" href="{APP}">Começar grátis</a><a class="btn btnS" href="precos.html">Ver planos</a></div>
     <ul class="provas sobe d3"><li>{P["TESTE_DIAS"]} dias do Pro, sem cartão</li><li>Sem anúncios</li><li>Celular e computador</li></ul>
   </div>
@@ -135,8 +135,8 @@ def landing():
 <section class="faixa" aria-label="Destaques"><div class="lim"><ul>
   <li><b>R$ 0</b>cartões e faturas no Grátis</li>
   <li><b>50/30/20</b>orçamento pela sua renda</li>
-  <li><b>Radar de preços</b>alertas de preço no celular</li>
-  <li><b>Foto ou frase</b>vira lançamento com IA</li>
+  <li><b>Alertas de preço</b>no sino de cada ativo</li>
+  <li><b>IA, recibo ou WhatsApp</b>vira lançamento em segundos</li>
 </ul></div></section>
 
 <section class="lim sec" aria-labelledby="t-como">
@@ -144,7 +144,7 @@ def landing():
   <h2 id="t-como">Organizado em três passos.</h2>
   <ol class="passos">
     <li><b>Crie sua conta</b><span>Com e-mail ou Google, em menos de um minuto. Você ganha {P["TESTE_DIAS"]} dias do Pro, sem cartão.</span></li>
-    <li><b>Traga o seu mês</b><span>Cadastre contas e cartões, marque as contas fixas e lance os gastos à mão, por foto, por frase ou importando o extrato.</span></li>
+    <li><b>Defina a meta do mês</b><span>No primeiro acesso o app só pergunta quanto você quer gastar por mês. Depois, lance pela barra do Início, pela foto do recibo ou pelo WhatsApp.</span></li>
     <li><b>Acompanhe sem susto</b><span>Veja o saldo previsto, o limite de cada categoria e receba avisos de fatura, contas do dia e orçamento no celular.</span></li>
   </ol>
 </section>
@@ -154,10 +154,10 @@ def landing():
   <h2>O que costuma estar espalhado em vários apps, num só lugar.</h2>
   <div class="difs">
     <article class="dif revela"><div class="ic">1</div><h3>Cartões e faturas de graça, para sempre</h3><p>Compras e parcelas na fatura certa, fechamento, vencimento, limite usado e juros de atraso, tudo no plano Grátis.</p><p class="porque">Por que importa: em vários apps conhecidos não há plano grátis permanente, ou cadastrar todos os cartões só é possível no plano pago.</p></article>
-    <article class="dif revela"><div class="ic">2</div><h3>Gastos e investimentos juntos</h3><p>FIIs, ações, BDRs, ETFs, cripto e renda fixa (CDB, LCI/LCA, Tesouro, caixinhas) com proventos, preço médio, IR e rendimento pelo CDI em dias úteis.</p><p class="porque">Por que importa: o patrimônio fecha com as suas contas e faturas, sem um segundo app só para a carteira.</p></article>
-    <article class="dif revela"><div class="ic">3</div><h3>Radar de preços</h3><p>Siga até {RADAR_MAX} ativos que você ainda não tem, defina até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia) e receba o aviso no celular, mesmo com o app fechado.</p><p class="porque">Por que importa: você não precisa ficar olhando cotação o dia todo.</p></article>
+    <article class="dif revela"><div class="ic">2</div><h3>Gastos e investimentos juntos</h3><p>FIIs, ações, BDRs, ETFs, cripto e renda fixa (CDB, LCI/LCA, Tesouro, caixinhas) com proventos, preço médio e rendimento pelo CDI em dias úteis.</p><p class="porque">Por que importa: o patrimônio fecha com as suas contas e faturas, sem um segundo app só para a carteira.</p></article>
+    <article class="dif revela"><div class="ic">3</div><h3>Patrimônio com alertas de preço</h3><p>Toque no sino de qualquer ativo da carteira para criar um alerta já com o preço de agora, ou acompanhe até {RADAR_MAX} ativos que você ainda não tem. Até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia), com aviso no celular mesmo com o app fechado.</p><p class="porque">Por que importa: você não precisa ficar olhando cotação o dia todo.</p></article>
     <article class="dif revela"><div class="ic">4</div><h3>Orçamento que nasce da sua renda</h3><p>Diga quanto ganha e escolha um perfil: Equilibrado 50/30/20, Contas apertadas 60/30/10 ou Acelerar 50/20/30. O app sugere o limite de cada categoria e mostra se você está no ritmo.</p><p class="porque">Por que importa: você não começa de uma tela vazia.</p></article>
-    <article class="dif revela"><div class="ic">5</div><h3>IA incluída no plano</h3><p>A foto do comprovante ou uma frase ("gastei 32 no mercado ontem"), digitada ou falada, vira um lançamento para você conferir antes de salvar. No Plus, {L_IA1} leituras por dia.</p><p class="porque">Por que importa: a IA não é um adicional cobrado à parte.</p></article>
+    <article class="dif revela"><div class="ic">5</div><h3>IA no app, foto do recibo ou WhatsApp</h3><p>Uma frase ("Almoço 45 crédito"), a foto do recibo ou uma mensagem no WhatsApp vira um lançamento para você conferir antes de salvar. No extrato, cada lançamento mostra de onde veio. No Plus, {L_IA1} leituras por dia.</p><p class="porque">Por que importa: a IA não é um adicional cobrado à parte.</p></article>
     <article class="dif revela"><div class="ic">6</div><h3>Saldo de cada dia e o melhor cartão</h3><p>Calendário com o saldo dia a dia, aviso quando o saldo vai ficar negativo e qual cartão dá mais prazo para pagar uma compra feita hoje.</p><p class="porque">Por que importa: você decide antes de gastar, não depois da fatura.</p></article>
   </div>
 </section>
@@ -178,12 +178,12 @@ def landing():
   </div>
 
   <div class="vit revela">
-    <div class="vitTxt"><h3>Lance em segundos</h3><p>Tire foto do comprovante ou diga o gasto do seu jeito: valor, onde, quando e como pagou. A IA preenche o lançamento e você confere antes de salvar.</p><ul class="lst"><li>Fale segurando o microfone ou use o ditado do teclado</li><li>Importe o extrato em PDF, OFX ou CSV, sem duplicar</li><li>Plus: {L_IA1} leituras por dia · Pro: {L_IA2}</li></ul></div>
+    <div class="vitTxt"><h3>Lance em segundos</h3><p>Tire foto do comprovante ou diga o gasto do seu jeito: valor, onde, quando e como pagou. A IA preenche o lançamento e você confere antes de salvar.</p><ul class="lst"><li>Mande pelo WhatsApp: "Uber 28 pix" vira lançamento</li><li>Fale segurando o microfone ou use o ditado do teclado</li><li>Importe o extrato em PDF, OFX ou CSV, sem duplicar</li><li>Plus: {L_IA1} leituras por dia · Pro: {L_IA2}</li></ul></div>
     <div class="vitImgs">{fone("ia-frase", "Falar ou escrever: a frase vira um lançamento preenchido pela IA")}</div>
   </div>
 
   <div class="vit inv revela">
-    <div class="vitTxt"><h3>Investimentos, Radar e patrimônio</h3><p>Carteira com cotação da B3 (atraso de cerca de 15 minutos) e próximo provento com valor esperado. No Radar, siga ativos que você ainda não tem e receba alertas de preço no celular.</p><ul class="lst"><li>Ações, FIIs e BDRs conferidos a cada 15 min no pregão; cripto de hora em hora</li><li>Renda fixa com taxas oficiais do Banco Central, IR regressivo e IOF</li><li>Patrimônio líquido mês a mês</li></ul></div>
+    <div class="vitTxt"><h3>Patrimônio e alertas de preço</h3><p>Carteira com cotação da B3 (atraso de cerca de 15 minutos), próximo provento com valor esperado e patrimônio total. Crie alertas de preço no sino de cada ativo ou para ativos que você ainda não tem.</p><ul class="lst"><li>Ações, FIIs e BDRs conferidos a cada 15 min no pregão; cripto de hora em hora</li><li>Renda fixa com as taxas oficiais do Banco Central</li><li>Patrimônio líquido mês a mês e proventos estimados</li></ul></div>
     <div class="vitImgs">{fone("radar", "Radar de preços: ativos seguidos, preço, variação de 30 dias e quanto falta para o alvo")}{fone("radar-alertas", "Alertas do Radar: acima de, abaixo de ou queda no dia, até 3 por ativo")}</div>
   </div>
 
@@ -203,8 +203,7 @@ def landing():
       <tr><th scope="row">Foco</th><td class="gv">Gastos, cartões, planejamento e investimentos</td><td>Gastos e cartões</td><td>Gastos e cartões</td><td>Gastos e orçamento</td><td>Só investimentos</td></tr>
       <tr><th scope="row">Plano grátis permanente</th><td class="gv">Sim, com cartões e faturas</td><td>Sim, com limites</td><td>Não, só teste grátis</td><td>Sim, manual</td><td>Sim, com limite de ativos</td></tr>
       <tr><th scope="row">Plano pago</th><td class="gv">Plus {brl(PL["plus"]["preco"])}/mês · Pro {brl(PL["pro"]["preco"])}/mês ou {brl(PL["pro_anual"]["preco"])}/ano</td><td>Anual, na faixa de R$ 100</td><td>Na faixa de R$ 30 a R$ 40 por mês</td><td>Mensal, entre R$ 20 e R$ 30</td><td>Só via assinatura de outra empresa</td></tr>
-      <tr><th scope="row">Conexão automática com o banco (Open Finance)</th><td class="gv">Experimental <small>via Meu Pluggy, para quem já usa; ou importe o extrato em PDF, OFX ou CSV</small></td><td>Sim, no plano pago</td><td>Sim, num plano mais caro</td><td>Sim, no plano pago</td><td>Para investimentos</td></tr>
-      <tr><th scope="row">IA para lançar gastos</th><td class="gv">Foto ou frase (digitada ou falada), no Plus</td><td>Assistente no plano mais caro</td><td>Adicional pago à parte</td><td>—</td><td>—</td></tr>
+      <tr><th scope="row">IA para lançar gastos</th><td class="gv">Frase, foto do recibo ou WhatsApp, no Plus</td><td>Assistente no plano mais caro</td><td>Adicional pago à parte</td><td>—</td><td>—</td></tr>
       <tr><th scope="row">Investimentos com proventos e alertas de preço</th><td class="gv">Sim, no Pro</td><td>—</td><td>—</td><td>—</td><td>Sim, no plano pago</td></tr>
       <tr><th scope="row">Anúncios</th><td class="gv">Não</td><td>—</td><td>—</td><td>Contém anúncios</td><td>—</td></tr>
     </tbody>
@@ -254,14 +253,14 @@ def landing():
   <a class="btn btnP" href="{APP}">Começar grátis</a>
 </div></section>'''
     return pagina('index.html', 'GranaViva · controle financeiro com cartões, investimentos e IA',
-        'App brasileiro de finanças pessoais: gastos, cartões e faturas no plano grátis; orçamento pela renda (50/30/20), metas, investimentos com Radar de preços e lançamento por foto ou frase com IA. Sem anúncios.',
+        'App brasileiro de finanças pessoais. Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço. Cartões e faturas no plano grátis. Sem anúncios.',
         corpo, cabeca=cabeca)
 
 def funcionalidades():
     def g(nivel, titulo, itens):
         li = ''.join(f'<div class="item"><h3>{e(t)}</h3><p>{e(d)}</p></div>' for t, d in itens)
         return f'<section class="lim bloco"><h2>{titulo} <span class="tag">{e(NOME_NV[nivel])}</span></h2><div class="grade3">{li}</div></section>'
-    corpo = '<section class="lim cab"><h1>Funcionalidades</h1><p class="lead">Tudo o que o GranaViva faz hoje, separado pelo plano em que aparece. Toda conta nova usa o Pro por ' + str(P['TESTE_DIAS']) + ' dias.</p></section>'
+    corpo = '<section class="lim cab"><h1>Funcionalidades</h1><p class="lead">Tudo o que o GranaViva faz hoje, separado pelo plano em que aparece. Toda conta nova usa o Pro por ' + str(P['TESTE_DIAS']) + ' dias.</p><p class="lead"><strong>Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.</strong></p></section>'
     corpo += g(0, 'Controle do dia a dia', [
         ('Lançamentos', 'Receitas, despesas e transferências, com status pago, previsto ou cancelado. Só o que está pago entra no saldo.'),
         ('Dividir entre categorias', 'Um gasto pode ser dividido em até 10 partes, em categorias diferentes, com os centavos sempre exatos.'),
@@ -285,22 +284,18 @@ def funcionalidades():
         ('Relatórios', 'Comparação com o mês anterior, ritmo de gastos, variação por categoria e resumo do mês.'),
         ('Importar extrato', 'PDF do extrato ou da fatura (lido com IA), OFX ou CSV do banco, com sugestão de categoria e sem duplicar lançamentos.'),
         ('Comprovantes', 'Anexe fotos e PDFs aos lançamentos, guardados em um espaço privado da sua conta.'),
-        ('Lançar com IA', f'A foto do comprovante ou uma frase, digitada ou falada ("gastei 32 no mercado ontem"), vira um lançamento para você conferir. Até {L_IA1} por dia no Plus e {L_IA2} no Pro.'),
+        ('Lançar com IA', f'A foto do recibo ou uma frase, digitada ou falada ("Almoço 45 crédito"), vira um lançamento para você conferir. Até {L_IA1} por dia no Plus e {L_IA2} no Pro.'),
+        ('Lançar pelo WhatsApp', 'Ligue seu número em WhatsApp & Conta e mande "Uber 28 pix" ou "Mercado 152,40 crédito Nubank": o lançamento entra no app, já com a categoria. No extrato, cada lançamento mostra se veio da IA, do WhatsApp, do recibo ou foi manual.'),
     ])
     corpo += g(2, 'Investimentos e patrimônio', [
         ('Carteira completa', 'FIIs, ações, BDRs, ETFs e cripto, com cotação da B3 (atraso de cerca de 15 minutos) e de cripto, proventos com valor esperado, reinvestimento e preço médio.'),
-        ('Radar de preços', f'Siga até {RADAR_MAX} ativos que você ainda não tem, com preço, variação de 30 dias e quanto falta para o alvo. Até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia), com aviso no celular mesmo com o app fechado. Comprou? Leve para a carteira com um toque.'),
-        ('Renda fixa pelo CDI', 'CDB, LCI/LCA, Tesouro, caixinhas e poupança calculados com as taxas oficiais do Banco Central, dias úteis e IR.'),
-        ('Imposto das vendas', 'Estimativa do DARF das vendas de ações e FIIs, com aviso 7 dias antes e no dia do vencimento. Confira sempre o valor com a Receita Federal.'),
+        ('Alertas de preço', f'No sino de cada ativo da carteira, crie um alerta já com o preço de agora. Também dá para acompanhar até {RADAR_MAX} ativos que você ainda não tem, com preço, variação de 30 dias e quanto falta para o alvo. Até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia), com aviso no celular mesmo com o app fechado.'),
+        ('Renda fixa pelo CDI', 'CDB, LCI/LCA, Tesouro, caixinhas e poupança calculados com as taxas oficiais do Banco Central e os dias úteis.'),
         ('Patrimônio', 'Contas, investimentos e bens menos dívidas e faturas, com histórico mês a mês.'),
         ('Assistente com IA', f'Pergunte "quanto gastei com mercado em outubro?". O app calcula com os seus dados e a resposta é conferida. Até {L_AS2} perguntas por dia. Não é recomendação de investimento.'),
     ])
-    corpo += '''<section class="lim bloco"><h2>Experimental e em preparação</h2><div class="grade3">
-<div class="item"><h3>Conexão bancária (Meu Pluggy)</h3><p>Para quem já usa o Meu Pluggy: o app traz contas e transações pelo Open Finance e você revisa tudo antes de entrar. Exige criar a sua conta no Meu Pluggy e copiar as credenciais de lá, por isso é um recurso avançado e experimental, disponível em todos os planos enquanto estiver em teste.</p></div>
-<div class="item"><h3>Lançar pelo WhatsApp</h3><p>Mandar "gastei 32 no almoço" para o WhatsApp do GranaViva e o lançamento entrar no app. Ainda não está disponível: o número oficial está em preparação.</p></div>
-</div></section>'''
     corpo += f'<section class="lim bloco final"><div class="ctas cen"><a class="btn btnP" href="{APP}">Começar grátis</a><a class="btn btnS" href="precos.html">Ver planos e preços</a></div></section>'
-    return pagina('funcionalidades.html', 'Funcionalidades · GranaViva', 'Lançamentos, cartões e faturas, orçamentos, planejamento, metas, investimentos com Radar de preços e IA no GranaViva.', corpo, 'funcionalidades.html')
+    return pagina('funcionalidades.html', 'Funcionalidades · GranaViva', 'Lançamentos por IA, foto do recibo ou WhatsApp, cartões e faturas, orçamentos, planejamento, metas e patrimônio com alertas de preço no GranaViva.', corpo, 'funcionalidades.html')
 
 # rótulos da tabela de preços: os nomes vêm de planos.js; aqui só o texto mostrado no site, quando o app faz mais do que o nome diz
 ROTULO = {'importar_extrato': 'Importar extrato (PDF, OFX ou CSV)', 'investimentos': 'Investimentos (FIIs, ações, ETFs, BDRs, cripto, renda fixa e cotações)'}
@@ -312,10 +307,10 @@ def precos():
     for k, r in REC.items():
         linhas += linha(ROTULO.get(k, r['nome']), r['nivel'])
         if k == 'investimentos':
-            linhas += linha(f'Radar de preços com alertas no celular (até {RADAR_MAX} ativos)', r['nivel'])
+            linhas += linha(f'Alertas de preço na carteira e em até {RADAR_MAX} ativos que você não tem', r['nivel'])
     linhas += '<tr><th scope="row">Leituras com IA por dia</th>' + ''.join(f'<td>{LIM[n]["leitura_ia_dia"] or "Não"}</td>' for n in (0, 1, 2)) + '</tr>'
     linhas += '<tr><th scope="row">Perguntas ao assistente por dia</th>' + ''.join(f'<td>{LIM[n]["assistente_dia"] or "Não"}</td>' for n in (0, 1, 2)) + '</tr>'
-    linhas += '<tr><th scope="row">Conexão bancária pelo Meu Pluggy (experimental)</th>' + '<td><span class=sim>Sim</span></td>' * 3 + '</tr>'
+    linhas += linha('Lançar pelo WhatsApp', NV('leitura_ia'))
     corpo = f'''<section class="lim cab"><h1>Planos e preços</h1><p class="lead">Comece grátis. Assine só se precisar de mais.</p><div class="ctas"><a class="btn btnP" href="{APP}">Começar grátis</a></div></section>
 <section class="lim bloco">{grade_planos()}{NOTA_PAG}</section>
 <section class="lim bloco"><h2>Compare os recursos</h2>
@@ -353,15 +348,15 @@ def sobre():
 
 Q_TESTE = f'O que acontece depois dos {P["TESTE_DIAS"]} dias de teste?'
 FAQ = [
-    ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas fixas, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, orçamentos, relatórios, metas, investimentos, o Radar de preços e a IA.'),
+    ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas fixas, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, orçamentos, relatórios, metas, investimentos, os alertas de preço, o WhatsApp e a IA.'),
     (Q_TESTE, 'Sua conta passa para o Grátis automaticamente. Nada é cobrado, porque o teste não pede cartão, e nada do que você registrou é apagado. Os recursos pagos ficam escondidos e voltam se você assinar.'),
     ('Como assino e quais formas de pagamento são aceitas?', 'No app, abra Ajustes, escolha o plano e pague pelo Mercado Pago. ' + PAG_MEIOS + ' A renovação é automática até você cancelar.'),
     ('Como cancelo a assinatura?', 'Em Ajustes, no app. O acesso continua até o fim do período já pago e você não é cobrado de novo.'),
     ('Posso desistir e receber o dinheiro de volta?', 'Sim, em até 7 dias da contratação, com devolução de todo o valor. Hoje o pedido é feito por e-mail (' + EMAIL + '), com o e-mail da sua conta. Só cancelar em Ajustes interrompe as próximas cobranças, mas não pede o reembolso. Os detalhes estão nos Termos de uso.'),
-    ('O que é o Radar de preços?', f'Um recurso do Pro, na aba Investimentos. Você segue até {RADAR_MAX} ações, FIIs, ETFs, BDRs ou criptomoedas, mesmo sem tê-los, e cria até {RADAR_AL} alertas por ativo: acima de um preço, abaixo de um preço ou queda forte no dia. O aviso chega no celular mesmo com o app fechado. A B3 é conferida a cada 15 minutos no pregão (cotação com até 15 minutos de atraso) e cripto, de hora em hora. Não é recomendação de compra ou venda.'),
+    ('Como funcionam os alertas de preço?', f'Um recurso do Pro, na aba Patrimônio. No sino de cada ativo da carteira você cria um alerta já com o preço de agora, e em "Novo alerta de ativo" acompanha até {RADAR_MAX} ações, FIIs, ETFs, BDRs ou criptomoedas, mesmo sem tê-los, e cria até {RADAR_AL} alertas por ativo: acima de um preço, abaixo de um preço ou queda forte no dia. O aviso chega no celular mesmo com o app fechado. A B3 é conferida a cada 15 minutos no pregão (cotação com até 15 minutos de atraso) e cripto, de hora em hora. Não é recomendação de compra ou venda.'),
     ('Dá para lançar falando?', 'Sim, nos planos com IA. Em "Falar ou escrever", segure o microfone e diga o gasto, ou use o ditado do teclado do celular. A fala vira texto pelo reconhecimento de voz do próprio navegador ou do teclado (da Apple ou do Google, conforme o aparelho) e só a frase escrita vai para a IA montar o lançamento, que você confere antes de salvar. Áudios pelo WhatsApp ainda não estão disponíveis.'),
-    ('Conecta com o meu banco?', 'Você pode importar o extrato em PDF, OFX ou CSV (Plus e Pro). Existe também uma conexão bancária experimental pelo Meu Pluggy, para quem já tem conta lá: é preciso criar a conta no Meu Pluggy e copiar as credenciais para o app. Ainda não há uma conexão Open Finance simples, de um toque.'),
-    ('Dá para lançar pelo WhatsApp?', 'Ainda não. O recurso está em preparação e aparece no app como "em breve".'),
+    ('Conecta com o meu banco?', 'Você pode importar o extrato em PDF, OFX ou CSV (Plus e Pro), sem duplicar lançamentos. Para o dia a dia, o mais rápido é lançar pela barra do Início, pela foto do recibo ou pelo WhatsApp.'),
+    ('Dá para lançar pelo WhatsApp?', 'Sim, nos planos Plus e Pro. Em WhatsApp & Conta, toque em "ligar meu WhatsApp" e envie o código. Depois é só mandar mensagens como "Uber 28 pix" ou "Mercado 152,40 crédito Nubank" e confirmar: o lançamento entra no app com a categoria.'),
     ('Meus dados estão seguros?', 'Os dados ficam em um banco de dados na nuvem (Supabase, com servidores nos Estados Unidos) com regras que deixam cada conta ver apenas os próprios dados, conexão sempre criptografada (HTTPS) e uma cópia criptografada no seu aparelho. Nenhum sistema é 100% imune a falhas, mas tratamos segurança como prioridade.'),
     ('Vocês vendem meus dados ou mostram anúncios?', 'Não. Não vendemos nem alugamos dados e não há anúncios.'),
     ('A IA lê meus dados?', 'Só quando você usa um recurso de IA. Na leitura de comprovante ou de frase, a foto, o PDF ou o texto vai para a IA do Google (Gemini) para montar o lançamento. No assistente, vão a pergunta e os totais calculados pelo app, não a lista dos seus lançamentos. Hoje usamos o nível gratuito do Gemini, em que o Google pode usar esse conteúdo para melhorar os produtos dele. Veja os detalhes na Política de privacidade.'),
@@ -376,7 +371,7 @@ def faq():
     corpo = f'''<section class="lim cab"><h1>Dúvidas frequentes</h1></section>
 <section class="lim bloco faq">{itens}</section>
 <section class="lim bloco"><p>Não achou sua resposta? Escreva para <a href="mailto:{EMAIL}">{EMAIL}</a>.</p></section>'''
-    return pagina('faq.html', 'Dúvidas frequentes · GranaViva', 'Respostas sobre planos, teste grátis, pagamento, Radar de preços, segurança, IA, instalação e seus dados no GranaViva.', corpo, 'faq.html')
+    return pagina('faq.html', 'Dúvidas frequentes · GranaViva', 'Respostas sobre planos, teste grátis, pagamento, alertas de preço, WhatsApp, segurança, IA, instalação e seus dados no GranaViva.', corpo, 'faq.html')
 
 def privacidade():
     corpo = f'''<section class="lim cab"><h1>Política de privacidade</h1><p class="lead">Como o GranaViva trata os seus dados pessoais. Vigente a partir de {VIGENCIA}.</p></section>

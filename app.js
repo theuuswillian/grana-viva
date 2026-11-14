@@ -1,6 +1,10 @@
 
 (function(){
 'use strict';
+/* v10.160: MVP enxuto. true = 4 abas (Início, Gastos & Cartões, Patrimônio, WhatsApp & Conta), barra inteligente com recibo,
+   alertas de preço na carteira, Pluggy (Open Finance) e imposto das vendas (IR/DARF) escondidos. false = app completo como na v10.159.
+   Nada do servidor é apagado: só a interface e as chamadas automáticas ao pluggy-sync mudam. */
+const MVP_MODE=true;
 /* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
    (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
 const ERR_KEY='gv-erros',ERR_MAX=50;
@@ -147,14 +151,18 @@ function I(n,c){if(n&&EMO2LU[n])n=EMO2LU[n];if(n&&!ICONS[n]&&EMO_RE.test(n))retu
 /* v10.84: cada logo com o próprio id do degradê (o mesmo id em 3 lugares é inválido e some quando o primeiro está escondido) */
 let LOGO_N=0;
 const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
-const NAV=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+const NAV_FULL=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
+/* v10.160: no MVP a navegação principal tem 4 abas; as telas de detalhe ficam em "mais" (barra lateral) e dentro de cada aba */
+const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'WhatsApp & Conta',i:'chat'}];
+const NAV_MVP_MAIS=[{t:'lanc',l:'Extrato',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'cartoes',l:'Cartões e faturas',i:'card'},{t:'plan',l:'Planejamento',i:'compass'},{t:'rel',l:'Relatório',i:'report'},{t:'pat',l:'Patrimônio líquido',i:'scale'},{t:'metas',l:'Metas',i:'flag'},{t:'bancos',l:'Contas e bancos',i:'bank'}];
+const NAV=MVP_MODE?NAV_MVP:NAV_FULL;
 /* ---------- v10.82: planos (Grátis, Plus, Pro) ----------
    A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
    O plano é lido UMA vez por login da tabela assinaturas (a pessoa só lê a própria linha; só o servidor escreve).
    Aqui o plano só decide o que aparece; os limites de IA são conferidos de novo no servidor.
    Sem conseguir ler o plano (sem rede, primeira vez): usa a última cópia; sem cópia, nada é bloqueado. */
 const TAB_RECURSO={orc:'orcamentos',fii:'investimentos',metas:'metas',pat:'patrimonio',plan:'planejamento',cartoes:'cartoes',rel:'relatorios'};
-const ACT_RECURSO={'fmodo':'investimentos','rd-busca':'investimentos','rd-alertas':'investimentos','rd-reativa':'investimentos','rd-comprei':'investimentos','rd-add-rapido':'investimentos','alvo-fii':'investimentos','ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
+const ACT_RECURSO={'rd-bell':'investimentos','fmodo':'investimentos','rd-busca':'investimentos','rd-alertas':'investimentos','rd-reativa':'investimentos','rd-comprei':'investimentos','rd-add-rapido':'investimentos','alvo-fii':'investimentos','ia-ler':'leitura_ia','ia-frase':'leitura_ia','ia-mic':'leitura_ia','assist':'assistente','importar':'importar_extrato','anexos':'comprovantes'};
 let PLANO_ROW,PLANO_LIDO=false,PLANO_PAG=null,PLANO_FALHA=false;
 function planoChave(){return 'gv-plano:'+(USER&&USER.id||'');}
 function planoAgora(){if(!PLANO_LIDO||!window.GVP)return null;return GVP.efetivo(PLANO_ROW,Date.now());}
@@ -1684,7 +1692,7 @@ async function atualizaPushUI(){
 }
 const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
-function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
+function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.filter(x=>!(MVP_MODE&&x[0]==='darf')).map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
   if(!pushSuportado()){toast('Este navegador não aceita notificações push.',true);return;}
@@ -2663,6 +2671,7 @@ function irApura(){
 }
 const irMesNome=k=>MESES_LONGO[+k.slice(5,7)-1]+' de '+k.slice(0,4);
 function irCardHTML(){
+  if(MVP_MODE)return ''; // v10.160: imposto das vendas escondido no MVP
   const A=irApura();if(!A.length)return '';
   const hj=hojeISO(),mesH=hj.slice(0,7),ab=A.filter(m=>m.darf>0&&m.vence>=hj||m.mes===mesH).slice(-3).reverse();
   if(!ab.length)return '';
@@ -2681,7 +2690,7 @@ function irCardHTML(){
 /* avisos no sino: DARF do mês passado a pagar (do dia 1 até o vencimento) e preço que chegou no alvo */
 function irAvisos(){
   const out=[],hj=hojeISO(),pagos=(S.cfg&&S.cfg.darfPago)||{};
-  if(notifOn('darf'))irApura().forEach(m=>{if(!(m.darf>0)||pagos[m.mes]||m.mes>=hj.slice(0,7)||m.vence<hj)return;
+  if(!MVP_MODE&&notifOn('darf'))irApura().forEach(m=>{if(!(m.darf>0)||pagos[m.mes]||m.mes>=hj.slice(0,7)||m.vence<hj)return;
     const d=Math.round((new Date(m.vence+'T12:00:00')-new Date(hj+'T12:00:00'))/864e5);
     out.push({id:'darf|'+m.mes+'|'+(d<=3?'3':'p'),k:d<=3?'venc':'aviso',h:`${I('receipt')} DARF das vendas de <b>${esc(irMesNome(m.mes))}</b>: ${brl(m.darf/100)} · ${d===0?'vence hoje':d===1?'vence amanhã':'vence em '+d+' dias ('+fmtData(m.vence)+')'}`});});
   if(notifOn('alvoPreco'))(S.fiis||[]).forEach(f=>{if(!(f.alvoP>0)||!(f.preco>0))return;const sob=f.alvoDir!=='abaixo';
@@ -2931,6 +2940,270 @@ function abreRapido(){
     ph.classList.add('out');setTimeout(()=>{i=(i+1)%QK_EX.length;ph.textContent=QK_EX[i];ph.classList.remove('out');},260);},2800);}
 }
 
+/* ---------- v10.160: MVP enxuto em 4 abas ----------
+   Início (barra inteligente, ritmo do mês, faturas abertas, patrimônio total e proventos),
+   Gastos & Cartões (limite do mês, faturas e parcelas, extrato com a origem de cada lançamento, planejamento recolhido),
+   Patrimônio (carteira, cotações e alertas de preço no sino de cada ativo; o antigo Radar mora aqui),
+   WhatsApp & Conta (WhatsApp em destaque, notificações, assinatura e o resto dos ajustes).
+   As telas de detalhe (Extrato, Orçamentos, Cartões, Planejamento, Relatório, Metas, Bancos, Patrimônio líquido) continuam
+   iguais e ficam dentro da aba do grupo: a barra de baixo acende a aba do grupo e a tela ganha "voltar". */
+const MVP_GRUPO={inicio:'inicio',gastos:'gastos',lanc:'gastos',orc:'gastos',cartoes:'gastos',plan:'gastos',rel:'gastos',fii:'fii',pat:'fii',metas:'fii',bancos:'fii',cfg:'cfg'};
+function grupoDe(t){return MVP_MODE?(MVP_GRUPO[t]||t):t;}
+/* nomes antigos e atalhos de link (#radar, #ajustes, gv-tab de outra versão) */
+const ROTA_ALIAS={gastos:'gastos',cartao:'cartoes',faturas:'cartoes',fatura:'cartoes',orcamento:'orc',orcamentos:'orc',despesas:'lanc',lancamentos:'lanc',extrato:'lanc',
+  planejamento:'plan',relatorio:'rel',patrimonio:'fii',investimentos:'fii',carteira:'fii',cotacoes:'fii',radar:'fii',alertas:'fii',bens:'pat',liquido:'pat',
+  conta:'cfg',ajustes:'cfg',config:'cfg',whatsapp:'cfg',assinatura:'cfg',notificacoes:'cfg',bancos:'bancos',contas:'bancos',metas:'metas',inicio:'inicio',home:'inicio'};
+function rotaResolve(t){
+  t=String(t||'').toLowerCase();
+  if(VIEWS[t])return t;
+  if(ROTA_ALIAS[t])return ROTA_ALIAS[t];
+  if(/^(ir|imposto|darf)$/.test(t))return 'fii'; // o imposto das vendas ficava na carteira
+  return 'inicio';
+}
+function pintaNav(){
+  const g=grupoDe(TAB),principal=new Set(NAV.map(n=>n.t));
+  document.querySelectorAll('.sb-item[data-tab]').forEach(b=>{const t=b.dataset.tab;b.classList.toggle('on',MVP_MODE&&principal.has(t)?t===g:t===TAB);});
+  document.querySelectorAll('#tabbar [data-tab]').forEach(b=>{const on=b.dataset.tab===g;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+}
+/* faixa "voltar" das telas de detalhe: volta para onde a pessoa estava, senão para a aba do grupo */
+function mvpVoltaHTML(){
+  const p=NAV_PILHA[NAV_PILHA.length-1],alvo=p&&p.tab!==TAB?p.tab:grupoDe(TAB);
+  return `<button type="button" class="navVolta" data-act="nav-grupo">${I('chevL')}<span>voltar para ${esc(TAB_NOME[alvo]||'a tela anterior')}</span></button>`;
+}
+
+/* ---------- origem do lançamento (selo discreto no extrato) ----------
+   novos lançamentos guardam t.origem ('ia' | 'recibo' | 'manual') no próprio JSON do lançamento (tabela tx, coluna data):
+   sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Banco/extrato importado:
+   pluggyId, importado ou impId. Lançamento antigo sem nenhuma marca = Manual. */
+const ORIGEM_L={ia:'IA',wa:'WhatsApp',rec:'Recibo',man:'Manual',imp:'Importado'};
+function origemTx(t){
+  if(!t)return 'man';
+  if(t.origem==='ia')return 'ia';
+  if(t.origem==='recibo')return 'rec';
+  if(t.origem==='whatsapp'||(Array.isArray(t.tags)&&t.tags.includes('whatsapp')))return 'wa';
+  if(t.origem==='banco'||t.pluggyId||t.importado||t.impId)return 'imp';
+  return 'man';
+}
+function origemBadge(t){
+  if(!MVP_MODE||!t||t.faturaKey)return '';
+  const k=origemTx(t);
+  return `<span class="txOrg o-${k}" title="lançado por: ${ORIGEM_L[k]}">${ORIGEM_L[k]}</span>`;
+}
+
+/* ---------- meta mensal de gastos (S.cfg.metaMes, sincroniza com os ajustes) ---------- */
+function metaMes(){const v=+(S.cfg&&S.cfg.metaMes)||0;return v>0?v:0;}
+/* limite do mês: a meta mensal; sem meta, a soma dos orçamentos por categoria */
+function limiteMes(m){
+  const mm=metaMes();if(mm)return {v:mm,de:'meta'};
+  const L=limOrc(m)||{},s=Object.values(L).reduce((a,b)=>a+(+b>0?cents(+b):0),0)/100;
+  return s>0?{v:s,de:'orc'}:null;
+}
+function metaMesForm(){
+  form('Meta de gastos do mês',[
+    {type:'html',html:'<p class="small">Quanto você quer gastar, no máximo, por mês. O termômetro compara o que já saiu com quanto do mês já passou. Deixe em branco para usar a soma dos orçamentos.</p>'},
+    {name:'v',label:'Meta mensal (R$)',value:metaMes()?num(metaMes()):'',inputmode:'decimal',placeholder:'ex: 3.000'}
+  ],v=>{
+    const tx=String(v.v||'').trim();
+    if(!tx){delete S.cfg.metaMes;salvar();render();toast('Meta mensal removida');return;}
+    const n=c2(parseBR(tx));if(!(n>0))return 'Informe um valor maior que zero.';
+    S.cfg.metaMes=n;salvar();render();toast('Meta salva: '+brl(n)+' por mês');
+  });
+}
+/* primeiro acesso no MVP: nada de tour, só a meta do mês e direto para o Início */
+function metaOnbAbre(){
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet onbMeta" role="dialog" aria-modal="true" aria-label="Meta mensal de gastos">
+    <span class="onbLogo" aria-hidden="true">${logoSVG()}</span>
+    <h3>Quanto você quer gastar por mês?</h3>
+    <p class="small">Essa é a sua meta mensal de gastos. No Início, o termômetro mostra se você está no ritmo. Dá para mudar quando quiser.</p>
+    <label class="onbV"><span>R$</span><input id="onbMetaV" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="3.000" aria-label="meta mensal de gastos em reais"></label>
+    <button type="button" class="btn full" id="onbMetaOk">Começar</button>
+    <button type="button" class="alink onbPula" id="onbMetaPula">Pular por agora</button>
+  </div>`;
+  box.classList.add('on');
+  const marca=()=>{try{localStorage.setItem('gv-tour-'+(USER&&USER.id),'1');}catch(e){}S.cfg.tourVisto=1;};
+  const inp=$('#onbMetaV');
+  const ok=()=>{const n=c2(parseBR(inp.value||''));if(!(n>0)){toast('Informe quanto quer gastar por mês.',true);inp.focus();return;}
+    S.cfg.metaMes=n;marca();salvar();closeModal();go('inicio');toast('Meta de '+brl(n)+' por mês salva');};
+  $('#onbMetaOk').onclick=ok;
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ok();}});
+  $('#onbMetaPula').onclick=()=>{marca();salvar();closeModal();go('inicio');};
+  setTimeout(()=>{try{inp.focus({preventScroll:true});}catch(e){}},80);
+}
+/* termômetro do mês: % da meta já gasta x % do mês que já passou, com o marcador vertical "Hoje" */
+function limiteMesHTML(){
+  const m=mesAtual(),lim=limiteMes(m),r=ritmoMes(m);
+  if(!lim)return `<div class="card lmCard lmVazio"><div class="lmTop"><div><small>ritmo do mês</small><b>Defina sua meta de gastos</b></div></div>
+    <p class="lmTxt">Com uma meta mensal, o termômetro mostra se o gasto está no ritmo do mês.</p><button type="button" class="btn sm" data-act="meta-mes">${I('flag')}definir meta</button></div>`;
+  const gasto=somaMes(m,'despesa',undefined,true),pct=lim.v>0?gasto/lim.v*100:0;
+  const cl=ritmoCls(pct,r,pct>=100),resta=c2(lim.v-gasto),dRest=r?Math.max(1,r.dMes-r.dia+1):1;
+  const st=pct>=100?['over','passou da meta']:cl==='warn'?['warn','acima do ritmo']:['ok','no ritmo'];
+  return `<div class="card lmCard">
+    <div class="lmTop"><div><small>${lim.de==='meta'?'meta de gastos do mês':'soma dos orçamentos do mês'}</small><b class="nw">${brl(gasto)} <span>de ${brl(lim.v)}</span></b></div><span class="lmSt ${st[0]}">${st[1]}</span></div>
+    <div class="lmBar ${cl}" role="img" aria-label="${esc(r?ritmoTxt(pct,r):Math.round(pct)+'% da meta')}"><i data-w="${Math.min(100,Math.max(0,pct)).toFixed(1)}"></i>${r?`<b class="lmHoje" style="left:${Math.min(100,r.pct).toFixed(1)}%"><span>Hoje</span></b>`:''}</div>
+    <div class="lmLeg"><span>${Math.round(pct)}% da meta gasto</span><span>${r?`dia ${r.dia} de ${r.dMes} · ${Math.round(r.pct)}% do mês`:''}</span></div>
+    <p class="lmTxt">${resta>=0?`dá para gastar <b class="nw">${brl(resta/dRest)}</b> por dia até o fim do mês`:`<b class="nw neg">${brl(-resta)}</b> acima da meta do mês`}<button type="button" class="lmEd" data-act="meta-mes" aria-label="mudar a meta mensal">${I('edit')}</button></p>
+  </div>`;
+}
+
+/* ---------- faturas abertas (Início e Gastos & Cartões) ---------- */
+function faturasAbertasHTML(compacto){
+  if(!pode('cartoes'))return compacto?'':`<button type="button" class="card gsTeaser" data-act="planos" data-id="cartoes">${I('card')}<span><b>Cartões e faturas</b><small>fatura aberta, parcelas e limite · ver planos</small></span>${I('chevR')}</button>`;
+  const CA=cartoesAtivos();
+  if(!CA.length)return compacto?'':`<div class="card gsCc"><div class="hmH"><h4>cartões e faturas</h4></div><p class="small" style="margin:4px 0 12px">Adicione seu cartão para ver a fatura aberta, o fechamento, o vencimento e as parcelas.</p><button type="button" class="btn sm" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`;
+  const hj=hojeISO(),dd=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'';
+  const dias=d=>Math.round((new Date(d+'T12:00')-new Date(hj+'T12:00'))/864e5);
+  let tot=0,fut=0,nFut=0;
+  const L=CA.map(c=>{let E;try{E=ccFatEstado(c);}catch(e){return null;}
+    tot+=cents(E.valor||0);
+    try{ccFaturasLista(c).forEach(f=>{if(f.estado==='futura'&&f.rest>0){fut+=cents(f.rest);nFut++;}});}catch(e){}
+    return {c,E};}).filter(Boolean);
+  const rows=L.slice(0,compacto?4:12).map(({c,E})=>{
+    const n=E.vence?dias(E.vence):null,venc=E.st==='vencida'||(E.tipo==='fechada'&&n!=null&&n<0);
+    const q=n==null?{t:'',c:''}:venc?{t:'vencida',c:'late'}:n===0?{t:'vence hoje',c:'now'}:n===1?{t:'vence amanhã',c:'now'}:{t:'vence '+dd(E.vence),c:n<=avisoDias()?'soon':''};
+    const sub=E.tipo==='fechada'?'fechada'+(E.st==='parcial'?' · paga em parte':''):'aberta · fecha '+dd(E.fecha);
+    return `<div class="rmRow tap" data-act="fat-abre" data-id="${esc(E.abre||'')}" role="button" tabindex="0" aria-label="abrir fatura do ${esc(c.nome)}"><span class="rmI" style="--cc:${esc(ccTom(c)||'#60a5fa')}">${I('card')}</span><div class="rmT"><b>${esc(c.nome)}</b><small>${sub}</small></div><div class="hvR"><span class="rmV nw">${brl(E.valor||0)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
+  return `<div class="card gsCc${compacto?' gsCcHm':''}">
+    <div class="hmH tap" ${compacto?'data-tab="gastos"':'data-act="nav-cartoes"'} role="button" tabindex="0" aria-label="${compacto?'abrir gastos e cartões':'abrir cartões'}"><h4>faturas abertas</h4><span class="hmSub">${brl(tot/100)}${I('chevR','tapCh')}</span></div>
+    ${rows}
+    ${fut>0?`<button type="button" class="gsParc" data-act="nav-cartoes">${I('calendar')}<span>parcelas e compras futuras: <b class="nw">${brl(fut/100)}</b> em ${nFut} ${nFut===1?'fatura':'faturas'}</span>${I('chevR')}</button>`:''}
+  </div>`;
+}
+
+/* ---------- patrimônio total + proventos (Início) ---------- */
+function patTotalHTML(){
+  if(!pode('patrimonio')){
+    if(!pode('investimentos'))return '';
+    const patr=patrimonio(),dm=divMensal();return (patr||dm)?carteiraInicioHTML(patr,dm,proximoPag()):'';
+  }
+  const P=patLiquido();if(!(P.ativos||P.passivos))return '';
+  return `<div class="card ptTot tap" data-tab="fii" role="button" tabindex="0" aria-label="abrir patrimônio">
+    <div class="hmH"><h4>patrimônio total</h4><span class="hmSub">contas + investimentos + bens − dívidas${I('chevR','tapCh')}</span></div>
+    <div class="ptTotV nw ${P.liq<0?'neg':''}">${brl(P.liq)}</div>
+    <div class="ptTotL"><span><small>contas</small><b class="nw">${brl(P.contas)}</b></span><span><small>investido</small><b class="nw">${brl(P.inv)}</b></span>${P.bens?`<span><small>bens</small><b class="nw">${brl(P.bens)}</b></span>`:''}${P.passivos?`<span><small>dívidas e faturas</small><b class="nw neg">− ${brl(P.passivos)}</b></span>`:''}</div>
+    ${rendaPassivaHTML('rpaHm')}
+  </div>`;
+}
+
+/* ---------- Aba 1: Início ---------- */
+function viewInicioMVP(){
+  const per=periodo(),pl=per.label;
+  const rec=somaMes(per,'receita'),des=somaMes(per,'despesa'),sal=(cents(rec)-cents(des))/100;
+  const tile=(cls,ic,lb,val,sub,act)=>`<div class="rsT ${cls} tap" data-act="${act}" role="button" tabindex="0" aria-label="${esc(lb)}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b><span class="rsD">${sub}</span></div>`;
+  const nome=nomeUsuario();
+  return `
+  <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
+  ${omniHTML()}
+  ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
+  ${limiteMesHTML()}
+  <div class="hmH hmResH"><h4>resumo · ${esc(pl)}</h4><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
+  <div class="relRes hmRes">
+    ${tile('rec','arrowUp','receitas',brl(rec),'entradas pagas','nav-rec')}
+    ${tile('des','arrowDown','despesas',brl(des),'saídas pagas','nav-des')}
+    ${tile('sal '+(sal<0?'neg':''),'wallet','saldo do período',brl(sal),sal<0?'gastou mais do que entrou':'sobrou no período','nav-tudo')}
+    ${tile('pou','bank','saldo nas contas',brl(saldoTotal()),'todas as contas','nav-contas')}
+  </div>
+  ${faturasAbertasHTML(true)}
+  ${proxVencHTML()}
+  ${patTotalHTML()}
+  ${dicaInstalarHTML(false)}`;
+}
+/* barra inteligente: frase (IA ou compra de ativo) + câmera do recibo no mesmo campo + lançamento manual */
+function smartBarHTML(){
+  return `<div class="omniWrap">
+  <form class="omni" id="omniF" role="search" aria-label="lançar numa frase ou pela foto do recibo" autocomplete="off" novalidate>
+    <span class="omniIc" aria-hidden="true">${I('sparkle')}</span>
+    <input id="omniTxt" type="text" enterkeyhint="send" maxlength="600" value="${esc(OMNI_TXT)}" placeholder="Ex: Almoço 45 crédito ou 10 MXRF11" aria-label="o que você gastou, recebeu ou investiu">
+    <button type="button" class="omniCam" data-act="ia-ler" aria-label="foto do recibo" title="foto do recibo">${I('camera')}</button>
+    <button type="submit" class="omniGo" aria-label="lançar">${I('arrowUp')}</button>
+  </form>
+  <button type="button" class="omniManual" data-act="lanc-manual">Lançamento manual</button>
+  </div>`;
+}
+
+/* ---------- Aba 2: Gastos & Cartões ---------- */
+let GS_PLAN=false;
+function gsExtratoHTML(){
+  const m=mesAtual(),hj=hojeISO();
+  const L=(S.tx||[]).filter(t=>t&&t.data&&t.data.slice(0,7)===m&&t.data<=hj&&!t.faturaKey&&t.status!=='cancelado'&&(t.tipo==='despesa'||t.tipo==='receita'||t.tipo==='transf'))
+    .sort((a,b)=>(b.data||'').localeCompare(a.data||'')||String(b.criadoEm||'').localeCompare(String(a.criadoEm||'')));
+  const cont={};L.forEach(t=>{const k=origemTx(t);cont[k]=(cont[k]||0)+1;});
+  const resumo=['ia','wa','rec','man','imp'].filter(k=>cont[k]).map(k=>`<span class="txOrg o-${k}">${ORIGEM_L[k]} ${cont[k]}</span>`).join('');
+  const rows=L.slice(0,12).map(t=>{const r=t.tipo==='receita',tr=t.tipo==='transf',cc=r?'#4ade80':tr?'#94a3b8':corCat(t.categoria);
+    return `<div class="rmRow tap" data-act="tx-menu" data-id="${esc(t.id)}" role="button" tabindex="0" aria-label="abrir lançamento"><span class="rmI" style="--cc:${cc}">${I(tr?'swap':catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${origemBadge(t)}${esc(tr?'transferência':t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status==='previsto'?' · previsto':''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':tr?'':'−'}${brl(t.valor)}</span></div>`;}).join('');
+  return `<div class="card gsExt">
+    <div class="hmH tap" data-act="gs-extrato" role="button" tabindex="0" aria-label="ver extrato completo"><h4>extrato de ${esc(MESES_LONGO[+m.slice(5,7)-1])}</h4><span class="hmSub">${L.length} ${L.length===1?'lançamento':'lançamentos'}${I('chevR','tapCh')}</span></div>
+    ${resumo?`<div class="gsOrgs" aria-label="lançamentos por origem">${resumo}</div>`:''}
+    ${rows||'<p class="small" style="margin:6px 0 4px">Nada lançado neste mês ainda. Use a barra do Início, a foto do recibo ou o WhatsApp.</p>'}
+    ${L.length>12?`<button type="button" class="hmLink hmMais" data-act="gs-extrato">ver os ${L.length} lançamentos do mês${I('chevR')}</button>`:''}
+  </div>`;
+}
+function gsPlanHTML(){
+  if(!pode('planejamento'))return `<button type="button" class="card gsTeaser" data-act="planos" data-id="planejamento">${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses e simulações · ver planos</small></span>${I('chevR')}</button>`;
+  let corpo='';
+  if(GS_PLAN){try{corpo=viewPlan().replace(/<div class="head"><h2>Planejamento<\/h2><\/div>/,'');}catch(e){corpo='<p class="small">Não consegui montar o planejamento agora.</p>';}}
+  return `<details class="card gsAcc" data-acc="plan"${GS_PLAN?' open':''}><summary>${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses, simulações e dia a dia</small></span>${I('chevD','gsAccCh')}</summary><div class="gsAccIn">${corpo}</div></details>`;
+}
+document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.dataset||d.dataset.acc!=='plan'||GS_PLAN===d.open)return;GS_PLAN=d.open;if(TAB==='gastos')render();},true);
+function viewGastos(){
+  const links=[['gs-extrato','receipt','Extrato completo'],['nav-orc','gauge','Orçamentos'],['nav-cartoes','card','Cartões e parcelas'],['nav-rel','report','Relatório'],['nova-fixa','calendar','Conta fixa'],['importar','up','Importar extrato']];
+  return `
+  <div class="head gsHead"><h2>Gastos &amp; Cartões</h2><button class="btn" data-act="lanc-manual">+ lançar</button></div>
+  ${limiteMesHTML()}
+  ${pode('orcamentos')?orcInicioHTML():''}
+  ${faturasAbertasHTML(false)}
+  ${gsExtratoHTML()}
+  ${gsPlanHTML()}
+  <div class="gsLinks" role="group" aria-label="mais em gastos e cartões">${links.map(([a,ic,l])=>`<button type="button" class="gsLk" data-act="${a}">${I(ic)}<span>${l}</span></button>`).join('')}</div>`;
+}
+
+/* ---------- Aba 3: Patrimônio (carteira + cotações + alertas de preço) ---------- */
+function patHeadMVP(){
+  let tot='';
+  if(pode('patrimonio')){try{const P=patLiquido();tot=`<button type="button" class="card ptLinha" data-act="nav-sub" data-id="pat"><span><small>patrimônio total</small><b class="nw ${P.liq<0?'neg':''}">${brl(P.liq)}</b></span><em>contas, investimentos e bens menos dívidas</em>${I('chevR')}</button>`;}catch(e){}}
+  return `<div class="head fiiHead"><h2>Patrimônio</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
+  <div class="ptAcoes"><button type="button" class="btn2 sm ptAlerta" data-act="rd-busca">${I('bell')}<span>Novo alerta de ativo</span></button><button type="button" class="btn2 sm" data-act="nav-sub" data-id="metas">${I('flag')}<span>Metas</span></button><button type="button" class="btn2 sm" data-act="nav-sub" data-id="bancos">${I('bank')}<span>Contas</span></button></div>
+  ${tot}`;
+}
+/* sino de cada ativo: cria o alerta em 1 toque (abre já com o preço de agora) e mostra se tem alerta ativo ou atingido */
+function rdItemDoAtivo(f){const cri=tipoOf(f)==='cripto',t=String(f.ticker||'').toUpperCase();return radarL().find(x=>x.t===t&&rdCri(x)===cri)||null;}
+function rdBellHTML(f){
+  const it=rdItemDoAtivo(f),at=it?it.al.filter(a=>!rdDisp(it,a)).length:0,hit=!!(it&&it.al.some(a=>rdDisp(it,a)));
+  const lb=hit?'alerta de preço atingido':at?(at>1?at+' alertas de preço ativos':'1 alerta de preço ativo'):'criar alerta de preço';
+  return `<button class="astBell${hit?' hit':at?' on':''}" data-act="rd-bell" data-id="${esc(f.id)}" title="${lb}" aria-label="${lb} · ${esc(f.ticker||'')}">${I('bell')}${at?`<i>${at}</i>`:''}</button>`;
+}
+function alertaAtivo(fid){
+  if(!pode('investimentos')){abrePlanos('investimentos');return;}
+  const f=(S.fiis||[]).find(x=>x.id===fid);if(!f||tipoOf(f)==='rf')return;
+  const it=rdItemDoAtivo(f)||radarAdd({t:f.ticker,k:tipoOf(f),cg:f.cgId,n:f.nome||''});if(!it)return;
+  radarAlertasAbre(rdQKey(it),!it.al.length,true);
+}
+/* alertas de ativos que a pessoa não tem (o antigo Radar), abaixo da carteira */
+function rdSecHTML(){
+  const L=radarL().filter(it=>!(S.fiis||[]).some(f=>f.cotas>0&&tipoOf(f)!=='rf'&&f.ticker===it.t&&(tipoOf(f)==='cripto')===rdCri(it)));
+  if(!L.length)return '';
+  return `<div class="wSec" id="rdSec"><h3>Alertas de ativos que você não tem <span>${L.length}</span></h3><button type="button" class="btn2 sm" data-act="rd-busca">${I('plus')}novo</button></div>
+  <div class="rrList">${L.map(rdCardHTML).join('')}</div>`;
+}
+
+/* ---------- Aba 4: WhatsApp & Conta ---------- */
+const WA_EX=['Uber 28 pix','Mercado 152,40 crédito Nubank','Quanto gastei com comida esse mês?','Comprei 10 MXRF11 a 10,15'];
+function waHeroHTML(){
+  return `<div class="card bcCard waCard waHero">
+    <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>Assistente no WhatsApp</h4><small>o jeito mais rápido de lançar no dia a dia</small></div><span class="bcSt" id="waSt"></span></div>
+    <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
+    <div class="pushBtns" id="waBtns"></div>
+    <div class="waEx" role="group" aria-label="exemplos de mensagem"><small>toque num exemplo para mandar pelo WhatsApp</small>${WA_EX.map(x=>`<button type="button" class="waExB" data-act="wa-ex" data-id="${esc(x)}">${I('chat')}<span>${esc(x)}</span></button>`).join('')}</div>
+  </div>`;
+}
+/* exemplo: abre o WhatsApp do GranaViva com a frase escrita (número que o servidor informa); sem número, copia a frase */
+function waExemplo(txt){
+  txt=String(txt||'').slice(0,200);if(!txt)return;
+  const st=WA_ST&&WA_ST.st,n=st&&st.ativo?String(st.numero||'').replace(/\D/g,''):'';
+  if(n){location.href='https://wa.me/'+n+'?text='+encodeURIComponent(txt);return;}
+  copiaTexto(txt).then(()=>toast('Copiado: '+txt)).catch(()=>toast('Não consegui copiar.',true));
+}
+
 /* ---------- navegação e renderização ---------- */
 let TAB='inicio';
 const F={mes:mesAtual(),cat:'',tipo:'despesa',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
@@ -2965,22 +3238,26 @@ function restauraAba(){
   let gt=null;
   try{gt=localStorage.getItem('gv-tab');}catch(e){}
   if(!gt){try{gt=sessionStorage.getItem('gv-tab');}catch(e){}}
+  if(gt&&!VIEWS[gt])gt=rotaResolve(gt); // v10.160: aba antiga com outro nome cai na aba nova certa
   if(gt&&VIEWS[gt]&&gt!==TAB){TAB=gt;}
-  document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===TAB));
+  pintaNav();
 }
 function go(t){
+  if(!VIEWS[t])t=rotaResolve(t); // v10.160: nomes antigos (radar, investimentos, ajustes...) caem na aba certa
+  if(MVP_MODE&&t==='fii'&&FMODO==='radar'){FMODO='carteira';try{localStorage.setItem('gv-fmodo','carteira');}catch(e){}}
   TAB=t;NAV_EXPLICITA=true;
   gravaAba(t);
   if(t==='fii'){atualizaCotacoes();atualizaCripto();atualizaCDI();}
   if(t==='metas'&&(S.metas||[]).some(m=>m.cdi||m.ipca))atualizaCDI().then(()=>{if(TAB==='metas')render();}).catch(()=>{});
-  document.querySelectorAll('.sb-item').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  pintaNav();
   toggleSide(false);
   render();window.scrollTo(0,0);
 }
 /* ---------- v10.78: cards que levam ao lugar certo ----------
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
-const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes'};
+const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes',gastos:'Gastos & Cartões'};
+if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'WhatsApp & Conta'});
 const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
@@ -3007,6 +3284,7 @@ function navRestaura(){
   return true;
 }
 addEventListener('popstate',()=>{if($('#side').classList.contains('open'))toggleSide(false);if(!navRestaura()&&$('#modal').classList.contains('on'))closeModal();ovConfere();});
+ICONS.camera='<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/>';
 ICONS.ccVira='<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/>';
 ICONS.info='<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/>';
 ICONS.clock='<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
@@ -3036,13 +3314,16 @@ function render(){
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)&&/[?&]gvtest\b/.test(location.search)))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
-  if(!window.__rdOk&&USER&&/[?&]radar=1/.test(location.search)){window.__rdOk=1;history.replaceState(null,'',location.pathname);FMODO='radar';try{localStorage.setItem('gv-fmodo','radar');}catch(e){}setTimeout(()=>go('fii'),200);} // v10.155: push do Radar
+  if(MVP_MODE&&!window.__hsOk){window.__hsOk=1;const h=/^#\/?([a-z]+)$/i.exec(location.hash||'');if(h){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}const t=rotaResolve(h[1].toLowerCase());if(t!==TAB)setTimeout(()=>go(t),0);}} // v10.160: links #gastos, #patrimonio, #radar...
+  if(!window.__rdOk&&USER&&/[?&]radar=1/.test(location.search)){window.__rdOk=1;history.replaceState(null,'',location.pathname);FMODO=MVP_MODE?'carteira':'radar';try{localStorage.setItem('gv-fmodo','radar');}catch(e){}setTimeout(()=>go('fii'),200);} // v10.155: push do Radar
   const v=$('#view');
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
   if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
   const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
   const espera=!!(recT&&USER&&!PLANO_LIDO&&!PLANO_FALHA&&window.GVP); // v10.129: logado e plano ainda não lido: não mostra a aba paga liberada
+  if(MVP_MODE){try{document.documentElement.dataset.gvTab=TAB;}catch(e){}}
   let html;try{html=espera?`<div class="head"><h2>${esc(TAB_NOME[TAB]||'')}</h2></div><div class="card plEspera" aria-busy="true">Carregando…</div>`:bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
+  if(MVP_MODE&&grupoDe(TAB)!==TAB&&html.indexOf('class="navVolta"')<0)html=mvpVoltaHTML()+html; // v10.160: tela de detalhe volta para a aba dela
   /* v10.91: sem "piscar". a mesma tela redesenhada (sync, cotações, CDI, volta ao app) só troca o que mudou:
      HTML igual = nada é tocado (nem os nós, nem a rolagem, nem os gráficos); HTML diferente = troca só os blocos
      de primeiro nível que mudaram, sem a animação de entrada e mantendo a rolagem. a animação fica só para troca de aba. */
@@ -3082,7 +3363,8 @@ function cabeNum(root){
 let CABE_T;addEventListener('resize',()=>{clearTimeout(CABE_T);CABE_T=setTimeout(()=>{const v=$('#view');if(v)cabeNum(v);},150);});
 
 const VIEWS={
-  inicio:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
+  gastos:viewGastos,
+  inicio:MVP_MODE?viewInicioMVP:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
 };
 const AFTER={
   cartoes:()=>{ccIniciaTilt();ccDepois();ccPinta();},
@@ -3092,7 +3374,7 @@ const AFTER={
     if(bc)drawBars(bc,1);if(dc)drawDonut(dc,1);
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
   },
-  fii:()=>{updCountdown();if(FMODO==='radar')radarAtualiza(false);},
+  fii:()=>{updCountdown();if(FMODO==='radar'||MVP_MODE)radarAtualiza(false);},
   rel:()=>{const c=$('#cRel'),d=$('#cRelDia');if(c||d)animar(800,p=>{if(c)drawRel(c,p);if(d)drawRelDia(d,p);});const ps=$('#rsPills');if(ps){const on=ps.querySelector('.on');if(on)ps.scrollLeft=on.offsetLeft-ps.clientWidth/2+on.clientWidth/2;}}
 };
 
@@ -3214,7 +3496,7 @@ function ppEstado(){
   if(S.cfg.onbOk)return null;
   const m=mesAtual(),P=[
     ['bank','Adicione sua conta','o banco onde seu dinheiro fica','novo-banco',(S.bancos||[]).length>0],
-    ['plus','Registre um gasto ou receita','ou conecte o banco e importe sozinho','q-gasto',S.tx.length>0],
+    ['plus','Registre um gasto ou receita',MVP_MODE?'por frase, foto do recibo ou WhatsApp':'ou conecte o banco e importe sozinho','q-gasto',S.tx.length>0],
     ['receipt','Cadastre uma conta fixa','aluguel, internet, salário','nova-fixa',(S.fixas||[]).length>0],
     ['gauge','Defina um orçamento','um limite por categoria no mês','hm-go-orc',Object.values(limOrc(m)).some(v=>v>0)]];
   const ok=P.filter(p=>p[4]).length;if(ok===P.length||S.tx.length>=30)return null;
@@ -3551,7 +3833,7 @@ function viewLanc(){
   const stB=t=>{const s=statusTx(t);if(s==='pago')return '';const [l,k]=ST_TX[s];return ` <span class="badge ${k} stb">${l}</span>`;};
   const item=t=>`<div class="tx hov txTap" data-act="tx-menu" data-id="${t.id}"${t.status==='cancelado'?' tx-cancel':''}${t.status==='previsto'?' tx-prev':''}">
       <span class="ic ${t.tipo}" style="color:${corCat(t.categoria)}">${I(catIcon(t.categoria))}</span>
-      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}<span class="txD">${txDatasHTML(t)}</span>${t.trab&&t.tipo==='receita'&&!t.sub&&norm(nm.n)===norm(t.categoria)?'<i class="txSemCat"></i>':' · '}`;})()}${t.emp||t.tipo==='transf'?esc(t.emp?empRotulo(t):nomeLado(t.de)+' → '+nomeLado(t.para)):(t.trab&&t.tipo==='receita'&&!t.sub&&norm(nomeTx(t).n)===norm(t.categoria)?'':(temSplit(t)?esc(t.split.map(p=>p.cat).slice(0,2).join(' + '))+(t.split.length>2?' +'+(t.split.length-2):''):esc(t.categoria))+(t.sub?' › '+esc(t.sub):''))+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()}</small></div>
+      <div class="txt">${(()=>{const nm=nomeTx(t);return `<b title="${esc(t.descricao||'')}">${esc(nm.n||t.categoria)}</b><small>${nm.k?`<span class="txK">${nm.k}</span>`:''}${origemBadge(t)}<span class="txD">${txDatasHTML(t)}</span>${t.trab&&t.tipo==='receita'&&!t.sub&&norm(nm.n)===norm(t.categoria)?'<i class="txSemCat"></i>':' · '}`;})()}${t.emp||t.tipo==='transf'?esc(t.emp?empRotulo(t):nomeLado(t.de)+' → '+nomeLado(t.para)):(t.trab&&t.tipo==='receita'&&!t.sub&&norm(nomeTx(t).n)===norm(t.categoria)?'':(temSplit(t)?esc(t.split.map(p=>p.cat).slice(0,2).join(' + '))+(t.split.length>2?' +'+(t.split.length-2):''):esc(t.categoria))+(t.sub?' › '+esc(t.sub):''))+(()=>{const cn=t.cartao?S.cartoes.find(c=>c.id===t.cartao):null;const bk=t.conta?S.bancos.find(b=>b.id===t.conta):null;return cn?' · '+esc(cn.nome):(bk&&S.bancos.length>1?' · '+esc(bk.nome):'');})()}</small></div>
       ${temSplit(t)?`<div class="txMeta"><span class="encChip spChip">${I('split')}${t.split.map(p=>esc(p.cat)+' '+brl(p.v)).join(' · ')}</span></div>`:''}
       ${t.multa||t.juros||t.desconto?`<div class="txMeta"><span class="encChip">${[t.multa?'multa '+brl(t.multa):'',t.juros?'juros '+brl(t.juros):'',t.desconto?'desconto '+brl(t.desconto):''].filter(Boolean).join(' · ')}</span></div>`:''}
       ${(t.tags&&t.tags.length)||t.obs?`<div class="txMeta">${(t.tags||[]).map(g=>`<button class="tagChip" data-act="tag-filtro" data-id="${esc(g)}">#${esc(g)}</button>`).join('')}${t.obs?`<span class="txObs" title="${esc(t.obs)}">${esc(t.obs.length>70?t.obs.slice(0,70)+'…':t.obs)}</span>`:''}</div>`:''}
@@ -3562,7 +3844,7 @@ function viewLanc(){
     </div>`;
   return `
   ${voltaHTML()}<div class="head lHead"><h2>${F.st==='aberto'?'A pagar e a receber':F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
-  <div class="ltools">${S.cfg.pluggyOn?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
+  <div class="ltools">${PLUGGY_ON()?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
   <div class="seg lseg">${[['despesa','Despesas'],['receita','Receitas'],['transf','Transf.'],['','Tudo']].map(([k,l])=>`<button class="${F.tipo===k?'on':''}" data-act="set-tipo" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="lfil">
     <label class="lsrch">${I('search')}<input type="search" data-filter="q" value="${esc(F.q)}" placeholder="Buscar lançamento" aria-label="buscar"></label>
@@ -3582,7 +3864,7 @@ function viewLanc(){
     if(F.tipo==='receita')return `<div class="card lsum"><small>Recebido ${F.mes?'no mês':'no período'}</small><b class="pos">${brl(tr)}</b><p>${prvR?`+ ${brl(prvR)} previsto`:cnt}</p></div>`;
     if(F.tipo==='transf')return `<div class="card lsum"><small>Movimentado entre suas contas</small><b>${brl(somaC(ef.filter(t=>t.tipo==='transf'),t=>t.valor))}</b><p>${cnt} · não contam como gasto</p></div>`;
     return `<div class="card lsum lsum3"><div class="ls3top"><small>Saldo ${F.mes?'do mês':'do período'}</small><b class="${tr-td>=0?'pos':'neg'}">${brl(tr-td)}</b></div><div><small>Entrou</small><b class="pos">${brl(tr)}</b></div><div><small>Saiu</small><b class="neg">${brl(td)}</b></div>${tdCartao?`<p>+ ${brl(tdCartao)} em compras no cartão, que saem pela fatura</p>`:''}</div>`;})()}
-  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):(S.tx.length?'<p class="vazio">nenhum lançamento com esses filtros.</p>':vazioHTML('report','Nenhum lançamento ainda','Registre seus gastos e receitas aqui, ou conecte o banco para importar sozinho.','<button class="btn sm" data-act="q-gasto">+ gasto</button><button class="btn2 sm" data-act="q-receita">+ receita</button>'))}</div>
+  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):(S.tx.length?'<p class="vazio">nenhum lançamento com esses filtros.</p>':vazioHTML('report','Nenhum lançamento ainda',(MVP_MODE?'Registre seus gastos e receitas aqui, por frase, foto do recibo ou WhatsApp, ou importe o extrato.':'Registre seus gastos e receitas aqui, ou conecte o banco para importar sozinho.'),'<button class="btn sm" data-act="q-gasto">+ gasto</button><button class="btn2 sm" data-act="q-receita">+ receita</button>'))}</div>
   ${fixasCard()}`;
 }
 
@@ -3934,6 +4216,7 @@ function rpAtualiza(){
 }
 function pctAloc(x){if(!(x>0))return '0%';if(x<1)return x<0.1?'<0,1%':num(x).replace(/0$/,'').replace(/,$/,'')+'%';return Math.round(x)+'%';}
 function viewFii(){
+  if(MVP_MODE)return viewFiiCarteira(''); // v10.160: Carteira + cotações + alertas numa tela só
   /* v10.155: Carteira | Radar */
   const nR=radarL().length;
   const modo=`<div class="seg rrModo" role="tablist" aria-label="Investimentos"><button type="button" role="tab" data-act="fmodo" data-id="carteira" class="${FMODO==='radar'?'':'on'}" aria-selected="${FMODO!=='radar'}">Carteira</button><button type="button" role="tab" data-act="fmodo" data-id="radar" class="${FMODO==='radar'?'on':''}" aria-selected="${FMODO==='radar'}">Radar${nR?`<span class="rrModoN">${nR}</span>`:''}</button></div>`;
@@ -3988,14 +4271,14 @@ function viewFiiCarteira(modo){
       ${meta.length?`<div class="astMeta${rf?' rfm':''}">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
       ${chips.length?`<div class="rfChips">${chips.map(([k,txt,cl])=>`<span class="rfChip ${cl||''}">${k==='dia'?'<i></i>':''}${esc(txt)}</span>`).join('')}</div>`:''}
       ${rf&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
-      <div class="astFoot"><small>${info}</small><div class="acts">${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
+      <div class="astFoot"><small>${info}</small><div class="acts">${MVP_MODE&&!rf?rdBellHTML(f):''}${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
   const usados=new Set(S.fiis.map(tipoOf));
   const tabs=`<div class="seg ftabs">${TIPOS.filter(t=>t.k==='todos'||usados.has(t.k)||FTAB===t.k).map(t=>`<button data-act="ftab" data-id="${t.k}" class="${FTAB===t.k?'on':''}">${t.l}</button>`).join('')}</div>`;
   const cotAuto=COT.st==='auto';
   return `
-  <div class="head fiiHead"><h2>Investimentos</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>
+  ${MVP_MODE?patHeadMVP():`<div class="head fiiHead"><h2>Investimentos</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>`}
   ${modo}
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
@@ -4016,7 +4299,7 @@ function viewFiiCarteira(modo){
   ${S.fiis.length?irCardHTML():''}
   <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
   ${al.length>1||FTAB!=='todos'?tabs:''}
-  <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>`;
+  <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>${MVP_MODE?rdSecHTML():''}`;
 }
 
 /* ---------- v10.155: Radar (Investimentos) ----------
@@ -4126,7 +4409,7 @@ async function radarCota(forca){
     }catch(x){}
   }finally{RD_COT_RODANDO=false;}
   try{localStorage.setItem(RD_Q_KEY,JSON.stringify(RD_Q));}catch(e){}
-  if(TAB==='fii'&&FMODO==='radar'){if(!document.querySelector('#modal.on'))render();else RD_RENDER_PEND=true;} // v10.156: cotação que chegou com a busca/alertas abertos aparece ao fechar
+  if(rdNaTela()){if(!document.querySelector('#modal.on'))render();else RD_RENDER_PEND=true;} // v10.156: cotação que chegou com a busca/alertas abertos aparece ao fechar
 }
 var RD_RENDER_PEND=false;
 /* disparos gravados pelo servidor (só leitura; RLS: as próprias linhas) */
@@ -4140,11 +4423,12 @@ async function radarDisparos(forca){
     const d={};data.forEach(r=>{if(r&&typeof r.chave==='string')d[r.chave]={em:String(r.em||''),preco:Number(r.preco)||0};});
     const mudou=JSON.stringify(d)!==JSON.stringify(RD_D.uid===uid0?RD_D.d:{});
     RD_D={uid:uid0,ts:Date.now(),d};
-    if(mudou){try{atualizaSino();}catch(e){}if(TAB==='fii'&&FMODO==='radar'&&!document.querySelector('#modal.on'))render();}
+    if(mudou){try{atualizaSino();}catch(e){}if(rdNaTela()&&!document.querySelector('#modal.on'))render();}
   }catch(e){}
 }
 function radarAtualiza(forca){radarCota(forca);radarDisparos(forca);}
-setInterval(()=>{if(TAB==='fii'&&FMODO==='radar'&&document.visibilityState==='visible')radarAtualiza(false);},60000);
+setInterval(()=>{if(rdNaTela()&&document.visibilityState==='visible')radarAtualiza(false);},60000);
+function rdNaTela(){return TAB==='fii'&&(FMODO==='radar'||MVP_MODE);} // v10.160: no MVP o Radar mora dentro da carteira
 /* ---------- migração do alerta antigo por ativo (fiis.alvoP/alvoDir, v10.111) ---------- */
 function radarMigra(){
   let mudou=false;
@@ -4279,7 +4563,7 @@ function radarBuscaAbre(){
     if(!it)return;closeModal();render();toast(it.t+' entrou no seu Radar');setTimeout(()=>radarAlertasAbre(rdQKey(it),true),250);});
   pinta();setTimeout(()=>{try{inp.focus({preventScroll:true});}catch(e){}},80);
 }
-function radarAlertasAbre(key,novo){
+function radarAlertasAbre(key,novo,atual){
   if(!pode('investimentos')){abrePlanos('investimentos');return;}
   const it=rdAcha(key);if(!it)return;
   const q=rdQ(it),p=q&&q.p>0?q.p:0;
@@ -4327,6 +4611,7 @@ function radarAlertasAbre(key,novo){
     for(let i=0;i<A.length;i++){const a=A[i];const v=a.vTxt!=null?parseBR(String(a.vTxt)):a.v;
       if(!(v>0)){toast('Informe o valor do alerta '+(i+1)+'.',true);const el=box.querySelector('[data-v="'+i+'"]');if(el)el.focus();return;}
       if(a.tp==='queda'&&v>=100){toast('A queda no dia vai de 0,1% a 99%.',true);return;}
+      if(atual&&a.novo&&p>0&&(a.tp==='acima'?v<=p:a.tp==='abaixo'?v>=p:false)){toast('O alvo '+(i+1)+' já foi alcançado pelo preço de agora ('+rdPreco(p)+'). Ajuste o valor para ele avisar no futuro.',true);const el=box.querySelector('[data-v="'+i+'"]');if(el)el.focus();return;}
       const orig=it.al.find(x=>x.id===a.id),mudou=!orig||orig.tp!==a.tp||Math.abs(orig.v-v)>1e-9;
       const o={id:a.id,tp:a.tp,v,g:mudou||a.reat||!(a.g>0)?Date.now()+i:a.g};
       if(a.leg&&!mudou)o.leg=a.leg; // alerta migrado sem mudança continua com a chave antiga (não avisa de novo)
@@ -4334,7 +4619,7 @@ function radarAlertasAbre(key,novo){
     const L=radarL().map(x=>x===it?Object.assign({},x,{al:out}):x);
     rdSalva(L);closeModal();render();toast(out.length?'Alertas de '+it.t+' salvos':'Alertas de '+it.t+' removidos');
   };
-  if(novo&&!A.length&&p>0){A.push({id:rdId(),tp:'acima',v:Math.round(p*1.05*(p<1?1e6:100))/(p<1?1e6:100),g:0,novo:1});A[0].vTxt=rdValTxt(A[0].v,'acima');}
+  if(novo&&!A.length&&p>0){A.push({id:rdId(),tp:'acima',v:Math.round(p*(atual?1:1.05)*(p<1?1e6:100))/(p<1?1e6:100),g:0,novo:1});A[0].vTxt=rdValTxt(A[0].v,'acima');} // v10.160: pelo sino, começa no preço de agora
   pinta();
 }
 function rdReativa(arg){
@@ -4372,7 +4657,7 @@ function rdAvisos(){
     out.push({id:rdChave(it,a),k:'aviso',h:`${I(a.tp==='acima'?'up':'down')} <b>${esc(it.t)}</b> ${a.tp==='queda'?'caiu mais de '+esc(rdNumTxt(a.v))+'% no dia':(a.tp==='acima'?'chegou acima de ':'chegou abaixo de ')+rdPreco(a.v)}${d.preco>0?' ('+rdPreco(d.preco)+')':''} · ${esc(rdDataHora(d.em))} <button class="btn2 sm" data-act="rd-ver" data-id="${esc(rdQKey(it))}">ver no Radar</button>`});}));
   return out;
 }
-function rdVer(){closeModal();if(TAB!=='fii')go('fii');rdModoSet('radar');}
+function rdVer(){closeModal();if(MVP_MODE){if(TAB!=='fii')go('fii');setTimeout(()=>{const e=document.getElementById('rdSec')||document.querySelector('.astBell.hit');if(e)e.scrollIntoView({block:'center'});},120);return;}if(TAB!=='fii')go('fii');rdModoSet('radar');}
 
 function updCountdown(){
   const el=document.getElementById('cd');if(!el)return;
@@ -4498,11 +4783,20 @@ function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())
 const META_COR=[['#22c55e','#0ea5e9'],['#8b5cf6','#ec4899'],['#f59e0b','#ef4444'],['#06b6d4','#6366f1'],['#10b981','#84cc16']];
 function brlK(v){if(OCULTO)return 'R$ •••';v=+v||0;const a=Math.abs(v),sg=v<0?'-':'';if(a<1000)return brl(v);const f=(x,u)=>sg+'R$ '+String(x>=100?Math.round(x):Math.round(x*10)/10).replace('.',',')+' '+u;if(a<999500)return f(a/1e3,'mil');if(a<999500000)return f(a/1e6,'mi');return f(a/1e9,'bi');}
 function metaIcone(n){const x=norm(n||'');const L=[[/aposent|previd|velhice|futuro/,'aposentadoria'],[/carro|moto|veic|automo/,'carro'],[/casa|apart|imovel|terreno|entrada|reforma/,'casa'],[/viag|ferias|mala|intercambio/,'mala'],[/estud|faculd|curso|educa|pos/,'educacao'],[/reserva|emergenc|seguran/,'piggy'],[/casament|presente|aniver|natal/,'presente'],[/celular|iphone|notebook|computador|pc|laptop|tv/,'laptop'],[/saude|cirurg|dente|tratament/,'saude'],[/pet|cachorro|gato/,'pet'],[/divida|quitar|emprest/,'receipt'],[/invest|acoes|fii|cripto/,'chart']];const h=L.find(([re])=>re.test(x));return h?h[1]:'flag';}
+/* v10.160: card de notificações separado para o MVP colocá-lo logo depois do WhatsApp */
+function notifCardHTML(){return `  <div class="card">
+    <h4>Notificações no celular</h4>
+    <p class="pushTxt" id="pushTxt">verificando…</p>
+    <div class="pushBtns" id="pushBtns"></div>
+    <button type="button" class="semLink" data-act="sem-abre">${I('report')}<span><b>Resumo da semana</b><small>${notifOn('semanal')?'chega domingo às 9h · ver o desta semana':'desligado · ver o desta semana'}</small></span>${I('chevR')}</button>
+    <label class="avisoSel"><span>${I('bell')}avisar contas com antecedência de</span><select data-aviso="1">${[[0,'só no dia'],[1,'1 dia'],[2,'2 dias'],[3,'3 dias'],[5,'5 dias'],[7,'7 dias']].map(([v,l])=>`<option value="${v}" ${avisoDias()===v?'selected':''}>${l}</option>`).join('')}</select></label>
+    <p class="hmNota">vale para os avisos do app e para as notificações. no dia e na véspera você também é avisado.</p>
+  </div>`;}
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
-  <div class="head"><h2>Ajustes</h2></div>
-  ${cardPlanoCfg()}
+  <div class="head"><h2>${MVP_MODE?'WhatsApp &amp; Conta':'Ajustes'}</h2></div>
+  ${MVP_MODE?waHeroHTML()+notifCardHTML()+cardPlanoCfg():cardPlanoCfg()}
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
@@ -4521,15 +4815,8 @@ function viewCfg(){
     ${S.cats.length>10?`<button type="button" class="catMaisBtn" data-act="cats-toggle">${CATS_ABERTAS?'mostrar menos':'ver todas as '+S.cats.length+' categorias'}</button>`:''}
   </div>
   ${lockCardHTML()}
-  <div class="card">
-    <h4>Notificações no celular</h4>
-    <p class="pushTxt" id="pushTxt">verificando…</p>
-    <div class="pushBtns" id="pushBtns"></div>
-    <button type="button" class="semLink" data-act="sem-abre">${I('report')}<span><b>Resumo da semana</b><small>${notifOn('semanal')?'chega domingo às 9h · ver o desta semana':'desligado · ver o desta semana'}</small></span>${I('chevR')}</button>
-    <label class="avisoSel"><span>${I('bell')}avisar contas com antecedência de</span><select data-aviso="1">${[[0,'só no dia'],[1,'1 dia'],[2,'2 dias'],[3,'3 dias'],[5,'5 dias'],[7,'7 dias']].map(([v,l])=>`<option value="${v}" ${avisoDias()===v?'selected':''}>${l}</option>`).join('')}</select></label>
-    <p class="hmNota">vale para os avisos do app e para as notificações. no dia e na véspera você também é avisado.</p>
-  </div>
-  <div class="card bcCard">
+  ${MVP_MODE?'':notifCardHTML()}
+  ${MVP_MODE?'':`  <div class="card bcCard">
     <div class="bcHd"><span class="bcIc">${I('bank')}</span><div><h4>Conexão bancária</h4><small>Open Finance · Meu Pluggy</small></div><span class="bcSt" id="bcSt"></span></div>
     <div class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</div>
     <div class="pushBtns" id="bcBtns"></div>
@@ -4538,7 +4825,7 @@ function viewCfg(){
     <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>WhatsApp</h4><small>lance por mensagem</small></div><span class="bcSt" id="waSt"></span></div>
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
     <div class="pushBtns" id="waBtns"></div>
-  </div>
+  </div>`}
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('lu_chart_candlestick')}</span><div><h4>Cotações</h4><small>preços de ações e FIIs da carteira</small></div></div>
     <div class="lkList"><button class="lkRow" data-act="brapi-token"><span class="lkRi">${I('lu_key_round')}</span><span class="lkRt"><b>Token brapi</b><small>opcional, deixa as cotações mais rápidas</small></span><span class="dkSt${S.cfg.brapi?' on':''}">${S.cfg.brapi?'configurado':'não configurado'}</span><span class="lkCh">${I('chevR')}</span></button></div>
@@ -5088,7 +5375,7 @@ function viewCartoes(){
       <p>${S.cartoes.length?'Desarquive um cartão abaixo ou adicione outro para ver a fatura, o limite e o melhor dia de compra.':'Adicione seu cartão de crédito para acompanhar a fatura, o limite, as parcelas e saber qual cartão usar em cada dia.'}</p>
       <button type="button" class="btn" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`+arq;
   const at=ccAtual(CA);
-  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+(S.cfg.pluggyOn||S.tx.some(t=>t.cartao&&(t.pluggyId||t.parcGer))?prcBotaoHTML():'')+arq;
+  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+(PLUGGY_ON()||S.tx.some(t=>t.cartao&&(t.pluggyId||t.parcGer))?prcBotaoHTML():'')+arq;
 }
 /* ---------- carrossel: escolha por rolagem, pontos, toque ---------- */
 let CC_ROL=0,CC_ROL_T=0,CC_DET_T=0;
@@ -5155,7 +5442,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} conta</button></div>
-  <div class="bkActs">${S.cfg.pluggyOn?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
+  <div class="bkActs">${PLUGGY_ON()?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
   ${S.bancos.length?(()=>{const st=saldoTotal(),sc=(cents(st)-cents(total))/100;return `<div class="card bkHero${total<0?' bkNeg':''}"><small>total em bancos</small><div class="bkBig nw">${total<0?'−':''}${brl(Math.abs(total))}</div>${total<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
@@ -5464,7 +5751,11 @@ function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
   S.cfg.migPropria=2;salvar();return k;}
 /* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
+/* v10.160: no MVP a conexão bancária some da tela e nenhuma chamada (automática ou não) vai ao pluggy-sync.
+   o que já entrou do banco continua no app como qualquer lançamento. */
+function PLUGGY_ON(){return !MVP_MODE&&!!(S.cfg&&S.cfg.pluggyOn);}
 async function pluggy(body){
+  if(MVP_MODE)throw new Error('conexão bancária indisponível nesta versão');
   const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
   if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
   if(data&&data.erro)throw new Error(data.erro);
@@ -5508,6 +5799,7 @@ function waDesligar(){
 }
 let BC_ST=null;
 async function atualizaBancoUI(){
+  if(MVP_MODE)return;
   const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
   if(!USER){bt.innerHTML='';return;}
   try{
@@ -5581,6 +5873,7 @@ async function bancoDaTabela(){
   }catch(e){return null;}
 }
 async function bancoSync(forcar=false){
+  if(MVP_MODE){toast('A conexão com o banco não está disponível nesta versão. Importe o extrato em Gastos & Cartões.',true);return;}
   BC_ST=null;
   if(!USER){toast('Entre na sua conta primeiro.',true);return;}
   const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
@@ -5862,7 +6155,7 @@ function prcDescK(desc,k){return String(desc||'').replace(/(parc(?:ela)?\.?\s*)(
 /* linhas do banco (fonte 1 e 2) por cartão do app. devolve {linhas:[{fitid,data,valor,desc,cat,cartao}],fontes:[],ok} */
 async function prcFontes(){
   const out={linhas:[],fontes:[],ok:true};
-  if(!USER||!S.cfg.pluggyOn||!navigator.onLine)return out;
+  if(!USER||!PLUGGY_ON()||!navigator.onLine)return out;
   const mapa=S.cfg.pluggyMap||{},vistos=new Set();
   const cartaoDe=acc=>{const m=mapa[acc];return typeof m==='string'&&m[0]==='c'&&S.cartoes.some(c=>c.id===m.slice(2))?m.slice(2):'';};
   const add=(acc,t)=>{const cid=cartaoDe(acc);if(!cid||!t||!t.id||!ISO_RE.test(String(t.data).slice(0,10)))return;const fitid='plg-'+t.id;if(vistos.has(fitid))return;vistos.add(fitid);
@@ -6613,7 +6906,7 @@ function abreResumo(ym){
   </div>`;
   box.classList.add('on');
 }
-function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(TAB==='fii'&&FMODO==='radar')setTimeout(render,0);}}
+function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(rdNaTela())setTimeout(render,0);}}
 /* v10.157: html.modalOn esconde o botão + sem depender de :has (iOS antigo) */
 new MutationObserver(()=>{document.documentElement.classList.toggle('modalOn',$('#modal').classList.contains('on'));}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']});
 new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
@@ -6654,12 +6947,12 @@ function novaTransf(id){
 /* v10.43: lê foto/print/PDF de comprovante com IA (função ler-comprovante, Gemini) e abre o lançamento preenchido */
 function imgParaJpeg(f,max){return new Promise((ok,er)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1]);};im.onerror=()=>{URL.revokeObjectURL(u);er(new Error('img'));};im.src=u;});}
 function b64DeArquivo(f){return new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=er;r.readAsDataURL(f);});}
-function abreTxIA(o,arq){
+function abreTxIA(o,arq,origem){
   const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
   let forma=o.forma,cartao='';
   if(forma==='cartao'){const CA=cartoesAtivos(),k=o.cartao&&CA.find(c=>c.nome===o.cartao);if(k)cartao=k.id;else if(CA.length===1)cartao=CA[0].id;else if(!CA.length)forma='pix';}
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
-  novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null});
+  novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null,origem:origem==='recibo'?'recibo':'ia'});
 }
 /* v10.54: o limite de leituras é contado só no servidor (função ler-comprovante, de forma atômica); o app não conta mais */
 const LIMITE_LEITURAS=40;
@@ -6922,6 +7215,7 @@ function omniInvConfirma(iv){
   const mf=$('#mf');if(mf){const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Confirmar compra';}
 }
 function omniHTML(){
+  if(MVP_MODE)return smartBarHTML();
   return `<form class="omni" id="omniF" role="search" aria-label="lançar numa frase" autocomplete="off" novalidate>
     <span class="omniIc" aria-hidden="true">${I('sparkle')}</span>
     <input id="omniTxt" type="text" enterkeyhint="send" maxlength="600" value="${esc(OMNI_TXT)}" placeholder="Uber 28 pix · Comprei 10 MXRF11 a 10,15" aria-label="o que você gastou, recebeu ou investiu">
@@ -6978,7 +7272,7 @@ function lerComprovanteIA(){
       const o=await chamaIA({imagem,mime},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('receipt')+'Tentando de novo…';toast(IA_OCUPADA);});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
-      abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null); // a foto/PDF vira comprovante do lançamento quando ele for salvo
+      abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento quando ele for salvo
     }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);}
     finally{solta();}
   };
@@ -7044,6 +7338,7 @@ function novoTx(id,tipoPre,base){
     let st=['pago','previsto','cancelado'].includes(v.status)?v.status:'pago';
     if(usaCartao&&st==='previsto')st='pago';
     obj.status=st;obj.fxAuto=undefined;
+    if(!t)obj.origem=base&&base.ia?(base.origem==='recibo'?'recibo':'ia'):'manual'; // v10.160: origem do lançamento (selo no extrato)
     const np=Math.max(1,Math.min(24,parseInt(v.parcelas,10)||1));
     if(spL&&v.fixa&&!t)return 'Conta fixa não pode ser dividida entre categorias. Desmarque "repete todo mês" ou não divida.';
     let novoId='';
@@ -8809,6 +9104,13 @@ async function apagaRastrosLocais(){
   S=vazio();AS_HIST=[];
 }
 const ACT={
+  'rd-bell':id=>alertaAtivo(id),
+  'meta-mes':()=>metaMesForm(),
+  'lanc-manual':()=>novoTx(null,'despesa'),
+  'gs-extrato':()=>navega('lanc',{tipo:'',mes:mesAtual()}),
+  'nav-sub':id=>navega(rotaResolve(id)),
+  'nav-grupo':()=>{const p=NAV_PILHA[NAV_PILHA.length-1];if(p&&p.tab!==TAB)navVolta();else go(grupoDe(TAB));},
+  'wa-ex':txt=>waExemplo(txt),
   'fechar':closeModal,
   'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
   'pp-ok':()=>{S.cfg.onbOk=1;salvar();render();},
@@ -9097,7 +9399,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#syncTxt')){syncDetalhe();return;}
   if(e.target.id==='ov'||e.target.closest('#btnClose')){toggleSide(false);return;}
   const tb=e.target.closest('[data-tab]');
-  if(tb){go(tb.dataset.tab);return;}
+  if(tb){if(MVP_MODE&&tb.closest('#tabbar,#sbNav'))NAV_PILHA=[];go(tb.dataset.tab);return;}
   if(e.target.id==='modal'){closeModal();return;}
   const t=e.target.closest('[data-act]');
   if(!t)return;
@@ -9148,7 +9450,7 @@ document.addEventListener('change',e=>{
    script do próprio site (a CSP só aceita 'self'), sem atributo onload no HTML; o service worker guarda junto com o app.
    cada parte se registra em window.__gvParte[nome] e recebe o contexto X (funções do app e getters do estado que muda). */
 const PARTES={};
-const PARTE_X={$,I,esc,logoSVG,go,abreRapido,salvar,get S(){return S;},get USER(){return USER;},get TAB(){return TAB;}};
+const PARTE_X={get MVP(){return MVP_MODE;},$,I,esc,logoSVG,go,abreRapido,salvar,get S(){return S;},get USER(){return USER;},get TAB(){return TAB;}};
 function carregaParte(nome){
   if(PARTES[nome])return PARTES[nome];
   return PARTES[nome]=new Promise((ok,falha)=>{
@@ -9171,6 +9473,7 @@ function tourTalvez(){
   try{
     if(tourAberto()||S.cfg.tourVisto||localStorage.getItem('gv-tour-'+(USER&&USER.id)))return;
     if((S.tx||[]).length||(S.cartoes||[]).length||(S.bancos||[]).length)return;
+    if(MVP_MODE){if(metaMes()>0)return;setTimeout(()=>{if(USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on')&&!$('#lock').classList.contains('on'))metaOnbAbre();},600);return;} // v10.160: sem tour no primeiro acesso
     setTimeout(()=>{if(!tourAberto()&&USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on'))tourAbre();},900);
   }catch(e){}
 }
@@ -9188,7 +9491,10 @@ if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,planoAplica,ge
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
-$('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+n.l+'</span></button>').join('');
+$('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join('')
+  +(MVP_MODE?'<div class="sb-sec">mais</div>'+NAV_MVP_MAIS.map(n=>'<button class="sb-item sbSub" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join(''):'');
+if(MVP_MODE){document.documentElement.classList.add('mvp');const tb=document.createElement('nav');tb.id='tabbar';tb.className='tabbar';tb.setAttribute('aria-label','abas principais');
+  tb.innerHTML=NAV_MVP.map(n=>'<button type="button" class="tbItem" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join('');document.body.appendChild(tb);pintaNav();}
 $('#logo').innerHTML=logoSVG();
 $('#btnMenu').innerHTML=I('menu');
 $('#btnBell').insertAdjacentHTML('afterbegin',I('bell'));

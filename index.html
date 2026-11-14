@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-TX2fCA2WuA+ZKrakS4TOGNmj9TDR2VW48ce2WdVreuQ=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-ZzQX2bXdbdmyKZRqUMC2v0FvLCe56FgVLJZz79UpBVM=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -3571,7 +3571,115 @@ html:not(.claro) .rpaEst{color:#fbbf24}
 .omniPrev b{display:block;font-size:15px;color:var(--hd)}
 .omniPrev em{display:block;font-style:normal;font-size:11.5px;color:var(--mut)}
 @media(min-width:1200px){#view[data-v=inicio]>.omni{grid-column:1/-1;order:1}}
-</style><style id="v157pat">@media (min-width:1000px){#view[data-v=pat]{max-width:1240px}#view[data-v=pat] .ptGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}}</style></head>
+</style><style id="v157pat">@media (min-width:1000px){#view[data-v=pat]{max-width:1240px}#view[data-v=pat] .ptGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}}</style><style id="v160mvp">
+/* v10.160: MVP em 4 abas (só vale com html.mvp, que o app.js liga quando MVP_MODE=true) */
+.tabbar{display:none}
+html.mvp .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:75;display:grid;grid-template-columns:repeat(4,1fr);padding:6px max(6px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 6px) max(6px,env(safe-area-inset-right,0px));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border-top:1px solid color-mix(in srgb,var(--txt) 9%,transparent)}
+.tbItem{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-height:52px;padding:5px 2px 2px;border:0;background:none;color:var(--mut);font:inherit;font-size:10.5px;font-weight:600;line-height:1.15;text-align:center;letter-spacing:-.01em;cursor:pointer;border-radius:12px;-webkit-tap-highlight-color:transparent}
+.tbItem .i{width:22px;height:22px;flex:none}
+.tbItem.on{color:var(--txt)}
+.tbItem.on .i{color:var(--a1)}
+.tbItem:active{background:color-mix(in srgb,var(--txt) 6%,transparent)}
+html.mvp #view{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+html.mvp .fab{bottom:calc(env(safe-area-inset-bottom,0px) + 84px)!important}
+html.mvp[data-gv-tab=inicio] .fab,html.mvp[data-gv-tab=cfg] .fab{display:none!important}
+html.mvp #toast{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
+@media(min-width:900px){html.mvp .tabbar{display:none}html.mvp #view{padding-bottom:40px}html.mvp .fab{bottom:calc(env(safe-area-inset-bottom,0px) + 20px)!important}html.mvp #toast{bottom:24px}}
+.sb-item.sbSub{font-size:13px;min-height:36px;opacity:.85}
+.sb-item.sbSub .i{width:16px;height:16px}
+/* barra inteligente */
+.omniWrap{margin:0 0 16px}
+.omniWrap .omni{margin:0}
+.omniCam{flex:none;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--txt);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.omniCam .i{width:19px;height:19px}
+.omniCam:active{transform:scale(.94)}
+.omniManual{display:block;margin:8px 0 0 auto;padding:4px 6px;border:0;background:none;color:var(--mut);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+@media(min-width:1200px){#view[data-v=inicio]>.omniWrap{grid-column:1/-1;order:1}}
+/* termômetro do mês */
+.lmCard{padding:16px 16px 12px}
+.lmTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.lmTop small{display:block;font-size:12px;color:var(--mut);margin-bottom:2px}
+.lmTop b{font-size:20px;font-weight:600;color:var(--hd);letter-spacing:-.01em}
+.lmTop b span{font-size:13px;font-weight:500;color:var(--mut)}
+.lmSt{flex:none;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(74,222,128,.12);color:#4ade80}
+.lmSt.warn{background:rgba(251,191,36,.14);color:#fbbf24}
+.lmSt.over{background:rgba(248,113,113,.14);color:#f87171}
+.lmBar{position:relative;height:12px;margin:26px 0 6px;border-radius:99px;background:var(--card2);border:1px solid var(--line)}
+.lmBar>i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:99px;background:var(--a1);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.lmBar.warn>i{background:#fbbf24}
+.lmBar.over>i{background:#f87171}
+.lmHoje{position:absolute;top:-8px;bottom:-5px;width:2px;margin-left:-1px;background:var(--txt);border-radius:2px}
+.lmHoje span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:2px;font-size:10.5px;font-weight:700;color:var(--txt);white-space:nowrap}
+.lmLeg{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--mut)}
+.lmTxt{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:13px;color:var(--mut)}
+.lmTxt b{color:var(--txt)}
+.lmEd{margin-left:auto;flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:10px;background:none;color:var(--mut);cursor:pointer}
+.lmEd .i{width:16px;height:16px}
+.lmVazio .btn{margin-top:10px}
+.hmResH{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 8px}
+.hmResH h4{margin:0}
+/* faturas, patrimônio, extrato */
+.gsCc .gsParc,.gsTeaser{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:var(--txt);cursor:pointer}
+.gsCc .gsParc{margin-top:8px;padding:10px 4px 2px;border:0;border-top:1px solid var(--line);background:none;font-size:13px;color:var(--mut)}
+.gsCc .gsParc b{color:var(--txt)}
+.gsCc .gsParc>span{flex:1}
+.gsTeaser{padding:14px 16px}
+.gsTeaser>span{flex:1;display:flex;flex-direction:column}
+.gsTeaser small{color:var(--mut);font-size:12px}
+.gsTeaser .i{flex:none;width:20px;height:20px}
+.ptTotV{font-size:28px;font-weight:600;color:var(--hd);letter-spacing:-.02em;margin:2px 0 10px}
+.ptTotL{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:6px}
+.ptTotL small{display:block;font-size:11.5px;color:var(--mut)}
+.ptTotL b{font-size:14px;font-weight:600}
+.txOrg{display:inline-flex;align-items:center;margin-right:6px;padding:0 6px;height:17px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.02em;line-height:1;vertical-align:1px;background:color-mix(in srgb,var(--txt) 7%,transparent);color:var(--mut);border:1px solid color-mix(in srgb,var(--txt) 10%,transparent);white-space:nowrap}
+.txOrg.o-ia{color:#a78bfa;border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.10)}
+.txOrg.o-wa{color:#4ade80;border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.10)}
+.txOrg.o-rec{color:#60a5fa;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.10)}
+.gsOrgs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px}
+.gsAcc{padding:0;overflow:hidden}
+.gsAcc>summary{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none}
+.gsAcc>summary::-webkit-details-marker{display:none}
+.gsAcc>summary>span{flex:1;display:flex;flex-direction:column}
+.gsAcc>summary small{color:var(--mut);font-size:12px}
+.gsAcc>summary .gsAccCh{transition:transform .2s;color:var(--mut)}
+.gsAcc[open]>summary .gsAccCh{transform:rotate(180deg)}
+.gsAccIn{padding:0 12px 12px}
+.gsAccIn:empty{display:none}
+.gsLinks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:4px 0 16px}
+.gsLk{display:flex;align-items:center;gap:8px;min-height:46px;padding:8px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+.gsLk .i{width:18px;height:18px;color:var(--mut);flex:none}
+@media(min-width:900px){.gsLinks{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* patrimônio */
+.ptAcoes{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px}
+.ptAcoes .btn2{display:inline-flex;align-items:center;gap:6px}
+.ptAcoes .i{width:15px;height:15px}
+.ptLinha{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--txt);cursor:pointer;padding:12px 16px}
+.ptLinha>span{display:flex;flex-direction:column}
+.ptLinha small{font-size:12px;color:var(--mut)}
+.ptLinha b{font-size:18px;font-weight:600}
+.ptLinha em{flex:1;font-style:normal;font-size:12px;color:var(--mut);text-align:right}
+.astFoot .acts .astBell{position:relative}
+.astFoot .acts .astBell.on{color:var(--a1)}
+.astFoot .acts .astBell.hit{color:#fbbf24}
+.astBell>i{position:absolute;top:3px;right:2px;min-width:15px;height:15px;padding:0 3px;border-radius:99px;background:var(--a1);color:#0a0a0c;font-size:9.5px;font-style:normal;font-weight:700;line-height:15px;text-align:center}
+#rdSec{display:flex;align-items:center;justify-content:space-between;gap:8px}
+/* WhatsApp & Conta */
+.waHero{border-color:color-mix(in srgb,#22c55e 35%,var(--line))}
+.waEx{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.waEx small{font-size:12px;color:var(--mut)}
+.waExB{display:flex;align-items:center;gap:8px;width:100%;min-height:42px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.waExB .i{width:16px;height:16px;color:#22c55e;flex:none}
+/* primeiro acesso: meta mensal */
+.onbMeta{text-align:center}
+.onbMeta .onbLogo{display:inline-grid;width:52px;height:52px;margin:4px auto 8px}
+.onbMeta .onbLogo svg{width:52px;height:52px}
+.onbMeta h3{margin:0 0 6px}
+.onbV{display:flex;align-items:center;gap:8px;margin:16px 0 14px;padding:4px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2)}
+.onbV span{color:var(--mut);font-weight:600}
+.onbV input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;font-size:22px;font-weight:600;padding:10px 0;color:var(--txt);outline:none}
+.onbPula{display:block;margin:12px auto 0}
+html.claro .tabbar{background:rgba(255,255,255,.88)}
+</style></head>
 <body>
 <aside class="side" id="side">
   <div class="sb-brand"><span id="logo"></span><div><b>GranaViva</b><small>finanças</small></div><button class="sbClose" id="btnClose" aria-label="fechar menu"></button></div>
@@ -3614,7 +3722,7 @@ html:not(.claro) .rpaEst{color:#fbbf24}
 </div>
 
 <script>
-const GV_BUILD='10.159'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.160'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3640,8 +3748,8 @@ const GV_BUILD='10.159'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.159"></script>
-<script defer src="app.min.js?v=10.159"></script>
+<script defer src="planos.js?v=10.160"></script>
+<script defer src="app.min.js?v=10.160"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
