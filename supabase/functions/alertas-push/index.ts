@@ -3,7 +3,7 @@
 //   previstos, empréstimos e orçamentos de quem ativou notificações e manda um push por aparelho.
 //   v10.79: aos domingos manda também o resumo da semana (entrou, saiu, o que vence em 7 dias, a receber de empréstimos).
 //   v10.89: lembrete do "dia de guardar" das metas com o app fechado (Ajustes › Notificações › "Dia de guardar no aparelho",
-//   padrão ligado; desligar "Dia de guardar" também para). só para quem tem Metas no plano (Plus ou Pro). um por meta por mês (push_log).
+//   padrão ligado; desligar "Dia de guardar" também para). só para quem tem Metas no plano (todos os planos desde v10.161). um por meta por mês (push_log).
 //   v10.112: DARF das vendas na bolsa (7 dias antes e no dia, chave "darf") entra no resumo das 9h.
 //   {so:'precos'} (pg_cron das 18:30 de Brasília, depois do fechamento da B3, só em dia útil): confere os alertas de preço
 //   dos ativos (chave "alvoPreco") com a cotação do Yahoo e manda um push por alerta (push_log "alvo|id|dir|preço").
@@ -21,7 +21,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { alertasD, diarioPayload, orcamentos, resumoSemana, textoSemana, discretoOn, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
 // v10.89: plano da pessoa (metas são do Plus). planos.js é cópia gerada do /planos.js da raiz por deploy-fn.py.
 import "../_shared/planos.js";
-import { darfAvisos, alvos, alvoBateu, chaveAlvo, textoAlvo, diaUtil } from "./ir.ts";
+import { darfAvisos, alvos, alvoBateu, chaveAlvo, textoAlvo, diaUtil, capAlertas } from "./ir.ts";
 const GVP = (globalThis as any).GVP;
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -58,8 +58,11 @@ async function precos(dry: boolean, hoje: string, porUser: Record<string, any[]>
     if (!A.length) continue;
     const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", A.map(chaveAlvo));
     const feitos = new Set((ja || []).map((r: any) => r.chave));
+    // v10.161: no Grátis só o 1º alerta de preço ativo é conferido (o app também não deixa criar o 2º)
+    const { data: pl } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+    const limAl = GVP.limite(GVP.efetivo(pl).nivel, "max_alertas_radar");
     const bat: { chave: string; txt: string; ticker: string }[] = [];
-    for (const a of A) { if (feitos.has(chaveAlvo(a))) continue; const p = await cotacao(a.ticker); if (alvoBateu(a, p)) bat.push({ chave: chaveAlvo(a), txt: textoAlvo(a, p), ticker: a.ticker }); }
+    for (const a of capAlertas(A, (x) => feitos.has(chaveAlvo(x)), limAl)) { const p = await cotacao(a.ticker); if (alvoBateu(a, p)) bat.push({ chave: chaveAlvo(a), txt: textoAlvo(a, p), ticker: a.ticker }); }
     if (!bat.length) continue;
     usuarios++;
     const discreto = discretoOn(cfg);

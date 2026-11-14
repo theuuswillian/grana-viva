@@ -11,6 +11,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
+import { confereCota, registraUso } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -55,6 +56,25 @@ const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=
 const dataBR = (d: string, hoje: string) => d === hoje ? "hoje" : d.slice(8, 10) + "/" + d.slice(5, 7) + (d.slice(0, 4) !== hoje.slice(0, 4) ? "/" + d.slice(0, 4) : "");
 const hojeBR = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); // America/Sao_Paulo (sem horário de verão)
 const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+// v10.161: plano Grátis = 5 lançamentos pelo WhatsApp por mês (contados ao salvar); consultas são sempre liberadas.
+const APP = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
+export const LINK_PRO = APP + "?planos=pro";
+export function msgCotaWhatsApp(limite: number) {
+  return `Seus ${limite} lançamentos grátis pelo WhatsApp deste mês acabaram. 🙂\n\nConsultas continuam liberadas: saldo, quanto posso gastar, fatura e orçamento.\n\nNo Pro, lançar pelo WhatsApp (e com IA no app) é ilimitado:\n${LINK_PRO}\n\nOu lance pelo app: o lançamento manual é sempre grátis.`;
+}
+async function cotaBloqueia(tel: string, uid: string, nivel: number): Promise<boolean> {
+  try {
+    const lim = await confereCota(sb, uid, nivel, "whatsapp");
+    if (!lim) return false;
+    await texto(tel, msgCotaWhatsApp(Number(lim.limite) || 5));
+    return true;
+  } catch (e) { await registraErro(sb, FN, "cota", e); await texto(tel, "Não consegui conferir seu limite agora. Tente de novo em instantes."); return true; }
+}
+async function nivelDe(uid: string): Promise<number> {
+  const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+  if (error) throw error;
+  return GVP.efetivo(data).nivel;
+}
 const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gastei 32 no almoço\n• uber 18,50 ontem\n• recebi 2500 de salário";
 
 async function vincula(tel: string, codigo: string) {
@@ -72,12 +92,13 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   let ef: any;
   try { const { data } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle(); ef = GVP.efetivo(data); }
   catch (er) { await registraErro(sb, FN, "plano", er); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
+  // v10.161: WhatsApp liberado em todos os planos. Freio técnico diário igual para todos (GVP.ANTIABUSO.leitura_ia_dia);
+  // a cota do plano (lançamentos por mês) é conferida só quando a mensagem é um lançamento, nunca numa consulta.
   const lim = GVP.limite(ef.nivel, "leitura_ia_dia");
-  if (!GVP.pode(ef.nivel, "leitura_ia") || lim <= 0) { await texto(tel, "Lançar pelo WhatsApp faz parte dos planos Plus e Pro. Você pode assinar pelo app, em Planos."); return; }
   const hoje = hojeBR();
   const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: hoje, p_k: "leitura", p_lim: lim });
   if (ue) { await registraErro(sb, FN, "limite", ue); await texto(tel, "Não consegui conferir seu limite agora. Tente de novo em instantes."); return; }
-  if (!ok) { await texto(tel, `Você chegou ao limite de ${lim} leituras por dia. Amanhã libera de novo, ou lance pelo app.`); return; }
+  if (!ok) { await texto(tel, `Você mandou muitas mensagens hoje (${lim}). Amanhã libera de novo, ou lance pelo app.`); return; }
   const [{ data: st }, { data: kc }, { data: bc }] = await Promise.all([
     sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
     sb.from("cartoes").select("data").eq("user_id", uid), sb.from("bancos").select("data").eq("user_id", uid)]);
@@ -87,6 +108,7 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   if (!r.ok) { await registraErro(sb, FN, "ia", r.erro); await texto(tel, "Não consegui ler agora (" + r.erro + "). Tente de novo em 1 minuto."); return; }
   const L = r.r;
   if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta); return; }
+  if (L.intencao === "lancamento" && L.itens.length && await cotaBloqueia(tel, uid, ef.nivel)) return;
   if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await texto(tel, (e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
   const pid = novoId();
   await sb.from("wa_pendente").delete().eq("user_id", uid).lt("criado_em", new Date(Date.now() - 24 * 3600e3).toISOString());
@@ -152,6 +174,10 @@ async function botao(tel: string, uid: string, bid: string) {
   const p = pd?.[0];
   if (!p) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (m[1] === "no") { await texto(tel, "Cancelado. Nada foi salvo."); return; }
+  // v10.161: confere a cota de novo na hora de salvar (vários pendentes ao mesmo tempo não passam do limite do mês)
+  let nv = 0;
+  try { nv = await nivelDe(uid); } catch (e) { await registraErro(sb, FN, "plano", e); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
+  if (await cotaBloqueia(tel, uid, nv)) return;
   const itens: any[] = Array.isArray(p.lanc?.itens) ? p.lanc.itens : [p.lanc];
   const agora = new Date().toISOString(), base = novoId();
   const linhas = itens.map((l: any, k: number) => {
@@ -163,6 +189,7 @@ async function botao(tel: string, uid: string, bid: string) {
   });
   const { error } = await sb.from("tx").insert(linhas);
   if (error) { await registraErro(sb, FN, "salvar", error); await texto(tel, "Não consegui salvar agora. Mande de novo em instantes."); return; }
+  await registraUso(sb, uid, "whatsapp"); // uma mensagem salva = um lançamento pelo WhatsApp na cota do mês
   if (itens.length > 1) { await texto(tel, `Salvos! ✅ ${itens.length} lançamentos. Aparecem no app na próxima vez que você abrir.`); return; }
   const l = itens[0];
   await texto(tel, `Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}${l.recorrente && !(l.parcelas > 1) ? ", como conta fixa todo mês" : ""}. Aparece no app na próxima vez que você abrir.`);

@@ -24,7 +24,7 @@ export async function leMensagem(texto: string, midia: Midia | null, cats: strin
 Hoje é ${hoje} (${dsem}). Interprete datas relativas ("ontem", "sexta", "dia 5") a partir de hoje. Valores como "45", "45 conto", "R$ 45,90", "mil e duzentos" são em reais.
 Decida a intencao:
 - "lancamento": registrar um ou mais gastos/receitas. Se houver vários ("almoço 30 e uber 15"), devolva um item para cada (no máximo 10). Num comprovante, um item com o total pago.
-- "pergunta": a pessoa quer saber algo dos próprios lançamentos ("quanto gastei com mercado esse mês?", "quanto recebi em outubro?", "qual meu saldo do mês?").
+- "pergunta": a pessoa quer saber algo dos próprios lançamentos ou do mês ("quanto gastei com mercado esse mês?", "quanto recebi em outubro?", "qual meu saldo do mês?", "quanto ainda posso gastar?", "quanto está minha fatura?", "como está meu orçamento?"). Perguntas NUNCA são lançamento, mesmo citando valores. Saldo e "quanto posso gastar" = tipo "saldo"; fatura e orçamento = tipo "despesa".
 - "outro": cumprimento, agradecimento ou algo sem valor.
 Para cada item:
 - valor: total em reais (se parcelado, o total da compra). data: AAAA-MM-DD (se não citada, ${hoje}).

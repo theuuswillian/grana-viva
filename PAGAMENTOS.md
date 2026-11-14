@@ -48,3 +48,14 @@ Status: estrutura pronta e publicada, **desligada**. Integração com o Mercado 
 - https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/get-preapproval/get
 - https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/get-authorized-payment/get
 - SDK oficial npm `mercadopago` 3.6.1, `dist/utils/webhook/index.js` (validação de assinatura portada sem mudar a regra)
+
+## v10.161: Grátis e Pro (mensal/anual)
+- À venda: `pro` R$ 24,90/mês e `pro_anual` R$ 179,00/ano (≈ R$ 14,90/mês). O `plus` não é mais vendido (a função `assinatura` recusa);
+  quem já tem linha `plus` vale como Pro. O webhook ainda aceita os preços antigos (`legado` em planos.js: Pro R$ 29,90, Pro anual R$ 299)
+  para assinaturas criadas antes da mudança.
+- Cotas do Grátis por mês (America/Sao_Paulo), contadas em `ia_uso` com `k` = `frase` (15), `comprovante` (3), `whatsapp` (5);
+  conferidas antes de chamar a IA e registradas só quando dá certo (`supabase/functions/_shared/cota.ts`). Resposta: HTTP 402
+  `{"erro":"LIMITE_PLANO","recurso":...,"limite":...,"mensagem":...}`; o app abre o aviso do Pro.
+- Para valer no servidor, publique: `python3 deploy-fn.py ler-comprovante`, `assistente`, `whatsapp-webhook`, `assinatura`,
+  `pagamento-webhook`, `alertas-push`, `whatsapp-vincular`. Não há migração nova (a coluna `k` de `ia_uso` não tem CHECK).
+- Testes: `node testes/planos.test.cjs` e `deno test --allow-env testes/cota_test.ts`.

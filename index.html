@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-ZzQX2bXdbdmyKZRqUMC2v0FvLCe56FgVLJZz79UpBVM=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-y65cCNDyDRGUaaFSkSTm1N1oioBj36IMBRb4WpH3BBA=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -1923,6 +1923,20 @@ html.claro .sb-item .sbPlano[data-p=pro]{color:#b45309;background:rgba(245,158,1
 .plAtual{display:block;text-align:center;font-size:13px;color:var(--mut);padding:8px 0}
 .plRod{font-size:12px;color:var(--mut);margin:14px 0 0;line-height:1.5}
 .plRod a{color:var(--a1)}
+/* v10.161: folha do Pro (aviso de limite + planos): benefício do limite, Anual/Mensal com selo, botão discreto de lançar manualmente */
+#modal .sheet.pwSheet{max-width:720px!important}
+.pwBen{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;margin:0 0 12px;background:color-mix(in srgb,var(--a1) 12%,var(--card2));border:1px solid color-mix(in srgb,var(--a1) 35%,var(--line))}
+.pwBen .i{flex:none;width:22px;height:22px;color:var(--a1);margin-top:1px}
+.pwBen b{display:block;font-size:16px;color:var(--hd);line-height:1.3}
+.pwBen small{display:block;font-size:13px;color:var(--mut);margin-top:3px;line-height:1.4}
+.pwPer{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:0 0 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+.pwPer button{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;min-height:42px;border:0;border-radius:9px;background:none;color:var(--mut);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.pwPer button.on{background:var(--card);color:var(--hd);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.pwPer button:focus-visible{outline:2px solid var(--a1);outline-offset:1px}
+.pwSelo{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;line-height:1;padding:4px 7px;border-radius:999px;color:#052e16;background:#4ade80}
+.pwCta{min-height:48px}
+.pwManual{display:block;margin:2px auto 0;background:none;border:0;padding:6px;color:var(--mut);font:inherit;font-size:13.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pwManual:focus-visible{outline:2px solid var(--a1);outline-offset:2px;border-radius:6px}
 /* ---------- v10.81: cartão com o visual do cartão físico (ISO 85,6 × 54 mm) ---------- */
 .gvc{--g0:#666;--g1:#444;--g2:#222;--ink:#fff;--ac:#fff;--tx:0;--ty:0;--vira:0deg;position:relative;display:block;width:100%;aspect-ratio:85.6/54;container:gvc/inline-size;perspective:1600px;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .gvc-in{position:absolute;inset:0;display:block;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.2,.75,.2,1)}
@@ -3722,7 +3736,7 @@ html.claro .tabbar{background:rgba(255,255,255,.88)}
 </div>
 
 <script>
-const GV_BUILD='10.160'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.161'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3748,8 +3762,8 @@ const GV_BUILD='10.160'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.160"></script>
-<script defer src="app.min.js?v=10.160"></script>
+<script defer src="planos.js?v=10.161"></script>
+<script defer src="app.min.js?v=10.161"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

@@ -36,10 +36,11 @@ Deno.serve(async (req) => {
   }
   if (acao === "checkout") {
     const plano = String(body?.plano || "");
-    if (!GVP.PAGOS.includes(plano)) return json({ erro: "plano inválido" }, 400);
+    // v10.161: à venda só "pro" (R$ 24,90/mês) e "pro_anual" (R$ 179/ano). "plus" é legado e não se compra mais.
+    if (!GVP.PAGOS.includes(plano)) return json({ erro: GVP.LEGADOS.includes(plano) ? "O plano Plus não é mais vendido. Escolha o Pro." : "plano inválido" }, 400);
     if (!token) return json({ erro: "Pagamento em breve", emBreve: true }, 503);
     if (ef.fundador) return json({ erro: "Sua conta fundadora já tem acesso completo." }, 409);
-    if (row?.status === "ativo" && ef.nivel > 0 && GVP.idBase(row.plano) === GVP.idBase(plano) && row.plano === plano) return json({ erro: "Você já assina este plano." }, 409);
+    if (row?.status === "ativo" && ef.nivel > 0 && GVP.idBase(row.plano) === GVP.idBase(plano) && GVP.normaliza(row.plano) === plano) return json({ erro: "Você já assina este plano." }, 409);
     // v10.118: e-mail da conta do Mercado Pago de quem paga (o MP exige que seja o mesmo do login do pagador); padrão: e-mail da conta
     const emIn = String(body?.email || "").trim().toLowerCase();
     if (emIn && (emIn.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn))) return json({ erro: "confira o e-mail do Mercado Pago" }, 400);
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
     const { data: okS } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "sincronizar", p_lim: 20, p_seg: 3600 });
     if (!okS) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
     try {
-      const id = await MP.ultimaAssinatura(user.id, GVP.PAGOS, token);
+      const id = await MP.ultimaAssinatura(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token);
       if (!id) return json({ ok: true, resultado: "nenhuma" });
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval&data.id=" + encodeURIComponent(id), {
         method: "POST", signal: AbortSignal.timeout(12000),

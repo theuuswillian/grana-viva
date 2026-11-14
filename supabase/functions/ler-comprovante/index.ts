@@ -7,7 +7,9 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-// v10.82: limite diário vem do plano: GVP.limite(nivel, "leitura_ia_dia") (Plus 15, Pro 40, Grátis 0)
+// v10.161: cotas do plano (por mês, contadas em ia_uso por tipo): frase = GVP "ia_frase_mes" (Grátis 15), foto/PDF = "ia_comprovante_mes" (Grátis 3);
+//          Pro ilimitado. O freio técnico diário (GVP.limite(nivel, "leitura_ia_dia"), igual para todos) continua.
+import { confereCota, registraUso, type TipoUso } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -43,8 +45,11 @@ Deno.serve(async (req) => {
   // v10.54: conta e confere numa só operação no banco (duas leituras ao mesmo tempo não passam do limite)
   let ef: any;
   try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
+  // v10.161: cota mensal do plano, conferida antes de chamar a IA. Extrato (PDF/foto) conta como leitura de comprovante.
+  const tipoUso: TipoUso = body?.extrato || !texto ? "comprovante" : "frase";
+  try { const lim = await confereCota(sb, uid, ef.nivel, tipoUso); if (lim) return json(lim, 402); }
+  catch { return json({ erro: "não foi possível conferir o limite agora" }, 503); }
   const LIMITE_DIA = GVP.limite(ef.nivel, "leitura_ia_dia");
-  if (!GVP.pode(ef.nivel, "leitura_ia") || LIMITE_DIA <= 0) return json({ erro: "A leitura com IA faz parte dos planos Plus e Pro.", upgrade: true, recurso: "leitura_ia" }, 402);
   const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: dia, p_k: "leitura", p_lim: LIMITE_DIA });
   if (ue) return json({ erro: "não foi possível conferir o limite agora" }, 503);
   if (!ok) return json({ erro: "Você chegou ao limite de " + LIMITE_DIA + " leituras por dia. Amanhã libera de novo." }, 429);
@@ -77,6 +82,7 @@ cartao: true se for fatura de cartão de crédito; false se for extrato de conta
       desc: String(l?.desc || "").replace(/\s+/g, " ").trim().slice(0, 120),
       valor: Math.round(Number(l?.valor) * 100) / 100,
     })).filter((l: any) => l.data && isFinite(l.valor) && l.valor !== 0 && Math.abs(l.valor) < 1e7);
+    if (linhas.length) await registraUso(sb, uid, tipoUso);
     return json({ cartao: !!oe.cartao, linhas });
   }
 
@@ -129,5 +135,6 @@ Se não houver um lançamento (imagem que não é comprovante ou frase sem valor
     confianca: Math.max(0, Math.min(1, Number(o.confianca) || 0)),
     cartao: cartoes.includes(o.cartao) ? o.cartao : "",
   };
+  if (out.valor > 0) await registraUso(sb, uid, tipoUso); // só conta quando a IA achou um lançamento
   return json(out);
 });

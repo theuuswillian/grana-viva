@@ -10,7 +10,9 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-const LIMITE_HORA = 15; // por dia: GVP.limite(nivel, "assistente_dia") (Pro: 30)
+// v10.161: freio técnico (igual para todos): GVP.limite(nivel, "assistente_hora") por hora e "assistente_dia" por dia.
+// Cota do plano: cada pergunta conta na cota mensal de IA por frase (Grátis 15/mês, Pro ilimitado), registrada só quando dá certo.
+import { confereCota, registraUso } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -67,8 +69,10 @@ Deno.serve(async (req) => {
 
   let ef: any;
   try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
+  try { const lim = await confereCota(sb, uid, ef.nivel, "frase"); if (lim) return json(lim, 402); }
+  catch { return json({ erro: "não foi possível conferir o limite agora" }, 503); }
   const LIMITE_DIA = GVP.limite(ef.nivel, "assistente_dia");
-  if (!GVP.pode(ef.nivel, "assistente") || LIMITE_DIA <= 0) return json({ erro: "O assistente com IA faz parte do plano Pro.", upgrade: true, recurso: "assistente" }, 402);
+  const LIMITE_HORA = GVP.limite(ef.nivel, "assistente_hora");
   const { data: okH } = await sb.rpc("rl_conta", { p_uid: uid, p_k: "assistente", p_lim: LIMITE_HORA, p_seg: 3600 });
   if (!okH) return json({ erro: "Muitas perguntas seguidas. Espere alguns minutos." }, 429);
   const dia = new Date().toISOString().slice(0, 10);
@@ -121,5 +125,6 @@ PERGUNTA: """${pergunta.replace(/"""/g, "")}"""`;
   if (!resposta) return json({ erro: "não consegui responder" }, 422);
   const c = confere(resposta, fatos, pergunta);
   if (!c.ok) { console.log("assistente: número fora dos fatos", c.estranhos.join(",")); return json({ resposta: null, conferida: false, motivo: "numero_fora_dos_fatos" }); }
+  await registraUso(sb, uid, "frase");
   return json({ resposta, suficiente: o?.suficiente !== false, conferida: true });
 });

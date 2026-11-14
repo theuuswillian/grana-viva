@@ -1,4 +1,4 @@
-# site.py (v10.82; revisado em 10/11/2026 para o app v10.156; v10.160: MVP sem Open Finance nem imposto das vendas, destaque para IA, recibo e WhatsApp): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
+# site.py (v10.82; revisado em 10/11/2026 para o app v10.156; v10.160: MVP sem Open Finance nem imposto das vendas, destaque para IA, recibo e WhatsApp; v10.161: dois planos, Grátis e Pro mensal/anual, com cotas): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
 # Gera TODAS as páginas .html (inclusive index e funcionalidades, que voltaram a ser geradas aqui). site/site.css é editado à mão e não é sobrescrito.
 # uso: python3 site.py          (rodar de novo sempre que planos.js ou estes textos mudarem)
 # O app continua em ./ (start_url do app instalado). As páginas ficam em ./site/ e não usam JavaScript.
@@ -57,36 +57,42 @@ def pagina(arq, titulo, descricao, corpo, atual=None, cabeca=''):
 '''
 
 # ---------- conteúdo compartilhado ----------
-L_IA1, L_IA2, L_AS2 = LIM[1]['leitura_ia_dia'], LIM[2]['leitura_ia_dia'], LIM[2]['assistente_dia']
-NV = lambda k: REC[k]['nivel']          # nível mínimo de cada recurso, de planos.js
-NOME_NV = [PL['gratis']['nome'], PL['plus']['nome'], PL['pro']['nome']]
-# Radar de preços (app.js: RD_MAX=30 ativos, RD_AL=3 alertas por ativo; faz parte do recurso "investimentos")
+# v10.161: dois planos. Cotas do Grátis e diferenciais do Pro vêm de planos.js (LIMITES.gratis e PRO_DIFERENCIAIS).
+LG = LIM['gratis']
+PM, PA = PL['pro'], PL['pro_anual']
+DIF = P['PRO_DIFERENCIAIS']
+# Radar de preços (app.js: RD_MAX=30 ativos seguidos, RD_AL=3 alertas por ativo; alertas ATIVOS: LG['max_alertas_radar'] no Grátis)
 RADAR_MAX, RADAR_AL = 30, 3
+PRECO_PRO = f'{brl(PA["mensal"])}/mês no anual ou {brl(PM["preco"])}/mês'
+ITENS_GRATIS = ['Lançamentos manuais ilimitados', 'Contas fixas, contas e bancos, categorias', 'Orçamentos com termômetro de ritmo', 'Planejamento, metas, relatórios e patrimônio',
+    f'IA: {LG["ia_frase_mes"]} lançamentos por frase e {LG["ia_comprovante_mes"]} fotos de recibo por mês',
+    f'WhatsApp: {LG["whatsapp_lancamento_mes"]} lançamentos por mês, consultas liberadas',
+    f'Até {LG["max_cartoes"]} cartões, {LG["max_ativos_carteira"]} ativos na carteira e {LG["max_alertas_radar"]} alerta de preço']
 
-def card_plano(id, destaque=False):
-    p = PL[id]
-    itens = {
-        'gratis': ['Lançamentos de receitas, despesas e transferências', 'Contas fixas e recorrências', 'Contas e bancos, com saldo de cada uma', 'Cartões, faturas e parcelas', 'Início com o resumo do mês e assinaturas detectadas', 'Alertas de vencimento no celular', 'PIN e Face ID, exportar e excluir seus dados'],
-        'plus': ['Tudo do Grátis', 'Planejamento e projeção de saldo', 'Orçamentos por categoria e plano pela renda', 'Metas com ritmo e rendimento pelo CDI', 'Relatórios completos e resumo do mês', 'Importar extrato (PDF, OFX ou CSV) e anexar comprovantes', f'Lançar com IA por foto do recibo ou frase ({L_IA1} por dia)', 'Lançar pelo WhatsApp'],
-        'pro': ['Tudo do Plus', 'Investimentos: FIIs, ações, BDRs, ETFs, cripto e renda fixa pelo CDI', f'Alertas de preço na carteira e em até {RADAR_MAX} ativos, no celular', 'Patrimônio líquido mês a mês', f'Assistente com IA ({L_AS2} perguntas por dia)', f'Lançar com IA ({L_IA2} por dia)'],
-    }[id]
-    preco = 'R$ 0' if id == 'gratis' else brl(p['preco'])
-    sufixo = 'para sempre' if id == 'gratis' else '/mês'
-    extra = f'<p class="pAnual">ou {brl(PL["pro_anual"]["preco"])}/ano no Pro anual</p>' if id == 'pro' else ''
-    etq = ' <span class="etq">mais completo</span>' if destaque else ''
-    li = ''.join(f'<li>{e(x)}</li>' for x in itens)
-    return f'''<article class="plano{' destaque' if destaque else ''}">
-  <h3>{e(p['nome'])}{etq}</h3>
-  <p class="preco">{preco}<small>{sufixo}</small></p>{extra}
-  <ul class="checks">{li}</ul>
+def card_plano(id):
+    li = lambda itens: ''.join(f'<li>{e(x)}</li>' for x in itens)
+    if id == 'gratis':
+        return f'''<article class="plano">
+  <h3>{e(PL['gratis']['nome'])}</h3>
+  <p class="preco">R$ 0<small>para sempre</small></p>
+  <ul class="checks">{li(ITENS_GRATIS)}</ul>
+</article>'''
+    return f'''<article class="plano destaque">
+  <h3>{e(PM['nome'])} <span class="etq soAnual">Mais escolhido</span></h3>
+  <p class="preco soAnual">{brl(PA['mensal'])}<small>/mês</small></p><p class="pAnual soAnual">cobrado {brl(PA['preco'])} por ano · economize {PA['economiaPct']}%</p>
+  <p class="preco soMensal">{brl(PM['preco'])}<small>/mês</small></p><p class="pAnual soMensal">cobrado todo mês · cancele quando quiser</p>
+  <ul class="checks">{li(['Tudo do Grátis'] + DIF)}</ul>
 </article>'''
 
 def grade_planos():
-    return f'<div class="planos">{card_plano("gratis")}{card_plano("plus")}{card_plano("pro", True)}</div>'
+    # Anual/Mensal sem JavaScript (as páginas não usam JS): dois rádios e seletores CSS em site.css (.perIn, .soAnual, .soMensal)
+    return ('<div class="perW"><input class="perIn" type="radio" name="per" id="perAnual" checked><input class="perIn" type="radio" name="per" id="perMensal">'
+        '<div class="perSel" role="group" aria-label="Período de cobrança do Pro"><label for="perAnual">Anual <span class="selo">Mais escolhido</span></label><label for="perMensal">Mensal</label></div>'
+        f'<div class="planos">{card_plano("gratis")}{card_plano("pro")}</div></div>')
 
 # formas de pagamento: o app cria uma assinatura (preapproval) no Mercado Pago sem meio definido; quem escolhe o meio é a tela do MP.
 PAG_MEIOS = 'Você escolhe a forma de pagamento na tela do Mercado Pago, entre as que ele oferece para assinaturas (cartão de crédito ou saldo da conta Mercado Pago, por exemplo).'
-NOTA_PAG = f'<p class="aviso"><strong>Como assinar.</strong> No app, em Ajustes, escolha o plano e pague pelo Mercado Pago. Toda conta nova ganha {P["TESTE_DIAS"]} dias do Pro para testar, sem cartão. Depois, ela continua no Grátis e nada do que você registrou é apagado.</p>'
+NOTA_PAG = f'<p class="aviso"><strong>Como assinar.</strong> No app, em Ajustes, escolha o Pro (anual ou mensal) e pague pelo Mercado Pago. Toda conta nova ganha {P["TESTE_DIAS"]} dias do Pro para testar, sem cartão. Depois, ela continua no Grátis e nada do que você registrou é apagado.</p>'
 
 def fone(img, alt, lazy=True):
     a = f' alt="{e(alt)}"' if alt else ' alt=""'
@@ -98,7 +104,7 @@ def landing():
         "operatingSystem": "Web, Android, iOS (PWA)", "inLanguage": "pt-BR", "url": "https://theuuswillian.github.io/grana-viva/site/",
         "image": "https://theuuswillian.github.io/grana-viva/site/img/og.jpg",
         "description": "Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.",
-        "offers": [{"@type": "Offer", "name": PL[k]['nome'], "price": f'{PL[k]["preco"]:.2f}', "priceCurrency": "BRL"} for k in ('gratis', 'plus', 'pro', 'pro_anual')],
+        "offers": [{"@type": "Offer", "name": PL[k]['nome'], "price": f'{PL[k]["preco"]:.2f}', "priceCurrency": "BRL"} for k in ('gratis', 'pro', 'pro_anual')],
         "author": {"@type": "Person", "name": "Matheus Willian"}}, ensure_ascii=False)
     cabeca = f'''<link rel="canonical" href="https://theuuswillian.github.io/grana-viva/site/">
 <meta property="og:type" content="website">
@@ -153,11 +159,11 @@ def landing():
   <p class="kick">Por que GranaViva</p>
   <h2>O que costuma estar espalhado em vários apps, num só lugar.</h2>
   <div class="difs">
-    <article class="dif revela"><div class="ic">1</div><h3>Cartões e faturas de graça, para sempre</h3><p>Compras e parcelas na fatura certa, fechamento, vencimento, limite usado e juros de atraso, tudo no plano Grátis.</p><p class="porque">Por que importa: em vários apps conhecidos não há plano grátis permanente, ou cadastrar todos os cartões só é possível no plano pago.</p></article>
+    <article class="dif revela"><div class="ic">1</div><h3>Cartões e faturas de graça, para sempre</h3><p>Compras e parcelas na fatura certa, fechamento, vencimento, limite usado e juros de atraso. Até {LG["max_cartoes"]} cartões no plano Grátis; ilimitados no Pro.</p><p class="porque">Por que importa: em vários apps conhecidos não há plano grátis permanente.</p></article>
     <article class="dif revela"><div class="ic">2</div><h3>Gastos e investimentos juntos</h3><p>FIIs, ações, BDRs, ETFs, cripto e renda fixa (CDB, LCI/LCA, Tesouro, caixinhas) com proventos, preço médio e rendimento pelo CDI em dias úteis.</p><p class="porque">Por que importa: o patrimônio fecha com as suas contas e faturas, sem um segundo app só para a carteira.</p></article>
-    <article class="dif revela"><div class="ic">3</div><h3>Patrimônio com alertas de preço</h3><p>Toque no sino de qualquer ativo da carteira para criar um alerta já com o preço de agora, ou acompanhe até {RADAR_MAX} ativos que você ainda não tem. Até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia), com aviso no celular mesmo com o app fechado.</p><p class="porque">Por que importa: você não precisa ficar olhando cotação o dia todo.</p></article>
+    <article class="dif revela"><div class="ic">3</div><h3>Patrimônio com alertas de preço</h3><p>Toque no sino de qualquer ativo da carteira para criar um alerta já com o preço de agora, ou acompanhe até {RADAR_MAX} ativos que você ainda não tem. Alertas acima de, abaixo de ou queda no dia, com aviso no celular mesmo com o app fechado: {LG["max_alertas_radar"]} alerta ativo no Grátis, Radar de Preços ilimitado no Pro.</p><p class="porque">Por que importa: você não precisa ficar olhando cotação o dia todo.</p></article>
     <article class="dif revela"><div class="ic">4</div><h3>Orçamento que nasce da sua renda</h3><p>Diga quanto ganha e escolha um perfil: Equilibrado 50/30/20, Contas apertadas 60/30/10 ou Acelerar 50/20/30. O app sugere o limite de cada categoria e mostra se você está no ritmo.</p><p class="porque">Por que importa: você não começa de uma tela vazia.</p></article>
-    <article class="dif revela"><div class="ic">5</div><h3>IA no app, foto do recibo ou WhatsApp</h3><p>Uma frase ("Almoço 45 crédito"), a foto do recibo ou uma mensagem no WhatsApp vira um lançamento para você conferir antes de salvar. No extrato, cada lançamento mostra de onde veio. No Plus, {L_IA1} leituras por dia.</p><p class="porque">Por que importa: a IA não é um adicional cobrado à parte.</p></article>
+    <article class="dif revela"><div class="ic">5</div><h3>IA no app, foto do recibo ou WhatsApp</h3><p>Uma frase ("Almoço 45 crédito"), a foto do recibo ou uma mensagem no WhatsApp vira um lançamento para você conferir antes de salvar. No extrato, cada lançamento mostra de onde veio. No Grátis, {LG["ia_frase_mes"]} lançamentos por frase, {LG["ia_comprovante_mes"]} fotos de recibo e {LG["whatsapp_lancamento_mes"]} lançamentos pelo WhatsApp por mês; no Pro, ilimitado.</p><p class="porque">Por que importa: a IA não é um adicional cobrado à parte.</p></article>
     <article class="dif revela"><div class="ic">6</div><h3>Saldo de cada dia e o melhor cartão</h3><p>Calendário com o saldo dia a dia, aviso quando o saldo vai ficar negativo e qual cartão dá mais prazo para pagar uma compra feita hoje.</p><p class="porque">Por que importa: você decide antes de gastar, não depois da fatura.</p></article>
   </div>
 </section>
@@ -178,7 +184,7 @@ def landing():
   </div>
 
   <div class="vit revela">
-    <div class="vitTxt"><h3>Lance em segundos</h3><p>Tire foto do comprovante ou diga o gasto do seu jeito: valor, onde, quando e como pagou. A IA preenche o lançamento e você confere antes de salvar.</p><ul class="lst"><li>Mande pelo WhatsApp: "Uber 28 pix" vira lançamento</li><li>Fale segurando o microfone ou use o ditado do teclado</li><li>Importe o extrato em PDF, OFX ou CSV, sem duplicar</li><li>Plus: {L_IA1} leituras por dia · Pro: {L_IA2}</li></ul></div>
+    <div class="vitTxt"><h3>Lance em segundos</h3><p>Tire foto do comprovante ou diga o gasto do seu jeito: valor, onde, quando e como pagou. A IA preenche o lançamento e você confere antes de salvar.</p><ul class="lst"><li>Mande pelo WhatsApp: "Uber 28 pix" vira lançamento</li><li>Fale segurando o microfone ou use o ditado do teclado</li><li>Importe o extrato em PDF, OFX ou CSV, sem duplicar</li><li>Grátis: {LG["ia_frase_mes"]} frases e {LG["ia_comprovante_mes"]} fotos de recibo por mês · Pro: ilimitado</li></ul></div>
     <div class="vitImgs">{fone("ia-frase", "Falar ou escrever: a frase vira um lançamento preenchido pela IA")}</div>
   </div>
 
@@ -202,9 +208,9 @@ def landing():
     <tbody>
       <tr><th scope="row">Foco</th><td class="gv">Gastos, cartões, planejamento e investimentos</td><td>Gastos e cartões</td><td>Gastos e cartões</td><td>Gastos e orçamento</td><td>Só investimentos</td></tr>
       <tr><th scope="row">Plano grátis permanente</th><td class="gv">Sim, com cartões e faturas</td><td>Sim, com limites</td><td>Não, só teste grátis</td><td>Sim, manual</td><td>Sim, com limite de ativos</td></tr>
-      <tr><th scope="row">Plano pago</th><td class="gv">Plus {brl(PL["plus"]["preco"])}/mês · Pro {brl(PL["pro"]["preco"])}/mês ou {brl(PL["pro_anual"]["preco"])}/ano</td><td>Anual, na faixa de R$ 100</td><td>Na faixa de R$ 30 a R$ 40 por mês</td><td>Mensal, entre R$ 20 e R$ 30</td><td>Só via assinatura de outra empresa</td></tr>
-      <tr><th scope="row">IA para lançar gastos</th><td class="gv">Frase, foto do recibo ou WhatsApp, no Plus</td><td>Assistente no plano mais caro</td><td>Adicional pago à parte</td><td>—</td><td>—</td></tr>
-      <tr><th scope="row">Investimentos com proventos e alertas de preço</th><td class="gv">Sim, no Pro</td><td>—</td><td>—</td><td>—</td><td>Sim, no plano pago</td></tr>
+      <tr><th scope="row">Plano pago</th><td class="gv">Pro {brl(PM["preco"])}/mês ou {brl(PA["preco"])}/ano (≈ {brl(PA["mensal"])}/mês)</td><td>Anual, na faixa de R$ 100</td><td>Na faixa de R$ 30 a R$ 40 por mês</td><td>Mensal, entre R$ 20 e R$ 30</td><td>Só via assinatura de outra empresa</td></tr>
+      <tr><th scope="row">IA para lançar gastos</th><td class="gv">Frase, foto do recibo ou WhatsApp, já no Grátis (cota mensal); ilimitada no Pro</td><td>Assistente no plano mais caro</td><td>Adicional pago à parte</td><td>—</td><td>—</td></tr>
+      <tr><th scope="row">Investimentos com proventos e alertas de preço</th><td class="gv">Sim, já no Grátis (até {LG["max_ativos_carteira"]} ativos); ilimitado no Pro</td><td>—</td><td>—</td><td>—</td><td>Sim, no plano pago</td></tr>
       <tr><th scope="row">Anúncios</th><td class="gv">Não</td><td>—</td><td>—</td><td>Contém anúncios</td><td>—</td></tr>
     </tbody>
   </table></div>
@@ -257,16 +263,16 @@ def landing():
         corpo, cabeca=cabeca)
 
 def funcionalidades():
-    def g(nivel, titulo, itens):
+    def g(tag, titulo, itens):
         li = ''.join(f'<div class="item"><h3>{e(t)}</h3><p>{e(d)}</p></div>' for t, d in itens)
-        return f'<section class="lim bloco"><h2>{titulo} <span class="tag">{e(NOME_NV[nivel])}</span></h2><div class="grade3">{li}</div></section>'
-    corpo = '<section class="lim cab"><h1>Funcionalidades</h1><p class="lead">Tudo o que o GranaViva faz hoje, separado pelo plano em que aparece. Toda conta nova usa o Pro por ' + str(P['TESTE_DIAS']) + ' dias.</p><p class="lead"><strong>Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.</strong></p></section>'
-    corpo += g(0, 'Controle do dia a dia', [
+        return f'<section class="lim bloco"><h2>{titulo} <span class="tag">{e(tag)}</span></h2><div class="grade3">{li}</div></section>'
+    corpo = '<section class="lim cab"><h1>Funcionalidades</h1><p class="lead">Tudo o que o GranaViva faz hoje. Quase tudo está no Grátis, com cotas mensais de IA e WhatsApp e limites de cartões, carteira e alertas; o Pro tira esses limites. Toda conta nova usa o Pro por ' + str(P['TESTE_DIAS']) + ' dias.</p><p class="lead"><strong>Controle completo em segundos via IA no App, Foto de Recibo ou WhatsApp + Gestão de Cartões e Patrimônio com Alertas de Preço.</strong></p></section>'
+    corpo += g('Grátis', 'Controle do dia a dia', [
         ('Lançamentos', 'Receitas, despesas e transferências, com status pago, previsto ou cancelado. Só o que está pago entra no saldo.'),
         ('Dividir entre categorias', 'Um gasto pode ser dividido em até 10 partes, em categorias diferentes, com os centavos sempre exatos.'),
         ('Contas fixas e recorrências', 'Diária, semanal, quinzenal, mensal, anual ou a cada N dias, com primeira cobrança e data de fim.'),
         ('Contas e bancos', 'Saldo de cada conta, transferências entre elas e contas arquivadas que continuam no histórico.'),
-        ('Cartões e faturas', 'Cartão com a cara do seu banco, compras e parcelas na fatura certa, fechamento e vencimento, limite usado, juros de atraso e o melhor cartão para comprar hoje.'),
+        ('Cartões e faturas', f'Cartão com a cara do seu banco, compras e parcelas na fatura certa, fechamento e vencimento, limite usado, juros de atraso e o melhor cartão para comprar hoje. Até {LG["max_cartoes"]} cartões no Grátis; ilimitados no Pro.'),
         ('Categorias, subcategorias e tags', 'Organize do seu jeito e filtre a lista por tag, texto ou período.'),
         ('Assinaturas detectadas', 'O Início mostra as cobranças que se repetem todo mês e avisa quando uma delas fica mais cara.'),
         ('Empréstimos a receber', 'Registre dinheiro que você emprestou, acompanhe o que falta receber e lembre a pessoa com uma mensagem pronta no WhatsApp.'),
@@ -276,7 +282,7 @@ def funcionalidades():
         ('PIN e Face ID', 'Trave o app com PIN e, nos aparelhos compatíveis, desbloqueie com biometria.'),
         ('Exportar e excluir', 'Baixe todos os seus dados (JSON e planilha) ou exclua a conta inteira em Ajustes.'),
     ])
-    corpo += g(1, 'Planejar e enxergar o mês', [
+    corpo += g('Grátis, IA com cota mensal', 'Planejar e enxergar o mês', [
         ('Orçamentos', 'Status no ritmo, acima do ritmo ou estourado, quanto resta por categoria, limite sugerido para gastos sem limite e histórico de planejado x gasto, com aviso em 80% e 100%.'),
         ('Plano pela renda', 'Informe a renda e escolha Equilibrado 50/30/20, Contas apertadas 60/30/10 ou Acelerar 50/20/30: o app sugere os limites e você aplica com um toque.'),
         ('Metas', 'Seu ritmo de economia (média dos últimos 3 meses), quanto guardar por mês, previsão de chegada, metas que rendem pelo CDI, alvo pela Tabela FIPE para carro ou moto e lembrete do dia de guardar.'),
@@ -284,48 +290,53 @@ def funcionalidades():
         ('Relatórios', 'Comparação com o mês anterior, ritmo de gastos, variação por categoria e resumo do mês.'),
         ('Importar extrato', 'PDF do extrato ou da fatura (lido com IA), OFX ou CSV do banco, com sugestão de categoria e sem duplicar lançamentos.'),
         ('Comprovantes', 'Anexe fotos e PDFs aos lançamentos, guardados em um espaço privado da sua conta.'),
-        ('Lançar com IA', f'A foto do recibo ou uma frase, digitada ou falada ("Almoço 45 crédito"), vira um lançamento para você conferir. Até {L_IA1} por dia no Plus e {L_IA2} no Pro.'),
-        ('Lançar pelo WhatsApp', 'Ligue seu número em WhatsApp & Conta e mande "Uber 28 pix" ou "Mercado 152,40 crédito Nubank": o lançamento entra no app, já com a categoria. No extrato, cada lançamento mostra se veio da IA, do WhatsApp, do recibo ou foi manual.'),
+        ('Lançar com IA', f'A foto do recibo ou uma frase, digitada ou falada ("Almoço 45 crédito"), vira um lançamento para você conferir. No Grátis, {LG["ia_frase_mes"]} lançamentos por frase e {LG["ia_comprovante_mes"]} fotos de recibo por mês; no Pro, ilimitado.'),
+        ('Lançar pelo WhatsApp', f'Ligue seu número em WhatsApp & Conta e mande "Uber 28 pix" ou "Mercado 152,40 crédito Nubank": o lançamento entra no app, já com a categoria. No extrato, cada lançamento mostra se veio da IA, do WhatsApp, do recibo ou foi manual. No Grátis, {LG["whatsapp_lancamento_mes"]} lançamentos por mês (consultas de saldo, fatura e orçamento liberadas); no Pro, ilimitado.'),
     ])
-    corpo += g(2, 'Investimentos e patrimônio', [
-        ('Carteira completa', 'FIIs, ações, BDRs, ETFs e cripto, com cotação da B3 (atraso de cerca de 15 minutos) e de cripto, proventos com valor esperado, reinvestimento e preço médio.'),
-        ('Alertas de preço', f'No sino de cada ativo da carteira, crie um alerta já com o preço de agora. Também dá para acompanhar até {RADAR_MAX} ativos que você ainda não tem, com preço, variação de 30 dias e quanto falta para o alvo. Até {RADAR_AL} alertas por ativo (acima de, abaixo de ou queda no dia), com aviso no celular mesmo com o app fechado.'),
+    corpo += g('Grátis com limites · Pro ilimitado', 'Investimentos e patrimônio', [
+        ('Carteira completa', f'FIIs, ações, BDRs, ETFs e cripto, com cotação da B3 (atraso de cerca de 15 minutos) e de cripto, proventos com valor esperado, reinvestimento e preço médio. Até {LG["max_ativos_carteira"]} ativos no Grátis; carteira ilimitada no Pro.'),
+        ('Alertas de preço', f'No sino de cada ativo da carteira, crie um alerta já com o preço de agora. Também dá para acompanhar até {RADAR_MAX} ativos que você ainda não tem, com preço, variação de 30 dias e quanto falta para o alvo. Alertas acima de, abaixo de ou queda no dia, com aviso no celular mesmo com o app fechado. {LG["max_alertas_radar"]} alerta ativo no Grátis; Radar de Preços ilimitado no Pro.'),
         ('Renda fixa pelo CDI', 'CDB, LCI/LCA, Tesouro, caixinhas e poupança calculados com as taxas oficiais do Banco Central e os dias úteis.'),
         ('Patrimônio', 'Contas, investimentos e bens menos dívidas e faturas, com histórico mês a mês.'),
-        ('Assistente com IA', f'Pergunte "quanto gastei com mercado em outubro?". O app calcula com os seus dados e a resposta é conferida. Até {L_AS2} perguntas por dia. Não é recomendação de investimento.'),
+        ('Assistente com IA', f'Pergunte "quanto gastei com mercado em outubro?". O app calcula com os seus dados e a resposta é conferida. Cada pergunta usa a cota mensal de IA do Grátis; no Pro, ilimitado. Não é recomendação de investimento.'),
     ])
     corpo += f'<section class="lim bloco final"><div class="ctas cen"><a class="btn btnP" href="{APP}">Começar grátis</a><a class="btn btnS" href="precos.html">Ver planos e preços</a></div></section>'
     return pagina('funcionalidades.html', 'Funcionalidades · GranaViva', 'Lançamentos por IA, foto do recibo ou WhatsApp, cartões e faturas, orçamentos, planejamento, metas e patrimônio com alertas de preço no GranaViva.', corpo, 'funcionalidades.html')
 
-# rótulos da tabela de preços: os nomes vêm de planos.js; aqui só o texto mostrado no site, quando o app faz mais do que o nome diz
-ROTULO = {'importar_extrato': 'Importar extrato (PDF, OFX ou CSV)', 'investimentos': 'Investimentos (FIIs, ações, ETFs, BDRs, cripto, renda fixa e cotações)'}
+# v10.161: tabela Grátis x Pro (valores de planos.js: LIMITES.gratis; o Pro é ilimitado)
 def precos():
-    linhas = ''
-    def linha(nome, nivel):
-        cel = ''.join(f'<td>{"<span class=sim>Sim</span>" if nivel <= n else "<span class=nao>Não</span>"}</td>' for n in (0, 1, 2))
-        return f'<tr><th scope="row">{e(nome)}</th>{cel}</tr>'
-    for k, r in REC.items():
-        linhas += linha(ROTULO.get(k, r['nome']), r['nivel'])
-        if k == 'investimentos':
-            linhas += linha(f'Alertas de preço na carteira e em até {RADAR_MAX} ativos que você não tem', r['nivel'])
-    linhas += '<tr><th scope="row">Leituras com IA por dia</th>' + ''.join(f'<td>{LIM[n]["leitura_ia_dia"] or "Não"}</td>' for n in (0, 1, 2)) + '</tr>'
-    linhas += '<tr><th scope="row">Perguntas ao assistente por dia</th>' + ''.join(f'<td>{LIM[n]["assistente_dia"] or "Não"}</td>' for n in (0, 1, 2)) + '</tr>'
-    linhas += linha('Lançar pelo WhatsApp', NV('leitura_ia'))
-    corpo = f'''<section class="lim cab"><h1>Planos e preços</h1><p class="lead">Comece grátis. Assine só se precisar de mais.</p><div class="ctas"><a class="btn btnP" href="{APP}">Começar grátis</a></div></section>
+    def q(v, un=''):
+        return 'Ilimitado' if v == -1 else f'{v}{un}'
+    L = [
+        ('Lançamentos manuais', 'Ilimitados', 'Ilimitados'),
+        ('Orçamentos com termômetro de ritmo', 'Sim', 'Sim'),
+        ('Planejamento, metas, relatórios e patrimônio', 'Sim', 'Sim'),
+        ('Importar extrato (OFX ou CSV)', 'Sim', 'Sim'),
+        ('IA por frase (digitada ou falada)', f'{LG["ia_frase_mes"]} por mês', 'Ilimitada'),
+        ('IA por foto de recibo', f'{LG["ia_comprovante_mes"]} por mês', 'Ilimitada'),
+        ('WhatsApp: lançamentos', f'{LG["whatsapp_lancamento_mes"]} por mês', 'Ilimitados'),
+        ('WhatsApp: consultas (saldo, quanto posso gastar, fatura, orçamento)', 'Liberadas', 'Ilimitadas'),
+        ('Cartões e faturas', f'Até {LG["max_cartoes"]} cartões', 'Cartões ilimitados'),
+        ('Carteira de investimentos', f'Até {LG["max_ativos_carteira"]} ativos', 'Carteira ilimitada'),
+        ('Radar de Preços (alertas ativos)', f'{LG["max_alertas_radar"]} alerta', 'Ilimitado'),
+    ]
+    linhas = ''.join(f'<tr><th scope="row">{e(n)}</th><td>{e(a)}</td><td>{e(b)}</td></tr>' for n, a, b in L)
+    corpo = f'''<section class="lim cab"><h1>Planos e preços</h1><p class="lead">Comece grátis. Assine o Pro só se precisar de mais.</p><div class="ctas"><a class="btn btnP" href="{APP}">Começar grátis</a></div></section>
 <section class="lim bloco">{grade_planos()}{NOTA_PAG}</section>
-<section class="lim bloco"><h2>Compare os recursos</h2>
-<div class="tabelaW"><table class="tabela"><thead><tr><th scope="col">Recurso</th><th scope="col">{e(PL["gratis"]["nome"])}<small>R$ 0</small></th><th scope="col">{e(PL["plus"]["nome"])}<small>{brl(PL["plus"]["preco"])}/mês</small></th><th scope="col">{e(PL["pro"]["nome"])}<small>{brl(PL["pro"]["preco"])}/mês ou {brl(PL["pro_anual"]["preco"])}/ano</small></th></tr></thead><tbody>{linhas}</tbody></table></div>
+<section class="lim bloco"><h2>Compare Grátis e Pro</h2>
+<div class="tabelaW"><table class="tabela"><thead><tr><th scope="col">Recurso</th><th scope="col">{e(PL["gratis"]["nome"])}<small>R$ 0</small></th><th scope="col">{e(PM["nome"])}<small>{e(PRECO_PRO)}</small></th></tr></thead><tbody>{linhas}</tbody></table></div>
 </section>
 <section class="lim bloco"><h2>Como funciona a cobrança</h2>
 <ul class="lista">
-<li>Assinatura mensal ({PL["plus"]["nome"]} ou {PL["pro"]["nome"]}) ou anual ({PL["pro_anual"]["nome"]}), cobrada de forma recorrente pelo Mercado Pago. {PAG_MEIOS}</li>
+<li>Pro anual: {brl(PA["preco"])} por ano (equivale a {brl(PA["mensal"])}/mês, cerca de {PA["economiaPct"]}% menos que o mensal). Pro mensal: {brl(PM["preco"])} por mês. As duas são cobradas de forma recorrente pelo Mercado Pago. {PAG_MEIOS}</li>
 <li>O GranaViva não recebe nem guarda os dados do seu cartão.</li>
 <li>Cancele quando quiser em Ajustes. O acesso continua até o fim do período já pago.</li>
 <li>Se desistir em até 7 dias da contratação, devolvemos todo o valor pago. Hoje o pedido é feito por e-mail; veja como nos <a href="termos.html">Termos de uso</a>.</li>
-<li>Ao voltar para o Grátis, nada é apagado: os recursos pagos ficam escondidos e voltam se você assinar de novo.</li>
+<li>Ao voltar para o Grátis, nada é apagado: o que você já cadastrou continua lá; só criar itens além dos limites do Grátis e usar a IA além da cota do mês pede o Pro.</li>
+<li>Quem assinou o antigo plano Plus continua com acesso igual ao do Pro enquanto a assinatura estiver ativa.</li>
 </ul>
 <p>Mais detalhes nos <a href="termos.html">Termos de uso</a>.</p></section>'''
-    return pagina('precos.html', 'Planos e preços · GranaViva', f'Grátis, Plus por {brl(PL["plus"]["preco"])}/mês e Pro por {brl(PL["pro"]["preco"])}/mês ou {brl(PL["pro_anual"]["preco"])}/ano.', corpo, 'precos.html')
+    return pagina('precos.html', 'Planos e preços · GranaViva', f'Grátis (R$ 0) e Pro por {brl(PA["mensal"])}/mês no anual ({brl(PA["preco"])}/ano) ou {brl(PM["preco"])}/mês.', corpo, 'precos.html')
 
 def sobre():
     corpo = f'''<section class="lim cab"><h1>Sobre</h1><p class="lead">O GranaViva nasceu de uma necessidade simples: saber para onde o dinheiro vai e quanto vai sobrar, sem planilha.</p></section>
@@ -348,15 +359,15 @@ def sobre():
 
 Q_TESTE = f'O que acontece depois dos {P["TESTE_DIAS"]} dias de teste?'
 FAQ = [
-    ('O GranaViva é grátis?', 'Sim. O plano Grátis não tem prazo e inclui lançamentos, contas fixas, contas, categorias, cartões e faturas, o resumo do mês e alertas. Os planos Plus e Pro liberam planejamento, orçamentos, relatórios, metas, investimentos, os alertas de preço, o WhatsApp e a IA.'),
-    (Q_TESTE, 'Sua conta passa para o Grátis automaticamente. Nada é cobrado, porque o teste não pede cartão, e nada do que você registrou é apagado. Os recursos pagos ficam escondidos e voltam se você assinar.'),
-    ('Como assino e quais formas de pagamento são aceitas?', 'No app, abra Ajustes, escolha o plano e pague pelo Mercado Pago. ' + PAG_MEIOS + ' A renovação é automática até você cancelar.'),
+    ('O GranaViva é grátis?', f'Sim. O plano Grátis não tem prazo e inclui lançamentos manuais ilimitados, orçamentos com termômetro de ritmo, planejamento, metas, relatórios e patrimônio. A IA e o WhatsApp também estão no Grátis, com cota mensal ({LG["ia_frase_mes"]} lançamentos por frase, {LG["ia_comprovante_mes"]} fotos de recibo e {LG["whatsapp_lancamento_mes"]} lançamentos pelo WhatsApp), com até {LG["max_cartoes"]} cartões, {LG["max_ativos_carteira"]} ativos na carteira e {LG["max_alertas_radar"]} alerta de preço. O Pro ({PRECO_PRO}) tira esses limites.'),
+    (Q_TESTE, 'Sua conta passa para o Grátis automaticamente. Nada é cobrado, porque o teste não pede cartão, e nada do que você registrou é apagado. Valem de novo os limites do Grátis, e tudo volta a ficar ilimitado se você assinar o Pro.'),
+    ('Como assino e quais formas de pagamento são aceitas?', 'No app, abra Ajustes, escolha o Pro (anual ou mensal) e pague pelo Mercado Pago. ' + PAG_MEIOS + ' A renovação é automática até você cancelar.'),
     ('Como cancelo a assinatura?', 'Em Ajustes, no app. O acesso continua até o fim do período já pago e você não é cobrado de novo.'),
     ('Posso desistir e receber o dinheiro de volta?', 'Sim, em até 7 dias da contratação, com devolução de todo o valor. Hoje o pedido é feito por e-mail (' + EMAIL + '), com o e-mail da sua conta. Só cancelar em Ajustes interrompe as próximas cobranças, mas não pede o reembolso. Os detalhes estão nos Termos de uso.'),
-    ('Como funcionam os alertas de preço?', f'Um recurso do Pro, na aba Patrimônio. No sino de cada ativo da carteira você cria um alerta já com o preço de agora, e em "Novo alerta de ativo" acompanha até {RADAR_MAX} ações, FIIs, ETFs, BDRs ou criptomoedas, mesmo sem tê-los, e cria até {RADAR_AL} alertas por ativo: acima de um preço, abaixo de um preço ou queda forte no dia. O aviso chega no celular mesmo com o app fechado. A B3 é conferida a cada 15 minutos no pregão (cotação com até 15 minutos de atraso) e cripto, de hora em hora. Não é recomendação de compra ou venda.'),
-    ('Dá para lançar falando?', 'Sim, nos planos com IA. Em "Falar ou escrever", segure o microfone e diga o gasto, ou use o ditado do teclado do celular. A fala vira texto pelo reconhecimento de voz do próprio navegador ou do teclado (da Apple ou do Google, conforme o aparelho) e só a frase escrita vai para a IA montar o lançamento, que você confere antes de salvar. Áudios pelo WhatsApp ainda não estão disponíveis.'),
-    ('Conecta com o meu banco?', 'Você pode importar o extrato em PDF, OFX ou CSV (Plus e Pro), sem duplicar lançamentos. Para o dia a dia, o mais rápido é lançar pela barra do Início, pela foto do recibo ou pelo WhatsApp.'),
-    ('Dá para lançar pelo WhatsApp?', 'Sim, nos planos Plus e Pro. Em WhatsApp & Conta, toque em "ligar meu WhatsApp" e envie o código. Depois é só mandar mensagens como "Uber 28 pix" ou "Mercado 152,40 crédito Nubank" e confirmar: o lançamento entra no app com a categoria.'),
+    ('Como funcionam os alertas de preço?', f'Ficam na aba Patrimônio: {LG["max_alertas_radar"]} alerta ativo no Grátis, Radar de Preços ilimitado no Pro. No sino de cada ativo da carteira você cria um alerta já com o preço de agora, e em "Novo alerta de ativo" acompanha até {RADAR_MAX} ações, FIIs, ETFs, BDRs ou criptomoedas, mesmo sem tê-los, e cria até {RADAR_AL} alertas por ativo: acima de um preço, abaixo de um preço ou queda forte no dia. O aviso chega no celular mesmo com o app fechado. A B3 é conferida a cada 15 minutos no pregão (cotação com até 15 minutos de atraso) e cripto, de hora em hora. Não é recomendação de compra ou venda.'),
+    ('Dá para lançar falando?', 'Sim, em todos os planos (no Grátis, dentro da cota mensal de IA). Em "Falar ou escrever", segure o microfone e diga o gasto, ou use o ditado do teclado do celular. A fala vira texto pelo reconhecimento de voz do próprio navegador ou do teclado (da Apple ou do Google, conforme o aparelho) e só a frase escrita vai para a IA montar o lançamento, que você confere antes de salvar. Áudios pelo WhatsApp ainda não estão disponíveis.'),
+    ('Conecta com o meu banco?', 'Você pode importar o extrato em PDF, OFX ou CSV, sem duplicar lançamentos. Para o dia a dia, o mais rápido é lançar pela barra do Início, pela foto do recibo ou pelo WhatsApp.'),
+    ('Dá para lançar pelo WhatsApp?', f'Sim. No Grátis são {LG["whatsapp_lancamento_mes"]} lançamentos por mês, e consultas (saldo, quanto posso gastar, fatura, orçamento) são liberadas; no Pro, ilimitado. Em WhatsApp & Conta, toque em "ligar meu WhatsApp" e envie o código. Depois é só mandar mensagens como "Uber 28 pix" ou "Mercado 152,40 crédito Nubank" e confirmar: o lançamento entra no app com a categoria.'),
     ('Meus dados estão seguros?', 'Os dados ficam em um banco de dados na nuvem (Supabase, com servidores nos Estados Unidos) com regras que deixam cada conta ver apenas os próprios dados, conexão sempre criptografada (HTTPS) e uma cópia criptografada no seu aparelho. Nenhum sistema é 100% imune a falhas, mas tratamos segurança como prioridade.'),
     ('Vocês vendem meus dados ou mostram anúncios?', 'Não. Não vendemos nem alugamos dados e não há anúncios.'),
     ('A IA lê meus dados?', 'Só quando você usa um recurso de IA. Na leitura de comprovante ou de frase, a foto, o PDF ou o texto vai para a IA do Google (Gemini) para montar o lançamento. No assistente, vão a pergunta e os totais calculados pelo app, não a lista dos seus lançamentos. Hoje usamos o nível gratuito do Gemini, em que o Google pode usar esse conteúdo para melhorar os produtos dele. Veja os detalhes na Política de privacidade.'),
@@ -457,14 +468,14 @@ def termos():
 
 <h2>4. Planos, teste e pagamento</h2>
 <ul class="lista">
-<li>O plano <strong>Grátis</strong> não tem prazo. Os planos <strong>Plus</strong> ({brl(PL["plus"]["preco"])}/mês) e <strong>Pro</strong> ({brl(PL["pro"]["preco"])}/mês ou {brl(PL["pro_anual"]["preco"])}/ano) liberam mais recursos, descritos na página <a href="precos.html">Planos e preços</a>.</li>
+<li>O plano <strong>Grátis</strong> não tem prazo e tem cotas mensais e limites de uso. O plano <strong>Pro</strong> ({brl(PM["preco"])}/mês ou {brl(PA["preco"])}/ano) tira esses limites, como descrito na página <a href="precos.html">Planos e preços</a>. Assinaturas do antigo plano Plus continuam valendo com acesso igual ao do Pro.</li>
 <li>Contas novas recebem 14 dias do Pro para teste, sem cartão e sem cobrança. Ao fim do teste a conta passa para o Grátis.</li>
 <li>As assinaturas são cobradas de forma recorrente (mensal ou anual) pelo Mercado Pago, que processa o pagamento. Você escolhe a forma de pagamento na tela do Mercado Pago, entre as que ele oferece para assinaturas. O GranaViva não recebe os dados do seu cartão.</li>
 <li>Você pode cancelar a qualquer momento em Ajustes. O cancelamento interrompe as próximas cobranças e o acesso pago continua até o fim do período já pago.</li>
 <li>Você pode desistir de uma assinatura em até 7 dias da contratação e receber todo o valor pago de volta. Veja a seção 5.</li>
 <li>Se um pagamento não for aprovado, a conta volta ao Grátis depois de um curto período de tolerância.</li>
 <li>Mudanças de preço serão avisadas com pelo menos 30 dias de antecedência e valem a partir da cobrança seguinte.</li>
-<li>Ao passar para um plano menor, nenhum dado é apagado: os recursos do plano anterior ficam indisponíveis até você assinar de novo.</li>
+<li>Ao passar para o Grátis, nenhum dado é apagado: voltam a valer as cotas e os limites do Grátis até você assinar de novo.</li>
 <li>Contas criadas antes do lançamento dos planos ("contas fundadoras") mantêm acesso completo sem cobrança.</li>
 </ul>
 

@@ -17,7 +17,7 @@ export const CARENCIA_DIAS = 3; // depois da data da próxima cobrança, mantém
 
 export type Estado = {
   uid: string;
-  plano: string;                       // plus | pro | pro_anual
+  plano: string;                       // pro | pro_anual (plus: legado, só assinaturas antigas)
   status: "ativo" | "cancelado" | "inadimplente" | null; // null = nada a mudar (ex.: assinatura ainda pendente de pagamento)
   periodo_fim: string | null;          // null = manter o que já está gravado
   provedor_assinatura_id: string;
@@ -117,7 +117,10 @@ export function confereValores(p: any, plano: string, PLANOS: any): boolean {
   const P = PLANOS[plano]; const ar = p?.auto_recurring || {};
   if (!P || !P.preco) return false;
   const freq = P.periodo === "ano" ? 12 : 1;
-  return ar.currency_id === "BRL" && Math.abs(Number(ar.transaction_amount) - P.preco) < 0.005 && Number(ar.frequency) === freq && ar.frequency_type === "months";
+  // v10.161: preço atual (Pro R$ 24,90/mês, Pro anual R$ 179/ano) ou um preço antigo do mesmo plano (assinaturas já existentes)
+  const precos = [P.preco, ...(Array.isArray(P.legado) ? P.legado : [])];
+  const v = Number(ar.transaction_amount);
+  return ar.currency_id === "BRL" && precos.some((x: number) => Math.abs(v - x) < 0.005) && Number(ar.frequency) === freq && ar.frequency_type === "months";
 }
 
 export function estadoDePreapproval(p: any, PLANOS: any, agora = Date.now()): Busca {
@@ -180,6 +183,8 @@ export async function buscaEstado(topico: string, dataId: string, token: string,
 // ---------- checkout: cria a assinatura pendente e devolve o link de pagamento (Pix ou cartão, escolhido no MP) ----------
 export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string }, f: Fetch = fetch) {
   const P = o.PLANOS[o.plano];
+  // v10.161: só Pro mensal (R$ 24,90) e Pro anual (R$ 179,00) são vendidos; o Plus é legado
+  if (!P || !P.preco || P.descontinuado) throw new Error("plano_nao_vendido " + o.plano);
   const body = {
     reason: "GranaViva " + P.nome,
     external_reference: refExterna(o.uid, o.plano),

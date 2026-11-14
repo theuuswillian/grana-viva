@@ -156,7 +156,7 @@ const NAV_FULL=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'rece
 const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'WhatsApp & Conta',i:'chat'}];
 const NAV_MVP_MAIS=[{t:'lanc',l:'Extrato',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'cartoes',l:'Cartões e faturas',i:'card'},{t:'plan',l:'Planejamento',i:'compass'},{t:'rel',l:'Relatório',i:'report'},{t:'pat',l:'Patrimônio líquido',i:'scale'},{t:'metas',l:'Metas',i:'flag'},{t:'bancos',l:'Contas e bancos',i:'bank'}];
 const NAV=MVP_MODE?NAV_MVP:NAV_FULL;
-/* ---------- v10.82: planos (Grátis, Plus, Pro) ----------
+/* ---------- v10.82: planos (v10.161: Grátis e Pro; o Plus antigo vale como Pro) ----------
    A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
    O plano é lido UMA vez por login da tabela assinaturas (a pessoa só lê a própria linha; só o servidor escreve).
    Aqui o plano só decide o que aparece; os limites de IA são conferidos de novo no servidor.
@@ -262,34 +262,75 @@ function cardPlanoCfg(){
     <button class="btn2 sm" data-act="planos">Ver planos</button></div><p class="plSt">${esc(planoStatusTxt(p))}</p>
     ${PLANO_ROW&&PLANO_ROW.status==='ativo'&&PLANO_ROW.provedor==='mercadopago'?'<button class="btn2 sm danger plCanc" data-act="ass-cancelar">Cancelar assinatura</button>':''}</div>`;
 }
-const PL_LISTA=[['gratis',['Lançamentos manuais','Contas e bancos','Cartões, faturas e parcelas','Categorias','Início com resumo do mês','Alertas de vencimento']], // v10.130: igual a planos.js (cartões no Grátis, metas no Plus)
-  ['plus',['Tudo do Grátis','Planejamento e projeções','Orçamentos por categoria','Metas com CDI','Relatórios completos','Importar extrato e anexar comprovantes','Lançar com IA (15 por dia)']],
-  ['pro',['Tudo do Plus','Investimentos e patrimônio','Assistente com IA (30 perguntas por dia)','Lançar com IA (40 por dia)']]];
-function abrePlanos(rec){
-  const box=$('#modal');const p=planoAgora();const atual=p?p.plano:null;
-  const pm=rec?GVP.planoMinimo(rec):null;
-  const pag=pagVisivel();
-  const botao=id=>{
-    if(id==='gratis')return atual==='gratis'?'<span class="plAtual">seu plano</span>':'';
-    if(p&&p.fundador)return '<span class="plAtual">incluso na sua conta</span>';
-    if(atual===id&&p&&p.status==='ativo')return '<span class="plAtual">seu plano</span>';
-    if(pag===true)return `<button class="btn full" data-act="assinar" data-id="${id}">Assinar ${esc(GVP.PLANOS[id].nome)}</button>`;
-    return `<button class="btn full" disabled aria-disabled="true">${pag===null?'Verificando…':'Pagamento em breve'}</button>`;
-  };
-  box.innerHTML=`<div class="sheet plSheet" role="dialog" aria-label="Planos"><div class="sh-head"><h3>Planos</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    ${rec&&REC_TXT[rec]?`<p class="plMot">${esc(REC_TXT[rec][0])} está no plano ${esc(GVP.PLANOS[pm].nome)}.</p>`:''}
-    ${p?`<p class="plMot2">${esc(planoStatusTxt(p))}</p>`:''}
-    <div class="plGrade">${PL_LISTA.map(([id,itens])=>{const P=GVP.PLANOS[id];const destaque=(pm||'pro')===id;
-      return `<div class="plOp${destaque?' on':''}"><div class="plOpH"><b>${esc(P.nome)}</b>${atual===id?'<span class="plTag">atual</span>':''}</div>
-      <div class="plPreco">${id==='gratis'?'R$ 0':esc(P.rotulo.replace('/mês',''))}<small>${id==='gratis'?'para sempre':'/mês'}</small></div>
-      ${id==='pro'?`<p class="plAnual">ou ${esc(GVP.PLANOS.pro_anual.rotulo)} (2 meses grátis)</p>`:''}
-      <ul>${itens.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
-      ${botao(id)}${id==='pro'&&pag===true&&!(p&&p.fundador)?`<button class="btn2 full plAnBtn" data-act="assinar" data-id="pro_anual">Assinar Pro anual</button>`:''}</div>`;}).join('')}</div>
-    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago; a forma de pagamento é escolhida na tela do Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
+/* v10.161: dois planos, Grátis e Pro (mensal ou anual; o Pro vem primeiro para o botão de assinar aparecer sem rolar). A mesma folha serve para "Ver planos" e para o aviso de limite:
+   abrePlanos(rec,{mensagem,manual}) com rec = um recurso de GVP.COTAS (ia_frase, ia_comprovante, whatsapp, cartoes, carteira, radar)
+   mostra primeiro o benefício que o Pro libera. Anual vem marcado ("Mais escolhido"). No limite da IA aparece também
+   "Continuar lançando manualmente (Grátis)", que abre o lançamento manual (sempre ilimitado). */
+let PL_PER='anual',PL_ARGS=[null,null];
+function plGratisItens(){const L=GVP.LIMITES.gratis;
+  return ['Lançamentos manuais ilimitados','Orçamentos com termômetro de ritmo','Planejamento, metas, patrimônio e relatórios','IA: '+L.ia_frase_mes+' lançamentos por frase e '+L.ia_comprovante_mes+' fotos de recibo por mês','WhatsApp: '+L.whatsapp_lancamento_mes+' lançamentos por mês (consultas liberadas)','Até '+L.max_cartoes+' cartões, '+L.max_ativos_carteira+' ativos na carteira e '+L.max_alertas_radar+' alerta de preço'];}
+const brlPl=v=>'R$ '+Number(v).toFixed(2).replace('.',',');
+function abrePlanos(rec,opts){
+  if(!window.GVP)return;
+  opts=opts||{};PL_ARGS=[rec||null,opts];
+  const box=$('#modal');const p=planoAgora();const pag=pagVisivel();
+  const C=rec&&GVP.COTAS[rec]?GVP.COTAS[rec]:null;
+  const ehPro=!!(p&&p.nivel>0);
+  const manual=opts.manual===true||(opts.manual!==false&&(rec==='ia_frase'||rec==='ia_comprovante'));
+  const an=PL_PER!=='mensal',PA=GVP.PLANOS.pro_anual,PM=GVP.PLANOS.pro,id=an?'pro_anual':'pro';
+  const msg=C?(opts.mensagem||GVP.erroLimite(rec,0).mensagem):'';
+  let cta;
+  if(p&&p.fundador)cta='<span class="plAtual">Pro incluso na sua conta fundadora</span>';
+  else if(ehPro&&p.status==='ativo')cta='<span class="plAtual">Você já é Pro</span>';
+  else if(pag===true)cta=`<button class="btn full pwCta" data-act="assinar" data-id="${id}">Assinar Pro ${an?'anual':'mensal'} · ${an?esc(brlPl(PA.preco))+'/ano':esc(brlPl(PM.preco))+'/mês'}</button>`;
+  else cta=`<button class="btn full pwCta" disabled aria-disabled="true">${pag===null?'Verificando…':'Pagamento em breve'}</button>`;
+  box.innerHTML=`<div class="sheet plSheet pwSheet" role="dialog" aria-modal="true" aria-label="${C?'Seja Pro':'Planos'}"><div class="sh-head"><h3>${C?'Seja Pro':'Planos'}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    ${C?`<div class="pwBen" data-rec="${esc(rec)}">${I('sparkle')}<div><b>${esc(C.beneficio)}</b><small>${esc(msg)}</small></div></div>`:''}
+    ${p&&!C?`<p class="plMot2">${esc(planoStatusTxt(p))}</p>`:''}
+    <div class="pwPer" role="radiogroup" aria-label="período">
+      <button type="button" role="radio" data-act="pl-per" data-id="anual" class="${an?'on':''}" aria-checked="${an}">Anual<span class="pwSelo">Mais escolhido</span></button>
+      <button type="button" role="radio" data-act="pl-per" data-id="mensal" class="${an?'':'on'}" aria-checked="${!an}">Mensal</button>
+    </div>
+    <div class="plGrade">
+      <div class="plOp on"><div class="plOpH"><b>Pro</b>${an?'<span class="pwSelo">Mais escolhido</span>':''}${ehPro?'<span class="plTag">atual</span>':''}</div>
+        <div class="plPreco pwPreco" data-per="${an?'anual':'mensal'}">${esc(brlPl(an?PA.mensal:PM.preco))}<small>/mês</small></div>
+        <p class="plAnual pwCob">${an?'cobrado '+esc(brlPl(PA.preco))+' por ano · economize '+PA.economiaPct+'%':'cobrado todo mês · cancele quando quiser'}</p>
+        <ul><li>${I('check')}<span>Tudo do Grátis</span></li>${GVP.PRO_DIFERENCIAIS.map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
+        ${cta}${manual?'<button type="button" class="pwManual" data-act="pw-manual">Continuar lançando manualmente (Grátis)</button>':''}</div>
+      <div class="plOp"><div class="plOpH"><b>Grátis</b>${p&&!ehPro?'<span class="plTag">atual</span>':''}</div>
+        <div class="plPreco">R$ 0<small>para sempre</small></div>
+        <ul>${plGratisItens().map(x=>`<li>${I('check')}<span>${esc(x)}</span></li>`).join('')}</ul></div>
+    </div>
+    <p class="plRod">${pag===false?'Os pagamentos ainda não estão ativos. Quando estiverem, você assina por aqui pelo Mercado Pago. ':''}<a href="site/precos.html" target="_blank" rel="noopener">Comparar planos</a> · <a href="site/termos.html" target="_blank" rel="noopener">Termos</a></p>
   </div>`;
   box.classList.add('on');
-  if(PLANO_PAG===null&&USER){const ant=pag;verificaPagamento().then(v=>{if(v!==ant&&$('#modal .plSheet'))abrePlanos(rec);});}
+  if(PLANO_PAG===null&&USER){const ant=pag;verificaPagamento().then(v=>{if(v!==ant&&$('#modal .pwSheet'))abrePlanos(PL_ARGS[0],PL_ARGS[1]);});}
 }
+function plPer(v){PL_PER=v==='mensal'?'mensal':'anual';if($('#modal .pwSheet'))abrePlanos(PL_ARGS[0],PL_ARGS[1]);}
+/* aviso de limite: o mesmo para a resposta LIMITE_PLANO do servidor e para os limites conferidos aqui (cartões, carteira, radar) */
+function abrePaywall(rec,opts){abrePlanos(rec,opts);}
+/* resposta de uma função: LIMITE_PLANO (v10.161) ou o 402 "upgrade" das funções antigas -> abre o aviso e devolve true */
+const REC_LEGADO={leitura_ia:'ia_frase',assistente:'ia_frase'};
+function trataLimitePlano(o,status,recPadrao,opts){
+  if(!o||typeof o!=='object')return false;
+  if(o.erro==='LIMITE_PLANO'){const rec=GVP.COTAS[o.recurso]?o.recurso:recPadrao;abrePaywall(rec,Object.assign({mensagem:typeof o.mensagem==='string'?o.mensagem.slice(0,200):''},opts||{}));return true;}
+  if(status===402&&o.upgrade){abrePaywall(recPadrao||REC_LEGADO[o.recurso]||'ia_frase',opts);return true;}
+  return false;
+}
+function erroPaywall(){const e=new Error('');e.gvPaywall=true;return e;}
+function toastErroIA(e,padrao){if(e&&e.gvPaywall)return;toast(String(e&&e.message||padrao),true);}
+/* limites de quantidade do plano, conferidos no aparelho antes de criar (sem plano lido: não bloqueia, como o resto do app) */
+function cabeNoPlano(rec,usados){
+  const p=planoAgora();if(!p||!window.GVP||!GVP.COTAS[rec])return true;
+  if(GVP.cabe(p.nivel,GVP.COTAS[rec].k,usados))return true;
+  abrePaywall(rec);return false;
+}
+function rdAlertasAtivos(exceto){let n=0;for(const x of radarL()){if(x===exceto)continue;for(const a of (x.al||[]))if(!rdDisp(x,a))n++;}return n;}
+/* ?planos=pro (link do WhatsApp quando acaba a cota): abre a folha do Pro assim que a conta estiver aberta */
+(function(){try{const m=/[?&]planos=([a-z_]+)/.exec(location.search);if(!m)return;sessionStorage.setItem('gv-abre-planos',m[1]);
+  const u=new URL(location.href);u.searchParams.delete('planos');history.replaceState(null,'',u.pathname+(u.search||'')+u.hash);}catch(e){}})();
+function abrePlanosURL(){try{const v=sessionStorage.getItem('gv-abre-planos');if(!v||!USER)return;sessionStorage.removeItem('gv-abre-planos');
+  if(v==='anual'||v==='mensal')PL_PER=v;abrePaywall(v==='pro'||v==='anual'||v==='mensal'?'whatsapp':null,{manual:false});}catch(e){}}
 /* v10.135: a tela de venda não espera o servidor para mostrar "Assinar": usa o último valor conhecido
    (guardado no aparelho) e, sem nenhum, assume pagamento ativo; se não estiver, o checkout responde "em breve" */
 function pagVisivel(){if(PLANO_PAG!==null)return PLANO_PAG;try{const c=localStorage.getItem('gv-pag');if(c==='0')return false;}catch(e){}return true;}
@@ -4603,8 +4644,9 @@ function radarAlertasAbre(key,novo,atual){
   });
   box.querySelector('#rrAls').addEventListener('input',e=>{const i=e.target.closest('[data-v]');if(!i)return;const a=A[+i.dataset.v];a.vTxt=i.value;
     if(a.tp!=='queda'&&p>0){const v=parseBR(i.value),h=i.closest('.rrAl').querySelector('.rrAlH');if(h)h.textContent=v>0?(Math.abs((v-p)/p*100)<0.005?'igual ao preço de agora':rdPct((v-p)/p*100)+' do preço de agora'):'';}});
-  box.querySelector('#rrAlAdd').onclick=()=>{lerV();if(A.length>=RD_AL)return;A.push({id:rdId(),tp:A.some(a=>a.tp==='acima')?'abaixo':'acima',v:0,g:0,novo:1});pinta();const ins=box.querySelectorAll('[data-v]');const l=ins[ins.length-1];if(l)l.focus();};
-  box.querySelector('#rrAlSug').onclick=e=>{const b=e.target.closest('[data-sg]');if(!b)return;lerV();if(A.length>=RD_AL)return;const [tp,v]=b.dataset.sg.split('|');
+  const cabeAl=()=>cabeNoPlano('radar',rdAlertasAtivos(it)+A.filter(a=>!rdDisp(it,a)).length); // v10.161: Grátis = 1 alerta ativo (somando todos os ativos e o sino)
+  box.querySelector('#rrAlAdd').onclick=()=>{lerV();if(A.length>=RD_AL)return;if(!cabeAl())return;A.push({id:rdId(),tp:A.some(a=>a.tp==='acima')?'abaixo':'acima',v:0,g:0,novo:1});pinta();const ins=box.querySelectorAll('[data-v]');const l=ins[ins.length-1];if(l)l.focus();};
+  box.querySelector('#rrAlSug').onclick=e=>{const b=e.target.closest('[data-sg]');if(!b)return;lerV();if(A.length>=RD_AL)return;if(!cabeAl())return;const [tp,v]=b.dataset.sg.split('|');
     const val=tp==='queda'?+v:p>0?Math.round(p*(tp==='acima'?1+v/100:1-v/100)*(p<1?1e6:100))/(p<1?1e6:100):0;A.push({id:rdId(),tp,v:val,vTxt:val?rdValTxt(val,tp):'',g:0,novo:1});pinta();};
   box.querySelector('#rrAlOk').onclick=()=>{
     lerV();const out=[];
@@ -4616,9 +4658,13 @@ function radarAlertasAbre(key,novo,atual){
       const o={id:a.id,tp:a.tp,v,g:mudou||a.reat||!(a.g>0)?Date.now()+i:a.g};
       if(a.leg&&!mudou)o.leg=a.leg; // alerta migrado sem mudança continua com a chave antiga (não avisa de novo)
       out.push(o);}
+    { const p0=planoAgora(),lim=p0&&window.GVP?GVP.limite(p0.nivel,'max_alertas_radar'):-1;
+      const depois=rdAlertasAtivos(it)+out.filter(o=>!rdDisp(it,o)).length,antes=rdAlertasAtivos(null);
+      if(lim!==-1&&depois>lim&&depois>antes){abrePaywall('radar');return;} } // v10.161: diminuir sempre pode
     const L=radarL().map(x=>x===it?Object.assign({},x,{al:out}):x);
     rdSalva(L);closeModal();render();toast(out.length?'Alertas de '+it.t+' salvos':'Alertas de '+it.t+' removidos');
   };
+  if(novo&&!A.length&&!cabeNoPlano('radar',rdAlertasAtivos(it)))return; // v10.161: já tem o alerta do Grátis -> aviso do Pro
   if(novo&&!A.length&&p>0){A.push({id:rdId(),tp:'acima',v:Math.round(p*(atual?1:1.05)*(p<1?1e6:100))/(p<1?1e6:100),g:0,novo:1});A[0].vTxt=rdValTxt(A[0].v,'acima');} // v10.160: pelo sino, começa no preço de agora
   pinta();
 }
@@ -5465,6 +5511,7 @@ function ccOpcoesVisual(t,atual){
 }
 function cartaoForm(id){
   const c=id?S.cartoes.find(x=>x.id===id):null;
+  if(!c&&!cabeNoPlano('cartoes',cartoesAtivos().length))return; // v10.161: Grátis até 2 cartões
   const bk=c&&bancoDoCartao(c);
   const bVal=bk?bk.n:(c&&ccAuto(c)==='dm'?'DM':'');
   const visAt=c?(c.visual||(c.corPropria&&!ccAuto(c)?'cor:'+((c.cor||0)%CARD_COR.length):'')):'';
@@ -5779,7 +5826,7 @@ async function atualizaWaUI(){
     const t2=$('#waTxt'),b2=$('#waBtns'),s2=$('#waSt');if(!t2||!b2)return;
     const pinta=(k,l)=>{if(s2){s2.className='bcSt'+(k?' on':'');s2.innerHTML='<i></i>'+l;}};
     if(!st.ativo){pinta(false,'em breve');t2.textContent='mande "gastei 32 no almoço" para o WhatsApp do GranaViva e o lançamento entra aqui, já com a categoria. está chegando.';b2.innerHTML='';return;}
-    if(!st.pode){pinta(false,'Plus');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. faz parte dos planos Plus e Pro.';b2.innerHTML=`<button class="btn" data-act="planos" data-id="leitura_ia">ver planos</button>`;return;}
+    if(!st.pode){pinta(false,'Pro');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. faz parte do Pro.';b2.innerHTML=`<button class="btn" data-act="planos" data-id="leitura_ia">ver planos</button>`;return;}
     if(st.vinculado){pinta(true,'ligado');t2.textContent='ligado ao número '+st.telefone+'. mande o gasto do jeito que você falaria, como "uber 18,50 ontem", e toque em Salvar.';
       b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`;return;}
     pinta(false,'desligado');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. você confere e toca em Salvar.';
@@ -5986,6 +6033,7 @@ async function importarExtratoIA(f){
     if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
     else{try{imagem=await imgParaJpeg(f,2000);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
     const r=await invokeIA('ler-comprovante',{imagem,mime,extrato:true,hoje:hojeISO()},()=>toast(IA_OCUPADA));
+    if(trataLimitePlano(r.o,r.status,'ia_comprovante',{manual:false}))return; // v10.161: cota do plano -> aviso do Pro
     if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui ler o extrato'));
     const hj=hojeISO();
     const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100}))
@@ -6966,7 +7014,7 @@ async function contaLeitura(){}
 let IA_ESP=[1500,4000,8000],IA_FN=null;
 const IA_OCUPADA='A IA está ocupada, tentando de novo…';
 function iaEspera(i){const b=IA_ESP[Math.min(i,IA_ESP.length-1)];return Math.round(b*(0.8+Math.random()*0.4));}
-function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite))||/limite de|muitas perguntas/i.test(String(erro||''));}
+function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite||o.erro==='LIMITE_PLANO'))||/limite de|muitas perguntas/i.test(String(erro||''));}
 async function invokeIA(nome,body,aoTentar){
   for(let i=0;;i++){
     let o=null,status=0,rede=false;
@@ -6988,6 +7036,7 @@ async function invokeIA(nome,body,aoTentar){
 }
 async function chamaIA(body,aoTentar){
   const r=await invokeIA('ler-comprovante',Object.assign({categorias:[...new Set(S.cats.concat(CATS_RECEITA))],cartoes:S.cartoes.map(c=>c.nome),hoje:hojeISO()},body),aoTentar);
+  if(trataLimitePlano(r.o,r.status,body&&body.texto?'ia_frase':'ia_comprovante'))throw erroPaywall(); // v10.161: cota do plano -> aviso do Pro, nunca toast de erro
   if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui entender'));
   return limpaIA(r.o);
 }
@@ -7186,6 +7235,7 @@ function omniInvConfirma(iv){
     return;
   }
   /* ativo que ainda não está na carteira: cria o ativo com a compra no histórico (preço médio e cotas vêm das operações) */
+  if(!cabeNoPlano('carteira',(S.fiis||[]).length))return; // v10.161
   const b=B3_LIST.find(x=>x.t===iv.ticker);
   form('Compra · '+iv.ticker,[
     {type:'html',html:omniInvResumo(iv,null,tipo)},
@@ -7235,7 +7285,7 @@ async function omniEnvia(){
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';
     abreTxIA(o);
-  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);}
+  }catch(e){toastErroIA(e,'não consegui entender');}
   finally{const f2=$('#omniF'),i3=$('#omniTxt');if(f2)f2.classList.remove('busy');if(i3)i3.readOnly=false;}
 }
 document.addEventListener('submit',e=>{if(e.target&&e.target.id==='omniF'){e.preventDefault();omniEnvia();}});
@@ -7251,7 +7301,7 @@ async function enviaFraseIA(){
     const o=await chamaIA({texto},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('sparkle')+' '+esc(IA_OCUPADA);});
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     abreTxIA(o);
-  }catch(e){toast(String(e&&e.message||'não consegui entender'),true);}
+  }catch(e){toastErroIA(e,'não consegui entender');}
   finally{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=I('sparkle')+' Preencher lançamento';}}
 }
 function lerComprovanteIA(){
@@ -7273,7 +7323,7 @@ function lerComprovanteIA(){
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
       abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento quando ele for salvo
-    }catch(e){toast(String(e&&e.message||'não consegui ler o comprovante'),true);}
+    }catch(e){toastErroIA(e,'não consegui ler o comprovante');}
     finally{solta();}
   };
   inp.click();
@@ -7882,6 +7932,7 @@ async function atualizaCDI(forca){
 }
 /* formulário */
 function rfForm(f){
+  if(!f&&!cabeNoPlano('carteira',(S.fiis||[]).length))return; // v10.161
   const prod0=f?rfProdOf(f):'caixinha',idx0=f?rfIdxOf(f):RF_PROD[prod0].idx[0],A=f?rfAportes(f):[],um=A.length<=1;
   const tx0=f?(idx0==='cdi'?f.pctCdi:f.taxa):'';
   const v0=f?(A.length===1?A[0].p!=null?A[0].p:A[0].v:0):0,d0=f&&A.length===1?(A[0].ir||A[0].d):'';
@@ -8008,6 +8059,7 @@ function rfCardInfo(f,posi){
 
 function fiiForm(id,tipoPre){
   const f=id?S.fiis.find(x=>x.id===id):null;
+  if(!f&&!cabeNoPlano('carteira',(S.fiis||[]).length))return; // v10.161: Grátis até 5 ativos na carteira
   if((f&&tipoOf(f)==='rf')||(!f&&tipoPre==='rf'))return rfForm(f);
   form(f?'Editar ativo':'Novo ativo',[
     {name:'tipo',label:'Tipo de ativo',type:'select',value:f?tipoOf(f):(tipoPre||'fii'),options:TIPOS.slice(1).map(x=>({v:x.k,t:x.l}))},
@@ -8744,7 +8796,7 @@ function metaManualIgual(l,d,usados){
 /* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
 function mtAvisos(){
   const out=[],hj=new Date(),dia=hj.getDate(),ym=mesAtual();
-  if(!pode('metas'))return out; // v10.89: metas são do Plus; no Grátis o lembrete não aparece (antes aparecia com a aba bloqueada)
+  if(!pode('metas'))return out; // v10.89: metas eram do Plus (v10.161: liberadas no Grátis); sem o recurso o lembrete não aparece (antes aparecia com a aba bloqueada)
   (S.metas||[]).forEach(m=>{if(!(m.aporteMes>0)||!(m.diaAporte>0))return;const alvo=alvoMeta(m);if(saldoMeta(m)>=alvo&&alvo>0)return;
     const dd=Math.min(m.diaAporte,new Date(hj.getFullYear(),hj.getMonth()+1,0).getDate());if(dia<dd)return;
     const feito=(m.aportes||[]).filter(a=>a.d&&a.d.slice(0,7)===ym).reduce((s,a)=>s+cents(a.v),0);if(feito>=cents(m.aporteMes))return;
@@ -9025,7 +9077,8 @@ async function perguntaAssistente(q){
     else{
       const r=await invokeIA('assistente',{pergunta:h.p,fatos:F,historico:AS_HIST.slice(0,-1).filter(x=>!x.carregando).slice(-3).map(x=>({p:x.p,r:x.r}))},()=>{h.status=IA_OCUPADA;asPinta();});
       const o=r.o,erro=r.erro;h.status='';
-      if(r.status!==200||erro||!o)local((erro||'a IA não respondeu')+' · resposta calculada no aparelho');
+      if(trataLimitePlano(o,r.status,'ia_frase',{manual:false}))local('resposta calculada no aparelho');
+      else if(r.status!==200||erro||!o)local((erro||'a IA não respondeu')+' · resposta calculada no aparelho');
       else if(!o.resposta)local('resposta direta dos seus números');
       else{h.r=o.resposta;h.nota=o.conferida?'conferido com os seus lançamentos':'';}
     }
@@ -9284,6 +9337,8 @@ const ACT={
   'lg-excluir':()=>excluirConta(),
   'assist':()=>abreAssistente(),
   'planos':rec=>abrePlanos(rec||''),
+  'pl-per':v=>plPer(v),
+  'pw-manual':()=>{closeModal();setTimeout(()=>novoTx(null,'despesa'),30);},
   'assinar':id=>assinar(id),
   'ass-cancelar':()=>confirma({titulo:'Cancelar a assinatura?',texto:'As próximas cobranças param. Seu acesso continua até o fim do período já pago e nada é apagado.',ok:'Cancelar assinatura',perigo:true},async()=>{
     try{const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'cancelar'}});let m=o&&o.erro;try{if(!m&&error&&error.context)m=(await error.context.json()).erro;}catch(e){}
@@ -9961,7 +10016,7 @@ async function entraComSessao(sess){
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;BASE_OK=false;SEGURA={};/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
-    planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
+    planoZera();carregaPlano().then(()=>{retornoAssinatura();abrePlanosURL();}); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
       const pend=await leTalvezCifrado('gv-pend');
@@ -10030,7 +10085,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
       const leg=LEGADO;limpaCache();LEGADO=leg;S=Object.assign(vazio(),{cfg:S.cfg});
     }
     USER=sess.user;SNAP=COPIA_LIDA?lerSnap():null;BASE_OK=false;SEGURA={};/* v10.117: sem a cópia deste aparelho, o snapshot não vale (senão o envio apagaria da nuvem o que só sumiu daqui) */pintaUsuario();escondeAuth();
-    planoZera();carregaPlano().then(retornoAssinatura); // v10.82: lê o plano uma vez por login
+    planoZera();carregaPlano().then(()=>{retornoAssinatura();abrePlanosURL();}); // v10.82: lê o plano uma vez por login
     /* v10.52: sessão expirou com edições pendentes? recoloca elas como pendência e reenvia antes de baixar */
     try{
       const pend=await leTalvezCifrado('gv-pend');

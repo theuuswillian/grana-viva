@@ -168,3 +168,16 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset
 .ctas.cen{justify-content:center}
 .rodIn p.forn{max-width:44ch;font-size:13px}
 .rodIn p.forn a{color:var(--mut)}
+/* v10.161: Pro anual/mensal sem JavaScript (rádios + seletores; site.py gera .perW) */
+.perW{position:relative}
+.perIn{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.perSel{display:grid;grid-template-columns:1fr 1fr;gap:4px;max-width:420px;margin:0 auto 16px;padding:4px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.perSel label{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;min-height:44px;padding:4px 10px;text-align:center;border-radius:10px;font-weight:700;color:var(--mut);cursor:pointer}
+#perAnual:checked~.perSel label[for=perAnual],#perMensal:checked~.perSel label[for=perMensal]{background:var(--lime);color:#0a1a05}
+#perAnual:focus-visible~.perSel label[for=perAnual],#perMensal:focus-visible~.perSel label[for=perMensal]{outline:2px solid var(--lime);outline-offset:2px}
+.perSel .selo{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;line-height:1;padding:4px 7px;border-radius:999px;background:#0a1a05;color:var(--lime)}
+#perAnual:not(:checked)~.perSel label[for=perAnual] .selo{background:var(--lime);color:#0a1a05}
+.perW .soMensal{display:none}
+#perMensal:checked~.planos .soMensal{display:block}
+#perMensal:checked~.planos .soAnual{display:none}
+.perW .plano h3 .soAnual{display:inline-block}

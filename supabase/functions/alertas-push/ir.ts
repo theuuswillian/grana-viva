@@ -76,6 +76,12 @@ export function alvos(fiis: any[]) {
   return (fiis || []).filter((f) => Number(f?.alvoP) > 0 && ["acao", "fii", "etf", "bdr"].includes(tipoOf(f)) && /^[A-Z0-9]{4,8}$/.test(String(f.ticker || "")))
     .map((f) => ({ id: String(f.id), ticker: String(f.ticker), alvo: Number(f.alvoP), dir: f.alvoDir === "abaixo" ? "abaixo" : "acima" }));
 }
+// v10.161: plano Grátis = GVP "max_alertas_radar" (1) alerta de preço ATIVO. Ativo = ainda não avisou (chave fora do push_log).
+// Mantém a ordem dos ativos e conferem só os primeiros lim; lim -1 = ilimitado (Pro).
+export function capAlertas<T>(A: T[], jaAvisou: (a: T) => boolean, lim: number): T[] {
+  const ativos = A.filter((a) => !jaAvisou(a));
+  return lim === -1 || lim == null ? ativos : ativos.slice(0, Math.max(0, lim | 0));
+}
 export function alvoBateu(a: { alvo: number; dir: string }, preco: number) { return preco > 0 && (a.dir === "abaixo" ? preco <= a.alvo : preco >= a.alvo); }
 export const chaveAlvo = (a: { id: string; dir: string; alvo: number }) => "alvo|" + a.id + "|" + a.dir + "|" + a.alvo;
 export const textoAlvo = (a: { ticker: string; dir: string; alvo: number }, preco: number) =>
