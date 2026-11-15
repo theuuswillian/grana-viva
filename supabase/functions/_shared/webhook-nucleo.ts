@@ -3,11 +3,12 @@
 //
 // Para cada notificação:
 //  1. provedor configurado? (sem token do servidor não dá para conferir nada: 503, o provedor tenta depois)
-//  2. se veio x-signature e há chave secreta, confere; assinatura inválida = 401 (nada muda)
+//  2. com chave secreta configurada, x-signature é obrigatória e conferida (v10.165); ausente ou inválida = 401 (nada muda)
 //  3. registra o evento (id estável); evento já concluído = 200 sem fazer nada (idempotente)
 //  4. busca o objeto na API do provedor com o token do servidor; só o que a API disser muda o plano
 //  5. grava em assinaturas e marca o evento como concluído. Falha temporária no provedor = 500 sem concluir (o provedor reenvia)
 import * as MP from "./mercadopago.ts";
+import { confereInterno } from "./seguro.ts";
 
 export type Linha = { plano: string; status: string; periodo_fim: string | null; provedor?: string | null; provedor_assinatura_id?: string | null; provedor_cliente_id?: string | null } | null;
 export type DB = {
@@ -16,7 +17,7 @@ export type DB = {
   leAssinatura(uid: string): Promise<Linha>;
   gravaAssinatura(uid: string, campos: Record<string, unknown>): Promise<void>;
 };
-export type Deps = { db: DB; env: { MP_ACCESS_TOKEN?: string; MP_WEBHOOK_SECRET?: string }; PLANOS: any; efetivo: (a: any, agora?: number) => any; fetch?: typeof fetch; agora?: () => number; log?: (...a: unknown[]) => void; erro?: (etapa: string, e: unknown) => Promise<void> | void };
+export type Deps = { db: DB; env: { MP_ACCESS_TOKEN?: string; MP_WEBHOOK_SECRET?: string; INTERNO_KEY?: string }; PLANOS: any; efetivo: (a: any, agora?: number) => any; fetch?: typeof fetch; agora?: () => number; log?: (...a: unknown[]) => void; erro?: (etapa: string, e: unknown) => Promise<void> | void };
 
 const resp = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 const ID_OK = /^[A-Za-z0-9_-]{1,64}$/;
@@ -38,14 +39,18 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   const n = MP.lerNotificacao(url, body, req.headers);
   if (!n.dataId || !ID_OK.test(n.dataId)) return resp({ erro: "sem id" }, 400);
 
-  // 2. assinatura: conferida quando vem; nunca é suficiente sozinha
+  // 2. assinatura. v10.165: com MP_WEBHOOK_SECRET configurado ela é OBRIGATÓRIA (sem x-signature = 401, nada muda).
+  //    Sem a chave secreta (ambiente antigo/teste), segue só pela consulta à API do provedor e registra no log.
+  //    Nunca é suficiente sozinha: o estado vem sempre da API (passo 4).
   const xs = req.headers.get("x-signature");
-  if (xs) {
-    if (d.env.MP_WEBHOOK_SECRET) {
-      const v = await MP.validaAssinatura({ xSignature: xs, xRequestId: n.reqId, dataId: n.dataIdQuery || n.dataId, secret: d.env.MP_WEBHOOK_SECRET });
-      if (!v.ok) { log("assinatura inválida", v.motivo); await d.erro?.("assinatura", "assinatura inválida " + v.motivo); return resp({ erro: "assinatura inválida" }, 401); } // v10.126: vira alarme
-    } else log("x-signature recebido sem MP_WEBHOOK_SECRET configurado: seguindo pela consulta à API");
-  }
+  //    Exceção: a função assinatura {acao:"sincronizar"} chama este webhook com x-gv-interno (HMAC com a service role,
+  //    seguro.ts, vale 5 min e só para este data.id). Ela não tem a chave do Mercado Pago para assinar como ele.
+  const interno = !xs && await confereInterno(req.headers.get("x-gv-interno"), d.env.INTERNO_KEY, "mp-sync", n.dataId, agora);
+  if (d.env.MP_WEBHOOK_SECRET && !interno) {
+    if (!xs) { log("x-signature ausente com MP_WEBHOOK_SECRET configurado: recusado"); await d.erro?.("assinatura", "x-signature ausente"); return resp({ erro: "assinatura ausente" }, 401); }
+    const v = await MP.validaAssinatura({ xSignature: xs, xRequestId: n.reqId, dataId: n.dataIdQuery || n.dataId, secret: d.env.MP_WEBHOOK_SECRET });
+    if (!v.ok) { log("assinatura inválida", v.motivo); await d.erro?.("assinatura", "assinatura inválida " + v.motivo); return resp({ erro: "assinatura inválida" }, 401); } // v10.126: vira alarme
+  } else log(xs ? "x-signature recebido sem MP_WEBHOOK_SECRET configurado: seguindo pela consulta à API" : "MP_WEBHOOK_SECRET não configurado: aviso sem assinatura conferida, seguindo pela consulta à API");
 
   // 3. idempotência: o mesmo aviso (mesmo id de notificação; sem ele, o mesmo x-request-id) só é processado uma vez
   const chave = ["mp", n.topico || "?", n.dataId, n.notifId || n.reqId || "sem-id", n.acao].join(":").slice(0, 200);

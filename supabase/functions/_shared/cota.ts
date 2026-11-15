@@ -10,7 +10,10 @@ const GVP = (globalThis as any).GVP;
 export type TipoUso = "frase" | "comprovante" | "extrato" | "whatsapp";
 export const RECURSO_DO_TIPO: Record<TipoUso, string> = { frase: "ia_frase", comprovante: "ia_comprovante", extrato: "ia_extrato", whatsapp: "whatsapp" };
 
-export const hojeSP = (agora = Date.now()) => new Date(agora - 3 * 3600e3).toISOString().slice(0, 10);
+// v10.165: dia de Brasília pelo Intl (fuso America/Sao_Paulo de verdade), não mais "UTC − 3 horas" fixo:
+// se o Brasil voltar a ter horário de verão, a virada do mês das cotas continua certa.
+const FMT_SP = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+export const hojeSP = (agora = Date.now()) => FMT_SP.format(new Date(agora));
 export const inicioMesSP = (agora = Date.now()) => hojeSP(agora).slice(0, 8) + "01";
 
 // soma do mês (todas as linhas do tipo k desde o dia 1 em Brasília)

@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import * as MP from "../_shared/mercadopago.ts";
 import { registraErro } from "../_shared/erros.ts";
+import { assinaInterno } from "../_shared/seguro.ts"; // v10.165: chamada interna ao pagamento-webhook
 const GVP = (globalThis as any).GVP;
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const ORIGENS = ["https://theuuswillian.github.io"];
@@ -78,7 +79,8 @@ Deno.serve(async (req) => {
       if (!id) return json({ ok: true, resultado: "nenhuma" });
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval&data.id=" + encodeURIComponent(id), {
         method: "POST", signal: AbortSignal.timeout(12000),
-        headers: { "content-type": "application/json", "x-request-id": "sync-" + crypto.randomUUID() },
+        // v10.165: assinatura interna (o webhook exige x-signature do MP quando MP_WEBHOOK_SECRET está configurado)
+        headers: { "content-type": "application/json", "x-request-id": "sync-" + crypto.randomUUID(), "x-gv-interno": await assinaInterno(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, "mp-sync", id) },
         body: JSON.stringify({ type: "subscription_preapproval", action: "sincronizar", data: { id } }),
       });
       let j: any = null; try { j = await r.json(); } catch { /* */ }

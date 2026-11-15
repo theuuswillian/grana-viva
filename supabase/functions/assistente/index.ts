@@ -12,7 +12,7 @@ const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Or
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 // v10.161: freio técnico (igual para todos): GVP.limite(nivel, "assistente_hora") por hora e "assistente_dia" por dia.
 // Cota do plano: cada pergunta conta na cota mensal de IA por frase (Grátis 15/mês, Pro ilimitado), registrada só quando dá certo.
-import { confereCota, registraUso, corpoLimite } from "../_shared/cota.ts";
+import { confereCota, registraUso, corpoLimite, hojeSP } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
   const LIMITE_HORA = GVP.limite(ef.nivel, "assistente_hora");
   const { data: okH } = await sb.rpc("rl_conta", { p_uid: uid, p_k: "assistente", p_lim: LIMITE_HORA, p_seg: 3600 });
   if (!okH) return json({ erro: "Muitas perguntas seguidas. Espere alguns minutos." }, 429);
-  const dia = new Date().toISOString().slice(0, 10);
+  const dia = hojeSP(); // v10.165: limite diário pelo dia de Brasília (antes: dia em UTC, virava às 21h)
   const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: dia, p_k: "assistente", p_lim: LIMITE_DIA });
   if (ue) return json({ erro: "não foi possível conferir o limite agora" }, 503);
   if (!ok) return json({ erro: "Você chegou ao limite de " + LIMITE_DIA + " perguntas por dia. Amanhã libera de novo.", limite: true }, 429);

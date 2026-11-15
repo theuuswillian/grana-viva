@@ -13,6 +13,8 @@ const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: 
 import { confereCota, registraUso, corpoLimite, type TipoUso } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
+// v10.165: validação estrita do JSON da IA (contra prompt injection) e "hoje" de Brasília
+import * as V from "../_shared/valida-ia.ts";
 const GVP = (globalThis as any).GVP;
 async function planoDe(uid: string) {
   const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
@@ -39,10 +41,11 @@ Deno.serve(async (req) => {
   if (!texto && (!img || img.length > 7_000_000 || !MIMES.includes(mime))) return json({ erro: "arquivo inválido ou grande demais" }, 400);
   const cartoes: string[] = (Array.isArray(body?.cartoes) ? body.cartoes : []).map(String).slice(0, 20).map((c: string) => c.slice(0, 40));
   const cats: string[] = (Array.isArray(body?.categorias) ? body.categorias : []).map(String).slice(0, 80).map((c: string) => c.slice(0, 40));
-  const hoje = String(body?.hoje || "").match(/^\d{4}-\d\d-\d\d$/) ? body.hoje : new Date().toISOString().slice(0, 10);
+  // v10.165: o "hoje" do app só vale se estiver a 1 dia do hoje de Brasília (senão a IA receberia uma data inventada)
+  const hoje = V.hojeCliente(body?.hoje);
 
-  // limite diário por usuário
-  const dia = new Date().toISOString().slice(0, 10);
+  // limite diário por usuário (v10.165: dia de Brasília, igual às cotas mensais; antes era o dia em UTC)
+  const dia = V.hojeSP();
   // v10.54: conta e confere numa só operação no banco (duas leituras ao mesmo tempo não passam do limite)
   let ef: any;
   try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
@@ -67,6 +70,7 @@ Liste TODOS os lançamentos (compras, pix, transferências, tarifas, pagamentos,
 - desc: a descrição como está no documento, sem o valor (inclua "PARC 03/10" ou "Parcela 3/10" quando houver).
 - valor: em reais, NEGATIVO para saída/compra/débito/tarifa e POSITIVO para entrada/crédito/estorno/pagamento recebido na fatura.
 Não inclua saldos, totais, limites, resumos, juros futuros nem parcelas futuras que ainda não foram cobradas.
+- provavel_fixo: true quando a linha parece uma cobrança que se repete todo mês (assinatura, streaming, academia, plano de celular/internet, aluguel, condomínio, seguro, mensalidade); senão false.
 cartao: true se for fatura de cartão de crédito; false se for extrato de conta.`;
     let re: Response;
     try { re = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + (Deno.env.get("GEMINI_MODEL_EXTRATO") || "gemini-flash-latest") + ":generateContent", {
@@ -75,17 +79,20 @@ cartao: true se for fatura de cartão de crédito; false se for extrato de conta
       body: JSON.stringify({ contents: [{ parts: [{ text: pe }, { inline_data: { mime_type: mime, data: img } }] }],
         generationConfig: { temperature: 0, maxOutputTokens: 30000, responseMimeType: "application/json",
           responseSchema: { type: "OBJECT", properties: { cartao: { type: "BOOLEAN" }, linhas: { type: "ARRAY", items: { type: "OBJECT", properties: {
-            data: { type: "STRING" }, desc: { type: "STRING" }, valor: { type: "NUMBER" } }, required: ["data", "desc", "valor"] } } }, required: ["cartao", "linhas"] } } }),
+            data: { type: "STRING" }, desc: { type: "STRING" }, valor: { type: "NUMBER" }, provavel_fixo: { type: "BOOLEAN" } }, required: ["data", "desc", "valor"] } } }, required: ["cartao", "linhas"] } } }),
     }); } catch { return json({ erro: "a IA demorou demais, tente um arquivo menor" }, 504); }
     if (!re.ok) { const t = (await re.text()).slice(0, 300); console.log("gemini-extrato", re.status, t); return json({ erro: re.status === 429 ? "a IA está ocupada, tente em 1 minuto" : "a IA não respondeu, tente de novo" }, 502); }
     const ge = await re.json();
     let oe: any;
     try { oe = JSON.parse(ge?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return json({ erro: "não consegui ler esse extrato" }, 422); }
-    const linhas = (Array.isArray(oe.linhas) ? oe.linhas : []).slice(0, 1500).map((l: any) => ({
-      data: /^\d{4}-\d\d-\d\d$/.test(l?.data) && l.data <= hoje ? l.data : "",
-      desc: String(l?.desc || "").replace(/\s+/g, " ").trim().slice(0, 120),
-      valor: Math.round(Number(l?.valor) * 100) / 100,
-    })).filter((l: any) => l.data && isFinite(l.valor) && l.valor !== 0 && Math.abs(l.valor) < 1e7);
+    // v10.165: cada linha validada (data real até hoje, descrição limpa, valor finito com teto) e marcação de provável conta fixa
+    const linhas = (Array.isArray(oe?.linhas) ? oe.linhas : []).slice(0, 1500).map((l: any) => ({
+      data: V.dataOuVazio(l?.data, hoje, { ateHoje: true }),
+      desc: V.textoIA(l?.desc, 120),
+      valor: V.valorSinalIA(l?.valor),
+      provavel_fixo: l?.provavel_fixo === true,
+    })).filter((l: any) => l.data && l.valor !== 0)
+      .map((l: any) => l.valor < 0 && (l.provavel_fixo || V.provavelFixo(l.desc)) ? { ...l, provavel_fixo: true } : { data: l.data, desc: l.desc, valor: l.valor });
     if (linhas.length) await registraUso(sb, uid, tipoUso);
     return json({ cartao: !!oe.cartao, linhas });
   }
@@ -127,16 +134,18 @@ Se não houver um lançamento (imagem que não é comprovante ou frase sem valor
   const g = await r.json();
   let o: any;
   try { o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return json({ erro: "não consegui ler" }, 422); }
-  const valor = Math.round(Number(o.valor) * 100) / 100;
+  // v10.165: validação estrita (valor com teto, data real numa janela de 5 anos para trás e 1 ano para frente, enums,
+  //          categoria só da lista do app, descrição sem marcação, parcelas 1..48)
+  if (!o || typeof o !== "object" || Array.isArray(o)) return json({ erro: "não consegui ler" }, 422);
   const out = {
-    valor: isFinite(valor) && valor > 0 && valor < 1e7 ? valor : 0,
-    data: /^\d{4}-\d\d-\d\d$/.test(o.data) ? o.data : hoje,
-    tipo: o.tipo === "receita" ? "receita" : "despesa",
-    descricao: String(o.descricao || "").slice(0, 80),
-    categoria: cats.includes(o.categoria) ? o.categoria : (cats.includes("Outros") ? "Outros" : ""),
-    forma: ["pix", "cartao", "dinheiro", "boleto"].includes(o.forma) ? o.forma : "pix",
-    parcelas: Math.max(1, Math.min(24, parseInt(o.parcelas, 10) || 1)),
-    confianca: Math.max(0, Math.min(1, Number(o.confianca) || 0)),
+    valor: V.valorIA(o.valor),
+    data: V.dataIA(o.data, hoje),
+    tipo: V.tipoIA(o.tipo),
+    descricao: V.textoIA(o.descricao, V.DESC_MAX),
+    categoria: V.categoriaIA(o.categoria, cats),
+    forma: V.formaIA(o.forma, "pix"),
+    parcelas: V.parcelasIA(o.parcelas),
+    confianca: V.confiancaIA(o.confianca),
     cartao: cartoes.includes(o.cartao) ? o.cartao : "",
   };
   if (out.valor > 0) await registraUso(sb, uid, tipoUso); // só conta quando a IA achou um lançamento

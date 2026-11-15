@@ -1,5 +1,7 @@
 // Lê um lançamento escrito em português ("gastei 32 no almoço") com o Gemini (v10.136, usado pelo whatsapp-webhook).
 // Mesmo prompt e mesmas regras da ler-comprovante (modo texto). A chave fica no secret GEMINI_API_KEY.
+// v10.165: validação estrita do JSON da IA (valida-ia.ts)
+import * as V from "./valida-ia.ts";
 export const CATS_RECEITA = ["Salário", "Horas extras", "Freelance", "Vendas", "Reembolso", "Aluguel recebido", "Presentes recebidos", "Aposentadoria", "Dividendos", "Bônus/Promoções", "Rendimentos", "Outros"];
 export const CATS_PADRAO = ["Moradia", "Alimentação", "Transporte", "Lazer", "Saúde", "Educação", "Mercado", "Restaurantes", "Delivery", "Combustível", "Uber e táxi", "Transporte público", "Manutenção do carro", "Contas da casa", "Internet e celular", "Assinaturas", "Compras", "Roupas", "Beleza", "Farmácia", "Academia", "Pets", "Viagem", "Presentes", "Doações", "Impostos e taxas", "Tarifas e juros", "Filhos", "Casa e reformas", "Eletrônicos", "Outros"];
 
@@ -9,7 +11,6 @@ export async function leLancamento(texto: string, catsDesp: string[], hoje: stri
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return { ok: false, erro: "IA não configurada" };
   const cats = (catsDesp.length ? catsDesp : CATS_PADRAO).slice(0, 80);
-  const todas = [...new Set([...cats, ...CATS_RECEITA])];
   const dsem = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"][new Date(hoje + "T12:00:00").getDay()];
   const prompt = `O usuário descreveu um lançamento financeiro com as próprias palavras, numa mensagem de WhatsApp (pode ter erros de digitação ou de ditado): """${texto.replace(/"""/g, "").slice(0, 600)}"""
 Interprete datas relativas ("ontem", "sexta", "dia 5") a partir de hoje, ${hoje} (${dsem}). Valores como "45", "45 conto", "R$ 45,90", "mil e duzentos" são em reais.
@@ -45,18 +46,19 @@ Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), 
   if (!r.ok) { console.log("gemini", r.status, (await r.text()).slice(0, 300)); return { ok: false, erro: r.status === 429 ? "a IA está ocupada" : "a IA não respondeu" }; }
   let o: any;
   try { const g = await r.json(); o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return { ok: false, erro: "não consegui ler" }; }
-  const valor = Math.round(Number(o.valor) * 100) / 100;
-  const tipo = o.tipo === "receita" ? "receita" : "despesa";
+  // v10.165: tudo o que a IA devolve passa pela validação estrita (valida-ia.ts) antes de virar lançamento
+  if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, erro: "não consegui ler" };
+  const tipo = V.tipoIA(o.tipo);
   const lista = tipo === "receita" ? CATS_RECEITA : cats;
   const l: Lanc = {
-    valor: isFinite(valor) && valor > 0 && valor < 1e7 ? valor : 0,
-    data: /^\d{4}-\d\d-\d\d$/.test(o.data) ? o.data : hoje,
+    valor: V.valorIA(o.valor),
+    data: V.dataIA(o.data, hoje),
     tipo,
-    descricao: String(o.descricao || "").replace(/[<>"'`]/g, "").slice(0, 80),
-    categoria: lista.includes(o.categoria) ? o.categoria : (todas.includes(o.categoria) && tipo === "despesa" && cats.includes(o.categoria) ? o.categoria : "Outros"),
-    forma: ["pix", "cartao", "dinheiro", "boleto"].includes(o.forma) ? o.forma : "pix",
-    parcelas: Math.max(1, Math.min(24, parseInt(o.parcelas, 10) || 1)),
-    confianca: Math.max(0, Math.min(1, Number(o.confianca) || 0)),
+    descricao: V.textoIA(o.descricao, V.DESC_MAX),
+    categoria: V.categoriaIA(o.categoria, lista),
+    forma: V.formaIA(o.forma, "pix"),
+    parcelas: V.parcelasIA(o.parcelas),
+    confianca: V.confiancaIA(o.confianca),
     recorrente: o.recorrente === true,
   };
   return { ok: true, l };

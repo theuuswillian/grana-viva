@@ -2,7 +2,8 @@
 // renova ou encerra um plano pago na tabela assinaturas. Nada que vem do navegador muda plano.
 // verify_jwt desligado (o Mercado Pago não manda login); a segurança é: assinatura conferida quando vem + consulta à API do MP
 // com o token do servidor + eventos já processados guardados em pagamento_eventos.
-// Secrets: MP_ACCESS_TOKEN (obrigatório para funcionar), MP_WEBHOOK_SECRET (opcional; confere x-signature quando vier).
+// Secrets: MP_ACCESS_TOKEN (obrigatório para funcionar), MP_WEBHOOK_SECRET (v10.165: quando configurado, x-signature é obrigatória;
+//          a única exceção é a chamada interna da função assinatura {sincronizar}, assinada com x-gv-interno).
 // v10.93: mercadopago.ts, webhook-nucleo.ts e planos.js vêm de ../_shared (planos.js de lá é gerado de /planos.js por deploy-fn.py).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
   try {
     return await processaWebhook(req, {
       db, PLANOS: GVP.PLANOS, efetivo: GVP.efetivo,
-      env: { MP_ACCESS_TOKEN: Deno.env.get("MP_ACCESS_TOKEN") || undefined, MP_WEBHOOK_SECRET: Deno.env.get("MP_WEBHOOK_SECRET") || undefined },
+      env: { MP_ACCESS_TOKEN: Deno.env.get("MP_ACCESS_TOKEN") || undefined, MP_WEBHOOK_SECRET: Deno.env.get("MP_WEBHOOK_SECRET") || undefined, INTERNO_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || undefined },
       log: (...a) => console.log("pagamento-webhook", ...a),
       erro: (etapa, e) => registraErro(sb, "pagamento-webhook", etapa, e),
     });

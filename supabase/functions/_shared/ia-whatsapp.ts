@@ -3,6 +3,8 @@
 // - intencao "pergunta": uma consulta sobre os próprios gastos ("quanto gastei com mercado esse mês?");
 // - intencao "outro": cumprimento ou algo sem valor.
 import { CATS_RECEITA, CATS_PADRAO } from "./ia-lancamento.ts";
+// v10.165: validação estrita do JSON da IA (valores, datas, enums, categoria da lista, parcelas 1..48)
+import * as V from "./valida-ia.ts";
 export { CATS_RECEITA, CATS_PADRAO };
 
 export type Item = { valor: number; data: string; tipo: "despesa" | "receita"; descricao: string; categoria: string; forma: string; parcelas: number; recorrente: boolean; pagoCom: string };
@@ -10,8 +12,7 @@ export type Pergunta = { tipo: "despesa" | "receita" | "saldo"; categoria: strin
 export type Leitura = { intencao: "lancamento" | "pergunta" | "outro"; itens: Item[]; pergunta: Pergunta | null; confianca: number };
 export type Midia = { mime: string; b64: string };
 
-const ISO = /^\d{4}-\d\d-\d\d$/;
-const limpa = (s: unknown, n: number) => String(s || "").replace(/[<>"'`*_~]/g, "").trim().slice(0, n);
+const limpa = (s: unknown, n: number) => V.textoIA(s, n, "*_~"); // v10.165: sem marcação do WhatsApp nem caracteres de controle
 
 export async function leMensagem(texto: string, midia: Midia | null, cats: string[], nomesPag: string[], hoje: string): Promise<{ ok: true; r: Leitura } | { ok: false; erro: string }> {
   const key = Deno.env.get("GEMINI_API_KEY");
@@ -65,28 +66,30 @@ confianca: 0 a 1, o quanto você tem certeza.`;
   if (!r.ok) { console.log("gemini", r.status, (await r.text()).slice(0, 300)); return { ok: false, erro: r.status === 429 ? "a IA está ocupada" : "a IA não respondeu" }; }
   let o: any;
   try { const g = await r.json(); o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return { ok: false, erro: "não consegui ler" }; }
+  if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, erro: "não consegui ler" };
   const itens: Item[] = [];
   for (const x of (Array.isArray(o.itens) ? o.itens : []).slice(0, 10)) {
-    const valor = Math.round(Number(x?.valor) * 100) / 100;
-    if (!(isFinite(valor) && valor > 0 && valor < 1e7)) continue;
-    const tipo = x.tipo === "receita" ? "receita" : "despesa";
+    if (!x || typeof x !== "object") continue;
+    const valor = V.valorIA(x.valor);
+    if (!valor) continue;
+    const tipo = V.tipoIA(x.tipo);
     const lista = tipo === "receita" ? CATS_RECEITA : cd;
-    const pc = limpa(x.pagoCom, 40);
     itens.push({
-      valor, tipo, data: ISO.test(x.data) ? x.data : hoje,
-      descricao: limpa(x.descricao, 80), categoria: lista.includes(x.categoria) ? x.categoria : "Outros",
-      forma: ["pix", "cartao", "dinheiro", "boleto"].includes(x.forma) ? x.forma : "",
-      pagoCom: pc, parcelas: Math.max(1, Math.min(24, parseInt(x.parcelas, 10) || 1)), recorrente: x.recorrente === true,
+      valor, tipo, data: V.dataIA(x.data, hoje),
+      descricao: limpa(x.descricao, V.DESC_MAX), categoria: V.categoriaIA(x.categoria, lista),
+      forma: V.formaIA(x.forma, ""),
+      pagoCom: limpa(x.pagoCom, 40), parcelas: V.parcelasIA(x.parcelas), recorrente: x.recorrente === true,
     });
   }
   let pergunta: Pergunta | null = null;
   if (o.intencao === "pergunta" && o.pergunta) {
     const p = o.pergunta, ini = hoje.slice(0, 8) + "01";
-    const de = ISO.test(p.de) ? p.de : ini, ate = ISO.test(p.ate) ? p.ate : hoje;
+    // v10.165: período só com datas reais, de até 5 anos atrás até hoje
+    const de = V.dataOuVazio(p.de, hoje, { ateHoje: true }) || ini, ate = V.dataOuVazio(p.ate, hoje, { ateHoje: true }) || hoje;
     const tp = ["despesa", "receita", "saldo"].includes(p.tipo) ? p.tipo : "despesa";
     const cat = [...cd, ...CATS_RECEITA].includes(p.categoria) ? p.categoria : "";
     pergunta = { tipo: tp, categoria: cat, busca: limpa(p.busca, 40).toLowerCase(), de: de <= ate ? de : ate, ate: de <= ate ? ate : de, rotulo: limpa(p.rotulo, 40) };
   }
   const intencao = o.intencao === "pergunta" && pergunta ? "pergunta" : itens.length ? "lancamento" : "outro";
-  return { ok: true, r: { intencao, itens, pergunta, confianca: Math.max(0, Math.min(1, Number(o.confianca) || 0)) } };
+  return { ok: true, r: { intencao, itens, pergunta, confianca: V.confiancaIA(o.confianca) } };
 }

@@ -7,11 +7,19 @@
 // v10.153: modo sandbox da 360dialog (teste sem conta na Meta): WA_SB_TOKEN (vai na URL do webhook, ?sb=...) e
 //          WA_D360_KEY (chave do sandbox, enviada no cabeçalho D360-API-KEY). O sandbox não assina as mensagens.
 //          Limite do sandbox: 25 envios no total; quem fala com ele é só o número dono da chave.
+// v10.165: idempotência por id da mensagem (wa_msg, chave primária, gravado ANTES de processar: reenvio da Meta = ignorado)
+//          e resumo semanal pelo WhatsApp: pg_cron toda segunda às 11:00 UTC (8h em America/Sao_Paulo) chama
+//          POST ?acao=resumo-semanal com x-cron-secret (= CRON_SECRET, o mesmo do alertas-push). Só para quem ligou o
+//          "Resumo semanal" (wa_vinculo.resumo_semanal) e no máximo um por semana (wa_vinculo.resumo_enviado, reservado antes de enviar).
+//          Fora da janela de 24h da Meta só template aprovado chega: WA_TPL_RESUMO (nome do template, 1 parâmetro no corpo) e
+//          WA_TPL_LANG (padrão pt_BR). Sem template configurado, vai como texto (chega só para quem falou com o bot nas últimas 24h).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
+import { iguais } from "../_shared/seguro.ts";
+import { semanaPassada, textoResumo } from "../_shared/resumo-semanal.ts";
 import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
-import { confereCota, registraUso } from "../_shared/cota.ts";
+import { confereCota, registraUso, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -54,7 +62,7 @@ const texto = (tel: string, t: string) => envia(tel, { type: "text", text: { bod
 
 const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const dataBR = (d: string, hoje: string) => d === hoje ? "hoje" : d.slice(8, 10) + "/" + d.slice(5, 7) + (d.slice(0, 4) !== hoje.slice(0, 4) ? "/" + d.slice(0, 4) : "");
-const hojeBR = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); // America/Sao_Paulo (sem horário de verão)
+const hojeBR = () => hojeSP(); // v10.165: America/Sao_Paulo pelo Intl (mesma função das cotas)
 const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 // v10.161: plano Grátis = 5 lançamentos pelo WhatsApp por mês (contados ao salvar); consultas são sempre liberadas.
 const APP = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
@@ -199,8 +207,10 @@ async function trata(m: any) {
   const tel = m?.from ? String(m.from).replace(/\D/g, "") : (m?.from_user_id ? "u:" + String(m.from_user_id).slice(0, 80) : "");
   const mid = String(m?.id || "");
   if (!tel || !mid) return;
+  // v10.165: reserva o id ANTES de processar (insert numa chave primária = "on conflict do nothing" atômico).
+  // 23505 = a Meta reenviou uma mensagem já processada: ignora. Outro erro: registra e não processa (melhor perder do que gravar 2x).
   const { error: de } = await sb.from("wa_msg").insert({ id: mid.slice(0, 200) });
-  if (de) return; // já processada (a Meta reenvia quando demora a resposta)
+  if (de) { if (de.code !== "23505") await registraErro(sb, FN, "idempotencia", de); return; }
   const t = m.type === "text" ? String(m.text?.body || "").trim() : "";
   const cod = /^\s*(?:gv\s*)?(\d{6})\s*$/i.exec(t);
   if (cod) { await vincula(tel, cod[1]); return; }
@@ -220,6 +230,35 @@ async function trata(m: any) {
   await leMsg(tel, v.user_id, { texto: t, midia: null });
 }
 
+/* ---------- v10.165: resumo semanal (segunda 8h de Brasília) ---------- */
+async function enviaResumo(tel: string, linhas: string[]) {
+  const tpl = Deno.env.get("WA_TPL_RESUMO");
+  // parâmetro de template não aceita quebra de linha: vai numa linha só, separado por " · "
+  if (tpl) return envia(tel, { type: "template", template: { name: tpl, language: { code: Deno.env.get("WA_TPL_LANG") || "pt_BR" }, components: [{ type: "body", parameters: [{ type: "text", text: linhas.join(" · ").replace(/\s+/g, " ").slice(0, 1000) }] }] } });
+  return texto(tel, linhas.join("\n") + "\n\nPara parar: GranaViva > WhatsApp & Conta > Resumo semanal.");
+}
+async function resumoSemanal(): Promise<Record<string, unknown>> {
+  const hoje = hojeBR(), { seg, de, ate } = semanaPassada(hoje);
+  const { data: vs, error } = await sb.from("wa_vinculo").select("user_id,telefone,resumo_enviado").eq("resumo_semanal", true).limit(5000);
+  if (error) { await registraErro(sb, FN, "resumo-lista", error); return { erro: "lista" }; }
+  let enviados = 0, pulados = 0;
+  for (const v of vs || []) {
+    if (v.resumo_enviado && v.resumo_enviado >= seg) { pulados++; continue; }
+    // reserva a semana antes de enviar: o cron repetido (ou duas execuções juntas) não manda duas vezes
+    const { data: rv, error: re } = await sb.from("wa_vinculo").update({ resumo_enviado: seg }).eq("user_id", v.user_id).or(`resumo_enviado.is.null,resumo_enviado.lt.${seg}`).select("user_id");
+    if (re || !rv?.length) { pulados++; continue; }
+    try {
+      const [{ data: rows }, { data: st }] = await Promise.all([
+        sb.from("tx").select("data").eq("user_id", v.user_id).gte("data->>data", de < hoje.slice(0, 8) + "01" ? de : hoje.slice(0, 8) + "01").lte("data->>data", hoje).limit(5000),
+        sb.from("settings").select("data").eq("user_id", v.user_id).maybeSingle()]);
+      const meta = Number(st?.data?.cfg?.metaMes) || 0;
+      await enviaResumo(v.telefone, textoResumo((rows || []).map((x: any) => x.data || {}), de, ate, hoje, meta));
+      enviados++;
+    } catch (e) { await registraErro(sb, FN, "resumo", e); }
+  }
+  return { ok: true, semana: { de, ate }, enviados, pulados };
+}
+
 Deno.serve(async (req) => {
   const u = new URL(req.url);
   if (req.method === "GET") {
@@ -228,6 +267,12 @@ Deno.serve(async (req) => {
     return new Response("proibido", { status: 403 });
   }
   if (req.method !== "POST") return new Response("método", { status: 405 });
+  // v10.165: chamada do pg_cron (segunda 11:00 UTC = 8h de Brasília) com o segredo do cron
+  if (u.searchParams.get("acao") === "resumo-semanal") {
+    if (!(await iguais(req.headers.get("x-cron-secret"), Deno.env.get("CRON_SECRET")))) return new Response("proibido", { status: 403 });
+    viaSandbox = false;
+    return new Response(JSON.stringify(await resumoSemanal()), { headers: { "content-type": "application/json" } });
+  }
   const raw = await req.text();
   const sbt = Deno.env.get("WA_SB_TOKEN"), sbq = u.searchParams.get("sb") || "";
   let sbOk = false;

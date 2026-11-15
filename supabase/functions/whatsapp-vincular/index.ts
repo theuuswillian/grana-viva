@@ -1,6 +1,7 @@
 // whatsapp-vincular (v10.136): chamada pelo app com o login da pessoa.
 // acao "status": diz se há WhatsApp ligado (número mascarado). "codigo": gera um código de 6 dígitos (15 min).
 // "desvincular": desliga o número. O número do GranaViva vem do secret WA_NUMERO (só dígitos).
+// v10.165: "resumo" {ligar:true|false}: liga/desliga o resumo semanal (segunda 8h de Brasília, grátis em todos os planos).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -29,8 +30,17 @@ Deno.serve(async (req) => {
   const { data: s } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
   const pode = GVP.pode(GVP.efetivo(s).nivel, "leitura_ia");
   if (acao === "status") {
-    const { data: v } = await sb.from("wa_vinculo").select("telefone,criado_em").eq("user_id", uid).maybeSingle();
-    return json({ ativo, pode, numero: ativo ? numero : "", vinculado: !!v, telefone: v ? mascara(v.telefone) : "", desde: v?.criado_em || null });
+    // v10.165: resumo_semanal (migração 20261115_wa_resumo_semanal.sql). Sem a coluna ainda, cai para a consulta antiga.
+    let { data: v, error: ve } = await sb.from("wa_vinculo").select("telefone,criado_em,resumo_semanal").eq("user_id", uid).maybeSingle();
+    if (ve) ({ data: v } = await sb.from("wa_vinculo").select("telefone,criado_em").eq("user_id", uid).maybeSingle());
+    return json({ ativo, pode, numero: ativo ? numero : "", vinculado: !!v, telefone: v ? mascara(v.telefone) : "", desde: v?.criado_em || null, resumoSemanal: !!(v as any)?.resumo_semanal });
+  }
+  if (acao === "resumo") {
+    const ligar = body?.ligar === true;
+    const { data: r, error } = await sb.from("wa_vinculo").update({ resumo_semanal: ligar }).eq("user_id", uid).select("user_id");
+    if (error) return json({ erro: "não consegui salvar agora" }, 503);
+    if (!r?.length) return json({ erro: "Ligue seu WhatsApp primeiro." }, 409);
+    return json({ ok: true, resumoSemanal: ligar });
   }
   if (acao === "desvincular") {
     await sb.from("wa_vinculo").delete().eq("user_id", uid);
