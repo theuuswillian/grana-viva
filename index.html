@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-UFV9YpyJ200JaP4XI1WVS5Ozv18lFItbgVkZnduDpGM=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-kop4H1fPbfdO3M5gN0KH9/T8070tegJb0M77xqYa8xw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -3696,6 +3696,118 @@ html.mvp #toast{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
 .onbV input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;font-size:22px;font-weight:600;padding:10px 0;color:var(--txt);outline:none}
 .onbPula{display:block;margin:12px auto 0}
 html.claro .tabbar{background:rgba(255,255,255,.88)}
+</style><style id="v164ui">/* v10.164: revisão de interface — design system, alinhamento, acessibilidade e micro-interações (vale para as 4 abas) */
+:root{--gv-gap:16px;--gv-pad:16px}
+/* 1) grade: mesmo recuo lateral (16px no celular) e mesmo espaço entre cards em todas as abas */
+@media(max-width:1199px){#app{padding-left:max(var(--gv-pad),env(safe-area-inset-left,0px));padding-right:max(var(--gv-pad),env(safe-area-inset-right,0px))}}
+#view>.card,#view>details.card,#view>.astList,#view>.gsLinks,#view>.relRes,#view>.ptAcoes,#view>.ccRail{margin-bottom:var(--gv-gap)}
+#view>.card+.card{margin-top:0}
+#view>.astList{gap:var(--gv-gap)}
+/* conteúdo nunca fica atrás da barra inferior nem do botão + */
+html.mvp #view{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}
+/* 2) barra inferior: itens de largura igual, ícone e rótulo centralizados, toque mínimo 44x44 */
+html.mvp .tabbar{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tbItem{justify-content:center;min-width:44px;min-height:52px;padding:6px 2px 4px}
+.tbItem>span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.sb-item{min-height:44px}
+@media(min-width:900px){.sbClose{display:none!important}}
+/* 3) números: algarismos de largura fixa e sem quebra; descrições longas com reticências */
+.nw,.val,.rmV,.rsT b,.lmTop b,.ptTotV,.ptTotL b,.pvRV b,.ptLinha b,.astV,.plPill,.wKpi b,.ccV,[class*="brl"],.hvQ,.lmLeg,.pvRN small,.tx .val{font-variant-numeric:tabular-nums}
+.val,.rmV,.rsT b,.pvRV b,.ptLinha b,.plPill,.hvQ{white-space:nowrap}
+.elp{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 4) lista de lançamentos: ícone à esquerda, descrição + selo de origem no meio, valor à direita (uma linha cada, sem espremer) */
+#view .tx{align-items:center;gap:12px}
+#view .tx>.ic{flex:none}
+#view .tx .txt{flex:1 1 auto;min-width:0}
+#view .tx .txt>b{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:auto}
+@media(max-width:479px){#view .card.lista{padding-left:14px!important;padding-right:8px!important}#view .tx{gap:10px}#view .tx .txMore{min-width:30px;width:30px;padding:0}#view .tx>.ic{width:36px;height:36px}}
+#view .tx .txt>small{display:block;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+#view .tx .val{flex:none;margin-left:auto;text-align:right}
+#view .tx .txMore{flex:none;min-width:36px;min-height:44px;display:grid;place-items:center}
+.txOrg{flex:none}
+.rmRow .rmT{min-width:0;flex:1}.rmRow .rmT b,.rmRow .rmT small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rmRow .hvR{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+/* 5) termômetro: rótulo "Hoje" preso dentro do card perto de 0% e 100%; status com ícone */
+.lmBar{margin-left:2px;margin-right:2px}
+.lmHoje.ini span{left:0;transform:none}
+.lmHoje.fim span{left:auto;right:0;transform:none}
+.lmSt{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.lmSt .i{width:13px;height:13px;flex:none}
+.lmTop>div{min-width:0}
+/* 6) próximos proventos: valor à direita não invade o ticker */
+.pvRV{flex:0 1 auto;max-width:48%}
+.pvRV small{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.pvRN b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 7) Início no computador: meta e resumo na largura toda, depois cards da mesma altura lado a lado */
+@media(min-width:1200px){
+html.mvp #view[data-v=inicio]>.lmCard{grid-column:1/-1;order:2}
+html.mvp #view[data-v=inicio]>.hmResH{grid-column:1/-1;order:3;margin:0 2px -8px!important;align-self:end}
+html.mvp #view[data-v=inicio]>.hmRes{grid-column:1/-1;order:4;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+html.mvp #view[data-v=inicio]>.hmRes>.rsT{min-height:0}
+html.mvp #view[data-v=inicio]>.gsCc,html.mvp #view[data-v=inicio]>.gsTeaser,html.mvp #view[data-v=inicio]>.hmVenc,html.mvp #view[data-v=inicio]>.ptTot{grid-column:span 6;order:20;align-self:stretch}
+html.mvp #view[data-v=inicio]>.ptTot:last-child{grid-column:span 6}
+/* Patrimônio: herói e KPIs na esquerda, próximos proventos ocupa as duas linhas à direita */
+#view[data-v=fii]>.wHero{align-self:start}
+#view[data-v=fii]>.wKpi>.card>small:first-child{white-space:normal}
+}
+/* cards lado a lado com a mesma altura e o mesmo alinhamento interno */
+.hmRes{align-items:stretch}.hmRes>.rsT{height:100%;justify-content:flex-start}
+.lmTxtT{flex:1;min-width:0}
+.rsT b,.rsT .rsD{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 8) WhatsApp & Conta: blocos claros, "Sair" no fim */
+.sairCard{display:flex!important;align-items:center;justify-content:space-between;gap:12px}
+.sairCard>div{min-width:0}.sairCard h4{margin:0 0 2px}.sairCard small{color:var(--mut);font-size:12.5px}
+.sairCard .btn2{display:inline-flex;align-items:center;gap:6px;flex:none;min-height:44px}
+.sairCard .btn2 .i{width:16px;height:16px}
+.waExB{min-height:44px}
+@media(max-width:479px){.lkRow .dkSt{font-size:11px;white-space:normal;text-align:right;max-width:78px;line-height:1.2}}
+/* 9) modais: centralizados, rolagem interna quando passam da tela */
+#modal{align-items:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));box-sizing:border-box}
+#modal .sheet{max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain}
+#modal .sheet:focus{outline:none}
+#modal .x{min-width:44px;min-height:44px}
+/* 10) estados vazios: ícone, frase curta e ação */
+.card.vz p{max-width:36ch;margin-left:auto;margin-right:auto}
+/* 11) foco visível só no teclado (sem contorno no clique/toque) */
+:where(button,a,input,select,textarea,summary,[role=button],[role=switch],[role=tab],[tabindex]:not([tabindex="-1"])):focus{outline:none}
+:where(button,a,input,select,textarea,summary,[role=button],[role=switch],[role=tab],[tabindex]:not([tabindex="-1"])):focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+.tbItem:focus-visible,.sb-item:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+/* 12) micro-interações: sem flash azul, :active suave, cursor de mão */
+button,a,summary,label,select,[role=button],[role=switch],[role=tab],[data-act],.tap{-webkit-tap-highlight-color:transparent}
+@media(hover:hover) and (pointer:fine){button:not(:disabled),a[href],summary,select,[role=button],[role=switch],[role=tab],[data-act],.tap{cursor:pointer}}
+:is(.btn,.btn2,.tbItem,.gsLk,.waExB,.ltool,.omniCam,.omniGo,.catRow,.ntRow,.sb-item):not(:disabled):active{transform:scale(.98);opacity:.9;transition:transform .08s ease,opacity .08s ease}
+:is(.card.tap,.rsT.tap,.rmRow.tap,.ptLinha,.gsTeaser,.semLink,.txTap):active{transform:scale(.99);background-color:color-mix(in srgb,var(--txt) 4%,var(--card))}
+@media(prefers-reduced-motion:reduce){:is(.btn,.btn2,.tbItem,.gsLk,.waExB,.ltool,.omniCam,.omniGo,.card.tap,.rsT.tap,.rmRow.tap,.ptLinha,.gsTeaser,.txTap):active{transform:none}}
+/* 13) desabilitado: não clica e mostra que não clica (as travas da IA continuam com o pulso e cursor de espera) */
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55!important;cursor:not-allowed;pointer-events:none}
+/* 14) espera: spinner leve em ações assíncronas (ler recibo, importar, IA, código do WhatsApp) */
+@keyframes gvGira{to{transform:rotate(360deg)}}
+.gvBusy,.iaCarrega{position:relative}
+.gvBusy{pointer-events:none;opacity:.8}
+.gvBusy::after,.iaCarrega::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:-2px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:gvGira .7s linear infinite;box-sizing:border-box}
+.omniGo.iaCarrega::after,.omniCam.iaCarrega::after{position:absolute;inset:0;margin:auto;width:18px;height:18px}
+.omniGo.iaCarrega .i,.omniCam.iaCarrega .i{opacity:0}
+@media(prefers-reduced-motion:reduce){.gvBusy::after,.iaCarrega::after{animation-duration:2s}}
+/* 15) contraste AA (≥ 4,5:1) — placeholders e textos secundários */
+#app input::placeholder,#app textarea::placeholder,#modal input::placeholder,#modal textarea::placeholder{color:var(--mut);opacity:1}
+html.claro .lmSt{background:rgba(22,163,74,.12);color:#166534}
+html.claro .lmSt.warn{background:rgba(217,119,6,.14);color:#92400e}
+html.claro .lmSt.over{background:rgba(220,38,38,.12);color:#991b1b}
+html.claro .txOrg.o-ia{color:#6d28d9;border-color:rgba(109,40,217,.35);background:rgba(109,40,217,.08)}
+html.claro .txOrg.o-rec{color:#1d4ed8;border-color:rgba(29,78,216,.35);background:rgba(29,78,216,.08)}
+html.claro .txOrg.o-wa{color:#166534;border-color:rgba(22,101,52,.35);background:rgba(22,101,52,.08)}
+html.claro #view .pos,html.claro #view .rsT.rec b,html.claro #view b.pos,html.claro .pvRow .pvRV b,html.claro .pvVal b,html.claro .pvRow.on .pvRV b{color:#15803d!important}
+html.claro #view .plPill.pos,html.claro #view .plPill.pos em,html.claro #view .crPct.ok{color:#166534!important}
+html.claro #view[data-v=fii]>.wKpi>.card>b.pos,html.claro #view .rsD.pos,html.claro #view .hmPrevL b.pos,html.claro #view .hmUlt .rmV.pos{color:#15803d!important}
+html.claro .plPill em{opacity:1!important}
+html.claro #view small.nw.neg,html.claro .ccFat small.nw{color:#b91c1c}
+html.claro .ccCap{color:#92400e!important}
+html.claro .ccRs{opacity:1!important;color:var(--mut)!important}
+html.claro .waHero small,html.claro .bcHd small{opacity:1!important;color:var(--mut)!important}
+html.claro #modal .pwSheet a,html.claro #modal .plSheet a{color:#15803d}
+/* verso do cartão: véu um pouco mais escuro para os números passarem de 4,5:1 em qualquer cor de cartão */
+.gvc-back{background:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.08),transparent 55%),linear-gradient(225deg,var(--g0) 0%,var(--g1) 50%,var(--g2) 100%)}
+.gvc-bkR>span{opacity:1}.gvc-bkG small{opacity:.92}
 </style></head>
 <body>
 <aside class="side" id="side">
@@ -3739,7 +3851,7 @@ html.claro .tabbar{background:rgba(255,255,255,.88)}
 </div>
 
 <script>
-const GV_BUILD='10.163'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.164'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3765,8 +3877,8 @@ const GV_BUILD='10.163'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.163"></script>
-<script defer src="app.min.js?v=10.163"></script>
+<script defer src="planos.js?v=10.164"></script>
+<script defer src="app.min.js?v=10.164"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

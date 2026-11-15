@@ -181,3 +181,15 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset
 #perMensal:checked~.planos .soMensal{display:block}
 #perMensal:checked~.planos .soAnual{display:none}
 .perW .plano h3 .soAnual{display:inline-block}
+/* v10.164: alinhamento e micro-interações */
+.rodIn nav{align-content:flex-start;align-items:flex-start}
+.perSel .selo{margin:0;padding:2px 8px;font-size:10px;line-height:1.4;letter-spacing:.04em;border:0;background:#0a1a05;color:var(--lime)}
+.plano{display:flex;flex-direction:column}
+.plano .pAnual{min-height:1.5em}
+.planos{align-items:stretch}
+.preco,.preco small,.tabela td{font-variant-numeric:tabular-nums}
+a,button,label,summary{-webkit-tap-highlight-color:transparent}
+.btn:active,.perSel label:active{transform:scale(.98)}
+@media(hover:hover) and (pointer:fine){a,button,label[for],summary{cursor:pointer}}
+button:focus-visible,.btn:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.btn:active,.perSel label:active{transform:none}}

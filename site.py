@@ -75,7 +75,7 @@ def card_plano(id):
     if id == 'gratis':
         return f'''<article class="plano">
   <h3>{e(PL['gratis']['nome'])}</h3>
-  <p class="preco">R$ 0<small>para sempre</small></p>
+  <p class="preco">R$ 0<small>para sempre</small></p><p class="pAnual">sem cartão de crédito</p>
   <ul class="checks">{li(ITENS_GRATIS)}</ul>
 </article>'''
     return f'''<article class="plano destaque">

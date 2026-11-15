@@ -282,7 +282,7 @@ function abrePlanos(rec,opts){
   let cta;
   if(p&&p.fundador)cta='<span class="plAtual">Pro incluso na sua conta fundadora</span>';
   else if(ehPro&&p.status==='ativo')cta='<span class="plAtual">Você já é Pro</span>';
-  else if(pag===true)cta=`<button class="btn full pwCta" data-act="assinar" data-id="${id}">Assinar Pro ${an?'anual':'mensal'} · ${an?esc(brlPl(PA.preco))+'/ano':esc(brlPl(PM.preco))+'/mês'}</button>`;
+  else if(pag===true)cta=`<button class="btn full pwCta" data-act="assinar" data-id="${id}">Assinar Pro ${an?'anual':'mensal'} · <span class="nw">${an?esc(brlPl(PA.preco))+'/ano':esc(brlPl(PM.preco))+'/mês'}</span></button>`;
   else cta=`<button class="btn full pwCta" disabled aria-disabled="true">${pag===null?'Verificando…':'Pagamento em breve'}</button>`;
   box.innerHTML=`<div class="sheet plSheet pwSheet" role="dialog" aria-modal="true" aria-label="${C?'Seja Pro':'Planos'}"><div class="sh-head"><h3>${C?'Seja Pro':'Planos'}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     ${C?`<div class="pwBen" data-rec="${esc(rec)}">${I('sparkle')}<div><b>${esc(C.beneficio)}</b><small>${esc(msg)}</small></div></div>`:''}
@@ -3079,12 +3079,13 @@ function limiteMesHTML(){
     <p class="lmTxt">Com uma meta mensal, o termômetro mostra se o gasto está no ritmo do mês.</p><button type="button" class="btn sm" data-act="meta-mes">${I('flag')}definir meta</button></div>`;
   const gasto=somaMes(m,'despesa',undefined,true),pct=lim.v>0?gasto/lim.v*100:0;
   const cl=ritmoCls(pct,r,pct>=100),resta=c2(lim.v-gasto),dRest=r?Math.max(1,r.dMes-r.dia+1):1;
-  const st=pct>=100?['over','passou da meta']:cl==='warn'?['warn','acima do ritmo']:['ok','no ritmo'];
+  const st=pct>=100?['over','Meta ultrapassada','close']:cl==='warn'?['warn','Atenção','alert']:['ok','Ritmo controlado','check']; // v10.164: status com ícone e texto, não só cor
+  const hjP=r?Math.min(100,Math.max(0,r.pct)):0,hjC=hjP<10?' ini':hjP>90?' fim':'';
   return `<div class="card lmCard">
-    <div class="lmTop"><div><small>${lim.de==='meta'?'meta de gastos do mês':'soma dos orçamentos do mês'}</small><b class="nw">${brl(gasto)} <span>de ${brl(lim.v)}</span></b></div><span class="lmSt ${st[0]}">${st[1]}</span></div>
-    <div class="lmBar ${cl}" role="img" aria-label="${esc(r?ritmoTxt(pct,r):Math.round(pct)+'% da meta')}"><i data-w="${Math.min(100,Math.max(0,pct)).toFixed(1)}"></i>${r?`<b class="lmHoje" style="left:${Math.min(100,r.pct).toFixed(1)}%"><span>Hoje</span></b>`:''}</div>
+    <div class="lmTop"><div><small>${lim.de==='meta'?'meta de gastos do mês':'soma dos orçamentos do mês'}</small><b class="nw">${brl(gasto)} <span>de ${brl(lim.v)}</span></b></div><span class="lmSt ${st[0]}">${I(st[2])}${st[1]}</span></div>
+    <div class="lmBar ${cl}" role="img" aria-label="${esc(r?ritmoTxt(pct,r):Math.round(pct)+'% da meta')}"><i data-w="${Math.min(100,Math.max(0,pct)).toFixed(1)}"></i>${r?`<b class="lmHoje${hjC}" style="left:${hjP.toFixed(1)}%"><span>Hoje</span></b>`:''}</div>
     <div class="lmLeg"><span>${Math.round(pct)}% da meta gasto</span><span>${r?`dia ${r.dia} de ${r.dMes} · ${Math.round(r.pct)}% do mês`:''}</span></div>
-    <p class="lmTxt">${resta>=0?`dá para gastar <b class="nw">${brl(resta/dRest)}</b> por dia até o fim do mês`:`<b class="nw neg">${brl(-resta)}</b> acima da meta do mês`}<button type="button" class="lmEd" data-act="meta-mes" aria-label="mudar a meta mensal">${I('edit')}</button></p>
+    <p class="lmTxt"><span class="lmTxtT">${resta>=0?`dá para gastar <b class="nw">${brl(resta/dRest)}</b> por dia até o fim do mês`:`<b class="nw neg">${brl(-resta)}</b> acima da meta do mês`}</span><button type="button" class="lmEd" data-act="meta-mes" aria-label="mudar a meta mensal">${I('edit')}</button></p>
   </div>`;
 }
 
@@ -4080,7 +4081,7 @@ function provCardHTML(p){
   const t=tipoOf(x.f),mesmoDia=L.filter(q=>+q.date===+x.date),totDia=mesmoDia.reduce((a,q)=>a+cents(q.valor),0)/100;
   const mesFim=new Date(h0.getFullYear(),h0.getMonth()+1,0),mesL=L.filter(q=>q.date<=mesFim),totMes=mesL.reduce((a,q)=>a+cents(q.valor),0)/100;
   const dsem=FMT_DIA_SEM.format(x.date);
-  const rows=L.slice(0,8).map(q=>{const nn=Math.round((q.date-h0)/864e5);return `<div class="pvRow${q===x?' on':''}">${assetIco(q.f.ticker,tipoOf(q.f))}<span class="pvRN"><b>${esc(q.f.ticker)}</b><small>${esc(FMT_DIA_CURTO.format(q.date).replace(/\./g,'').replace(',',' ·'))} · ${diasTxt(nn)}</small></span><span class="pvRV">${q.valor>0?`<b>${brl(q.valor)}</b><small>${num(q.f.cotas).replace(/,00$/,'')} × ${brl(q.f.dpc)}</small>`:'<small>valor por cota não informado</small>'}</span><button class="pvRec" data-act="prov-receber" data-id="${q.f.id}" aria-label="registrar provento recebido de ${esc(q.f.ticker)}">${I('arrowDown')}</button></div>`;}).join('');
+  const rows=L.slice(0,8).map(q=>{const nn=Math.round((q.date-h0)/864e5);return `<div class="pvRow${q===x?' on':''}">${assetIco(q.f.ticker,tipoOf(q.f))}<span class="pvRN"><b>${esc(q.f.ticker)}</b><small>${esc(FMT_DIA_CURTO.format(q.date).replace(/\./g,'').replace(',',' ·'))} · ${diasTxt(nn)}</small></span><span class="pvRV">${q.valor>0?`<b>${brl(q.valor)}</b><small>${num(q.f.cotas).replace(/,00$/,'')} × ${brl(q.f.dpc)}</small>`:'<small title="valor por cota não informado">valor/cota a informar</small>'}</span><button class="pvRec" data-act="prov-receber" data-id="${q.f.id}" aria-label="registrar provento recebido de ${esc(q.f.ticker)}">${I('arrowDown')}</button></div>`;}).join('');
   return `<div class="card pvCard" style="--tc:${TCOR[t]||'var(--a1)'}">
     <div class="pvHead"><small>próximo provento</small>${totMes>0?`<span class="pvMes">${MESES_LONGO[h0.getMonth()].toLowerCase()} · ${brl(totMes)}</span>`:''}</div>
     <div class="pvMain">
@@ -4341,7 +4342,7 @@ function viewFiiCarteira(modo){
   ${S.fiis.length?irCardHTML():''}
   <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
   ${al.length>1||FTAB!=='todos'?tabs:''}
-  <div class="astList">${filtrados.length?lista:'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>'}</div>${MVP_MODE?rdSecHTML():''}`;
+  <div class="astList">${filtrados.length?lista:((S.fiis||[]).length?'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>':vazioHTML('scale','Nenhum ativo ainda','Cadastre ações, FIIs ou cripto para ver cotação, preço médio, variação e proventos.','<button class="btn sm" data-act="novo-fii">+ ativo</button><button class="btn2 sm" data-act="rd-busca">'+I('bell')+'alerta de preço</button>'))}</div>${MVP_MODE?rdSecHTML():''}`;
 }
 
 /* ---------- v10.155: Radar (Investimentos) ----------
@@ -4905,6 +4906,7 @@ function viewCfg(){
       <a class="lkRow" href="site/termos.html" target="_blank" rel="noopener"><span class="lkRi">${I('list')}</span><span class="lkRt"><b>Termos de uso</b><small>planos, pagamento e cancelamento</small></span><span class="lkCh">${I('chevR')}</span></a>
     </div>
   </div>
+  ${MVP_MODE&&USER?`<div class="card sairCard"><div><h4>Conta</h4><small class="nw elp">${esc(USER.email||'conectado')}</small></div><button type="button" class="btn2 sm danger" data-act="sair-conta">${I('logout')}Sair</button></div>`:''}
   <p class="rod">GranaViva v${GV_BUILD} · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
 }
 
@@ -5668,7 +5670,9 @@ function form(titulo,campos,onSubmit){
   };
   const first=box.querySelector('input,select');if(first&&first.type!=='date')setTimeout(()=>{if(box.querySelector('.roda'))return;const a=document.activeElement;if(!(a&&box.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)))first.focus();},60);
 }
-let focoAntes=null;
+let focoAntes=null,ULT_FOCO=null;
+/* v10.164: último elemento focado fora do modal (origem para devolver o foco quando o modal fecha) */
+document.addEventListener('focusin',e=>{const m=document.getElementById('modal');if(m&&!m.contains(e.target)&&e.target!==document.body)ULT_FOCO=e.target;});
 /* ---------- importar extrato (OFX / CSV) ---------- */
 function numExt(v){
   let x=String(v==null?'':v).trim().replace(/\s|R\$/g,'');if(!x)return NaN;
@@ -5840,10 +5844,13 @@ async function atualizaWaUI(){
 }
 async function waLigar(){
   if(!USER){toast('Entre na sua conta primeiro.',true);return;}
+  const bt=document.querySelector('[data-act="wa-ligar"]');if(bt&&bt.classList.contains('gvBusy'))return;
+  if(bt){bt.classList.add('gvBusy');bt.setAttribute('aria-busy','true');} // v10.164: feedback imediato enquanto o servidor gera o código
   let o;try{o=await waChama('codigo');}catch(e){toast(e.message,true);return;}
+  finally{if(bt&&bt.isConnected){bt.classList.remove('gvBusy');bt.removeAttribute('aria-busy');}}
   WA_ST=null;
   const url='https://wa.me/'+String(o.numero).replace(/\D/g,'')+'?text='+encodeURIComponent('GV '+o.codigo);
-  confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir'},()=>{location.href=url;});
+  confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir',alt:'Copiar código',altCb:()=>{copiaTexto('GV '+o.codigo).then(()=>toast('Código copiado: GV '+o.codigo)).catch(()=>toast('Não consegui copiar.',true));}},()=>{location.href=url;});
 }
 function waDesligar(){
   confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
@@ -6963,10 +6970,13 @@ function abreResumo(ym){
   </div>`;
   box.classList.add('on');
 }
-function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes&&document.contains(focoAntes))try{focoAntes.focus();}catch(e){}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(rdNaTela())setTimeout(render,0);}}
+function closeModal(){const b=$('#modal');b.classList.remove('on');b.innerHTML='';b.style.zIndex='';if(focoAntes){let f=focoAntes;if(!document.contains(f)&&f.dataset&&f.dataset.act){try{f=document.querySelector('[data-act="'+CSS.escape(f.dataset.act)+'"]'+(f.dataset.id?'[data-id="'+CSS.escape(f.dataset.id)+'"]':''));}catch(e){f=null;}} /* v10.164: a tela redesenhou, volta para o botão equivalente */
+  if(f&&document.contains(f))try{f.focus({preventScroll:true});}catch(e){}}focoAntes=null;if(RD_RENDER_PEND){RD_RENDER_PEND=false;if(rdNaTela())setTimeout(render,0);}}
 /* v10.157: html.modalOn esconde o botão + sem depender de :has (iOS antigo) */
 new MutationObserver(()=>{document.documentElement.classList.toggle('modalOn',$('#modal').classList.contains('on'));}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']});
-new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes)focoAntes=document.activeElement;sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}}).observe(document.getElementById('modal'),{childList:true});
+new MutationObserver(()=>{const b=$('#modal'),sh=b.querySelector('.sheet');if(!sh||sh.hasAttribute('role'))return;if(!focoAntes){const a=document.activeElement;focoAntes=a&&a!==document.body&&!b.contains(a)?a:ULT_FOCO;}sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');const h=sh.querySelector('h3');if(h){h.id=h.id||'dlgT';sh.setAttribute('aria-labelledby',h.id);}
+  /* v10.164: o foco entra na folha ao abrir (volta para a origem no closeModal); quem já foca um campo continua focando */
+  setTimeout(()=>{if(!sh.isConnected)return;const a=document.activeElement;if(a&&b.contains(a))return;if(!sh.hasAttribute('tabindex'))sh.setAttribute('tabindex','-1');try{sh.focus({preventScroll:true});}catch(e){}},90);}).observe(document.getElementById('modal'),{childList:true});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if($('#modal').classList.contains('on')){closeModal();return;}if($('#side').classList.contains('open'))toggleSide(false);}
   if(e.key==='Tab'&&$('#modal').classList.contains('on')){
@@ -9201,6 +9211,7 @@ const ACT={
   'nav-sub':id=>navega(rotaResolve(id)),
   'nav-grupo':()=>{const p=NAV_PILHA[NAV_PILHA.length-1];if(p&&p.tab!==TAB)navVolta();else go(grupoDe(TAB));},
   'wa-ex':txt=>waExemplo(txt),
+  'sair-conta':()=>{const b=document.getElementById('btnOut');if(b)b.click();else{pintaUsuario();const c=document.getElementById('btnOut');if(c)c.click();}}, // v10.164: Sair também em WhatsApp & Conta
   'fechar':closeModal,
   'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
   'pp-ok':()=>{S.cfg.onbOk=1;salvar();render();},
