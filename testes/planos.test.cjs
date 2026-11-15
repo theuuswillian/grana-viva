@@ -17,7 +17,7 @@ t("preços", () => {
   assert.ok(G.PLANOS.pro.legado.includes(29.90) && G.PLANOS.pro_anual.legado.includes(299));
 });
 t("limites", () => {
-  assert.deepEqual(G.LIMITES.gratis, { lancamento_manual: -1, ia_frase_mes: 15, ia_comprovante_mes: 3, whatsapp_lancamento_mes: 5, max_cartoes: 2, max_ativos_carteira: 5, max_alertas_radar: 1, orcamento_ritmo: true });
+  assert.deepEqual(G.LIMITES.gratis, { lancamento_manual: -1, ia_frase_mes: 15, ia_comprovante_mes: 3, ia_extrato_mes: 1, whatsapp_lancamento_mes: 5, max_cartoes: 2, max_ativos_carteira: 5, max_alertas_radar: 1, orcamento_ritmo: true });
   for (const [k, v] of Object.entries(G.LIMITES.pro)) assert.ok(v === -1 || (k === "orcamento_ritmo" && v === true), k);
   assert.equal(G.limite(0, "ia_frase_mes"), 15); assert.equal(G.limite(2, "ia_frase_mes"), -1);
   assert.equal(G.limite(0, "leitura_ia_dia"), G.ANTIABUSO.leitura_ia_dia); assert.equal(G.limite(2, "assistente_hora"), 15);
@@ -64,5 +64,22 @@ t("site e app sem preços antigos", () => {
     assert.ok(!/R\$ ?29,90|R\$ ?299\b|planos Plus|No Plus|Plus por/.test(s), f + " ainda cita Plus/preço antigo");
   }
   assert.ok(!/Open Finance|Pluggy|Imposto de Renda/i.test(pr), "precos.html cita Open Finance/IR");
+});
+t("v10.162: cota de extrato com IA", () => {
+  assert.equal(G.limite(0, "ia_extrato_mes"), 1); assert.equal(G.limite(2, "ia_extrato_mes"), -1);
+  assert.equal(G.cabe(0, "ia_extrato_mes", 0), true); assert.equal(G.cabe(0, "ia_extrato_mes", 1), false); assert.equal(G.cabe(2, "ia_extrato_mes", 999), true);
+  assert.deepEqual(G.erroLimite("ia_extrato", 0), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: "Você atingiu o limite de 1 importação de extrato com IA deste mês no plano Grátis." });
+  assert.equal(G.COTAS.ia_extrato.beneficio, "Importação de extratos ilimitada com IA");
+  assert.ok(G.PRO_DIFERENCIAIS.includes("Importação de extratos ilimitada com IA"));
+});
+t("v10.162: alerta mais antigo (alertasPermitidos)", () => {
+  const A = [{ id: "b", c: 300 }, { id: "a", c: 100 }, { id: "x" }, { id: "c", c: 200 }, { id: "y" }];
+  const cr = (x) => x.c;
+  assert.deepEqual(G.alertasPermitidos(A, 1, cr).map((x) => x.id), ["x"], "sem data = mais antigo, na ordem gravada");
+  assert.deepEqual(G.alertasPermitidos(A.filter((x) => x.c), 1, cr).map((x) => x.id), ["a"], "ORDER BY criado ASC LIMIT 1");
+  assert.deepEqual(G.alertasPermitidos(A, 2, cr).map((x) => x.id), ["x", "y"]);
+  assert.equal(G.alertasPermitidos(A, -1, cr).length, 5, "Pro: todos");
+  assert.deepEqual(G.alertasPermitidos(A, 0, cr), []);
+  assert.deepEqual(G.alertasPermitidos([{ id: "p", c: 5 }, { id: "q", c: 5 }], 1, cr).map((x) => x.id), ["p"], "empate: ordem gravada");
 });
 console.log(n + " testes ok");

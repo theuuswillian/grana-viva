@@ -8,7 +8,9 @@
    Quem decide o plano de verdade é o servidor (tabela assinaturas, escrita só pelo webhook de pagamento).
    As cotas de IA e WhatsApp são contadas no servidor (tabela ia_uso); cartões, carteira e radar são conferidos no app
    (e o radar também no servidor, em alertas-push).
-   v10.161: o Plus deixou de ser vendido. Quem já tem linha "plus" vale como Pro (mantido). "free" é sinônimo de "gratis". */
+   v10.161: o Plus deixou de ser vendido. Quem já tem linha "plus" vale como Pro (mantido). "free" é sinônimo de "gratis".
+   v10.162: cota própria para importar extrato/fatura com IA (ia_extrato_mes, Grátis 1 por mês) e a regra do radar no
+   servidor: no Grátis vale só o alerta ATIVO MAIS ANTIGO (alertasPermitidos). */
 (function (g) {
   "use strict";
   // nível: 0 grátis, 2 pro (o 1 era o Plus; quem ainda tem "plus" gravado recebe o nível do Pro).
@@ -44,8 +46,8 @@
   };
   // cotas por plano (-1 = ilimitado). *_mes: por mês do calendário (America/Sao_Paulo), contadas no servidor.
   var LIMITES = {
-    gratis: { lancamento_manual: -1, ia_frase_mes: 15, ia_comprovante_mes: 3, whatsapp_lancamento_mes: 5, max_cartoes: 2, max_ativos_carteira: 5, max_alertas_radar: 1, orcamento_ritmo: true },
-    pro:    { lancamento_manual: -1, ia_frase_mes: -1, ia_comprovante_mes: -1, whatsapp_lancamento_mes: -1, max_cartoes: -1, max_ativos_carteira: -1, max_alertas_radar: -1, orcamento_ritmo: true }
+    gratis: { lancamento_manual: -1, ia_frase_mes: 15, ia_comprovante_mes: 3, ia_extrato_mes: 1, whatsapp_lancamento_mes: 5, max_cartoes: 2, max_ativos_carteira: 5, max_alertas_radar: 1, orcamento_ritmo: true },
+    pro:    { lancamento_manual: -1, ia_frase_mes: -1, ia_comprovante_mes: -1, ia_extrato_mes: -1, whatsapp_lancamento_mes: -1, max_cartoes: -1, max_ativos_carteira: -1, max_alertas_radar: -1, orcamento_ritmo: true }
   };
   // freio técnico contra abuso, igual para todos os planos (não é cota de plano; o Pro "ilimitado" continua com ele)
   var ANTIABUSO = { leitura_ia_dia: 60, assistente_dia: 40, assistente_hora: 15 };
@@ -53,13 +55,14 @@
   var COTAS = {
     ia_frase:       { k: "ia_frase_mes",            beneficio: "IA ilimitada no App e no WhatsApp", msg: function (n) { return "Você atingiu o limite de " + n + " lançamentos com IA deste mês no plano Grátis."; } },
     ia_comprovante: { k: "ia_comprovante_mes",      beneficio: "IA ilimitada no App e no WhatsApp", msg: function (n) { return "Você atingiu o limite de " + n + " leituras de comprovante com IA deste mês no plano Grátis."; } },
+    ia_extrato:     { k: "ia_extrato_mes",          beneficio: "Importação de extratos ilimitada com IA", msg: function (n) { return "Você atingiu o limite de " + n + (n === 1 ? " importação de extrato" : " importações de extrato") + " com IA deste mês no plano Grátis."; } },
     whatsapp:       { k: "whatsapp_lancamento_mes", beneficio: "IA ilimitada no App e no WhatsApp", msg: function (n) { return "Você atingiu o limite de " + n + " lançamentos pelo WhatsApp deste mês no plano Grátis."; } },
     cartoes:        { k: "max_cartoes",             beneficio: "Cartões ilimitados",               msg: function (n) { return "O plano Grátis permite até " + n + " cartões."; } },
     carteira:       { k: "max_ativos_carteira",     beneficio: "Carteira ilimitada",               msg: function (n) { return "O plano Grátis permite até " + n + " ativos na carteira."; } },
     radar:          { k: "max_alertas_radar",       beneficio: "Radar de Preços ilimitado",        msg: function (n) { return "O plano Grátis permite " + n + " alerta de preço ativo."; } }
   };
   // os diferenciais do Pro, nesta ordem, no app e no site
-  var PRO_DIFERENCIAIS = ["IA ilimitada por frase e foto de recibo", "WhatsApp ilimitado para lançamentos e consultas", "Cartões ilimitados", "Carteira ilimitada", "Radar de Preços ilimitado"];
+  var PRO_DIFERENCIAIS = ["IA ilimitada por frase e foto de recibo", "Importação de extratos ilimitada com IA", "WhatsApp ilimitado para lançamentos e consultas", "Cartões ilimitados", "Carteira ilimitada", "Radar de Preços ilimitado"];
   var TESTE_DIAS = 14;      // conta nova: Pro grátis por 14 dias, depois Grátis
   var STATUS = ["ativo", "cancelado", "inadimplente", "teste", "fundador"];
 
@@ -107,11 +110,20 @@
   function planoMinimo(recurso) { var x = RECURSOS[recurso]; if (!x) return COTAS[recurso] ? "pro" : null; return x.nivel >= 1 ? "pro" : "gratis"; }
   function recursosDoNivel(n) { return Object.keys(RECURSOS).filter(function (k) { return RECURSOS[k].nivel === n; }); }
   function vendavel(p) { return PAGOS.indexOf(p) >= 0; }
+  /* v10.162: quais alertas ATIVOS o plano confere. Ordena pela criação (criadoEm(item) em ms; sem data = mais antigo de todos,
+     na ordem em que estão gravados) e fica com os lim primeiros: no Grátis (1) é o equivalente a ORDER BY criado ASC LIMIT 1.
+     Quem era Pro e voltou ao Grátis com vários alertas guardados continua recebendo só o mais antigo; os outros ficam salvos. */
+  function alertasPermitidos(itens, lim, criadoEm) {
+    var L = (itens || []).map(function (x, i) { var t = criadoEm ? Number(criadoEm(x)) : NaN; return { x: x, i: i, t: isFinite(t) && t > 0 ? t : -Infinity }; });
+    L.sort(function (a, b) { return a.t === b.t ? a.i - b.i : (a.t < b.t ? -1 : 1); });
+    var out = L.map(function (o) { return o.x; });
+    return ilimitado(lim) || lim == null ? out : out.slice(0, Math.max(0, lim | 0));
+  }
 
   var GVP = { PLANOS: PLANOS, ALIAS: ALIAS, PAGOS: PAGOS, LEGADOS: LEGADOS, RECURSOS: RECURSOS, LIMITES: LIMITES, ANTIABUSO: ANTIABUSO, COTAS: COTAS,
     PRO_DIFERENCIAIS: PRO_DIFERENCIAIS, TESTE_DIAS: TESTE_DIAS, STATUS: STATUS,
     efetivo: efetivo, pode: pode, limite: limite, cabe: cabe, ilimitado: ilimitado, erroLimite: erroLimite, planoMinimo: planoMinimo,
-    recursosDoNivel: recursosDoNivel, nivelDoPlano: nivelDoPlano, idBase: idBase, normaliza: normaliza, vendavel: vendavel };
+    recursosDoNivel: recursosDoNivel, nivelDoPlano: nivelDoPlano, idBase: idBase, normaliza: normaliza, vendavel: vendavel, alertasPermitidos: alertasPermitidos };
   g.GVP = GVP;
   if (typeof module !== "undefined" && module.exports) module.exports = GVP;
 })(typeof globalThis !== "undefined" ? globalThis : this);

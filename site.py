@@ -66,6 +66,7 @@ RADAR_MAX, RADAR_AL = 30, 3
 PRECO_PRO = f'{brl(PA["mensal"])}/mês no anual ou {brl(PM["preco"])}/mês'
 ITENS_GRATIS = ['Lançamentos manuais ilimitados', 'Contas fixas, contas e bancos, categorias', 'Orçamentos com termômetro de ritmo', 'Planejamento, metas, relatórios e patrimônio',
     f'IA: {LG["ia_frase_mes"]} lançamentos por frase e {LG["ia_comprovante_mes"]} fotos de recibo por mês',
+    f'Importar extrato com IA (PDF ou foto): {LG["ia_extrato_mes"]} por mês',
     f'WhatsApp: {LG["whatsapp_lancamento_mes"]} lançamentos por mês, consultas liberadas',
     f'Até {LG["max_cartoes"]} cartões, {LG["max_ativos_carteira"]} ativos na carteira e {LG["max_alertas_radar"]} alerta de preço']
 
@@ -314,6 +315,7 @@ def precos():
         ('Importar extrato (OFX ou CSV)', 'Sim', 'Sim'),
         ('IA por frase (digitada ou falada)', f'{LG["ia_frase_mes"]} por mês', 'Ilimitada'),
         ('IA por foto de recibo', f'{LG["ia_comprovante_mes"]} por mês', 'Ilimitada'),
+        ('Importar extrato ou fatura com IA (PDF ou foto)', f'{LG["ia_extrato_mes"]} por mês', 'Ilimitada'),
         ('WhatsApp: lançamentos', f'{LG["whatsapp_lancamento_mes"]} por mês', 'Ilimitados'),
         ('WhatsApp: consultas (saldo, quanto posso gastar, fatura, orçamento)', 'Liberadas', 'Ilimitadas'),
         ('Cartões e faturas', f'Até {LG["max_cartoes"]} cartões', 'Cartões ilimitados'),

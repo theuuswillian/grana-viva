@@ -7,9 +7,10 @@ const origemOk = (o: string) => ORIGENS.includes(o) || /^http:\/\/(localhost|127
 let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
-// v10.161: cotas do plano (por mês, contadas em ia_uso por tipo): frase = GVP "ia_frase_mes" (Grátis 15), foto/PDF = "ia_comprovante_mes" (Grátis 3);
+// v10.161: cotas do plano (por mês, contadas em ia_uso por tipo): frase = GVP "ia_frase_mes" (Grátis 15), foto/PDF = "ia_comprovante_mes" (Grátis 3),
+//          v10.162: extrato/fatura com IA = "ia_extrato_mes" (Grátis 1, k 'extrato');
 //          Pro ilimitado. O freio técnico diário (GVP.limite(nivel, "leitura_ia_dia"), igual para todos) continua.
-import { confereCota, registraUso, type TipoUso } from "../_shared/cota.ts";
+import { confereCota, registraUso, corpoLimite, type TipoUso } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -45,9 +46,12 @@ Deno.serve(async (req) => {
   // v10.54: conta e confere numa só operação no banco (duas leituras ao mesmo tempo não passam do limite)
   let ef: any;
   try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
-  // v10.161: cota mensal do plano, conferida antes de chamar a IA. Extrato (PDF/foto) conta como leitura de comprovante.
-  const tipoUso: TipoUso = body?.extrato || !texto ? "comprovante" : "frase";
-  try { const lim = await confereCota(sb, uid, ef.nivel, tipoUso); if (lim) return json(lim, 402); }
+  // v10.161: cota mensal do plano, conferida antes de chamar a IA.
+  // v10.162: importar extrato/fatura tem cota própria ('extrato', GVP ia_extrato_mes, Grátis 1). O app manda modo:'extrato'
+  //          (v10.162+) e extrato:true (todas as versões desde a v10.145); sem nenhum dos dois é foto de recibo ou frase.
+  const ehExtrato = body?.modo === "extrato" || body?.extrato === true;
+  const tipoUso: TipoUso = ehExtrato ? "extrato" : texto ? "frase" : "comprovante";
+  try { const lim = await confereCota(sb, uid, ef.nivel, tipoUso); if (lim) return json(corpoLimite(lim, body), 402); }
   catch { return json({ erro: "não foi possível conferir o limite agora" }, 503); }
   const LIMITE_DIA = GVP.limite(ef.nivel, "leitura_ia_dia");
   const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: dia, p_k: "leitura", p_lim: LIMITE_DIA });
@@ -55,7 +59,7 @@ Deno.serve(async (req) => {
   if (!ok) return json({ erro: "Você chegou ao limite de " + LIMITE_DIA + " leituras por dia. Amanhã libera de novo." }, 429);
 
   // v10.145: extrato ou fatura em PDF/foto vira lista de lançamentos para a tela de importar
-  if (body?.extrato) {
+  if (ehExtrato) {
     if (!img) return json({ erro: "envie o PDF ou a foto do extrato" }, 400);
     const pe = `Você lê extratos bancários e faturas de cartão brasileiros (PDF ou foto). Hoje é ${hoje}.
 Liste TODOS os lançamentos (compras, pix, transferências, tarifas, pagamentos, estornos, créditos), um por linha, na ordem do documento.

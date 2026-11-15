@@ -263,12 +263,12 @@ function cardPlanoCfg(){
     ${PLANO_ROW&&PLANO_ROW.status==='ativo'&&PLANO_ROW.provedor==='mercadopago'?'<button class="btn2 sm danger plCanc" data-act="ass-cancelar">Cancelar assinatura</button>':''}</div>`;
 }
 /* v10.161: dois planos, Grátis e Pro (mensal ou anual; o Pro vem primeiro para o botão de assinar aparecer sem rolar). A mesma folha serve para "Ver planos" e para o aviso de limite:
-   abrePlanos(rec,{mensagem,manual}) com rec = um recurso de GVP.COTAS (ia_frase, ia_comprovante, whatsapp, cartoes, carteira, radar)
+   abrePlanos(rec,{mensagem,manual}) com rec = um recurso de GVP.COTAS (ia_frase, ia_comprovante, ia_extrato, whatsapp, cartoes, carteira, radar)
    mostra primeiro o benefício que o Pro libera. Anual vem marcado ("Mais escolhido"). No limite da IA aparece também
    "Continuar lançando manualmente (Grátis)", que abre o lançamento manual (sempre ilimitado). */
 let PL_PER='anual',PL_ARGS=[null,null];
 function plGratisItens(){const L=GVP.LIMITES.gratis;
-  return ['Lançamentos manuais ilimitados','Orçamentos com termômetro de ritmo','Planejamento, metas, patrimônio e relatórios','IA: '+L.ia_frase_mes+' lançamentos por frase e '+L.ia_comprovante_mes+' fotos de recibo por mês','WhatsApp: '+L.whatsapp_lancamento_mes+' lançamentos por mês (consultas liberadas)','Até '+L.max_cartoes+' cartões, '+L.max_ativos_carteira+' ativos na carteira e '+L.max_alertas_radar+' alerta de preço'];}
+  return ['Lançamentos manuais ilimitados','Orçamentos com termômetro de ritmo','Planejamento, metas, patrimônio e relatórios','IA: '+L.ia_frase_mes+' lançamentos por frase e '+L.ia_comprovante_mes+' fotos de recibo por mês','Importar extrato com IA (PDF ou foto): '+(L.ia_extrato_mes==null?1:L.ia_extrato_mes)+' por mês','WhatsApp: '+L.whatsapp_lancamento_mes+' lançamentos por mês (consultas liberadas)','Até '+L.max_cartoes+' cartões, '+L.max_ativos_carteira+' ativos na carteira e '+L.max_alertas_radar+' alerta de preço'];}
 const brlPl=v=>'R$ '+Number(v).toFixed(2).replace('.',',');
 function abrePlanos(rec,opts){
   if(!window.GVP)return;
@@ -2747,8 +2747,9 @@ function alvoForm(fid){
     {name:'dir',label:'Avisar quando',type:'select',value:f.alvoDir||'acima',options:[{v:'acima',t:'subir até ou acima de'},{v:'abaixo',t:'cair até ou abaixo de'}]},
     {name:'alvo',label:'Preço (R$)',value:f.alvoP?num(f.alvoP):'',inputmode:'decimal',placeholder:'0,00'}
   ],v=>{const a=c2(parseBR(v.alvo)||0);
-    if(!String(v.alvo||'').trim()){delete f.alvoP;delete f.alvoDir;salvar();render();atualizaSino();toast('Alerta de preço removido');return;}
+    if(!String(v.alvo||'').trim()){delete f.alvoP;delete f.alvoDir;delete f.alvoEm;salvar();render();atualizaSino();toast('Alerta de preço removido');return;}
     if(!(a>0))return 'Informe um preço maior que zero.';
+    if(!(f.alvoP>0)||f.alvoP!==a||f.alvoDir!==(v.dir==='abaixo'?'abaixo':'acima'))f.alvoEm=Date.now(); // v10.162: criação do alerta (alertas-push: o mais antigo vale no Grátis)
     f.alvoP=a;f.alvoDir=v.dir==='abaixo'?'abaixo':'acima';salvar();render();atualizaSino();toast('Alerta salvo: '+f.ticker+(f.alvoDir==='acima'?' acima de ':' abaixo de ')+brl(a));});
 }
 function darfPago(mes){S.cfg.darfPago=Object.assign({},(S.cfg&&S.cfg.darfPago)||{});if(S.cfg.darfPago[mes])delete S.cfg.darfPago[mes];else S.cfg.darfPago[mes]=hojeISO();salvar();render();atualizaSino();}
@@ -4371,6 +4372,7 @@ function radarSaneia(r){
       ids.add(id);
       const o={id,tp,v:tp==='queda'?Math.round(v*100)/100:Math.round(v*1e8)/1e8,g};
       if(typeof a.leg==='string'&&/^alvo\|[\w-]{1,40}\|(acima|abaixo)\|[\d.]{1,16}$/.test(a.leg))o.leg=a.leg;
+      {const c=Math.floor(Number(a.c));if(c>1577836800000&&isFinite(c))o.c=c;} // v10.162: criação (ms). sem c = alerta de antes da v10.162 (conta como o mais antigo)
       al.push(o);
     });
     const it={t,k,n:String(x.n==null?'':x.n).replace(/[\u0000-\u001f]/g,'').slice(0,60),em:/^\d{4}-\d{2}-\d{2}$/.test(String(x.em||''))?x.em:'',al};
@@ -4482,7 +4484,7 @@ function radarMigra(){
     if(!/^alvo\|[\w-]{1,40}\|(acima|abaixo)\|[\d.]{1,16}$/.test(leg))return;
     const L=radarL().slice();let it=L.find(x=>x.t===t&&(x.k==='cripto')===cri);
     if(!it){if(L.length>=RD_MAX)return;it={t,k,n:String(f.nome||'').slice(0,60),em:hojeISO(),al:[]};if(cri)it.cg=f.cgId;L.push(it);}
-    if(!it.al.some(a=>a.leg===leg||(a.tp===dir&&a.v===f.alvoP))){if(it.al.length>=RD_AL)return;it.al=it.al.concat([{id:rdId(),tp:dir,v:f.alvoP,g:Date.now(),leg}]);}
+    if(!it.al.some(a=>a.leg===leg||(a.tp===dir&&a.v===f.alvoP))){if(it.al.length>=RD_AL)return;{const al={id:rdId(),tp:dir,v:f.alvoP,g:Date.now(),leg};if(f.alvoEm>0)al.c=f.alvoEm;it.al=it.al.concat([al]);}}
     S.cfg.radar=radarSaneia(L);delete f.alvoP;delete f.alvoDir;mudou=true;
   });
   return mudou;
@@ -4640,7 +4642,7 @@ function radarAlertasAbre(key,novo,atual){
     const tb=e.target.closest('[data-tp]');
     if(tb){lerV();const i=+tb.closest('.rdAl').dataset.i;if(A[i].tp!==tb.dataset.tp){A[i].tp=tb.dataset.tp;A[i].v=0;A[i].vTxt='';}pinta();return;}
     const dl=e.target.closest('[data-del]');if(dl){lerV();A.splice(+dl.dataset.del,1);pinta();return;}
-    const re=e.target.closest('[data-reat]');if(re){lerV();const a=A[+re.dataset.reat];a.g=Date.now();a.reat=1;pinta();toast('Alerta reativado: salve para valer');}
+    const re=e.target.closest('[data-reat]');if(re){lerV();const a=A[+re.dataset.reat];if(!a)return;if(!cabeAl())return; /* v10.162: reativar também respeita o alerta ativo do Grátis */a.g=Date.now();a.reat=1;pinta();toast('Alerta reativado: salve para valer');}
   });
   box.querySelector('#rrAls').addEventListener('input',e=>{const i=e.target.closest('[data-v]');if(!i)return;const a=A[+i.dataset.v];a.vTxt=i.value;
     if(a.tp!=='queda'&&p>0){const v=parseBR(i.value),h=i.closest('.rrAl').querySelector('.rrAlH');if(h)h.textContent=v>0?(Math.abs((v-p)/p*100)<0.005?'igual ao preço de agora':rdPct((v-p)/p*100)+' do preço de agora'):'';}});
@@ -4656,6 +4658,7 @@ function radarAlertasAbre(key,novo,atual){
       if(atual&&a.novo&&p>0&&(a.tp==='acima'?v<=p:a.tp==='abaixo'?v>=p:false)){toast('O alvo '+(i+1)+' já foi alcançado pelo preço de agora ('+rdPreco(p)+'). Ajuste o valor para ele avisar no futuro.',true);const el=box.querySelector('[data-v="'+i+'"]');if(el)el.focus();return;}
       const orig=it.al.find(x=>x.id===a.id),mudou=!orig||orig.tp!==a.tp||Math.abs(orig.v-v)>1e-9;
       const o={id:a.id,tp:a.tp,v,g:mudou||a.reat||!(a.g>0)?Date.now()+i:a.g};
+      {const c=orig?(orig.c>0?orig.c:0):Date.now()+i;if(c>0)o.c=c;} // v10.162: data de criação; editar ou reativar não muda (o servidor confere o mais antigo no Grátis)
       if(a.leg&&!mudou)o.leg=a.leg; // alerta migrado sem mudança continua com a chave antiga (não avisa de novo)
       out.push(o);}
     { const p0=planoAgora(),lim=p0&&window.GVP?GVP.limite(p0.nivel,'max_alertas_radar'):-1;
@@ -4670,6 +4673,8 @@ function radarAlertasAbre(key,novo,atual){
 }
 function rdReativa(arg){
   const [key,id]=String(arg||'').split('#');const it=rdAcha(key);if(!it)return;
+  {const a=it.al.find(x=>x.id===id);if(!a)return;
+   if(rdDisp(it,a)&&!cabeNoPlano('radar',rdAlertasAtivos(null)))return;} // v10.162: reativar conta como ativar (Grátis = 1 alerta ativo)
   const L=radarL().map(x=>x===it?Object.assign({},x,{al:x.al.map(a=>a.id===id?Object.assign({},a,{g:Date.now()}):a)}):x);
   rdSalva(L);render();toast('Alerta reativado: avisa de novo quando chegar no preço');
 }
@@ -6010,6 +6015,7 @@ function proxImportBanco(){
   montaImport();
 }
 function importarExtrato(){
+  if(IA_PEND.extrato){toast('Ainda lendo o extrato anterior…');return;} // v10.162
   const inp=document.createElement('input');inp.type='file';inp.accept='.ofx,.csv,.txt,text/csv,application/x-ofx,application/pdf,.pdf,image/*';
   inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;
     if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)||/^image\//.test(f.type)){importarExtratoIA(f);return;}
@@ -6025,15 +6031,17 @@ function importarExtrato(){
 /* v10.145: extrato ou fatura em PDF/foto: a IA lista os lançamentos e eles caem na mesma tela de revisar do OFX/CSV */
 async function importarExtratoIA(f){
   if(!USER){toast('Entre na sua conta para importar PDF.',true);return;}
+  if(IA_PEND.extrato)return; // v10.162: um extrato por vez
   const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);
   if(f.size>4.5e6){toast('Arquivo grande demais (máx. 4,5 MB).',true);return;}
   toast('Lendo o extrato com a IA… pode levar até 1 minuto.');
+  iaTrava('extrato',true); // v10.162: botões de importar disabled até a resposta
   try{
     let imagem,mime;
     if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
     else{try{imagem=await imgParaJpeg(f,2000);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
-    const r=await invokeIA('ler-comprovante',{imagem,mime,extrato:true,hoje:hojeISO()},()=>toast(IA_OCUPADA));
-    if(trataLimitePlano(r.o,r.status,'ia_comprovante',{manual:false}))return; // v10.161: cota do plano -> aviso do Pro
+    const r=await invokeIA('ler-comprovante',{imagem,mime,modo:'extrato',extrato:true,hoje:hojeISO()},()=>toast(IA_OCUPADA)); // v10.162: modo:'extrato' = cota própria (ia_extrato)
+    if(trataLimitePlano(r.o,r.status,'ia_extrato',{manual:false}))return; // v10.162: cota de extrato -> aviso do Pro com "Importação de extratos ilimitada com IA"
     if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui ler o extrato'));
     const hj=hojeISO();
     const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100}))
@@ -6044,6 +6052,7 @@ async function importarExtratoIA(f){
     else if(!IMP.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
     montaImport();
   }catch(e){toast(String(e&&e.message||'não consegui ler o extrato'),true);}
+  finally{iaTrava('extrato',false);}
 }
 function abreImport(nome,txt){
   const r=/<OFX>|OFXHEADER/i.test(txt)?lerOFX(txt):lerCSV(txt);
@@ -7002,6 +7011,29 @@ function abreTxIA(o,arq,origem){
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
   novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null,origem:origem==='recibo'?'recibo':'ia'});
 }
+/* v10.162: trava de envio da IA. Sem trava no banco: o botão fica disabled (com "carregando") enquanto o pedido está no ar,
+   e a função ignora um segundo toque/Enter. Três travas independentes: omni (Smart Bar/Omnibox), recibo (foto do recibo)
+   e extrato (importar extrato/fatura). Sempre soltas no finally (também no LIMITE_PLANO e nos erros).
+   Enquanto alguma está presa, um MutationObserver repõe o disabled nos botões que a tela redesenhar. */
+const IA_PEND={omni:false,recibo:false,extrato:false};
+const IA_SEL={omni:'#omniF .omniGo',recibo:'[data-act="ia-ler"]',extrato:'[data-act="importar"]'};
+let IA_OBS=null;
+function iaTravaUI(){
+  for(const k of Object.keys(IA_SEL)){const on=IA_PEND[k];
+    document.querySelectorAll(IA_SEL[k]).forEach(b=>{
+      if(on){if(!b.disabled){b.disabled=true;b.dataset.iaTrava='1';}b.setAttribute('aria-busy','true');b.classList.add('iaCarrega');}
+      else if(b.dataset.iaTrava){b.disabled=false;delete b.dataset.iaTrava;b.removeAttribute('aria-busy');b.classList.remove('iaCarrega');}
+    });}
+  const fm=document.getElementById('omniF'),inp=document.getElementById('omniTxt');
+  if(fm)fm.classList.toggle('busy',IA_PEND.omni);if(inp)inp.readOnly=IA_PEND.omni;
+}
+function iaTrava(k,on){
+  IA_PEND[k]=!!on;
+  const algum=Object.values(IA_PEND).some(Boolean);
+  if(algum&&!IA_OBS&&window.MutationObserver){IA_OBS=new MutationObserver(()=>{IA_OBS.disconnect();try{iaTravaUI();}finally{if(IA_OBS)IA_OBS.observe(document.body,{childList:true,subtree:true});}});IA_OBS.observe(document.body,{childList:true,subtree:true});}
+  if(!algum&&IA_OBS){IA_OBS.disconnect();IA_OBS=null;}
+  iaTravaUI();
+}
 /* v10.54: o limite de leituras é contado só no servidor (função ler-comprovante, de forma atômica); o app não conta mais */
 const LIMITE_LEITURAS=40;
 async function usoIA(){return {mes:hojeISO().slice(0,7),n:0};}
@@ -7016,6 +7048,7 @@ const IA_OCUPADA='A IA está ocupada, tentando de novo…';
 function iaEspera(i){const b=IA_ESP[Math.min(i,IA_ESP.length-1)];return Math.round(b*(0.8+Math.random()*0.4));}
 function iaNaoRepete(status,o,erro){return status===401||status===402||status===403||!!(o&&(o.upgrade||o.limite||o.erro==='LIMITE_PLANO'))||/limite de|muitas perguntas/i.test(String(erro||''));}
 async function invokeIA(nome,body,aoTentar){
+  body=Object.assign({limiteV:2},body); // v10.162: este app entende o corpo novo do LIMITE_PLANO (o servidor manda o antigo só para o v10.160/161)
   for(let i=0;;i++){
     let o=null,status=0,rede=false;
     try{
@@ -7273,22 +7306,24 @@ function omniHTML(){
   </form>`;
 }
 async function omniEnvia(){
-  const inp=$('#omniTxt'),fm=$('#omniF');if(!inp||(fm&&fm.classList.contains('busy')))return;
+  const inp=$('#omniTxt'),fm=$('#omniF');if(!inp||IA_PEND.omni||(fm&&fm.classList.contains('busy')))return; // v10.162: um pedido por vez
   const texto=inp.value.trim();
   if(texto.length<3){toast('Escreva o que você gastou, recebeu ou investiu.',true);inp.focus();return;}
   if(omniInv(texto)){OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';return;}
   if(!USER){toast('Entre na sua conta para lançar despesas por frase.',true);return;}
   if(!pode('leitura_ia')){abrePlanos('leitura_ia');return;}
-  if(fm){fm.classList.add('busy');inp.readOnly=true;}
+  iaTrava('omni',true); // v10.162: botão de enviar disabled e "carregando" até a resposta
   try{
     const o=await chamaIA({texto},()=>toast(IA_OCUPADA));
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';
     abreTxIA(o);
   }catch(e){toastErroIA(e,'não consegui entender');}
-  finally{const f2=$('#omniF'),i3=$('#omniTxt');if(f2)f2.classList.remove('busy');if(i3)i3.readOnly=false;}
+  finally{iaTrava('omni',false);}
 }
-document.addEventListener('submit',e=>{if(e.target&&e.target.id==='omniF'){e.preventDefault();omniEnvia();}});
+/* v10.162: Enter segurado (repetição) ou Enter durante o pedido não envia de novo */
+document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='omniTxt'&&(e.key==='Enter'||e.keyCode===13)&&(e.repeat||IA_PEND.omni)){e.preventDefault();e.stopPropagation();}},true);
+document.addEventListener('submit',e=>{if(e.target&&e.target.id==='omniF'){e.preventDefault();if(IA_PEND.omni)return;omniEnvia();}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='omniTxt')OMNI_TXT=e.target.value;});
 async function enviaFraseIA(){
   const ta=$('#iaTxt'),btn=document.querySelector('[data-act="ia-frase-ok"]');if(!ta)return;
@@ -7306,13 +7341,15 @@ async function enviaFraseIA(){
 }
 function lerComprovanteIA(){
   if(!USER){toast('Entre na sua conta para usar a IA.',true);return;}
+  if(IA_PEND.recibo)return; // v10.162: já tem uma foto sendo lida
   const inp=document.createElement('input');inp.type='file';inp.accept='image/*,application/pdf';
   inp.onchange=async()=>{
-    const f=inp.files&&inp.files[0];if(!f)return;
+    const f=inp.files&&inp.files[0];if(!f||IA_PEND.recibo)return;
     const pdf=f.type==='application/pdf';
     if(pdf&&f.size>4.5e6){toast('PDF grande demais (máx. 4,5 MB).',true);return;}
-    const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.disabled=true;btn.innerHTML=I('receipt')+'Lendo…';}
-    const solta=()=>{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=I('receipt')+'Ler comprovante';}};
+    const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.innerHTML=I('receipt')+'Lendo…';}
+    iaTrava('recibo',true); // v10.162: câmera/“Comprovante” disabled até a resposta
+    const solta=()=>{iaTrava('recibo',false);if(btn&&btn.isConnected){btn.innerHTML=I('receipt')+'Ler comprovante';}};
     try{
       const uso=await usoIA();
       if(uso.n>=LIMITE_LEITURAS){toast('Você chegou ao limite de '+LIMITE_LEITURAS+' leituras de comprovante neste mês. Lançar por frase continua liberado.',true);return;}

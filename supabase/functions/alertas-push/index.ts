@@ -51,14 +51,14 @@ async function precos(dry: boolean, hoje: string, porUser: Record<string, any[]>
   if (!dry && !diaUtil(hoje)) return { hoje, so: "precos", pulado: "não é dia útil" };
   let enviados = 0, usuarios = 0; const simulado: any[] = [];
   for (const uid of Object.keys(porUser)) {
-    const [f, s] = await Promise.all([sb.from("fiis").select("data").eq("user_id", uid), sb.from("settings").select("data").eq("user_id", uid).maybeSingle()]);
+    const [f, s] = await Promise.all([sb.from("fiis").select("data").eq("user_id", uid).order("id", { ascending: true }), sb.from("settings").select("data").eq("user_id", uid).maybeSingle()]);
     const cfg = s.data?.data || {};
     if (cfg?.cfg?.notif && cfg.cfg.notif.alvoPreco === false) continue;
     const A = alvos((f.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"));
     if (!A.length) continue;
     const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", A.map(chaveAlvo));
     const feitos = new Set((ja || []).map((r: any) => r.chave));
-    // v10.161: no Grátis só o 1º alerta de preço ativo é conferido (o app também não deixa criar o 2º)
+    // v10.161: no Grátis só 1 alerta de preço ativo é conferido (o app também não deixa criar o 2º); v10.162: o mais antigo (capAlertas)
     const { data: pl } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
     const limAl = GVP.limite(GVP.efetivo(pl).nivel, "max_alertas_radar");
     const bat: { chave: string; txt: string; ticker: string }[] = [];

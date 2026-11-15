@@ -12,7 +12,7 @@ const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Or
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 // v10.161: freio técnico (igual para todos): GVP.limite(nivel, "assistente_hora") por hora e "assistente_dia" por dia.
 // Cota do plano: cada pergunta conta na cota mensal de IA por frase (Grátis 15/mês, Pro ilimitado), registrada só quando dá certo.
-import { confereCota, registraUso } from "../_shared/cota.ts";
+import { confereCota, registraUso, corpoLimite } from "../_shared/cota.ts";
 // v10.82: plano da pessoa (tabela assinaturas, só o servidor escreve). planos.js é cópia gerada do /planos.js da raiz.
 import "../_shared/planos.js";
 const GVP = (globalThis as any).GVP;
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
   let ef: any;
   try { ef = await planoDe(uid); } catch { return json({ erro: "não foi possível conferir seu plano agora" }, 503); }
-  try { const lim = await confereCota(sb, uid, ef.nivel, "frase"); if (lim) return json(lim, 402); }
+  try { const lim = await confereCota(sb, uid, ef.nivel, "frase"); if (lim) return json(corpoLimite(lim, body), 402); } // v10.162: corpoLimite = o v10.160 em cache também mostra a frase certa
   catch { return json({ erro: "não foi possível conferir o limite agora" }, 503); }
   const LIMITE_DIA = GVP.limite(ef.nivel, "assistente_dia");
   const LIMITE_HORA = GVP.limite(ef.nivel, "assistente_hora");
