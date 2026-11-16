@@ -1,7 +1,7 @@
 # Monitoramento das funções (v10.93)
 
 As Edge Functions gravam uma linha em `public.erros_fn` quando algo falha em:
-`pluggy-sync`, `pluggy-webhook`, `pagamento-webhook`, `assinatura` e `minha-conta`.
+`pagamento-webhook`, `assinatura` e `minha-conta`.
 
 - Colunas: `ts`, `funcao`, `etapa` (ação ou evento), `codigo` (ex.: 500, 23505), `mensagem` (até 300 caracteres).
 - **Sem dados pessoais**: `_shared/erros.ts` troca e-mails, ids (uuid), tokens/JWT, sequências longas e números de 6+ dígitos
@@ -27,7 +27,7 @@ group by 1, 2, 3 order by vezes desc;
 ## Segredos
 
 Tudo vem de `Deno.env.get` (secrets das funções) ou do Supabase Vault:
-`SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `PLUGGY_ENC_KEY`, `GEMINI_API_KEY`, `CRON_SECRET`,
+`SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `GEMINI_API_KEY`, `CRON_SECRET`,
 `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY`. O job diário do `alertas-push` lê o `x-cron-secret` do Vault (`gv_cron_secret`).
 O app (navegador) só tem a chave publicável (`sb_publishable_…`), protegida pelas regras RLS.
 

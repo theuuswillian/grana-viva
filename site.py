@@ -1,4 +1,4 @@
-# site.py (v10.82; revisado em 10/11/2026 para o app v10.156; v10.160: MVP sem Open Finance nem imposto das vendas, destaque para IA, recibo e WhatsApp; v10.161: dois planos, Grátis e Pro mensal/anual, com cotas; v10.165: termômetro do ritmo, resumo semanal pelo WhatsApp e conquistas de dividendos em destaque): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
+# site.py (v10.82; revisado em 10/11/2026 para o app v10.156; v10.160: MVP enxuto, destaque para IA, recibo e WhatsApp; v10.161: dois planos, Grátis e Pro mensal/anual, com cotas; v10.165: termômetro do ritmo, resumo semanal pelo WhatsApp e conquistas de dividendos em destaque): gera as páginas públicas em site/ (estáticas, pt-BR) a partir de planos.js (fonte única dos planos).
 # Gera TODAS as páginas .html (inclusive index e funcionalidades, que voltaram a ser geradas aqui). site/site.css é editado à mão e não é sobrescrito.
 # uso: python3 site.py          (rodar de novo sempre que planos.js ou estes textos mudarem)
 # O app continua em ./ (start_url do app instalado). As páginas ficam em ./site/ e não usam JavaScript.
@@ -409,7 +409,6 @@ def privacidade():
 <li><strong>Uso técnico e segurança:</strong> contadores de uso dos recursos de IA e limites por hora, para evitar abuso.</li>
 <li><strong>Plano e pagamento:</strong> plano, situação da assinatura, datas e identificadores da assinatura e do pagador no Mercado Pago. Os dados do cartão são digitados no Mercado Pago e não chegam ao GranaViva.</li>
 <li><strong>Radar de preços:</strong> os ativos que você acompanha, os alertas de preço que você cria e o registro dos alertas já enviados, para não avisar duas vezes.</li>
-<li><strong>Conexão bancária (opcional e experimental, pelo Meu Pluggy):</strong> se você ativar, as credenciais de acesso à Pluggy (guardadas criptografadas) e as contas e transações que a Pluggy enviar.</li>
 <li><strong>No seu aparelho:</strong> uma cópia dos seus dados para o app abrir rápido e funcionar sem internet, guardada criptografada, além de preferências como tema e PIN (o PIN é guardado em forma de hash).</li>
 </ul>
 <p>Não usamos cookies de publicidade nem ferramentas de rastreamento de terceiros. O armazenamento local do navegador é usado apenas para o app funcionar (sessão, preferências e a cópia criptografada).</p>
@@ -418,7 +417,7 @@ def privacidade():
 <ul class="lista">
 <li><strong>Prestar o serviço que você contratou</strong> (guardar, sincronizar, calcular e mostrar seus dados; ler comprovantes e responder perguntas quando você pede; cobrar a assinatura): execução de contrato (art. 7º, V).</li>
 <li><strong>Segurança e prevenção de abuso</strong> (limites de uso, registros técnicos): legítimo interesse (art. 7º, IX).</li>
-<li><strong>Notificações no celular e conexão bancária:</strong> seu consentimento (art. 7º, I), que você pode retirar a qualquer momento desligando o recurso em Ajustes.</li>
+<li><strong>Notificações no celular:</strong> seu consentimento (art. 7º, I), que você pode retirar a qualquer momento desligando o recurso em Ajustes.</li>
 <li><strong>Cumprir obrigações legais</strong>, quando houver (art. 7º, II).</li>
 </ul>
 <p>Não vendemos, alugamos ou usamos seus dados para publicidade.</p>
@@ -428,7 +427,6 @@ def privacidade():
 <ul class="lista">
 <li><strong>Supabase</strong> (banco de dados, autenticação, arquivos e funções do servidor). Servidores nos Estados Unidos.</li>
 <li><strong>Google</strong>: o login com Google, se você escolher; e a IA <strong>Gemini</strong>, quando você usa a leitura de comprovante, o lançamento por frase ou o assistente. Na leitura, vai a foto, o PDF ou o texto que você enviou; no assistente, vai a pergunta e os totais calculados pelo app. Hoje usamos o nível gratuito da API do Gemini, cujos termos permitem que o Google use esse conteúdo para melhorar seus produtos. Por isso, evite enviar documentos com dados que você não quer compartilhar e não use os recursos de IA se não concordar. Se você usar o microfone no lançamento por frase, a fala é transformada em texto pelo reconhecimento de voz do navegador ou do sistema do aparelho (da Apple ou do Google, conforme o aparelho), segundo as regras desses fornecedores; o GranaViva recebe apenas o texto.</li>
-<li><strong>Pluggy</strong>, somente se você ativar a conexão bancária.</li>
 <li><strong>Mercado Pago</strong>, para processar as assinaturas pagas. O Mercado Pago trata os dados de pagamento conforme a política de privacidade dele.</li>
 <li><strong>GitHub Pages</strong>, que hospeda o site e o app e pode registrar dados técnicos de acesso (como endereço IP).</li>
 </ul>
@@ -442,12 +440,13 @@ def privacidade():
 <li>Ao excluir a conta em Ajustes, apagamos na hora o login, todos os lançamentos e demais registros e os comprovantes. Se houver assinatura paga ativa, ela é cancelada antes.</li>
 <li>Cópias de segurança mantidas pelo provedor de nuvem podem guardar dados por um período limitado, até serem substituídas.</li>
 <li>Contadores de uso e limites são de curta duração e apagados junto com a conta.</li>
+<li>A antiga conexão bancária automática, que era opcional e experimental, foi descontinuada: não coletamos mais esses dados, e as credenciais de acesso e as cópias de contas e transações que ela guardava são apagadas do nosso banco. Lançamentos que você já tinha importado continuam na sua conta como lançamentos comuns, e você pode editá-los ou excluí-los quando quiser.</li>
 <li>Registros de pagamento mantidos pelo Mercado Pago seguem a política e as obrigações legais dele.</li>
 </ul>
 
 <h2>6. Seus direitos</h2>
 <p>Pela LGPD (art. 18), você pode pedir: confirmação de que tratamos seus dados; acesso; correção; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; eliminação dos dados tratados com consentimento; informação sobre com quem compartilhamos; e revogação do consentimento.</p>
-<p>Você mesmo pode, no app: <strong>exportar</strong> todos os seus dados (JSON e planilha) e <strong>excluir</strong> a conta em Ajustes; <strong>corrigir</strong> qualquer registro editando-o; e desligar notificações e a conexão bancária. Para os demais pedidos, escreva para <a href="mailto:{EMAIL}">{EMAIL}</a>. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
+<p>Você mesmo pode, no app: <strong>exportar</strong> todos os seus dados (JSON e planilha) e <strong>excluir</strong> a conta em Ajustes; <strong>corrigir</strong> qualquer registro editando-o; e desligar as notificações. Para os demais pedidos, escreva para <a href="mailto:{EMAIL}">{EMAIL}</a>. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
 
 <h2>7. Segurança</h2>
 <p>Usamos conexão criptografada (HTTPS), regras no banco de dados que deixam cada conta acessar apenas os próprios dados, armazenamento privado para comprovantes, segredos de integrações guardados criptografados no servidor, cópia local criptografada no aparelho e trava opcional por PIN ou biometria. Nenhum sistema é totalmente imune a falhas; se ocorrer um incidente de segurança que possa causar risco ou dano relevante, avisaremos você e a ANPD.</p>
@@ -500,7 +499,7 @@ def termos():
 
 <h2>6. Cálculos, cotações e IA</h2>
 <ul class="lista">
-<li>Saldos, projeções, rendimentos, impostos estimados e cotações são cálculos feitos a partir do que você registra e de fontes públicas, que podem ter atraso (as cotações da B3 têm cerca de 15 minutos de atraso). Confira valores importantes na fonte oficial (seu banco, corretora ou a Receita Federal).</li>
+<li>Saldos, projeções, rendimentos e cotações são cálculos feitos a partir do que você registra e de fontes públicas, que podem ter atraso (as cotações da B3 têm cerca de 15 minutos de atraso). Confira valores importantes na fonte oficial (seu banco ou sua corretora).</li>
 <li>Os recursos de IA podem errar. A leitura de comprovante sempre abre o lançamento para você conferir antes de salvar, e o assistente não altera nada no app.</li>
 <li>Nada no GranaViva é oferta, recomendação ou consultoria de investimento.</li>
 </ul>
