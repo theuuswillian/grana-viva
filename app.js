@@ -721,7 +721,8 @@ async function upTabela(tab,arr,uid,ok){
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
   const mudou=[],hashes={};
-  (arr||[]).forEach(x=>{const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:uid,id,data:x,updated_at:agora});});
+  (arr||[]).forEach(x=>{if(x&&x.demo)return; /* v10.165: dados de exemplo ficam só no aparelho, nunca vão para a nuvem */
+    const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:uid,id,data:x,updated_at:agora});});
   let sair=Object.keys(snap).filter(id=>!(id in hashes));
   /* v10.65: trava de segurança. sumir mais da metade de uma tabela de uma vez só acontece de propósito por "Apagar tudo"
      ou "Importar backup". fora disso, seria um defeito: a exclusão na nuvem fica segurada e os dados continuam lá. */
@@ -792,7 +793,7 @@ async function enviar(){
 }
 function temPendencia(){
   if(!USER||!SNAP)return false;
-  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set(),seg=new Set(SEGURA[t]||[]);for(const x of S[t]||[]){const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)&&!seg.has(id)))return true;}
+  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set(),seg=new Set(SEGURA[t]||[]);for(const x of S[t]||[]){if(x&&x.demo)continue; /* v10.165: exemplo local nunca fica pendente */const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)&&!seg.has(id)))return true;}
   return SNAP.__cfg!==hashObj(cfgNuvem());
 }
 async function baixar(o){
@@ -817,7 +818,7 @@ async function baixar(o){
     SNAP={};gravaSnap();BASE_OK=true;
     const temLocal=TABELAS.some(t=>(S[t]||[]).length);
     if(temLocal&&localStorage.getItem(OWNER_KEY)===USER.id){await enviar();return;}
-    S=Object.assign(vazio(),{cfg:S.cfg});
+    {const dm=demoGuarda();S=Object.assign(vazio(),{cfg:S.cfg});demoRepoe(dm);} // v10.165: o exemplo (só local) sobrevive
     salvar();setSync('sincronizado');
     if(LEGADO&&TABELAS.some(t=>Array.isArray(LEGADO[t])&&LEGADO[t].length)){
       const leg=LEGADO;LEGADO=null;
@@ -829,7 +830,7 @@ async function baixar(o){
      não reprocessa, não regrava o cache e não redesenha a tela. abrir o app fica bem mais leve com milhares de lançamentos. */
   if(SNAP&&s.data&&SNAP.__cfgAt&&SNAP.__cfgAt===(s.data.updated_at||'')&&localStorage.getItem(OWNER_KEY)===USER.id&&!temPendencia()&&TABELAS.every(t=>{
       const o=SNAP[t];if(!o)return false;const rows=res[t].data.filter(r=>r.data),n=Object.keys(o).length;
-      if(rows.length!==n||(S[t]||[]).length!==n)return false;
+      if(rows.length!==n||(S[t]||[]).filter(x=>!(x&&x.demo)).length!==n)return false; // v10.165: exemplo local não conta
       return rows.every(r=>o[String(r.id)]===hashObj(r.data));})){
     LEGADO=null;BASE_OK=true;setSync('sincronizado');
     try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
@@ -837,10 +838,12 @@ async function baixar(o){
   }
   LEGADO=null;
   const cfgRem=(s.data&&s.data.data)||{};
+  const dmG=demoGuarda(); // v10.165: o exemplo é só deste aparelho; volta depois de trocar pela nuvem
   S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();
   SNAP={__cfg:s.data?hashObj(cfgNuvem()):''};
   if(s.data){SNAP.__cfgAt=s.data.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());}
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
+  demoRepoe(dmG);
   /* registros que o saneamento corrigiu ficam com hash diferente do que veio da nuvem e são reenviados */
   TABELAS.forEach(t=>{const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});Object.keys(SNAP[t]).forEach(id=>{if(orig[id]!==SNAP[t][id])SNAP[t][id]='x';});});
   gravaSnap();BASE_OK=true;
@@ -1003,6 +1006,10 @@ function parseBR(s){
 const pad=n=>String(n).padStart(2,'0');
 function isoDe(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 const hojeISO=()=>isoDe(new Date());
+/* v10.165: dia de hoje em America/Sao_Paulo (o termômetro de ritmo, as cotas mensais do servidor e o resumo de segunda usam
+   o mesmo calendário, mesmo com o aparelho noutro fuso). Sem Intl com fuso, cai no dia do aparelho. */
+const FMT_SP=(()=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});}catch(e){return null;}})();
+const hojeSP=()=>{try{const s=FMT_SP&&FMT_SP.format(new Date());if(s&&/^\d{4}-\d\d-\d\d$/.test(s))return s;}catch(e){}return hojeISO();};
 const mesAtual=()=>hojeISO().slice(0,7);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const fmtData=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y;};
@@ -2827,7 +2834,7 @@ function opForm(fid,tipo,deCard){
   /* v10.91: provento com cabeçalho do ativo e a conta do valor esperado */
   if(tipo==='provento'){const mf=$('#mf');if(!mf)return;mf.closest('.sheet').classList.add('pvSheet');
     const pp=proxPags(45).find(q=>q.f===f);
-    mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
+    mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${OCULTO?'•••••':num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
     const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar provento';
     const sc=mf.querySelector('[name="conta"]');if(sc&&sc.closest('label')&&sc.closest('label').firstChild)sc.closest('label').firstChild.textContent='Entrou na conta (vira receita)';
     if(rvPode(f))rvLiga(f);}
@@ -3090,6 +3097,12 @@ function limiteMesHTML(){
 }
 
 /* ---------- faturas abertas (Início e Gastos & Cartões) ---------- */
+/* v10.165: logo real do banco do cartão (pasta logos/, servida pelo app; sem logo local = ícone de cartão como antes) */
+function ccLogoHTML(c){
+  const n=norm(String(c&&(c.banco||c.nome)||''));if(!n)return '';
+  const b=(typeof BANCOS_BR!=='undefined'?BANCOS_BR:[]).find(x=>x.d&&LOGO_LOCAL.has(x.d)&&(norm(x.n)===n||n.includes(norm(x.n))||norm(x.n).includes(n)));
+  return b?bancoLogoHTML(bancoLogo(b.d),b.n,'rmI rmLogo'):'';
+}
 function faturasAbertasHTML(compacto){
   if(!pode('cartoes'))return compacto?'':`<button type="button" class="card gsTeaser" data-act="planos" data-id="cartoes">${I('card')}<span><b>Cartões e faturas</b><small>fatura aberta, parcelas e limite · ver planos</small></span>${I('chevR')}</button>`;
   const CA=cartoesAtivos();
@@ -3104,8 +3117,10 @@ function faturasAbertasHTML(compacto){
   const rows=L.slice(0,compacto?4:12).map(({c,E})=>{
     const n=E.vence?dias(E.vence):null,venc=E.st==='vencida'||(E.tipo==='fechada'&&n!=null&&n<0);
     const q=n==null?{t:'',c:''}:venc?{t:'vencida',c:'late'}:n===0?{t:'vence hoje',c:'now'}:n===1?{t:'vence amanhã',c:'now'}:{t:'vence '+dd(E.vence),c:n<=avisoDias()?'soon':''};
-    const sub=E.tipo==='fechada'?'fechada'+(E.st==='parcial'?' · paga em parte':''):'aberta · fecha '+dd(E.fecha);
-    return `<div class="rmRow tap" data-act="fat-abre" data-id="${esc(E.abre||'')}" role="button" tabindex="0" aria-label="abrir fatura do ${esc(c.nome)}"><span class="rmI" style="--cc:${esc(ccTom(c)||'#60a5fa')}">${I('card')}</span><div class="rmT"><b>${esc(c.nome)}</b><small>${sub}</small></div><div class="hvR"><span class="rmV nw">${brl(E.valor||0)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
+    const nf=E.tipo!=='fechada'&&E.fecha?dias(E.fecha):null; // v10.165: aviso de fechamento perto (compras depois entram na próxima fatura)
+    const sub=E.tipo==='fechada'?'fechada'+(E.st==='parcial'?' · paga em parte':''):nf!=null&&nf>=0&&nf<=3?`<span class="fatFecha">${I('alert')}${nf===0?'fecha hoje':nf===1?'fecha amanhã':'fecha em '+nf+' dias'} · compras depois vão para a próxima</span>`:'aberta · fecha '+dd(E.fecha);
+    const lg=ccLogoHTML(c);
+    return `<div class="rmRow tap" data-act="fat-abre" data-id="${esc(E.abre||'')}" role="button" tabindex="0" aria-label="abrir fatura do ${esc(c.nome)}">${lg||`<span class="rmI" style="--cc:${esc(ccTom(c)||'#60a5fa')}">${I('card')}</span>`}<div class="rmT"><b>${esc(c.nome)}</b><small>${sub}</small></div><div class="hvR"><span class="rmV nw">${brl(E.valor||0)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
   return `<div class="card gsCc${compacto?' gsCcHm':''}">
     <div class="hmH tap" ${compacto?'data-tab="gastos"':'data-act="nav-cartoes"'} role="button" tabindex="0" aria-label="${compacto?'abrir gastos e cartões':'abrir cartões'}"><h4>faturas abertas</h4><span class="hmSub">${brl(tot/100)}${I('chevR','tapCh')}</span></div>
     ${rows}
@@ -3128,6 +3143,35 @@ function patTotalHTML(){
   </div>`;
 }
 
+/* ---------- v10.165: dados de exemplo para explorar (conta nova, sem nenhum lançamento) ----------
+   lançamentos com demo:1, só neste aparelho (upTabela pula; o download da nuvem devolve o exemplo depois de trocar os dados),
+   com selo "exemplo" no extrato e uma faixa com "Limpar exemplo" (1 toque). Não entram no resumo do WhatsApp nem nos avisos. */
+function temDemo(){return (S.tx||[]).some(t=>t&&t.demo);}
+function demoGuarda(){return (S&&S.tx||[]).filter(t=>t&&t.demo);}
+function demoRepoe(L){if(!L||!L.length)return;if(!S.tx)S.tx=[];const ids=new Set(S.tx.map(t=>t.id));L.forEach(t=>{if(!ids.has(t.id))S.tx.push(t);});}
+function demoPreenche(){
+  if((S.tx||[]).some(t=>t&&!t.demo)){toast('O exemplo só aparece numa conta sem lançamentos.',true);return;}
+  const hj=hojeISO(),d=n=>{const x=new Date(hj+'T12:00');x.setDate(x.getDate()-n);const s=isoDe(x);return s.slice(0,7)===hj.slice(0,7)?s:hj.slice(0,8)+'01';};
+  const c=(k,lista)=>lista.includes(k)?k:lista[lista.length-1];
+  const base={sub:'',obs:'',status:'pago',multa:0,juros:0,desconto:0,cartao:'',pagoCom:'',demo:1};
+  const L=[
+    {tipo:'receita',valor:4200,categoria:c('Salário',CATS_RECEITA),descricao:'salário (exemplo)',data:d(9),forma:'pix',tags:[],origem:'manual'},
+    {tipo:'despesa',valor:386.4,categoria:c('Mercado',S.cats),descricao:'mercado do mês',data:d(8),forma:'pix',tags:[],origem:'recibo'},
+    {tipo:'despesa',valor:55.9,categoria:c('Assinaturas',S.cats),descricao:'streaming',data:d(7),forma:'pix',tags:[],origem:'ia'},
+    {tipo:'despesa',valor:32,categoria:c('Restaurantes',S.cats),descricao:'almoço',data:d(4),forma:'pix',tags:['whatsapp'],origem:'whatsapp'},
+    {tipo:'despesa',valor:18.5,categoria:c('Uber e táxi',S.cats),descricao:'uber pro trabalho',data:d(2),forma:'pix',tags:[],origem:'ia'},
+    {tipo:'despesa',valor:47.8,categoria:c('Farmácia',S.cats),descricao:'farmácia',data:d(1),forma:'dinheiro',tags:[],origem:'manual'},
+    {tipo:'despesa',valor:28.9,categoria:c('Delivery',S.cats),descricao:'delivery',data:d(0),forma:'pix',tags:['whatsapp'],origem:'whatsapp'}
+  ].map((t,i)=>Object.assign({id:'demo-'+i+'-'+uid()},base,t,{conta:t.forma==='pix'?bancoPadrao():''}));
+  if(!S.tx)S.tx=[];S.tx.push(...L);
+  geraRecorrentes();salvar();render();toast('Exemplo preenchido. Toque em "Limpar exemplo" quando quiser começar.');
+}
+function demoLimpa(){const n=(S.tx||[]).filter(t=>t&&t.demo).length;S.tx=(S.tx||[]).filter(t=>!(t&&t.demo));geraRecorrentes();salvar();render();toast(n?'Exemplo apagado. Agora é com você!':'Nada de exemplo para apagar');}
+function demoHTML(){
+  if(temDemo())return `<div class="card demoBar" role="note">${I('sparkle')}<span><b>Você está vendo dados de exemplo</b><small>só neste aparelho, não vão para a sua conta</small></span><button type="button" class="btn2 sm" data-act="demo-limpa">Limpar exemplo</button></div>`;
+  if(!USER||(S.tx||[]).length||(S.fiis||[]).length)return '';
+  return `<div class="card demoVazio"><div class="hmH"><h4>comece por aqui</h4></div><p class="small">Escreva na barra acima um gasto do jeito que você falaria ("almoço 32 no pix") ou tire foto do recibo. Quer ver o app funcionando antes?</p><button type="button" class="btn2" data-act="demo-preenche">${I('sparkle')}Preencher exemplo para explorar</button></div>`;
+}
 /* ---------- Aba 1: Início ---------- */
 function viewInicioMVP(){
   const per=periodo(),pl=per.label;
@@ -3137,6 +3181,7 @@ function viewInicioMVP(){
   return `
   <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
   ${omniHTML()}
+  ${demoHTML()}
   ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${limiteMesHTML()}
   <div class="hmH hmResH"><h4>resumo · ${esc(pl)}</h4><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
@@ -3172,14 +3217,25 @@ function gsExtratoHTML(){
     .sort((a,b)=>(b.data||'').localeCompare(a.data||'')||String(b.criadoEm||'').localeCompare(String(a.criadoEm||'')));
   const cont={};L.forEach(t=>{const k=origemTx(t);cont[k]=(cont[k]||0)+1;});
   const resumo=['ia','wa','rec','man','imp'].filter(k=>cont[k]).map(k=>`<span class="txOrg o-${k}">${ORIGEM_L[k]} ${cont[k]}</span>`).join('');
-  const rows=L.slice(0,12).map(t=>{const r=t.tipo==='receita',tr=t.tipo==='transf',cc=r?'#4ade80':tr?'#94a3b8':corCat(t.categoria);
-    return `<div class="rmRow tap" data-act="tx-menu" data-id="${esc(t.id)}" role="button" tabindex="0" aria-label="abrir lançamento"><span class="rmI" style="--cc:${cc}">${I(tr?'swap':catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${origemBadge(t)}${esc(tr?'transferência':t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status==='previsto'?' · previsto':''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':tr?'':'−'}${brl(t.valor)}</span></div>`;}).join('');
+  /* v10.165: agrupado por dia ("Hoje", "Ontem", "Qui, 12 nov") com o saldo do dia à direita; tocar na linha edita ou exclui */
+  const linha=t=>{const r=t.tipo==='receita',tr=t.tipo==='transf',cc=r?'#4ade80':tr?'#94a3b8':corCat(t.categoria);
+    return `<div class="rmRow tap" data-act="tx-menu" data-id="${esc(t.id)}" role="button" tabindex="0" aria-label="abrir lançamento ${esc(nomeTx(t).n||t.categoria||'')}, ${esc(brl(t.valor))}"><span class="rmI" style="--cc:${cc}">${I(tr?'swap':catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${origemBadge(t)}${esc(tr?'transferência':t.categoria||'')}${t.status==='previsto'?' · previsto':''}${t.demo?' · exemplo':''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':tr?'':'−'}${brl(t.valor)}</span></div>`;};
+  const vis=L.slice(0,12),grupos=[];vis.forEach(t=>{const g=grupos[grupos.length-1];if(g&&g.d===t.data)g.L.push(t);else grupos.push({d:t.data,L:[t]});});
+  const rows=grupos.map(g=>{const tot=L.filter(t=>t.data===g.d).reduce((a,t)=>a+(t.tipo==='receita'?cents(t.valor):t.tipo==='despesa'?-cents(t.valor):0),0)/100;
+    return `<div class="dayH"><span>${esc(diaRotulo(g.d))}</span><b class="nw ${tot>0?'pos':''}">${tot>0?'+':tot<0?'−':''}${brl(Math.abs(tot))}</b></div>${g.L.map(linha).join('')}`;}).join('');
   return `<div class="card gsExt">
     <div class="hmH tap" data-act="gs-extrato" role="button" tabindex="0" aria-label="ver extrato completo"><h4>extrato de ${esc(MESES_LONGO[+m.slice(5,7)-1])}</h4><span class="hmSub">${L.length} ${L.length===1?'lançamento':'lançamentos'}${I('chevR','tapCh')}</span></div>
     ${resumo?`<div class="gsOrgs" aria-label="lançamentos por origem">${resumo}</div>`:''}
     ${rows||'<p class="small" style="margin:6px 0 4px">Nada lançado neste mês ainda. Use a barra do Início, a foto do recibo ou o WhatsApp.</p>'}
     ${L.length>12?`<button type="button" class="hmLink hmMais" data-act="gs-extrato">ver os ${L.length} lançamentos do mês${I('chevR')}</button>`:''}
   </div>`;
+}
+/* v10.165: rótulo do dia no extrato: Hoje, Ontem ou "Qui, 12 nov" */
+function diaRotulo(d){
+  const hj=hojeISO();if(d===hj)return 'Hoje';
+  const on=isoDe(new Date(new Date(hj+'T12:00').getTime()-864e5));if(d===on)return 'Ontem';
+  const x=new Date(d+'T12:00');const ds=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][x.getDay()];
+  return ds+', '+x.getDate()+' '+MESES[x.getMonth()]+(d.slice(0,4)!==hj.slice(0,4)?' '+d.slice(0,4):'');
 }
 function gsPlanHTML(){
   if(!pode('planejamento'))return `<button type="button" class="card gsTeaser" data-act="planos" data-id="planejamento">${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses e simulações · ver planos</small></span>${I('chevR')}</button>`;
@@ -3192,6 +3248,7 @@ function viewGastos(){
   const links=[['gs-extrato','receipt','Extrato completo'],['nav-orc','gauge','Orçamentos'],['nav-cartoes','card','Cartões e parcelas'],['nav-rel','report','Relatório'],['nova-fixa','calendar','Conta fixa'],['importar','up','Importar extrato']];
   return `
   <div class="head gsHead"><h2>Gastos &amp; Cartões</h2><button class="btn" data-act="lanc-manual">+ lançar</button></div>
+  ${temDemo()?demoHTML():''}
   ${limiteMesHTML()}
   ${pode('orcamentos')?orcInicioHTML():''}
   ${faturasAbertasHTML(false)}
@@ -3237,6 +3294,7 @@ function waHeroHTML(){
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
     <div class="pushBtns" id="waBtns"></div>
     <div class="waEx" role="group" aria-label="exemplos de mensagem"><small>toque num exemplo para mandar pelo WhatsApp</small>${WA_EX.map(x=>`<button type="button" class="waExB" data-act="wa-ex" data-id="${esc(x)}">${I('chat')}<span>${esc(x)}</span></button>`).join('')}</div>
+    ${waCmdHTML()}
   </div>`;
 }
 /* exemplo: abre o WhatsApp do GranaViva com a frase escrita (número que o servidor informa); sem número, copia a frase */
@@ -3352,7 +3410,20 @@ function morphView(v,antHtml,html){
   for(let i=0;i<b.length;i++){if(ser(a[i])===ser(b[i]))continue;mataGraficos(cur[i]);cur[i].replaceWith(b[i]);}
   return true;
 }
+/* v10.165: saldo livre no cabeçalho: saldo nas contas menos as faturas abertas dos cartões (o que dá para gastar sem dever) */
+function saldoLivre(){
+  let fat=0;try{cartoesAtivos().forEach(c=>{try{const E=ccFatEstado(c);if(E&&E.tipo!=='fechada')fat+=cents(E.valor||0);}catch(e){}});}catch(e){}
+  return (cents(saldoTotal())-fat)/100;
+}
+function pintaSaldoHd(){
+  const el=$('#hdSaldo');if(!el)return;
+  if(!MVP_MODE||!USER||!((S.bancos||[]).length)){el.hidden=true;return;}
+  let v=0;try{v=saldoLivre();}catch(e){el.hidden=true;return;}
+  el.hidden=false;el.innerHTML=`<small>saldo livre</small><b class="${v<0&&!OCULTO?'neg':''}">${OCULTO?'R$ •••••':brl(v)}</b>`;
+  el.setAttribute('aria-label','saldo livre: '+(OCULTO?'oculto':brl(v)));
+}
 function render(){
+  try{pintaSaldoHd();}catch(e){}
   {const dh=DATA_HOJE(),ix=dh.indexOf(' · ');$('#sub').innerHTML=ix>0?'<b>'+esc(dh.slice(0,ix))+'</b><span aria-hidden="true"> · </span>'+esc(dh.slice(ix+3)):esc(dh);}
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)&&/[?&]gvtest\b/.test(location.search)))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
@@ -3772,6 +3843,24 @@ function rendaPassivaEst(){
     else if(t==='fii'&&f.preco>0){const v=cents(f.cotas*f.preco*DY_FII_PADRAO);tot+=v;est+=v;n++;}});
   return {v:tot/100,est:est/100,n};
 }
+/* ---------- v10.165: conquistas de dividendos ----------
+   barra de marcos da renda passiva mensal estimada (rendaPassivaEst): Café R$ 30 → Streaming R$ 60 → Internet R$ 120 →
+   Luz R$ 250 → Mercado R$ 600 → Aluguel R$ 1.500. Marco atingido fica aceso; mostra quanto falta para o próximo. */
+const CONQ_DIV=[{v:30,n:'Café',i:'lu_coffee'},{v:60,n:'Streaming',i:'lu_tv'},{v:120,n:'Internet',i:'lu_wifi'},{v:250,n:'Luz',i:'lu_lightbulb'},{v:600,n:'Mercado',i:'lu_shopping_cart'},{v:1500,n:'Aluguel',i:'lu_house'}];
+function conquistasDivHTML(){
+  if(!(S.fiis||[]).some(f=>f.cotas>0))return '';
+  const R=rendaPassivaEst(),v=R.v>0?R.v:0,M=CONQ_DIV,ult=M[M.length-1].v;
+  const feitos=M.filter(m=>v>=m.v).length,prox=M[feitos]||null;
+  /* barra em degraus iguais (cada marco ocupa a mesma largura), com o pedaço do degrau atual proporcional */
+  const ant=feitos?M[feitos-1].v:0,pc=prox?((feitos+(v-ant)/(prox.v-ant))/M.length*100):100;
+  const txt=prox?`faltam <b class="nw">${brl(prox.v-v)}</b>/mês para a conquista <b>${esc(prox.n)}</b>`:`todas as conquistas: seus dividendos já pagam um <b>aluguel</b> de ${brl(ult)}`;
+  return `<div class="card cqCard" role="group" aria-label="conquistas de dividendos: ${feitos} de ${M.length}">
+    <div class="hmH"><h4>conquistas de dividendos</h4><span class="hmSub nw">${brl(v)}/mês${R.est>0?' · estimativa':''}</span></div>
+    <div class="cqBar" role="progressbar" aria-valuemin="0" aria-valuemax="${M.length}" aria-valuenow="${feitos}" aria-valuetext="${feitos} de ${M.length} conquistas"><i style="width:${Math.max(0,Math.min(100,pc)).toFixed(1)}%"></i></div>
+    <ol class="cqL">${M.map((m,k)=>`<li class="${v>=m.v?'on':k===feitos?'prox':''}"><span class="cqIc" aria-hidden="true">${I(m.i)}</span><b>${esc(m.n)}</b><small class="nw">${brl(m.v)}</small></li>`).join('')}</ol>
+    <p class="cqTx">${txt}</p>
+  </div>`;
+}
 function fixasMensaisDespesa(){
   const hj=hojeISO();
   return (S.fixas||[]).filter(f=>f&&f.tipo==='despesa'&&(f.freq||'mensal')==='mensal'&&+f.valor>0&&(!f.fim||f.fim>=hj)&&(!f.inicio||f.inicio<=hj))
@@ -3835,8 +3924,9 @@ function proxVencHTML(){
    meses passados e futuros: sem marcador e com a regra antiga (âmbar a partir de 80%). */
 const RITMO_MARGEM=10;
 function ritmoMes(m){
-  if(m!==mesAtual())return null;
-  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),dia=+hojeISO().slice(8,10);
+  const hs=hojeSP(); // v10.165: dia do mês de Brasília
+  if(m!==hs.slice(0,7))return null; // outro mês (ou virada do mês com o aparelho noutro fuso): sem marcador
+  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),dia=+hs.slice(8,10);
   return {dia,dMes,pct:dia/dMes*100};
 }
 function ritmoCls(pct,r,over){if(over)return 'over';if(r)return pct>r.pct+RITMO_MARGEM?'warn':'';return pct>=80?'warn':'';}
@@ -4295,11 +4385,11 @@ function viewFiiCarteira(modo){
     if(rf){
       const R=rfCardInfo(f,posi);meta=R.meta;info=R.info;chips=R.chips;tagT=R.tag;
     }else if(cri){
-      meta.push(['quantidade',Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8})+' '+esc(f.ticker)],['preço',brl(f.preco)]);
+      meta.push(['quantidade',(OCULTO?'•••••':Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8}))+' '+esc(f.ticker)],['preço',brl(f.preco)]); // v10.165: o olho esconde também a quantidade
       if(f.pago>0)meta.push(['pago',brl(f.pago)]);
       info='cripto · '+esc(CG_ST.msg||'');
     }else{
-      meta.push(['cotas',num(f.cotas).replace(/,00$/,'')],['cota',brl(f.preco)]);
+      meta.push(['cotas',OCULTO?'•••••':num(f.cotas).replace(/,00$/,'')],['cota',brl(f.preco)]); // v10.165: quantidade oculta no modo privacidade
       if(f.pago>0&&f.cotas>0)meta.push(['preço médio',brl(f.pago/f.cotas)]);
       if(t==='fii')meta.push(['renda/mês',brl(dv)]);else if(f.dpc)meta.push(['provento/cota',brl(f.dpc)]);
       if(f.diaPag)meta.push(['paga dia',String(f.diaPag)]);
@@ -4330,6 +4420,7 @@ function viewFiiCarteira(modo){
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados${semCusto?` · ${semCusto} ${semCusto>1?'ativos sem':'ativo sem'} preço pago fora da conta`:''}</small></div>`:''}
     ${barra}
   </div>
+  ${MVP_MODE?conquistasDivHTML():''}
   ${temRV||S.fiis.length?`<div class="wKpi${temRV?'':' semRV'}">
     ${temRV?`<div class="card mini wRenda"><small>renda mensal</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>`:''}
     <div class="card mini wDk"><small>total aplicado</small><b>${brl(aplic)}</b><small class="wHint">custo das compras</small></div>
@@ -5820,8 +5911,8 @@ async function pluggy(body){
 /* v10.136: WhatsApp. O app só gera o código de ligação e mostra o estado; ler e salvar acontece no servidor (whatsapp-webhook).
    O lançamento salvo pelo WhatsApp chega aqui na próxima sincronização (tag "whatsapp"). */
 let WA_ST=null;
-async function waChama(acao){
-  const {data,error}=await sb.functions.invoke('whatsapp-vincular',{body:{acao}});
+async function waChama(acao,extra){
+  const {data,error}=await sb.functions.invoke('whatsapp-vincular',{body:Object.assign({acao},extra||{})});
   if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
   if(data&&data.erro)throw new Error(data.erro);
   return data;
@@ -5837,7 +5928,7 @@ async function atualizaWaUI(){
     if(!st.ativo){pinta(false,'em breve');t2.textContent='mande "gastei 32 no almoço" para o WhatsApp do GranaViva e o lançamento entra aqui, já com a categoria. está chegando.';b2.innerHTML='';return;}
     if(!st.pode){pinta(false,'Pro');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. faz parte do Pro.';b2.innerHTML=`<button class="btn" data-act="planos" data-id="leitura_ia">ver planos</button>`;return;}
     if(st.vinculado){pinta(true,'ligado');t2.textContent='ligado ao número '+st.telefone+'. mande o gasto do jeito que você falaria, como "uber 18,50 ontem", e toque em Salvar.';
-      b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`;return;}
+      b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`+waResumoHTML(!!st.resumoSemanal);return;}
     pinta(false,'desligado');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. você confere e toca em Salvar.';
     b2.innerHTML=`<button class="btn" data-act="wa-ligar">${I('link')}ligar meu WhatsApp</button>`;
   }catch(e){const t2=$('#waTxt'),b2=$('#waBtns');if(t2)t2.textContent='o WhatsApp ainda não está disponível no servidor.';if(b2)b2.innerHTML='';}
@@ -5852,6 +5943,26 @@ async function waLigar(){
   const url='https://wa.me/'+String(o.numero).replace(/\D/g,'')+'?text='+encodeURIComponent('GV '+o.codigo);
   confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir',alt:'Copiar código',altCb:()=>{copiaTexto('GV '+o.codigo).then(()=>toast('Código copiado: GV '+o.codigo)).catch(()=>toast('Não consegui copiar.',true));}},()=>{location.href=url;});
 }
+/* v10.165: resumo semanal pelo WhatsApp (toda segunda às 8h de Brasília, grátis). O servidor guarda em wa_vinculo.resumo_semanal
+   (função whatsapp-vincular {acao:'resumo'}) e o pg_cron das 11:00 UTC de segunda manda (função whatsapp-webhook). */
+function waResumoHTML(on){
+  return `<div class="ntList waRes"><button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="wa-resumo"><span class="ntIc" style="--c:#25d366">${I('calendar')}</span><span class="ntTx"><b>Resumo semanal toda segunda às 8h</b><small>gastos e entradas da semana, onde mais foi e o ritmo do mês, no seu WhatsApp</small></span><span class="ntSw${on?' on':''}"><i></i></span></button></div>`;
+}
+async function waResumoTog(){
+  const b=document.querySelector('[data-act="wa-resumo"]');if(!b||b.getAttribute('aria-busy')==='true')return;
+  const on=b.getAttribute('aria-checked')!=='true';
+  b.setAttribute('aria-busy','true');
+  try{const o=await waChama('resumo',{ligar:on});const v=!!(o&&o.resumoSemanal);
+    if(WA_ST&&WA_ST.st)WA_ST.st=Object.assign({},WA_ST.st,{resumoSemanal:v});
+    const b2=document.querySelector('[data-act="wa-resumo"]');if(b2){b2.setAttribute('aria-checked',String(v));const sw=b2.querySelector('.ntSw');if(sw)sw.classList.toggle('on',v);}
+    toast(v?'Resumo semanal ligado: toda segunda às 8h':'Resumo semanal desligado');}
+  catch(e){toast(e.message,true);}
+  finally{const b2=document.querySelector('[data-act="wa-resumo"]');if(b2)b2.removeAttribute('aria-busy');}
+}
+/* v10.165: comandos do WhatsApp em chips copiáveis (consultas são grátis em todos os planos) */
+const WA_CMD=['saldo do mês','quanto posso gastar?','quanto está minha fatura?','como está meu orçamento?','quanto gastei com mercado esse mês?'];
+function waCmdHTML(){return `<div class="waEx waCmd" role="group" aria-label="comandos do WhatsApp"><small>comandos de consulta · toque para copiar</small><div class="waCmdL">${WA_CMD.map(x=>`<button type="button" class="chip waCmdB" data-act="wa-copia" data-id="${esc(x)}" aria-label="copiar comando: ${esc(x)}">${I('copy')}<span>${esc(x)}</span></button>`).join('')}</div></div>`;}
+function waCopia(txt){txt=String(txt||'').slice(0,200);if(!txt)return;copiaTexto(txt).then(()=>toast('Copiado: '+txt)).catch(()=>toast('Não consegui copiar.',true));}
 function waDesligar(){
   confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
     try{await waChama('desvincular');WA_ST=null;toast('WhatsApp desligado');atualizaWaUI();}catch(e){toast(e.message,true);}});
@@ -6051,7 +6162,7 @@ async function importarExtratoIA(f){
     if(trataLimitePlano(r.o,r.status,'ia_extrato',{manual:false}))return; // v10.162: cota de extrato -> aviso do Pro com "Importação de extratos ilimitada com IA"
     if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui ler o extrato'));
     const hj=hojeISO();
-    const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100}))
+    const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100,fixo:!!(l&&l.provavel_fixo===true)})) // v10.165: provavel_fixo vem da IA
       .filter(l=>DATA_OK.test(l.data)&&l.data<=hj&&isFinite(l.valor)&&l.valor!==0);
     if(!linhas.length){toast('Não encontrei lançamentos nesse arquivo.',true);return;}
     IMP={nome:f.name,cartao:!!r.o.cartao,linhas:linhas.slice(0,3000),destino:'',ia:true};
@@ -6166,6 +6277,40 @@ function montaImport(){
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
 function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
+/* v10.165: assinaturas sugeridas a partir do extrato da IA. uma por descrição (a data mais recente), só despesas importadas
+   agora, que ainda não são conta fixa. conta=true: extrato de conta (sai via pix da conta); senão, fatura do cartão alvo */
+function fixosDoImport(linhas,alvo,conta){
+  const fx=(S.fixas||[]).map(f=>norm(f.nome||'')),porDesc=new Map();
+  (linhas||[]).forEach(l=>{
+    if(!l||!l.fixo||!l.on||l.tipo!=='despesa'||l.transf||l.propria||!(Math.abs(l.valor)>0))return;
+    const nome=String(l.desc||'').replace(/\s+/g,' ').trim().slice(0,60);const k=norm(nome);if(!k||fx.includes(k))return;
+    const a=porDesc.get(k);if(a){a.meses.add(l.data.slice(0,7));if(l.data>a.data){a.data=l.data;a.valor=Math.abs(c2(l.valor));}return;}
+    porDesc.set(k,{nome,valor:Math.abs(c2(l.valor)),data:l.data,categoria:l.cat||'Assinaturas',meses:new Set([l.data.slice(0,7)]),conta:conta?alvo:'',cartao:conta?'':alvo,forma:conta?'pix':'cartao'});
+  });
+  return [...porDesc.values()].slice(0,20);
+}
+function fixosImportAbre(L){
+  if(!L||!L.length)return;
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet fxSug" role="dialog" aria-modal="true" aria-label="Salvar assinaturas como contas fixas"><div class="sh-head"><h3>Parecem contas fixas</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">A IA achou cobranças que costumam se repetir todo mês. Marque as que quer salvar como conta fixa: elas entram sozinhas nos próximos meses (dá para mudar ou apagar depois em Contas fixas).</p>
+    <div class="lista fxSugL">${L.map((x,i)=>`<label class="tx fxSugRow"><input type="checkbox" data-fx="${i}" checked aria-label="salvar ${esc(x.nome)} como conta fixa"><div class="txt"><b>${esc(x.nome)}</b><small>todo dia ${parseInt(x.data.slice(8,10),10)} · ${esc(x.categoria)} · ${x.forma==='cartao'?'no cartão':'na conta'}</small></div><div class="val neg">${brl(x.valor)}</div></label>`).join('')}</div>
+    <button class="btn full" id="fxSugOk">salvar ${L.length} ${L.length===1?'conta fixa':'contas fixas'}</button>
+    <button class="btn2 full" data-act="fechar" style="margin-top:8px">agora não</button>
+  </div>`;
+  box.classList.add('on');
+  const ok=$('#fxSugOk'),conta=()=>box.querySelectorAll('input[data-fx]:checked').length;
+  box.querySelectorAll('input[data-fx]').forEach(c=>c.onchange=()=>{const n=conta();ok.textContent=n?'salvar '+n+' '+(n===1?'conta fixa':'contas fixas'):'nenhuma marcada';ok.disabled=!n;});
+  ok.onclick=()=>{
+    const sel=[...box.querySelectorAll('input[data-fx]:checked')].map(c=>L[+c.dataset.fx]).filter(Boolean);if(!sel.length)return;
+    if(!S.fixas)S.fixas=[];if(!S.gerados)S.gerados={};
+    sel.forEach(x=>{const id=uid(),dia=parseInt(x.data.slice(8,10),10)||1;
+      S.fixas.push({id,nome:x.nome,valor:x.valor,dia,tipo:'despesa',freq:'mensal',auto:true,categoria:x.categoria,inicio:x.data,criadoEm:x.data<hojeISO()?x.data:hojeISO(),forma:x.forma,conta:x.conta,cartao:x.cartao,pagoCom:''});
+      x.meses.forEach(m=>{S.gerados['fx|'+id+'|'+m]=1;}); // o mês que veio no extrato já foi importado: não gera de novo
+    });
+    geraRecorrentes();salvar();closeModal();render();toast(sel.length+(sel.length===1?' conta fixa salva':' contas fixas salvas'));
+  };
+}
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
   let n=0,lig=0,rcb=0;
@@ -6194,7 +6339,11 @@ function confirmaImport(){
     const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
     S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
   const eraBanco=IMP.banco,mudo=IMP.silent;
+  /* v10.165: extrato lido pela IA com linhas marcadas como provável conta fixa (assinatura, streaming, academia...):
+     depois de importar, oferece salvar como contas fixas mensais, com uma caixa de seleção por assinatura */
+  const sugFixos=IMP.ia?fixosDoImport(IMP.linhas,alvo,!ehCartao):[];
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
+  if(sugFixos.length&&!mudo)setTimeout(()=>fixosImportAbre(sugFixos),400);
   if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
   else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
   if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
@@ -7021,6 +7170,64 @@ function abreTxIA(o,arq,origem){
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
   novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null,origem:origem==='recibo'?'recibo':'ia'});
 }
+/* ---------- v10.165: confirmação rápida (8 s) depois de lançar pela barra ou pela foto ----------
+   Com a IA confiante (≥ 0,6), à vista, data até hoje e forma de pagamento resolvida, o lançamento é salvo na hora e aparece um
+   cartão por 8 s com 3 pílulas de 1 toque: [Categoria ▾] [Pagamento ▾] [Desfazer]. Qualquer dúvida (parcelado, boleto, vários
+   cartões sem nome citado, confiança baixa) abre o formulário de conferência como antes. Tocar no texto do cartão abre a edição. */
+const QC_MS=8000;let QC=null;
+function iaPodeRapido(o){return !!(o&&o.valor>0&&(o.confianca==null?0.5:+o.confianca)>=0.6&&(parseInt(o.parcelas,10)||1)<=1&&DATA_OK.test(String(o.data||''))&&o.data<=hojeISO()&&o.forma!=='boleto');}
+function salvaRapidoIA(o,arq,origem){
+  if(!iaPodeRapido(o)){abreTxIA(o,arq,origem);return;}
+  const rec=o.tipo==='receita',lista=rec?CATS_RECEITA:S.cats;
+  let forma=['pix','dinheiro','cartao'].includes(o.forma)?o.forma:'pix',cartao='',conta='';
+  if(rec&&forma==='cartao')forma='pix';
+  if(forma==='cartao'){const CA=cartoesAtivos(),k=o.cartao&&CA.find(c=>c.nome===o.cartao);if(k)cartao=k.id;else if(CA.length===1)cartao=CA[0].id;else{abreTxIA(o,arq,origem);return;}}
+  if(forma==='pix')conta=bancoPadrao();
+  const t={id:uid(),tipo:rec?'receita':'despesa',valor:c2(o.valor),categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],descricao:str(o.descricao,80).trim(),sub:'',tags:[],obs:'',data:o.data,cartao,forma,conta,pagoCom:'',status:'pago',multa:0,juros:0,desconto:0,origem:origem==='recibo'?'recibo':'ia'};
+  if($('#modal')&&$('#modal').classList.contains('on'))closeModal();
+  S.tx.push(t);
+  if(!rec){if(!S.cfg)S.cfg={};S.cfg.ultLanc={forma,cartao,conta};}
+  geraRecorrentes();salvar();render();
+  if(arq)anexar(t.id,arq).then(e=>{if(e)toast(e,true);else render();}).catch(()=>{});
+  qcAbre(t.id);
+}
+function qcPagTxt(t){if(t.forma==='cartao'){const c=S.cartoes.find(x=>x.id===t.cartao);return c?c.nome:'cartão';}return t.forma==='dinheiro'?'Dinheiro':'Pix';}
+function qcHTML(t){
+  const rec=t.tipo==='receita',lista=rec?CATS_RECEITA:S.cats;
+  const cats=(lista.includes(t.categoria)?lista:[t.categoria].concat(lista)).map(c=>`<option value="${esc(c)}"${c===t.categoria?' selected':''}>${esc(c)}</option>`).join('');
+  const pv=t.forma==='cartao'?'c:'+t.cartao:t.forma;
+  const pags=[['pix','Pix'],['dinheiro','Dinheiro']].concat(rec?[]:cartoesAtivos().map(c=>['c:'+c.id,'Cartão '+c.nome])).map(([v,l])=>`<option value="${esc(v)}"${v===pv?' selected':''}>${esc(l)}</option>`).join('');
+  return `<div class="qcTop"><span class="qcIc" aria-hidden="true">${I('check')}</span><button type="button" class="qcTx" data-qc="edit" aria-label="editar o lançamento"><b class="nw">${rec?'Receita':'Gasto'} de ${brl(t.valor)} salvo</b><small>${esc(t.descricao||t.categoria)} · ${t.data===hojeISO()?'hoje':fmtDataCurta(t.data)}${t.origem==='recibo'?' · recibo':' · IA'}</small></button><button type="button" class="qcX" data-qc="fecha" aria-label="fechar">${I('close')}</button></div>
+  <div class="qcPills">
+    <label class="qcPill"><span class="qcL">Categoria</span><b>${esc(t.categoria)}</b>${I('chevD')}<select data-qc="cat" aria-label="trocar a categoria">${cats}</select></label>
+    <label class="qcPill"><span class="qcL">Pagamento</span><b>${esc(qcPagTxt(t))}</b>${I('chevD')}<select data-qc="pag" aria-label="trocar a forma de pagamento">${pags}</select></label>
+    <button type="button" class="qcPill qcUndo" data-qc="undo">${I('lu_undo_2')}<b>Desfazer</b></button>
+  </div><i class="qcBar" aria-hidden="true"></i>`;
+}
+function qcFecha(){if(!QC)return;clearTimeout(QC.tm);const el=QC.el;QC=null;if(el){el.classList.remove('on');setTimeout(()=>el.remove(),250);}}
+function qcTimer(ms){if(!QC)return;clearTimeout(QC.tm);QC.fim=Date.now()+ms;QC.tm=setTimeout(qcFecha,ms);const b=QC.el.querySelector('.qcBar');if(b){b.style.transition='none';b.style.transform='scaleX('+(ms/QC_MS)+')';void b.offsetWidth;b.style.transition='transform '+ms+'ms linear';b.style.transform='scaleX(0)';}}
+function qcPausa(){if(!QC||QC.pausa)return;QC.pausa=Math.max(1200,QC.fim-Date.now());clearTimeout(QC.tm);const b=QC.el.querySelector('.qcBar');if(b){const w=getComputedStyle(b).transform;b.style.transition='none';b.style.transform=w==='none'?'scaleX(1)':w;}}
+function qcSegue(){if(!QC||!QC.pausa)return;const ms=QC.pausa;QC.pausa=0;qcTimer(ms);}
+function qcPinta(){if(!QC)return;const t=S.tx.find(x=>x.id===QC.id);if(!t){qcFecha();return;}QC.el.innerHTML=qcHTML(t);}
+function qcAbre(id){
+  qcFecha();const t=S.tx.find(x=>x.id===id);if(!t)return;
+  const el=document.createElement('div');el.className='qcCard';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  document.body.appendChild(el);QC={id,el,tm:0,fim:0,pausa:0};qcPinta();
+  requestAnimationFrame(()=>el.classList.add('on'));qcTimer(QC_MS);
+  el.addEventListener('pointerenter',qcPausa);el.addEventListener('pointerleave',qcSegue);
+  el.addEventListener('focusin',qcPausa);el.addEventListener('focusout',e=>{if(!el.contains(e.relatedTarget))qcSegue();});
+  el.addEventListener('change',e=>{const s=e.target.closest('select[data-qc]');if(!s||!QC)return;const t=S.tx.find(x=>x.id===QC.id);if(!t)return qcFecha();
+    if(s.dataset.qc==='cat'){t.categoria=s.value;t.sub='';}
+    else{const v=s.value;if(v.indexOf('c:')===0&&S.cartoes.some(c=>c.id===v.slice(2))){t.forma='cartao';t.cartao=v.slice(2);t.conta='';}
+      else if(v==='dinheiro'){t.forma='dinheiro';t.cartao='';t.conta='';}else{t.forma='pix';t.cartao='';t.conta=bancoPadrao();}
+      if(t.tipo==='despesa'){S.cfg.ultLanc={forma:t.forma,cartao:t.cartao||'',conta:t.conta||''};}}
+    geraRecorrentes();salvar();render();qcPinta();QC.pausa=0;qcTimer(QC_MS);toast(s.dataset.qc==='cat'?'Categoria: '+t.categoria:'Pagamento: '+qcPagTxt(t));});
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-qc]');if(!b||b.tagName==='SELECT'||!QC)return;const k=b.dataset.qc,id=QC.id;
+    if(k==='fecha'){qcFecha();return;}
+    if(k==='edit'){qcFecha();novoTx(id);return;}
+    if(k==='undo'){const t=S.tx.find(x=>x.id===id);qcFecha();if(!t)return;removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);geraRecorrentes();salvar();render();toast('Lançamento desfeito');}});
+}
+document.addEventListener('keydown',e=>{if(QC&&e.key==='Escape'&&!($('#modal')&&$('#modal').classList.contains('on')))qcFecha();});
 /* v10.162: trava de envio da IA. Sem trava no banco: o botão fica disabled (com "carregando") enquanto o pedido está no ar,
    e a função ignora um segundo toque/Enter. Três travas independentes: omni (Smart Bar/Omnibox), recibo (foto do recibo)
    e extrato (importar extrato/fatura). Sempre soltas no finally (também no LIMITE_PLANO e nos erros).
@@ -7327,7 +7534,7 @@ async function omniEnvia(){
     const o=await chamaIA({texto},()=>toast(IA_OCUPADA));
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';
-    abreTxIA(o);
+    salvaRapidoIA(o); // v10.165: confiança alta = salva já e mostra a confirmação rápida de 8 s; senão abre o formulário
   }catch(e){toastErroIA(e,'não consegui entender');}
   finally{iaTrava('omni',false);}
 }
@@ -7369,7 +7576,7 @@ function lerComprovanteIA(){
       const o=await chamaIA({imagem,mime},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('receipt')+'Tentando de novo…';toast(IA_OCUPADA);});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
-      abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento quando ele for salvo
+      salvaRapidoIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento (v10.165: confirmação rápida)
     }catch(e){toastErroIA(e,'não consegui ler o comprovante');}
     finally{solta();}
   };
@@ -7387,7 +7594,7 @@ function novoTx(id,tipoPre,base){
     {name:'pagoCom',label:'Boleto pago com',type:'select',value:P?(P.pagoCom||(P.cartao?'cartao':(P.conta&&P.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:P&&P.cartao?P.cartao:(!P&&cartoesAtivos().some(c=>c.id===(S.cfg&&S.cfg.ultLanc||{}).cartao)?(S.cfg&&S.cfg.ultLanc||{}).cartao:''),options:[{v:'',t:cartoesAtivos().length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(cartoesAtivos(P&&P.cartao).map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
     {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:(!P&&S.bancos.some(b=>b.id===(S.cfg&&S.cfg.ultLanc||{}).conta)?(S.cfg&&S.cfg.ultLanc||{}).conta:((S.bancos.find(b=>b.principal)||{}).id||'')),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(bancosAtivos(P&&P.conta).map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
-    {name:'parcelas',label:'Parcelas',type:'select',value:String(!t&&P&&P.parcSel||1),options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
+    {name:'parcelas',label:'Parcelas',type:'select',value:String(!t&&P&&P.parcSel||1),options:Array.from({length:48},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
     {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
     {name:'tags',label:'Tags (opcional, separe por vírgula)',value:P?(P.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
@@ -7436,7 +7643,7 @@ function novoTx(id,tipoPre,base){
     if(usaCartao&&st==='previsto')st='pago';
     obj.status=st;obj.fxAuto=undefined;
     if(!t)obj.origem=base&&base.ia?(base.origem==='recibo'?'recibo':'ia'):'manual'; // v10.160: origem do lançamento (selo no extrato)
-    const np=Math.max(1,Math.min(24,parseInt(v.parcelas,10)||1));
+    const np=Math.max(1,Math.min(48,parseInt(v.parcelas,10)||1)); // v10.165: até 48x (igual à leitura da IA)
     if(spL&&v.fixa&&!t)return 'Conta fixa não pode ser dividida entre categorias. Desmarque "repete todo mês" ou não divida.';
     let novoId='';
     if(t){
@@ -9211,6 +9418,10 @@ const ACT={
   'nav-sub':id=>navega(rotaResolve(id)),
   'nav-grupo':()=>{const p=NAV_PILHA[NAV_PILHA.length-1];if(p&&p.tab!==TAB)navVolta();else go(grupoDe(TAB));},
   'wa-ex':txt=>waExemplo(txt),
+  'wa-copia':txt=>waCopia(txt), // v10.165
+  'demo-preenche':()=>demoPreenche(), // v10.165
+  'demo-limpa':()=>demoLimpa(), // v10.165
+  'wa-resumo':()=>waResumoTog(), // v10.165
   'sair-conta':()=>{const b=document.getElementById('btnOut');if(b)b.click();else{pintaUsuario();const c=document.getElementById('btnOut');if(c)c.click();}}, // v10.164: Sair também em WhatsApp & Conta
   'fechar':closeModal,
   'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
@@ -9921,7 +10132,9 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
   document.addEventListener('touchend',e=>{fim(e);fimSeguro();},{passive:true});
   document.addEventListener('touchcancel',e=>{fim(e);fimSeguro();},{passive:true});
 })();
-function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.classList.toggle('on',OCULTO);}
+function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.setAttribute('aria-pressed',String(OCULTO));b.classList.toggle('on',OCULTO);}
+/* v10.165: olho do modo privacidade no cabeçalho (mesmo estado e mesma chave gv-oculto do localStorage dos olhos das telas) */
+{const be=$('#btnEye');if(be)be.addEventListener('click',()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();});}
 pintaOlho();
 $('#aLogo').innerHTML=logoSVG();
 $('#topMark').innerHTML=logoSVG();
