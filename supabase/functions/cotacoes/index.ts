@@ -4,7 +4,12 @@
 // cotacoes: preços da B3 (ações, FIIs, ETFs, BDRs) sem token, via Yahoo Finance no servidor.
 // O app chama com o login do usuário; o navegador não acessa o Yahoo direto (CORS), por isso passa aqui.
 // Cotação da B3 em fontes gratuitas chega com ~15 min de atraso.
+// Fase 2: fallback para o último preço conhecido. Cada preço bom fica guardado (memória da função e, se a tabela existir,
+// public.cotacao_cache da migração 20261116_fase2_blindagem.sql). Se o Yahoo falhar (fora do ar, limite, fim de semana sem
+// resposta), o ativo volta com o último preço guardado e cache:true + salvoEm (quando foi lido), em vez de sumir da resposta:
+// a carteira e a barra de dividendos continuam com valor. Dias da B3 calculados em America/Sao_Paulo pelo Intl.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { diaSP, comFallback } from "./cache.ts"; // Fase 2
 const sb = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), {
   auth: {
     persistSession: false
@@ -32,6 +37,8 @@ const json = (b, s = 200)=>new Response(JSON.stringify(b), {
   });
 const CACHE = new Map();
 const TTL = 30_000;
+const ULT = new Map(); // último preço bom por ticker (sem prazo), para o fallback
+
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36";
 async function um(tk) {
   const c = CACHE.get(tk);
@@ -56,7 +63,7 @@ async function um(tk) {
       if (!(p > 0)) break;
       // fechamento do pregão anterior: penúltima barra diária (a última é o pregão de hoje/último)
       const ts = res?.timestamp || [], cl = res?.indicators?.quote?.[0]?.close || [];
-      const dia = (x)=>new Date((x - 10800) * 1000).toISOString().slice(0, 10);
+      const dia = diaSP; // Fase 2: dia de Brasília pelo Intl (antes: UTC − 3 h fixo)
       const hojeB3 = m?.regularMarketTime ? dia(m.regularMarketTime) : "";
       let ant = NaN;
       for(let i = ts.length - 1; i >= 0; i--){
@@ -77,17 +84,51 @@ async function um(tk) {
         nome: String(m?.longName || m?.shortName || "").slice(0, 80),
         div: ult && ult.amount > 0 ? {
           v: +Number(ult.amount).toFixed(6),
-          d: new Date(ult.date * 1000).toISOString().slice(0, 10)
+          d: diaSP(ult.date)
         } : null
       };
       break;
     } catch  {}
   }
-  if (v) CACHE.set(tk, {
-    t: Date.now(),
-    v
-  });
+  if (v) {
+    CACHE.set(tk, {
+      t: Date.now(),
+      v
+    });
+    ULT.set(tk, {
+      v,
+      em: new Date().toISOString()
+    });
+  }
   return v;
+}
+// Fase 2: últimos preços guardados no banco (tabela opcional: se ainda não existir, só a memória vale)
+async function leGuardados(tks) {
+  try {
+    const { data, error } = await sb.from("cotacao_cache").select("ticker,v,salvo_em").in("ticker", tks);
+    if (error) return {};
+    const o = {};
+    for (const r of data || [])if (r?.v && Number(r.v.p) > 0) o[r.ticker] = {
+      v: r.v,
+      em: r.salvo_em
+    };
+    return o;
+  } catch  {
+    return {};
+  }
+}
+async function guarda(frescos) {
+  const linhas = Object.entries(frescos).map(([ticker, v])=>({
+      ticker,
+      v,
+      salvo_em: new Date().toISOString()
+    }));
+  if (!linhas.length) return;
+  try {
+    await sb.from("cotacao_cache").upsert(linhas, {
+      onConflict: "ticker"
+    });
+  } catch  {}
 }
 Deno.serve(async (req)=>{
   const og = req.headers.get("origin") || "";
@@ -133,11 +174,22 @@ Deno.serve(async (req)=>{
   if (ok === false) return json({
     erro: "muitas atualizações seguidas, tente em alguns minutos"
   }, 429);
-  const out = {};
+  const frescos = {};
   await Promise.all(tks.map(async (t)=>{
-    const v = await um(t);
-    if (v) out[t] = v;
+    let v = null;
+    try {
+      v = await um(t);
+    } catch  {}
+    if (v) frescos[t] = v;
   }));
+  const faltam = tks.filter((t)=>!frescos[t] && !ULT.has(t));
+  const banco = faltam.length ? await leGuardados(faltam) : {};
+  const out = comFallback(frescos, tks, ULT, banco);
+  // sem esperar: guardar o último preço nunca atrasa nem derruba a resposta
+  const g = guarda(frescos);
+  try {
+    globalThis.EdgeRuntime?.waitUntil?.(g);
+  } catch  {}
   return json({
     q: out,
     em: new Date().toISOString()

@@ -229,3 +229,18 @@ export async function cancela(id: string, token: string, f: Fetch = fetch) {
   if (!r.ok) throw new Error("mp_cancela " + r.status);
   return true;
 }
+
+/* Fase 2 (LGPD, excluir conta): cancela a assinatura no Mercado Pago e confirma. Se o PUT falhar, consulta a assinatura:
+   já cancelada (ou encerrada) no MP conta como cancelada (senão a pessoa nunca conseguiria excluir a conta); qualquer outro
+   estado ou falha de rede lança erro e a exclusão para antes de apagar qualquer dado. */
+export async function cancelaConfirmando(id: string, token: string, f: Fetch = fetch): Promise<"cancelada" | "ja_cancelada"> {
+  try { await cancela(id, token, f); return "cancelada"; }
+  catch (e) {
+    const r = await f(API + "/preapproval/" + encodeURIComponent(id), { method: "GET", signal: AbortSignal.timeout(10000), headers: { Authorization: "Bearer " + token } });
+    if (r.status === 404) return "ja_cancelada";
+    if (!r.ok) throw e;
+    const j: any = await r.json().catch(() => ({}));
+    if (["cancelled", "finished", "expired"].includes(String(j?.status || ""))) return "ja_cancelada";
+    throw e;
+  }
+}

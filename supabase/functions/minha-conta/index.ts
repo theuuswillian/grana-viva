@@ -11,11 +11,9 @@ let ORIG = ORIGENS[0];
 const CORS = { get "Access-Control-Allow-Origin"() { return ORIG; }, "Vary": "Origin", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 
-// todas as tabelas com dados da pessoa (todas têm user_id). manter em dia ao criar tabela nova.
-const TABELAS = ["tx", "fiis", "metas", "cartoes", "bancos", "settings", "push_subs", "push_log", "ia_uso", "rl_uso", "assinaturas", "pagamento_eventos"]; // v10.82: + plano e avisos de pagamento
+// todas as tabelas com dados da pessoa (todas têm user_id). Fase 2: lista em tabelas.ts (com as do WhatsApp e do radar)
+import { TABELAS, OCULTAR } from "./tabelas.ts";
 const BUCKET = "comprovantes";
-// colunas que nunca saem no arquivo (segredos de acesso, já criptografados no banco)
-const OCULTAR: Record<string, string[]> = { push_subs: ["p256dh", "auth"] };
 
 async function todasLinhas(t: string, uid: string) {
   const out: any[] = [];
@@ -91,8 +89,8 @@ Deno.serve(async (req) => {
       const tk = Deno.env.get("MP_ACCESS_TOKEN");
       if (a?.provedor === "mercadopago" && a.provedor_assinatura_id && a.status !== "cancelado") {
         if (!tk) return json({ erro: "Sua assinatura paga precisa ser cancelada antes. Fale com o suporte." }, 409);
-        await MP.cancela(a.provedor_assinatura_id, tk);
-        rel.assinatura_cancelada = 1;
+        // Fase 2: cancela e confirma (já cancelada no MP também serve); falhou = para aqui, nada é apagado
+        rel[(await MP.cancelaConfirmando(a.provedor_assinatura_id, tk)) === "cancelada" ? "assinatura_cancelada" : "assinatura_ja_cancelada"] = 1;
       }
     } catch (e) { console.log("excluir: cancela assinatura", uid, String(e)); await registraErro(sb, "minha-conta", "excluir-cancela-assinatura", e); return json({ erro: "não consegui cancelar sua assinatura agora. Tente de novo em instantes." }, 502); }
     try {
@@ -103,6 +101,9 @@ Deno.serve(async (req) => {
         if (error) throw new Error("storage: " + error.message);
       }
       rel.comprovantes = arqs.length;
+      // Fase 2: envios simulados do WhatsApp guardados pelo telefone (antes de apagar o vínculo, que diz qual é o telefone)
+      const { data: wv } = await sb.from("wa_vinculo").select("telefone").eq("user_id", uid).maybeSingle();
+      if (wv?.telefone) { const { count } = await sb.from("wa_saida_teste").delete({ count: "exact" }).eq("telefone", wv.telefone); rel.wa_saida_teste = count || 0; }
       // 2) linhas de todas as tabelas (rl_uso por último, o limitador acabou de gravar nela)
       for (const t of TABELAS) {
         const { error, count } = await sb.from(t).delete({ count: "exact" }).eq("user_id", uid);
