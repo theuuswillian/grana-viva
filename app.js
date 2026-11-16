@@ -2600,6 +2600,7 @@ async function cotacoesB3(todos){
           const pr=Number(q&&q.p);if(!(pr>0))return;pegos.add(sym);
           S.fiis.filter(f=>f.ticker===sym).forEach(f=>{
             f.preco=Math.round(pr*100)/100;f.cotEm=q.t||agora;f.cotFonte='b3';viaSrv++;
+            if(q.cache)f.cotCache=1;else delete f.cotCache; // Fase 2: o servidor devolveu o último preço guardado (fonte fora do ar)
             f.ant=Number(q.ant)>0?Math.round(Number(q.ant)*100)/100:null;
             if(tipoOf(f)==='fii'&&q.div&&q.div.v>0&&(Date.now()-new Date(q.div.d+'T12:00:00'))<75*864e5)f.dpc=q.div.v;
           });
@@ -2625,7 +2626,7 @@ async function cotacoesB3(todos){
         const sym=String(q.symbol||'').toUpperCase();
         S.fiis.filter(f=>f.ticker===sym).forEach(f=>{
           const pr=Number(q.regularMarketPrice);
-          if(pr>0){f.preco=pr;f.cotEm=q.regularMarketTime?new Date(q.regularMarketTime).toISOString():agora;f.cotFonte='brapi';f.ant=Number(q.regularMarketPreviousClose)>0?Number(q.regularMarketPreviousClose):null;n++;}
+          if(pr>0){f.preco=pr;f.cotEm=q.regularMarketTime?new Date(q.regularMarketTime).toISOString():agora;f.cotFonte='brapi';f.ant=Number(q.regularMarketPreviousClose)>0?Number(q.regularMarketPreviousClose):null;delete f.cotCache;n++;}
           // só FIIs pagam todo mês: para ações/ETFs/BDRs o último provento não é uma renda mensal
           if(tipoOf(f)==='fii'){
             const cd=(q.dividendsData&&q.dividendsData.cashDividends)||[];
@@ -2644,8 +2645,14 @@ async function cotacoesB3(todos){
   if(n)salvar();
   if(TAB==='fii')render();
 }
+/* Fase 2: data e hora em Brasília ("dd/mm hh:mm") para o "último preço de" */
+const FMT_SP_DH=(()=>{try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});}catch(e){return null;}})();
+function fmtHoraSP(iso){const d=new Date(iso);if(isNaN(d))return '';try{if(FMT_SP_DH)return FMT_SP_DH.format(d).replace(',','');}catch(e){}return fmtHora(iso);}
+/* o preço mostrado é o último guardado (a fonte falhou agora ou o app está sem conexão) */
+function cotAntiga(f){return !!(f&&f.cotEm&&(f.cotCache||COT.st==='manual'));}
 function infoCot(f){
   if(!(f.cotFonte==='brapi'||f.cotFonte==='b3')||!f.cotEm)return 'preço digitado manualmente';
+  if(cotAntiga(f))return '<span class="cotAnt">último preço de '+fmtHoraSP(f.cotEm)+'</span>';
   const vivo=b3Aberta()&&Date.now()-new Date(f.cotEm)<40*60e3;
   const dv=f.ant>0?(f.preco-f.ant)/f.ant*100:null;
   const dia=dv==null?'':` · <span class="${dv>0?'pos':dv<0?'neg':''}">hoje ${dv>0?'+':''}${dv.toFixed(2).replace('.',',')}%</span>`;
@@ -4785,7 +4792,7 @@ function viewCfg(){
     <div class="lkHead"><span class="lkIc dkIc">${I('shield')}</span><div><h4>Privacidade e seus dados</h4><small>seus direitos pela LGPD</small></div></div>
     <div class="lkList">
       <button class="lkRow" data-act="lg-dados"><span class="lkRi">${I('lu_download')}</span><span class="lkRt"><b>Exportar meus dados</b><small>arquivo completo (JSON) e planilha dos lançamentos (CSV)</small></span><span class="lkCh">${I('chevR')}</span></button>
-      ${USER?`<button class="lkRow perigo" data-act="lg-excluir"><span class="lkRi">${I('userX')}</span><span class="lkRt"><b>Excluir minha conta</b><small>apaga a conta e todos os dados, para sempre</small></span><span class="lkCh">${I('chevR')}</span></button>`:''}
+      ${USER?`<button class="lkRow perigo" data-act="lg-excluir"><span class="lkRi">${I('userX')}</span><span class="lkRt"><b>Excluir minha conta e dados</b><small>apaga a conta e todos os dados, para sempre</small></span><span class="lkCh">${I('chevR')}</span></button>`:''}
       <a class="lkRow" href="site/privacidade.html" target="_blank" rel="noopener"><span class="lkRi">${I('shield')}</span><span class="lkRt"><b>Política de privacidade</b><small>quais dados guardamos, com quem e por quanto tempo</small></span><span class="lkCh">${I('chevR')}</span></a>
       <a class="lkRow" href="site/termos.html" target="_blank" rel="noopener"><span class="lkRi">${I('list')}</span><span class="lkRt"><b>Termos de uso</b><small>planos, pagamento e cancelamento</small></span><span class="lkCh">${I('chevR')}</span></a>
     </div>
@@ -5769,13 +5776,14 @@ async function importarExtratoIA(f){
   if(!USER){toast('Entre na sua conta para importar PDF.',true);return;}
   if(IA_PEND.extrato)return; // v10.162: um extrato por vez
   const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);
-  if(f.size>4.5e6){toast('Arquivo grande demais (máx. 4,5 MB).',true);return;}
+  {const er=iaArqEscolhido(f);if(er){toast(er,true);return;}} // Fase 2: 5 MB e tipo, antes de enviar
   toast('Lendo o extrato com a IA… pode levar até 1 minuto.');
   iaTrava('extrato',true); // v10.162: botões de importar disabled até a resposta
   try{
     let imagem,mime;
     if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
     else{try{imagem=await imgParaJpeg(f,2000);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
+    {const er=iaArqErro(imagem,mime);if(er){toast(er,true);return;}}
     const r=await invokeIA('ler-comprovante',{imagem,mime,modo:'extrato',extrato:true,hoje:hojeISO()},()=>toast(IA_OCUPADA)); // v10.162: modo:'extrato' = cota própria (ia_extrato)
     if(trataLimitePlano(r.o,r.status,'ia_extrato',{manual:false}))return; // v10.162: cota de extrato -> aviso do Pro com "Importação de extratos ilimitada com IA"
     if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui ler o extrato'));
@@ -6600,6 +6608,15 @@ function novaTransf(id){
 /* v10.43: lê foto/print/PDF de comprovante com IA (função ler-comprovante, Gemini) e abre o lançamento preenchido */
 function imgParaJpeg(f,max){return new Promise((ok,er)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1]);};im.onerror=()=>{URL.revokeObjectURL(u);er(new Error('img'));};im.src=u;});}
 function b64DeArquivo(f){return new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=er;r.readAsDataURL(f);});}
+/* Fase 2: o mesmo limite do servidor (ler-comprovante recusa com 413/415), conferido ANTES de enviar: até 5 MB e só
+   foto JPG/PNG/WEBP, PDF ou CSV. Fotos de outro formato (HEIC etc.) são convertidas para JPG antes (imgParaJpeg). */
+const IA_ARQ_MAX=5*1024*1024,IA_MIMES=['image/jpeg','image/png','image/webp','application/pdf','text/csv'];
+const IA_MSG_GRANDE='Arquivo grande demais. O limite é 5 MB: tire a foto de novo ou envie um PDF menor.',IA_MSG_TIPO='Formato não aceito. Envie uma foto (JPG, PNG ou WEBP), um PDF ou um CSV.';
+function iaB64Bytes(b){b=String(b||'');const p=b.endsWith('==')?2:b.endsWith('=')?1:0;return Math.floor(b.length*3/4)-p;}
+/* arquivo escolhido: '' = pode seguir (imagem de qualquer formato passa, porque vira JPG); senão a mensagem para o toast */
+function iaArqEscolhido(f){if(!f)return IA_MSG_TIPO;const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');if(!pdf&&!/^image\//.test(f.type||''))return IA_MSG_TIPO;if(pdf&&f.size>IA_ARQ_MAX)return IA_MSG_GRANDE;return '';}
+/* o que vai de fato para o servidor (base64 + MIME) */
+function iaArqErro(b64,mime){if(!IA_MIMES.includes(String(mime||'')))return IA_MSG_TIPO;if(iaB64Bytes(b64)>IA_ARQ_MAX)return IA_MSG_GRANDE;return '';}
 function abreTxIA(o,arq,origem){
   const lista=o.tipo==='receita'?CATS_RECEITA:S.cats;
   let forma=o.forma,cartao='';
@@ -6995,7 +7012,7 @@ function lerComprovanteIA(){
   inp.onchange=async()=>{
     const f=inp.files&&inp.files[0];if(!f||IA_PEND.recibo)return;
     const pdf=f.type==='application/pdf';
-    if(pdf&&f.size>4.5e6){toast('PDF grande demais (máx. 4,5 MB).',true);return;}
+    {const er=iaArqEscolhido(f);if(er){toast(er,true);return;}} // Fase 2: 5 MB e tipo, antes de enviar
     const btn=document.querySelector('.iaBtn[data-act="ia-ler"]');if(!btn)toast('Lendo o comprovante…');if(btn){btn.innerHTML=I('receipt')+'Lendo…';}
     iaTrava('recibo',true); // v10.162: câmera/“Comprovante” disabled até a resposta
     const solta=()=>{iaTrava('recibo',false);if(btn&&btn.isConnected){btn.innerHTML=I('receipt')+'Ler comprovante';}};
@@ -7005,6 +7022,7 @@ function lerComprovanteIA(){
       let imagem,mime;
       if(pdf){imagem=await b64DeArquivo(f);mime='application/pdf';}
       else{try{imagem=await imgParaJpeg(f,1600);mime='image/jpeg';}catch(e){imagem=await b64DeArquivo(f);mime=f.type||'image/jpeg';}}
+      {const er=iaArqErro(imagem,mime);if(er){toast(er,true);return;}}
       const o=await chamaIA({imagem,mime},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('receipt')+'Tentando de novo…';toast(IA_OCUPADA);});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
@@ -8815,7 +8833,7 @@ async function exportaJSON(){
 }
 function excluirConta(){
   if(!USER){toast('Entre na conta que você quer excluir.',true);return;}
-  confirma({titulo:'Excluir minha conta?',texto:'Isso apaga para sempre a sua conta ('+(USER.email||'')+') e todos os dados: lançamentos, cartões, contas, metas, investimentos, ajustes, comprovantes e notificações, em todos os aparelhos. Não dá para desfazer. Se quiser uma cópia, use antes "Exportar meus dados". Para confirmar, digite EXCLUIR.',ok:'Excluir conta',perigo:true,digitar:'EXCLUIR'},async()=>{
+  confirma({titulo:'Excluir minha conta?',texto:'Isso apaga para sempre a sua conta ('+(USER.email||'')+') e todos os dados: lançamentos, cartões, contas, metas, investimentos, ajustes, comprovantes, notificações e o WhatsApp ligado, em todos os aparelhos. Uma assinatura paga ativa é cancelada no Mercado Pago. Não dá para desfazer. Se quiser uma cópia, use antes "Exportar meus dados". Para confirmar, digite EXCLUIR.',ok:'Excluir conta',perigo:true,digitar:'EXCLUIR'},async()=>{
     if(!navigator.onLine){toast('Sem internet. Conecte-se para excluir a conta.',true);return;}
     toast('Excluindo sua conta…');
     let erro='';

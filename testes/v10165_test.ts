@@ -92,5 +92,6 @@ Deno.test("resumo semanal: semana anterior e texto", () => {
   ];
   const L = textoResumo(tx, "2026-11-09", "2026-11-15", "2026-11-16", 1000);
   const t = L.join("\n");
-  if (!t.includes("R$ 70,00") || !t.includes("R$ 100,00") || !t.includes("Mercado R$ 50,00") || !t.includes("Ritmo do mês")) throw new Error(t);
+  // Fase 2: o resumo passou a ser gasto dos últimos 7 dias + saldo livre do mês com R$/dia + fatura atual
+  if (!t.includes("Gasto nos últimos 7 dias: *R$ 70,00*") || !t.includes("Saldo livre no mês: *R$ 930,00*") || !t.includes("/dia")) throw new Error(t);
 });

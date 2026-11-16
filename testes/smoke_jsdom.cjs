@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},origemBadge,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},origemBadge,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML,iaArqErro,iaArqEscolhido,infoCot};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -71,6 +71,13 @@ doc.querySelector('#btnEye').click();
 // fase 1: nenhuma aba mostra a conexão bancária automática nem o imposto das vendas
 {const txt=[];for(const tab of ['inicio','gastos','lanc','cartoes','bancos','fii','cfg']){try{T.go(tab);txt.push(view());}catch(e){ok(false,'aba '+tab+': '+e.message);}}
  ok(!/imposto das vendas|conectar banco|banco-sync|banco-config|parc-verif|bcTxt|\birCard/i.test(txt.join('')),'sem conexão bancária automática e sem imposto das vendas nas telas');}
+// fase 2: arquivo conferido no app antes de enviar (mesmo limite do servidor), último preço e exclusão da conta
+{const b64=n=>'A'.repeat(Math.ceil(n/3)*4);
+ ok(T.iaArqErro(b64(1000),'image/jpeg')===''&&/5 MB/.test(T.iaArqErro(b64(5*1024*1024+10),'application/pdf')),'app: arquivo acima de 5 MB recusado antes de enviar');
+ ok(/Formato não aceito/.test(T.iaArqErro(b64(10),'image/heic'))&&/Formato não aceito/.test(T.iaArqEscolhido({type:'application/zip',name:'x.zip',size:10})),'app: tipo fora da lista recusado antes de enviar');
+ ok(T.iaArqEscolhido({type:'image/heic',name:'a.heic',size:9e6})==='','app: foto de outro formato passa (vira JPG antes)');
+ const ic=T.infoCot({cotFonte:'b3',cotEm:'2026-11-13T20:07:00Z',cotCache:1,preco:10});ok(/último preço de 13\/11 17:07/.test(ic),'carteira: "último preço de dd/mm hh:mm" (Brasília) quando a fonte falhou: '+ic);
+ T.go('cfg');ok(/Excluir minha conta e dados/.test(view()),'WhatsApp & Conta: "Excluir minha conta e dados"');}
 const e2=erros.filter(x=>!/Not implemented|Could not parse CSS|navigation/.test(x));
 if(e2.length)console.log('erros do jsdom:',e2.slice(0,8));
 setTimeout(()=>process.exit(process.exitCode||0),300);
