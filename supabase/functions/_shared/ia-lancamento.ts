@@ -12,7 +12,7 @@ export async function leLancamento(texto: string, catsDesp: string[], hoje: stri
   if (!key) return { ok: false, erro: "IA não configurada" };
   const cats = (catsDesp.length ? catsDesp : CATS_PADRAO).slice(0, 80);
   const dsem = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"][new Date(hoje + "T12:00:00").getDay()];
-  const prompt = `O usuário descreveu um lançamento financeiro com as próprias palavras, numa mensagem de WhatsApp (pode ter erros de digitação ou de ditado): """${texto.replace(/"""/g, "").slice(0, 600)}"""
+  const prompt = `O usuário descreveu um lançamento financeiro com as próprias palavras, numa mensagem de WhatsApp (pode ter erros de digitação ou de ditado): """${V.entradaUsuario(texto, V.ENTRADA_MAX)}"""
 Interprete datas relativas ("ontem", "sexta", "dia 5") a partir de hoje, ${hoje} (${dsem}). Valores como "45", "45 conto", "R$ 45,90", "mil e duzentos" são em reais.
 Extraia o lançamento financeiro principal.
 - valor: o total em reais (número, ponto decimal). Se houver parcelas, o valor TOTAL da compra.
@@ -24,7 +24,8 @@ Extraia o lançamento financeiro principal.
 - parcelas: número de parcelas se houver (1 se à vista).
 - recorrente: true só se a pessoa disser que se repete todo mês ("conta fixa", "fixa", "todo mês", "mensal", "mensalidade", "assinatura", "salário fixo"); senão false.
 - confianca: 0 a 1, o quanto você tem certeza do valor.
-Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), devolva valor 0 e confianca 0.`;
+Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), devolva valor 0 e confianca 0.
+${V.AVISO_DADO}`;
   let r: Response;
   try {
     r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + (Deno.env.get("GEMINI_MODEL") || "gemini-flash-lite-latest") + ":generateContent", {
@@ -47,7 +48,8 @@ Se a mensagem não for um lançamento (cumprimento, pergunta, frase sem valor), 
   let o: any;
   try { const g = await r.json(); o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return { ok: false, erro: "não consegui ler" }; }
   // v10.165: tudo o que a IA devolve passa pela validação estrita (valida-ia.ts) antes de virar lançamento
-  if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, erro: "não consegui ler" };
+  // Fase 2: fora do formato pedido = descartada
+  if (!V.conformeSchema(o, { valor: "n", data: "s", tipo: "s", descricao: "s", categoria: "s" })) return { ok: false, erro: "não consegui ler" };
   const tipo = V.tipoIA(o.tipo);
   const lista = tipo === "receita" ? CATS_RECEITA : cats;
   const l: Lanc = {
