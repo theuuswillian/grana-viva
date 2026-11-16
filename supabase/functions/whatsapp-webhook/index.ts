@@ -15,12 +15,19 @@
 //          Recuo: sem essa coluna ainda, vale wa_vinculo.resumo_semanal como na v10.165.
 //          Fora da janela de 24h da Meta só template aprovado chega: WA_TPL_RESUMO (nome do template, 1 parâmetro no corpo) e
 //          WA_TPL_LANG (padrão pt_BR). Sem template configurado, vai como texto (chega só para quem falou com o bot nas últimas 24h).
+// Fase 2: o resumo traz o gasto dos últimos 7 dias, o saldo livre do mês com quanto dá por dia e a fatura atual; os envios
+//          saem com 1,5 s de intervalo e no máximo ~100 s por chamada (o que sobrar vai na chamada seguinte do cron, mesma
+//          segunda; a semana reservada impede repetir). Consultas pelo WhatsApp respondem saldo livre do mês e fatura atual e
+//          não gastam cota. Foto/PDF/áudio acima de 5 MB ou de tipo fora da lista são recusados antes da IA.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
-import { semanaPassada, textoResumo, quemRecebeResumo } from "../_shared/resumo-semanal.ts";
-import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
+import { reservaMensagem } from "../_shared/wa-idem.ts";
+import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, janelaResumo, enviaEmLote } from "../_shared/resumo-semanal.ts";
+import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
+// Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
+import { confereBytes, ARQ_MAX, MSG_GRANDE, MSG_TIPO } from "../_shared/arquivo.ts";
 import { confereCota, registraUso, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
@@ -118,7 +125,8 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   if (!r.ok) { await registraErro(sb, FN, "ia", r.erro); await texto(tel, "Não consegui ler agora (" + r.erro + "). Tente de novo em 1 minuto."); return; }
   const L = r.r;
   if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta); return; }
-  if (L.intencao === "lancamento" && L.itens.length && await cotaBloqueia(tel, uid, ef.nivel)) return;
+  // Fase 2: só lançamento gasta cota (gastaCota); consulta e conversa nunca chegam aqui
+  if (gastaCota(L) && await cotaBloqueia(tel, uid, ef.nivel)) return;
   if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await texto(tel, (e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
   const pid = novoId();
   await sb.from("wa_pendente").delete().eq("user_id", uid).lt("criado_em", new Date(Date.now() - 24 * 3600e3).toISOString());
@@ -137,6 +145,33 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
 }
 
 async function responde(tel: string, uid: string, p: Pergunta) {
+  const h0 = hojeBR();
+  // Fase 2: "qual meu saldo / quanto posso gastar" no mês atual = saldo livre do mês (igual ao termômetro do app) e
+  //         "quanto está minha fatura" = fatura atual de cada cartão. Nenhuma das duas gasta cota.
+  if (p.tipo === "fatura" || (p.tipo === "saldo" && p.de === h0.slice(0, 8) + "01" && p.ate === h0 && !p.categoria && !p.busca)) {
+    const j = janelaResumo(h0, h0.slice(0, 8) + "01");
+    const [{ data: rs, error: er }, { data: st }, { data: kc }] = await Promise.all([
+      sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", j.de).lte("data->>data", j.ate).limit(10000),
+      sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
+      p.tipo === "fatura" ? sb.from("cartoes").select("data").eq("user_id", uid) : Promise.resolve({ data: [] as any[] })]);
+    if (er) { await registraErro(sb, FN, "pergunta", er); await texto(tel, "Não consegui consultar agora. Tente de novo em instantes."); return; }
+    const txs = (rs || []).map((x: any) => x.data || {});
+    if (p.tipo === "fatura") {
+      let cs = (kc || []).map((x: any) => x.data || {});
+      if (p.busca) { const f = cs.filter((c: any) => String(c.nome || "").toLowerCase().includes(p.busca)); if (f.length) cs = f; }
+      const F = faturaAtual(cs, txs, h0);
+      await texto(tel, !F.cartoes.length ? "Você ainda não tem cartão com dia de fechamento e vencimento no app. Cadastre em Gastos & Cartões."
+        : F.cartoes.map((c) => `💳 ${c.nome}: fatura atual *${brl(c.valor)}* · fecha ${dataBR(c.fecha, h0)} · vence ${dataBR(c.vence, h0)}`).join("\n") + (F.cartoes.length > 1 ? `\n\nTotal: *${brl(F.total)}*` : ""));
+      return;
+    }
+    const L = livreMes(txs, h0, st?.data || {});
+    const msg = L.base === "saldo"
+      ? `Saldo livre no mês (entrou menos saiu): ${L.livre < 0 ? "−" : ""}*${brl(Math.abs(L.livre))}*${L.livre > 0 ? ` · dá ${brl(L.porDia)}/dia até o fim do mês` : ""}.\n\nDefina uma meta de gastos no app para eu acompanhar o ritmo do mês.`
+      : L.livre >= 0 ? `Saldo livre no mês: *${brl(L.livre)}* · dá para gastar ${brl(L.porDia)}/dia até o fim do mês.\n(${L.base === "meta" ? "meta" : "orçamentos"} ${brl(L.lim)}, já gasto ${brl(L.gasto)})`
+      : `Você está *${brl(-L.livre)}* acima da ${L.base === "meta" ? "meta" : "soma dos orçamentos"} do mês (${brl(L.lim)}; já gasto ${brl(L.gasto)}).`;
+    await texto(tel, msg);
+    return;
+  }
   const { data: rows, error } = await sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", p.de).lte("data->>data", p.ate).limit(5000);
   if (error) { await registraErro(sb, FN, "pergunta", error); await texto(tel, "Não consegui consultar agora. Tente de novo em instantes."); return; }
   const txs = (rows || []).map((x: any) => x.data || {}).filter((t: any) => t.status !== "previsto" && !t.faturaKey && (t.tipo === "despesa" || t.tipo === "receita"));
@@ -161,18 +196,24 @@ async function responde(tel: string, uid: string, p: Pergunta) {
   await texto(tel, msg);
 }
 
-async function baixaMidia(id: string): Promise<Midia | null> {
+// Fase 2: até 5 MB (pelo tamanho que a Meta informa ANTES de baixar e pelos bytes baixados) e tipo conferido pelos bytes
+// mágicos: foto JPG/PNG/WEBP, PDF, CSV ou áudio (OGG/MP3/MP4/AMR). Recusado = mensagem clara, sem chamar a IA.
+async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> {
   const tok = Deno.env.get("WA_TOKEN");
   if (!tok || !/^[0-9]{5,30}$/.test(id)) return null;
   try {
     const m = await fetch(`${GRAPH}/${id}`, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(10000) }).then((r) => r.json());
-    if (!m?.url || (m.file_size && m.file_size > 8e6)) return null;
+    if (!m?.url) return null;
+    if (Number(m.file_size) > ARQ_MAX) return { erro: MSG_GRANDE };
     const r = await fetch(m.url, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) return null;
+    const cl = Number(r.headers.get("content-length") || 0);
+    if (cl > ARQ_MAX) { try { await r.body?.cancel(); } catch { /* */ } return { erro: MSG_GRANDE }; }
     const buf = new Uint8Array(await r.arrayBuffer());
-    if (buf.length > 8e6) return null;
+    const c = confereBytes(buf, String(m.mime_type || ""), { audio: true });
+    if (!c.ok) return { erro: c.erro };
     let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    return { mime: String(m.mime_type || "").split(";")[0] || "image/jpeg", b64: btoa(bin) };
+    return { mime: c.mime, b64: btoa(bin) };
   } catch (e) { await registraErro(sb, FN, "midia", e); return null; }
 }
 
@@ -211,8 +252,8 @@ async function trata(m: any) {
   if (!tel || !mid) return;
   // v10.165: reserva o id ANTES de processar (insert numa chave primária = "on conflict do nothing" atômico).
   // 23505 = a Meta reenviou uma mensagem já processada: ignora. Outro erro: registra e não processa (melhor perder do que gravar 2x).
-  const { error: de } = await sb.from("wa_msg").insert({ id: mid.slice(0, 200) });
-  if (de) { if (de.code !== "23505") await registraErro(sb, FN, "idempotencia", de); return; }
+  const rs = await reservaMensagem(sb, mid);
+  if (rs !== "nova") { if (rs === "erro") await registraErro(sb, FN, "idempotencia", "falha ao reservar o id da mensagem"); return; }
   const t = m.type === "text" ? String(m.text?.body || "").trim() : "";
   const cod = /^\s*(?:gv\s*)?(\d{6})\s*$/i.exec(t);
   if (cod) { await vincula(tel, cod[1]); return; }
@@ -220,11 +261,14 @@ async function trata(m: any) {
   if (!v) { await texto(tel, "Olá! Para lançar seus gastos por aqui, abra o GranaViva, vá em Ajustes > WhatsApp e mande o código de 6 dígitos que aparece lá."); return; }
   if (m.type === "interactive" && m.interactive?.type === "button_reply") { await botao(tel, v.user_id, String(m.interactive.button_reply?.id || "")); return; }
   if (m.type === "button") { return; }
-  if (m.type === "image" || m.type === "audio" || (m.type === "document" && /^image\//.test(m.document?.mime_type || ""))) {
+  if (m.type === "image" || m.type === "audio" || m.type === "document") {
+    // Fase 2: documento só foto ou PDF; o resto recebe a mensagem de formato, sem baixar
+    if (m.type === "document" && !/^(image\/(jpeg|png|webp)|application\/pdf|text\/csv)$/.test(String(m.document?.mime_type || "").split(";")[0])) { await texto(tel, MSG_TIPO); return; }
     const md = m.image || m.audio || m.document;
     if (viaSandbox) { await texto(tel, "Foto e áudio funcionam quando o número oficial do GranaViva estiver ligado. Por enquanto, mande por texto. 🙂"); return; }
     const midia = await baixaMidia(String(md?.id || ""));
     if (!midia) { await texto(tel, "Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
+    if ("erro" in midia) { await texto(tel, midia.erro); return; }
     await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia }); return;
   }
   if (m.type !== "text") { await texto(tel, "Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
@@ -259,22 +303,28 @@ async function resumoSemanal(): Promise<Record<string, unknown>> {
   const hoje = hojeBR(), { seg, de, ate } = semanaPassada(hoje);
   const vs = await listaResumo();
   if (!vs) return { erro: "lista" };
-  let enviados = 0, pulados = 0;
-  for (const v of vs || []) {
-    if (v.resumo_enviado && v.resumo_enviado >= seg) { pulados++; continue; }
+  const fila = vs.filter((v) => !(v.resumo_enviado && v.resumo_enviado >= seg)); // já recebeu esta semana: nem entra na fila
+  const j = janelaResumo(hoje, de);
+  const r = await enviaEmLote(fila, {
     // reserva a semana antes de enviar: o cron repetido (ou duas execuções juntas) não manda duas vezes
-    const { data: rv, error: re } = await sb.from("wa_vinculo").update({ resumo_enviado: seg }).eq("user_id", v.user_id).or(`resumo_enviado.is.null,resumo_enviado.lt.${seg}`).select("user_id");
-    if (re || !rv?.length) { pulados++; continue; }
-    try {
-      const [{ data: rows }, { data: st }] = await Promise.all([
-        sb.from("tx").select("data").eq("user_id", v.user_id).gte("data->>data", de < hoje.slice(0, 8) + "01" ? de : hoje.slice(0, 8) + "01").lte("data->>data", hoje).limit(5000),
-        sb.from("settings").select("data").eq("user_id", v.user_id).maybeSingle()]);
-      const meta = Number(st?.data?.cfg?.metaMes) || 0;
-      await enviaResumo(v.telefone, textoResumo((rows || []).map((x: any) => x.data || {}), de, ate, hoje, meta));
-      enviados++;
-    } catch (e) { await registraErro(sb, FN, "resumo", e); }
-  }
-  return { ok: true, semana: { de, ate }, enviados, pulados };
+    async reserva(v) {
+      const { data: rv, error: re } = await sb.from("wa_vinculo").update({ resumo_enviado: seg }).eq("user_id", v.user_id).or(`resumo_enviado.is.null,resumo_enviado.lt.${seg}`).select("user_id");
+      if (re) throw re;
+      return !!rv?.length;
+    },
+    async envia(v) {
+      const [{ data: rows, error: e1 }, { data: st }, { data: kc }] = await Promise.all([
+        sb.from("tx").select("data").eq("user_id", v.user_id).gte("data->>data", j.de).lte("data->>data", j.ate).limit(10000),
+        sb.from("settings").select("data").eq("user_id", v.user_id).maybeSingle(),
+        sb.from("cartoes").select("data").eq("user_id", v.user_id)]);
+      if (e1) throw e1;
+      await enviaResumo(v.telefone, textoResumo((rows || []).map((x: any) => x.data || {}), de, ate, hoje, st?.data || {}, (kc || []).map((x: any) => x.data || {})));
+    },
+    espera: (ms) => new Promise((ok) => setTimeout(ok, ms)),
+    agora: () => Date.now(),
+    erro: (_v, e) => registraErro(sb, FN, "resumo", e),
+  });
+  return { ok: true, semana: { de, ate }, ...r, pulados: r.pulados + (vs.length - fila.length) };
 }
 
 Deno.serve(async (req) => {
