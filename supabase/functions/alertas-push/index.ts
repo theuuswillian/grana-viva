@@ -4,7 +4,6 @@
 //   v10.79: aos domingos manda também o resumo da semana (entrou, saiu, o que vence em 7 dias, a receber de empréstimos).
 //   v10.89: lembrete do "dia de guardar" das metas com o app fechado (Ajustes › Notificações › "Dia de guardar no aparelho",
 //   padrão ligado; desligar "Dia de guardar" também para). só para quem tem Metas no plano (todos os planos desde v10.161). um por meta por mês (push_log).
-//   v10.112: DARF das vendas na bolsa (7 dias antes e no dia, chave "darf") entra no resumo das 9h.
 //   {so:'precos'} (pg_cron das 18:30 de Brasília, depois do fechamento da B3, só em dia útil): confere os alertas de preço
 //   dos ativos (chave "alvoPreco") com a cotação do Yahoo e manda um push por alerta (push_log "alvo|id|dir|preço").
 // - {dry:true} com o segredo do cron: calcula tudo e devolve o que seria enviado, sem mandar push e sem gravar push_log.
@@ -21,7 +20,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { alertasD, diarioPayload, orcamentos, resumoSemana, textoSemana, discretoOn, diaSemana, ISO_RE, guardar, textoGuardar } from "./calc.ts";
 // v10.89: plano da pessoa (metas são do Plus). planos.js é cópia gerada do /planos.js da raiz por deploy-fn.py.
 import "../_shared/planos.js";
-import { darfAvisos, alvos, alvoBateu, chaveAlvo, textoAlvo, diaUtil, capAlertas } from "./ir.ts";
+import { alvos, alvoBateu, chaveAlvo, textoAlvo, diaUtil, capAlertas } from "./alvos.ts";
 const GVP = (globalThis as any).GVP;
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -154,12 +153,11 @@ Deno.serve(async (req) => {
   let enviados = 0, usuarios = 0;
   const simulado: any[] = [];
   for (const uid of Object.keys(porUser)) {
-    const [t, c, s, mt, fi] = await Promise.all([
+    const [t, c, s, mt] = await Promise.all([
       sb.from("tx").select("data").eq("user_id", uid),
       sb.from("cartoes").select("data").eq("user_id", uid),
       sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
       sb.from("metas").select("data").eq("user_id", uid),
-      sb.from("fiis").select("data").eq("user_id", uid),
     ]);
     const cfg = s.data?.data || {};
     const D = { tx: (t.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), cartoes: (c.data || []).map((r: any) => r.data).filter(Boolean), cfg };
@@ -168,8 +166,6 @@ Deno.serve(async (req) => {
     const lista = alertasD(D, hoje);
     // orçamento: um aviso por limite, por categoria, por mês (chaves em push_log)
     const orcs = orcamentos(D, hoje);
-    /* v10.112: DARF das vendas (mesma regra de chaves do orçamento: cada fase avisa uma vez) */
-    if (on("darf")) { try { orcs.push(...(darfAvisos((fi.data || []).map((r: any) => r.data).filter((x: any) => x && typeof x === "object"), cfg?.cfg || {}, hoje) as any)); } catch (e) { console.error("darf", e); } }
     let novos: { chave: string; txt: string; disc: string }[] = [];
     if (orcs.length) {
       const { data: ja } = await sb.from("push_log").select("chave").eq("user_id", uid).in("chave", orcs.map((o) => o.chave));

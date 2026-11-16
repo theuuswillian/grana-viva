@@ -29,3 +29,11 @@ export function textoResumo(txs: any[], de: string, ate: string, hoje: string, m
   if (!sem.length) linhas.push("Nenhum lançamento na semana passada. Mande seus gastos por aqui: \"almoço 32\".");
   return linhas;
 }
+
+/* Fase 1: quem recebe o resumo. A preferência fica em settings.whatsapp_resumo_semanal (padrão ligado); só recebe quem tem
+   o WhatsApp ligado (linha em wa_vinculo). prefs: user_id -> valor da coluna (sem linha em settings = ligado). */
+export function quemRecebeResumo<T extends { user_id: string }>(vinculos: T[], prefs: Map<string, boolean | null | undefined>): T[] {
+  return (vinculos || []).filter((v) => v && v.user_id && prefs.get(v.user_id) !== false);
+}
+/* valor mostrado no app: sem linha em settings (ou coluna nula) = ligado, que é o padrão da coluna */
+export const resumoLigado = (linha: { whatsapp_resumo_semanal?: boolean | null } | null | undefined) => linha?.whatsapp_resumo_semanal !== false;

@@ -10,14 +10,16 @@
 // v10.165: idempotência por id da mensagem (wa_msg, chave primária, gravado ANTES de processar: reenvio da Meta = ignorado)
 //          e resumo semanal pelo WhatsApp: pg_cron toda segunda às 11:00 UTC (8h em America/Sao_Paulo) chama
 //          POST ?acao=resumo-semanal com x-cron-secret (= CRON_SECRET, o mesmo do alertas-push). Só para quem ligou o
-//          "Resumo semanal" (wa_vinculo.resumo_semanal) e no máximo um por semana (wa_vinculo.resumo_enviado, reservado antes de enviar).
+//          "Resumo semanal" e no máximo um por semana (wa_vinculo.resumo_enviado, reservado antes de enviar).
+//          Fase 1: a preferência fica em settings.whatsapp_resumo_semanal (padrão ligado; sem linha em settings = ligado).
+//          Recuo: sem essa coluna ainda, vale wa_vinculo.resumo_semanal como na v10.165.
 //          Fora da janela de 24h da Meta só template aprovado chega: WA_TPL_RESUMO (nome do template, 1 parâmetro no corpo) e
 //          WA_TPL_LANG (padrão pt_BR). Sem template configurado, vai como texto (chega só para quem falou com o bot nas últimas 24h).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
-import { semanaPassada, textoResumo } from "../_shared/resumo-semanal.ts";
+import { semanaPassada, textoResumo, quemRecebeResumo } from "../_shared/resumo-semanal.ts";
 import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 import { confereCota, registraUso, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -237,10 +239,26 @@ async function enviaResumo(tel: string, linhas: string[]) {
   if (tpl) return envia(tel, { type: "template", template: { name: tpl, language: { code: Deno.env.get("WA_TPL_LANG") || "pt_BR" }, components: [{ type: "body", parameters: [{ type: "text", text: linhas.join(" · ").replace(/\s+/g, " ").slice(0, 1000) }] }] } });
   return texto(tel, linhas.join("\n") + "\n\nPara parar: GranaViva > WhatsApp & Conta > Resumo semanal.");
 }
+/* quem tem o WhatsApp ligado e não desligou o resumo (settings.whatsapp_resumo_semanal). null = falha ao ler */
+async function listaResumo(): Promise<{ user_id: string; telefone: string; resumo_enviado: string | null }[] | null> {
+  const { data: vs, error } = await sb.from("wa_vinculo").select("user_id,telefone,resumo_enviado").limit(5000);
+  if (error) { await registraErro(sb, FN, "resumo-lista", error); return null; }
+  const ids = (vs || []).map((v: any) => v.user_id), prefs = new Map<string, boolean | null>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: ps, error: pe } = await sb.from("settings").select("user_id,whatsapp_resumo_semanal").in("user_id", ids.slice(i, i + 200));
+    if (pe) { // recuo: coluna nova ainda não existe (migração 20261116 não aplicada) -> regra da v10.165
+      const { data: velhos, error: e2 } = await sb.from("wa_vinculo").select("user_id,telefone,resumo_enviado").eq("resumo_semanal", true).limit(5000);
+      if (e2) { await registraErro(sb, FN, "resumo-lista", e2); return null; }
+      return velhos || [];
+    }
+    for (const p of ps || []) prefs.set(p.user_id, p.whatsapp_resumo_semanal);
+  }
+  return quemRecebeResumo(vs || [], prefs);
+}
 async function resumoSemanal(): Promise<Record<string, unknown>> {
   const hoje = hojeBR(), { seg, de, ate } = semanaPassada(hoje);
-  const { data: vs, error } = await sb.from("wa_vinculo").select("user_id,telefone,resumo_enviado").eq("resumo_semanal", true).limit(5000);
-  if (error) { await registraErro(sb, FN, "resumo-lista", error); return { erro: "lista" }; }
+  const vs = await listaResumo();
+  if (!vs) return { erro: "lista" };
   let enviados = 0, pulados = 0;
   for (const v of vs || []) {
     if (v.resumo_enviado && v.resumo_enviado >= seg) { pulados++; continue; }

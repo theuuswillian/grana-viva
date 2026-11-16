@@ -266,7 +266,6 @@ const DISC: Record<string, [string, (n: number) => string]> = {
   fatura: ["Uma fatura de cartão", (n) => `${n} faturas de cartão`],
   fixa: ["Uma conta fixa", (n) => `${n} contas fixas`],
   conta: ["Uma conta prevista", (n) => `${n} contas previstas`],
-  darf: ["Um DARF", (n) => `${n} DARFs`],
 };
 export function textoDiscreto(k: string, n: number): string {
   const [g, q] = [k.slice(0, k.indexOf("|")), k.slice(k.indexOf("|") + 1)];

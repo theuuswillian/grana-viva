@@ -1,6 +1,6 @@
 // v10.161: deno test testes/cota_test.ts  (cotas mensais, corte de alertas do radar e preços aceitos pelo webhook)
 import { confereCota, usoMes, registraUso, inicioMesSP, hojeSP, corpoLimite, MSG_LIMITE_LEGADO, clienteLimiteV2 } from "../supabase/functions/_shared/cota.ts";
-import { capAlertas, alvos, criadoAlvo } from "../supabase/functions/alertas-push/ir.ts";
+import { capAlertas, alvos, criadoAlvo } from "../supabase/functions/alertas-push/alvos.ts";
 import { confereValores } from "../supabase/functions/_shared/mercadopago.ts";
 const GVP = (globalThis as any).GVP;
 const eq = (a: unknown, b: unknown, m = "") => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(m + " esperado " + JSON.stringify(b) + " veio " + JSON.stringify(a)); };
