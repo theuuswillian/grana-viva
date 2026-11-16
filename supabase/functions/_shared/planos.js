@@ -102,10 +102,12 @@
   // cabe(nivel, chave, usados): ainda dá para usar mais um?
   function cabe(nivel, k, usados) { var l = limite(nivel, k); if (ilimitado(l)) return true; if (typeof l !== "number") return false; return (usados | 0) < l; }
   // corpo do erro LIMITE_PLANO que as funções devolvem (HTTP 402) e o app entende
+  // v10.165: texto único do aviso de limite (servidor e app usam o mesmo)
+  var MSG_LIMITE = "Limite mensal do plano Grátis atingido. Recarregue o app ou assine o Plano Pro em Conta > Planos para liberar uso ilimitado.";
   function erroLimite(recurso, nivel) {
     var c = COTAS[recurso]; if (!c) return null;
     var n = limite(nivel == null ? 0 : nivel, c.k);
-    return { erro: "LIMITE_PLANO", recurso: recurso, limite: n, mensagem: c.msg(n) };
+    return { erro: "LIMITE_PLANO", recurso: recurso, limite: n, mensagem: MSG_LIMITE };
   }
   // plano mais barato que libera o recurso (para o texto do aviso de upgrade)
   function planoMinimo(recurso) { var x = RECURSOS[recurso]; if (!x) return COTAS[recurso] ? "pro" : null; return x.nivel >= 1 ? "pro" : "gratis"; }

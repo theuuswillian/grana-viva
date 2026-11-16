@@ -28,7 +28,7 @@ t("limites", () => {
   for (const r of Object.keys(G.RECURSOS)) assert.ok(G.pode(0, r), "recurso liberado no Grátis: " + r);
 });
 t("erro LIMITE_PLANO", () => {
-  assert.deepEqual(G.erroLimite("ia_frase", 0), { erro: "LIMITE_PLANO", recurso: "ia_frase", limite: 15, mensagem: "Você atingiu o limite de 15 lançamentos com IA deste mês no plano Grátis." });
+  assert.deepEqual(G.erroLimite("ia_frase", 0), { erro: "LIMITE_PLANO", recurso: "ia_frase", limite: 15, mensagem: "Limite mensal do plano Grátis atingido. Recarregue o app ou assine o Plano Pro em Conta > Planos para liberar uso ilimitado." });
   const c = G.erroLimite("ia_comprovante", 0); assert.equal(c.limite, 3); assert.equal(c.recurso, "ia_comprovante");
   assert.equal(G.erroLimite("whatsapp", 0).limite, 5);
   assert.equal(G.COTAS.cartoes.beneficio, "Cartões ilimitados"); assert.equal(G.COTAS.radar.beneficio, "Radar de Preços ilimitado");
@@ -68,7 +68,7 @@ t("site e app sem preços antigos", () => {
 t("v10.162: cota de extrato com IA", () => {
   assert.equal(G.limite(0, "ia_extrato_mes"), 1); assert.equal(G.limite(2, "ia_extrato_mes"), -1);
   assert.equal(G.cabe(0, "ia_extrato_mes", 0), true); assert.equal(G.cabe(0, "ia_extrato_mes", 1), false); assert.equal(G.cabe(2, "ia_extrato_mes", 999), true);
-  assert.deepEqual(G.erroLimite("ia_extrato", 0), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: "Você atingiu o limite de 1 importação de extrato com IA deste mês no plano Grátis." });
+  assert.deepEqual(G.erroLimite("ia_extrato", 0), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: "Limite mensal do plano Grátis atingido. Recarregue o app ou assine o Plano Pro em Conta > Planos para liberar uso ilimitado." });
   assert.equal(G.COTAS.ia_extrato.beneficio, "Importação de extratos ilimitada com IA");
   assert.ok(G.PRO_DIFERENCIAIS.includes("Importação de extratos ilimitada com IA"));
 });

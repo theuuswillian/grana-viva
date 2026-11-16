@@ -27,7 +27,7 @@ Deno.test("frase: Grátis bloqueia no 15º, Pro nunca", async () => {
   eq(await usoMes(sb, "u", "frase", AG), 14);
   eq(await confereCota(sb, "u", 0, "frase", AG), null, "14 usados ainda pode");
   await registraUso(sb, "u", "frase", AG);
-  eq(await confereCota(sb, "u", 0, "frase", AG), { erro: "LIMITE_PLANO", recurso: "ia_frase", limite: 15, mensagem: "Você atingiu o limite de 15 lançamentos com IA deste mês no plano Grátis." });
+  eq(await confereCota(sb, "u", 0, "frase", AG), { erro: "LIMITE_PLANO", recurso: "ia_frase", limite: 15, mensagem: MSG_LIMITE_LEGADO });
   eq(await confereCota(sb, "u", 2, "frase", AG), null, "Pro ilimitado");
 });
 Deno.test("comprovante 3 e whatsapp 5", async () => {
@@ -64,7 +64,7 @@ Deno.test("v10.162 extrato: Grátis 1 por mês, separado do comprovante", async 
   eq(await confereCota(sb, "u", 0, "extrato", AG), null, "1ª importação pode");
   await registraUso(sb, "u", "extrato", AG);
   eq(sb.linhas.find((r) => r.k === "extrato")?.n, 1, "conta em k='extrato'");
-  eq(await confereCota(sb, "u", 0, "extrato", AG), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: "Você atingiu o limite de 1 importação de extrato com IA deste mês no plano Grátis." });
+  eq(await confereCota(sb, "u", 0, "extrato", AG), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: MSG_LIMITE_LEGADO });
   eq(await confereCota(sb, "u", 0, "comprovante", AG), null, "extrato não gasta a cota de comprovante");
   eq(await usoMes(sb, "u", "comprovante", AG), 2);
   eq(await confereCota(sb, "u", 2, "extrato", AG), null, "Pro ilimitado");
