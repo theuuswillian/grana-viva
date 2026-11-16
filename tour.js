@@ -4,8 +4,8 @@
 (window.__gvParte=window.__gvParte||{}).tour=function(X){
 'use strict';
 const {$,I,esc,logoSVG,go,abreRapido,salvar}=X;
-/* v10.160: no MVP (X.MVP) o tour é opcional (Ajustes) e mostra só as 4 abas */
-const TOUR_MVP=[
+/* v10.160: o tour é opcional (Ajustes) e mostra só as 4 abas */
+const TOUR_PASSOS=[
   {k:'oi'},
   {tab:'inicio',ic:'home',cor:'#10b981',t:'Início',d:'Escreva o gasto na barra do topo ("Almoço 45 crédito") ou toque na câmera para ler o recibo. Logo abaixo, o termômetro mostra se você está no ritmo da sua meta do mês.'},
   {tab:'gastos',ic:'card',cor:'#8b5cf6',t:'Gastos & Cartões',d:'Limite do mês, faturas abertas e parcelas, e o extrato com a origem de cada lançamento: IA, WhatsApp, Recibo ou Manual. O planejamento fica aqui também.'},
@@ -13,30 +13,13 @@ const TOUR_MVP=[
   {tab:'cfg',ic:'chat',cor:'#22c55e',t:'WhatsApp & Conta',d:'Ligue o WhatsApp e lance mandando uma mensagem. Aqui também ficam as notificações, a assinatura e os ajustes. Quiser rever este tour, ele fica aqui.'},
   {k:'fim'}
 ];
-const TOUR_FULL=[
-  {k:'oi'},
-  {alvo:'#fab',ic:'plus',cor:'#10b981',t:'Lance em segundos',d:'Este botão registra um gasto, uma entrada ou uma transferência. Dá para fotografar o comprovante e deixar a IA preencher.'},
-  {tab:'inicio',ic:'home',cor:'#10b981',t:'Início',d:'Seu mês num relance: saldo, o que entrou e saiu, contas que vencem e como os gastos andam dia a dia.'},
-  {tab:'lanc',ic:'receipt',cor:'#f97316',t:'Despesas',d:'Todos os seus lançamentos. Filtre por mês, categoria, conta ou cartão e toque em um para editar, duplicar ou anexar.'},
-  {tab:'orc',ic:'gauge',cor:'#eab308',t:'Orçamentos',d:'Ponha um limite por categoria e veja se está no ritmo. Informe sua renda e o app monta um plano 50/30/20 para você.'},
-  {tab:'cartoes',ic:'card',cor:'#8b5cf6',t:'Cartões',d:'Fatura atual, fechamento, vencimento e limite usado de cada cartão, com parcelas já distribuídas nas faturas certas.'},
-  {tab:'bancos',ic:'bank',cor:'#0ea5e9',t:'Bancos',d:'Suas contas e o saldo de cada uma. Se quiser, conecte pelo Open Finance para os lançamentos chegarem sozinhos.'},
-  {tab:'metas',ic:'flag',cor:'#ec4899',t:'Metas',d:'Junte dinheiro para um objetivo e veja quanto falta e quanto guardar por mês para chegar lá.'},
-  {tab:'fii',ic:'chart',cor:'#a3e635',t:'Investimentos',d:'FIIs, ações, renda fixa e cripto num lugar só, com proventos e a evolução do que você investiu.'},
-  {tab:'pat',ic:'scale',cor:'#14b8a6',t:'Patrimônio',d:'Tudo o que você tem menos o que deve. O número que mostra se você está, de fato, ficando mais rico.'},
-  {tab:'plan',ic:'compass',cor:'#6366f1',t:'Planejamento',d:'Olhe para frente: o saldo dos próximos meses com as contas fixas e parcelas que já estão por vir.'},
-  {tab:'rel',ic:'report',cor:'#f43f5e',t:'Relatório',d:'Para onde foi o dinheiro: categorias, comparação entre meses e exportação.'},
-  {tab:'cfg',ic:'sliders',cor:'#64748b',t:'Ajustes',d:'Tema, categorias, bloqueio com PIN, backup e sua conta. Quiser rever este tour, ele fica aqui.'},
-  {k:'fim'}
-];
-const TOUR_PASSOS=X.MVP?TOUR_MVP:TOUR_FULL;
 let TOUR=null;
 function tourPC(){return matchMedia('(min-width:1024px)').matches&&$('#sbNav')&&$('#sbNav').offsetParent!==null;}
 function tourAlvo(p){
   if(p.alvo)return $(p.alvo);
   if(!p.tab)return null;
   if(tourPC())return $('#sbNav [data-tab="'+p.tab+'"]');
-  if(X.MVP){const tb=$('#tabbar [data-tab="'+p.tab+'"]');if(tb&&tb.offsetParent!==null)return tb;}
+  {const tb=$('#tabbar [data-tab="'+p.tab+'"]');if(tb&&tb.offsetParent!==null)return tb;}
   return $('#view h2')||$('#view .card');
 }
 function tourMarca(){try{localStorage.setItem('gv-tour-'+(X.USER&&X.USER.id),'1');}catch(e){}if(!X.S.cfg.tourVisto){X.S.cfg.tourVisto=1;salvar();}}
@@ -92,7 +75,7 @@ function tourMostra(i){
   }else if(p.k==='fim'){
     card.innerHTML='<div class="tr-confete" aria-hidden="true">'+Array.from({length:26},(_,j)=>'<i style="--x:'+(Math.cos(j*2.4)*140|0)+'px;--y:'+(-60-Math.abs(Math.sin(j*1.7))*120|0)+'px;--r:'+(j*47%360)+'deg;--c:'+['#10b981','#a3e635','#8b5cf6','#ec4899','#eab308','#0ea5e9'][j%6]+';--d:'+(j%7)*.04+'s"></i>').join('')+'</div>'
       +'<div class="tr-ok">'+I('check')+'</div><h3>Tudo pronto!</h3><p>Por onde quer começar?</p>'
-      +'<div class="tr-passos">'+(X.MVP?'<button data-tr="ir" data-t="cfg"><span style="--c:#22c55e">'+I('chat')+'</span><b>Ligar o WhatsApp</b><small>e lançar por mensagem</small></button>':'<button data-tr="ir" data-t="bancos"><span style="--c:#0ea5e9">'+I('bank')+'</span><b>Cadastrar minha conta</b><small>e o saldo de hoje</small></button>')
+      +'<div class="tr-passos">'+'<button data-tr="ir" data-t="cfg"><span style="--c:#22c55e">'+I('chat')+'</span><b>Ligar o WhatsApp</b><small>e lançar por mensagem</small></button>'
       +'<button data-tr="ir" data-t="cartoes"><span style="--c:#8b5cf6">'+I('card')+'</span><b>Adicionar um cartão</b><small>com fechamento e vencimento</small></button>'
       +'<button data-tr="ir" data-t="novo"><span style="--c:#10b981">'+I('plus')+'</span><b>Lançar o primeiro gasto</b><small>leva 10 segundos</small></button></div>'
       +'<div class="tr-acts"><button class="btn tr-sec" data-tr="fim">Explorar sozinho</button></div>';

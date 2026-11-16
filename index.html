@@ -1180,13 +1180,7 @@ html.claro .wTot,html.claro .astNm b,html.claro .astVal b{color:var(--hd)}
 .bcIc{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;flex:none}.bcIc .i{width:22px;height:22px}
 .bcSt{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line);color:var(--mut)}.bcSt:empty{display:none}
 .bcSt i{width:7px;height:7px;border-radius:50%;background:currentColor}.bcSt.on{color:#4ade80;border-color:rgba(74,222,128,.35)}.bcSt.on i{box-shadow:0 0 0 3px rgba(74,222,128,.2)}
-.bcGrid{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
-.bcGrid>span{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
-.bcGrid small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt);opacity:.65}.bcGrid b{font-size:15px;color:var(--hd)}
-.bcBks{grid-column:1/-1}.bcBks b{display:flex;align-items:center;gap:8px}.bcLg{width:30px;height:30px;border-radius:9px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.08);overflow:hidden;background:#fff;display:inline-flex;align-items:center;justify-content:center}.bcLg img{width:100%;height:100%;object-fit:cover}.bcLg .bl-ini{font-size:9px;color:#333}
-.bcNota{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--txt);opacity:.7;margin:10px 2px 14px}.bcNota .i{width:13px;height:13px}
 #bcBtns{display:flex!important;flex-direction:column;gap:10px}
-.bcSync{width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;min-height:48px}
 .bcSec{display:flex;gap:10px}.bcSec .btn2{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px}.bcSec .i{width:15px;height:15px}
 .bcDel{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:1px solid rgba(248,113,113,.35);color:#f87171;border-radius:14px;font:inherit;font-size:14px;cursor:pointer;min-height:44px}
 
@@ -1545,7 +1539,7 @@ html.claro .rfChip.warn{color:#b45309}
 .catMaisBtn{display:block;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1px dashed var(--line);background:none;color:var(--a1);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
 .catRow .cr-n{word-break:normal;overflow-wrap:normal;hyphens:auto;-webkit-hyphens:auto}
 @media (max-width:420px){.catRow .cr-n{font-size:12.5px;letter-spacing:-.015em}}
-.pushTxt,#bcTxt.bcIntro{font-size:13.5px;line-height:1.45;color:var(--mut)}
+.pushTxt{font-size:13.5px;line-height:1.45;color:var(--mut)}
 .gvAtu{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit;font-size:13.5px;box-shadow:0 12px 30px -10px rgba(0,0,0,.6);cursor:pointer;animation:rSobe .3s ease-out;white-space:nowrap;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box}
 /* v10.126: com left:50% o botão só tinha meia tela de largura e o "atualizar" vazava; agora a largura é a do conteúdo */
 .gvAtu .i{width:16px;height:16px;color:var(--a1);flex:none}.gvAtu span{overflow:hidden;text-overflow:ellipsis}.gvAtu b{flex:none;color:var(--a1);font-weight:700;margin-left:2px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--a1) 14%,transparent)}
@@ -2334,14 +2328,6 @@ html.preto .walDet .walFat{background:radial-gradient(120% 90% at 100% 0%,color-
 .empCobra{display:flex;align-items:center;gap:10px;width:100%;margin:-6px 0 16px;padding:11px 14px;border-radius:16px;border:1px solid rgba(251,113,133,.35);background:rgba(251,113,133,.08);color:var(--txt);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .empCobra>svg:first-child{width:18px;height:18px;color:#fb7185;flex:none}.empCobra span{flex:1;min-width:0}.empCobra>svg:last-child{width:16px;height:16px;opacity:.6}
 @media(min-width:1200px){#view[data-v=inicio]>.empCobra{grid-column:span 4;margin:0!important}}
-/* v10.111: imposto das vendas (DARF) */
-.irCard{margin-top:12px}
-.irHead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.irHead b{display:block;color:var(--hd)}.irHead small{display:block;color:var(--mut);font-size:12px}
-.irIc{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,#f59e0b 14%,transparent);color:#f59e0b}
-.irIc svg{width:18px;height:18px}
-.irRow .txt small{white-space:normal!important;line-height:1.3}
-.irPrej,.irNota{color:var(--mut);margin:8px 0 0}
 /* v10.110: contas fixas. valor em cima e editar/excluir embaixo, à direita, para o nome ganhar a largura */
 .fx-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;row-gap:4px;align-items:center}
 .fx-row>.fx-ic{grid-row:1/3}
@@ -2735,7 +2721,6 @@ html.claro .mcIc{color:#4d7c0f}
 html.claro .rvAviso{color:#b45309}
 .asSec{margin-top:10px}.asSec+.asSec{border-top:1px solid var(--line);padding-top:10px}
 .asSecH{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.asSecH h5{margin:0;font-size:13px;font-weight:700;color:var(--txt);letter-spacing:.01em}.asSecH span{font-size:12px;color:var(--mut)}
-.ccBcoNota{color:var(--mut);font-size:12.5px;line-height:1.4}
 
 .ccFm{margin-top:14px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--txt) 10%,transparent)}
 .ccFmH{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}.ccFmH small{letter-spacing:0;text-transform:none;font-weight:500}
@@ -2755,17 +2740,6 @@ html.claro .ccFmP.st-paga small{color:#16a34a}html.claro .ccFmP.st-vencida small
 #mf .fatDica .i{flex:none;width:15px;height:15px;margin-top:1px;color:#60a5fa}#mf .fatDica[hidden]{display:none}
 
 /* v10.96: verificar parcelas */
-.prcBtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}
-.prcIc{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--txt) 8%,transparent);color:var(--mut);flex:none}.prcIc svg{width:19px;height:19px}
-.prcBt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.prcBt small{color:var(--mut);font-size:12px;line-height:1.35}.prcBtn>svg{width:18px;height:18px;opacity:.55;flex:none}
-.bcParc{width:100%;margin-top:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px}.bcParc .i{width:15px;height:15px}
-.prcTop{font-size:16px;font-weight:600;line-height:1.4;margin:0 0 6px;color:var(--hd,var(--txt))}
-.prcNota{margin:0 0 12px;line-height:1.45}
-.prcLista{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;margin:0 0 14px}
-.prcIt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid color-mix(in srgb,var(--txt) 10%,transparent);background:color-mix(in srgb,var(--txt) 3%,transparent);cursor:pointer}
-.prcIt.off{opacity:.5}.prcIt input{margin-top:3px;flex:none;width:18px;height:18px}
-.prcTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.prcTx b{font-size:14px;overflow-wrap:anywhere}.prcTx small{color:var(--mut);font-size:12px;line-height:1.35}
-.prcV{font-size:14px;flex:none;white-space:nowrap}
 
 /* v10.103: tour de boas-vindas */
 #tour{position:fixed;inset:0;z-index:2147483000;opacity:0;transition:opacity .25s,background .3s}
@@ -3249,7 +3223,6 @@ html:not(.claro) .yocAn{color:#fbbf24}
 #view[data-v=fii]>.rpCard{grid-column:1/8;margin:28px 0 0;align-self:stretch;padding:20px 22px 16px}
 #view[data-v=fii]>.yocCard{grid-column:8/-1;margin:28px 0 0;align-self:stretch;padding:20px 22px 16px}
 #view[data-v=fii]>.rpCard.rpVazio{grid-column:1/-1}
-#view[data-v=fii]>.irCard{grid-column:1/-1;margin:20px 0 0;padding:18px 22px 14px}
 #view[data-v=fii]>.rpCard .rpChart{height:150px}
 #view[data-v=fii]>.yocCard .yocList{max-height:420px;overflow:auto}
 }
@@ -3589,7 +3562,7 @@ html:not(.claro) .rpaEst{color:#fbbf24}
 .omniPrev em{display:block;font-style:normal;font-size:11.5px;color:var(--mut)}
 @media(min-width:1200px){#view[data-v=inicio]>.omni{grid-column:1/-1;order:1}}
 </style><style id="v157pat">@media (min-width:1000px){#view[data-v=pat]{max-width:1240px}#view[data-v=pat] .ptGrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}}</style><style id="v160mvp">
-/* v10.160: MVP em 4 abas (só vale com html.mvp, que o app.js liga quando MVP_MODE=true) */
+/* v10.160: app em 4 abas (html.mvp, ligado sempre pelo app.js) */
 .tabbar{display:none}
 html.mvp .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:75;display:grid;grid-template-columns:repeat(4,1fr);padding:6px max(6px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 6px) max(6px,env(safe-area-inset-right,0px));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border-top:1px solid color-mix(in srgb,var(--txt) 9%,transparent)}
 .tbItem{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-height:52px;padding:5px 2px 2px;border:0;background:none;color:var(--mut);font:inherit;font-size:10.5px;font-weight:600;line-height:1.15;text-align:center;letter-spacing:-.01em;cursor:pointer;border-radius:12px;-webkit-tap-highlight-color:transparent}

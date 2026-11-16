@@ -1,10 +1,9 @@
 
 (function(){
 'use strict';
-/* v10.160: MVP enxuto. true = 4 abas (Início, Gastos & Cartões, Patrimônio, WhatsApp & Conta), barra inteligente com recibo,
-   alertas de preço na carteira, Pluggy (Open Finance) e imposto das vendas (IR/DARF) escondidos. false = app completo como na v10.159.
-   Nada do servidor é apagado: só a interface e as chamadas automáticas ao pluggy-sync mudam. */
-const MVP_MODE=true;
+/* v10.160: 4 abas (Início, Gastos & Cartões, Patrimônio, WhatsApp & Conta), barra inteligente com recibo e alertas de preço
+   na carteira. Fase 1: a chave de versão antiga/nova saiu; este é o único modo do app. A conexão bancária automática e o
+   cálculo de imposto das vendas foram removidos (lançamentos que já vieram do banco continuam, com o selo "Importado"). */
 /* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
    (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
 const ERR_KEY='gv-erros',ERR_MAX=50;
@@ -151,11 +150,10 @@ function I(n,c){if(n&&EMO2LU[n])n=EMO2LU[n];if(n&&!ICONS[n]&&EMO_RE.test(n))retu
 /* v10.84: cada logo com o próprio id do degradê (o mesmo id em 3 lugares é inválido e some quando o primeiro está escondido) */
 let LOGO_N=0;
 const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
-const NAV_FULL=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
-/* v10.160: no MVP a navegação principal tem 4 abas; as telas de detalhe ficam em "mais" (barra lateral) e dentro de cada aba */
+/* v10.160: a navegação principal tem 4 abas; as telas de detalhe ficam em "mais" (barra lateral) e dentro de cada aba */
 const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'WhatsApp & Conta',i:'chat'}];
 const NAV_MVP_MAIS=[{t:'lanc',l:'Extrato',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'cartoes',l:'Cartões e faturas',i:'card'},{t:'plan',l:'Planejamento',i:'compass'},{t:'rel',l:'Relatório',i:'report'},{t:'pat',l:'Patrimônio líquido',i:'scale'},{t:'metas',l:'Metas',i:'flag'},{t:'bancos',l:'Contas e bancos',i:'bank'}];
-const NAV=MVP_MODE?NAV_MVP:NAV_FULL;
+const NAV=NAV_MVP;
 /* ---------- v10.82: planos (v10.161: Grátis e Pro; o Plus antigo vale como Pro) ----------
    A regra vem de planos.js (window.GVP), o mesmo arquivo que as funções do servidor usam.
    O plano é lido UMA vez por login da tabela assinaturas (a pessoa só lê a própria linha; só o servidor escreve).
@@ -1142,7 +1140,7 @@ function saldoBanco0(b){
   let s=cents(b.saldo);
   /* saldoFecha: o saldo informado pelo banco já inclui os lançamentos do próprio dia QUE VIERAM DO BANCO.
      v10.52: lançamento manual feito hoje (sem origem no banco) também entra no saldo do dia. */
-  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.pluggyId))));
+  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||t.origem==='banco')));
   S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!antes(o.data))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
     if(t.faturaKey)pagsFatura(t).forEach(p=>{if(p.conta===b.id&&p.data&&!antes(p.data,p))s-=cents(p.valor);}); // cada pagamento na sua data e conta
@@ -1156,9 +1154,8 @@ function saldoBanco0(b){
 }
 /* limite comprometido: compras cuja fatura ainda não venceu (ciclo aberto + fatura fechada a pagar).
    antes somava todas as compras desde sempre, então o limite nunca era liberado. */
-function usadoCartaoTotal(c){return memo('uc|'+c.id+'|'+c.fechamento+'|'+c.vencimento+'|'+c.bancoData+'|'+c.bancoUsado,()=>usadoCartaoTotal0(c));}
+function usadoCartaoTotal(c){return memo('uc|'+c.id+'|'+c.fechamento+'|'+c.vencimento,()=>usadoCartaoTotal0(c));}
 function usadoCartaoTotal0(c){
-  if(c.bancoData&&c.bancoUsado!=null&&isFinite(c.bancoUsado))return c.bancoUsado; // o banco informa o usado de verdade
   const hj=hojeISO();let tot=0;
   /* v10.55: faturas indexadas uma vez (antes: uma busca na lista inteira para cada compra) */
   const FAT={},RF={};S.tx.forEach(x=>{if(x.faturaKey&&!FAT[x.faturaKey])FAT[x.faturaKey]=x;});
@@ -1713,7 +1710,7 @@ function listaAlertas(completo){
   try{out.push(...empAvisos(AD));}catch(e){}
   try{if(notifOn('metas'))out.push(...mtAvisos().map(a=>({id:a.id,k:a.k,h:a.h})));}catch(e){} // v10.87: dia de guardar
   try{out.push(...assinAvisos());}catch(e){}
-  try{out.push(...irAvisos());}catch(e){} // v10.111: DARF e alerta de preço
+  try{out.push(...alvoAvisos());}catch(e){} // v10.111: alerta de preço
   /* v10.66: cada alerta tem id estável; quem não tem ganha um pelo texto. excluídos somem, lidos ficam apagados */
   const est=alEst();
   return out.map(a=>{if(!a.id)a.id='tx|'+hashObj(a.h.replace(/<[^>]+>/g,''));const e=est[a.id];a.lido=!!e&&e[0]==='l';a.fora=!!e&&e[0]==='x';return a;}).filter(a=>!a.fora);
@@ -1738,9 +1735,9 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
+const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
-function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.filter(x=>!(MVP_MODE&&x[0]==='darf')).map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
+function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
   if(!USER){toast('entre na sua conta primeiro');return;}
   if(!pushSuportado()){toast('Este navegador não aceita notificações push.',true);return;}
@@ -2672,75 +2669,9 @@ function calcOps(ops){
   });
   return {qtd:q,pago:custo/100,realizado:real/100,proventos:prov/100,erro};
 }
-/* ---------- v10.111: imposto sobre vendas na bolsa (DARF 6015) e alerta de preço ----------
-   regras (Receita Federal, 2026): operações comuns (ações, ETFs, BDRs) 15%; ganho em AÇÕES isento quando o total vendido
-   em ações no mês não passa de R$ 20 mil (ETF e BDR não têm isenção); FIIs 20%, sem isenção. Prejuízo compensa só na mesma
-   categoria (comuns com comuns, FII com FII), sem prazo. Desconta o IRRF de 0,005% sobre as vendas. Imposto abaixo de R$ 10
-   passa para o mês seguinte. Vence no último dia útil do mês seguinte. Day trade (compra e venda no mesmo dia) e cripto não
-   entram na conta: o app avisa para conferir. É uma estimativa a partir do que você registrou. */
-const IR_TIPOS={acao:'comum',etf:'comum',bdr:'comum',fii:'fii'};
-function irVendas(){
+/* ---------- v10.111: alerta de preço por ativo (fiis.alvoP/alvoDir) ---------- */
+function alvoAvisos(){
   const out=[];
-  (S.fiis||[]).forEach(f=>{const cat=IR_TIPOS[tipoOf(f)];if(!cat)return;
-    const ord=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
-    let q=0,custo=0;const compraDia=new Set();
-    ord.forEach(o=>{
-      if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
-      else if(o.tipo==='compra'){q=Q8(q+o.qtd);custo+=cents(o.qtd*o.preco)+cents(o.taxas);if(o.data)compraDia.add(o.data);}
-      else if(o.tipo==='venda'&&o.data){if(o.qtd>q+1e-9||!q)return;
-        const baixa=Math.round(custo*o.qtd/q),bruto=cents(o.qtd*o.preco);
-        out.push({mes:o.data.slice(0,7),cat,acao:tipoOf(f)==='acao',ticker:f.ticker,venda:bruto,ganho:bruto-cents(o.taxas)-baixa,dt:compraDia.has(o.data)});
-        custo-=baixa;q=Q8(q-o.qtd);if(q<=0){q=0;custo=0;}}
-    });});
-  return out;
-}
-function ultimoDiaUtil(ano,mes0){let d=new Date(ano,mes0+1,0);while(!diaUtil(isoDe(d)))d.setDate(d.getDate()-1);return isoDe(d);}
-/* um registro por mês com venda: o que foi vendido, o ganho de cada categoria, o imposto e o DARF (em centavos) */
-function irApura(){
-  const V=irVendas();if(!V.length)return [];
-  const M={};V.forEach(v=>{const m=M[v.mes]||(M[v.mes]={mes:v.mes,vAcoes:0,vComum:0,vFii:0,gAcoes:0,gOutros:0,gFii:0,dt:false,tickers:new Set()});
-    if(v.cat==='fii'){m.vFii+=v.venda;m.gFii+=v.ganho;}else{m.vComum+=v.venda;if(v.acao){m.vAcoes+=v.venda;m.gAcoes+=v.ganho;}else m.gOutros+=v.ganho;}
-    if(v.dt)m.dt=true;m.tickers.add(v.ticker);});
-  let pC=0,pF=0,resto=0;const out=[];
-  Object.keys(M).sort().forEach(k=>{const m=M[k];
-    m.isento=m.vAcoes>0&&m.vAcoes<=2000000;
-    /* lucro de ações isento não entra; prejuízo de ações entra sempre */
-    let bC=(m.isento&&m.gAcoes>0?0:m.gAcoes)+m.gOutros,bF=m.gFii;
-    if(bC>0){const u=Math.min(bC,pC);bC-=u;pC-=u;}else{pC+=-bC;bC=0;}
-    if(bF>0){const u=Math.min(bF,pF);bF-=u;pF-=u;}else{pF+=-bF;bF=0;}
-    const irrf=Math.round((bC>0?m.vComum:0)*0.00005)+Math.round((bF>0?m.vFii:0)*0.00005);
-    m.imposto=Math.max(0,Math.round(bC*0.15)+Math.round(bF*0.20)-irrf);
-    const tot=m.imposto+resto;
-    if(tot>=1000){m.darf=tot;m.acumulado=resto;resto=0;}else{m.darf=0;m.acumulado=resto;resto=tot;}
-    m.prejC=pC;m.prejF=pF;m.resto=resto;
-    const a=+k.slice(0,4),mm=+k.slice(5,7)-1;m.vence=ultimoDiaUtil(mm===11?a+1:a,(mm+1)%12);
-    m.tickers=[...m.tickers];out.push(m);});
-  return out;
-}
-const irMesNome=k=>MESES_LONGO[+k.slice(5,7)-1]+' de '+k.slice(0,4);
-function irCardHTML(){
-  if(MVP_MODE)return ''; // v10.160: imposto das vendas escondido no MVP
-  const A=irApura();if(!A.length)return '';
-  const hj=hojeISO(),mesH=hj.slice(0,7),ab=A.filter(m=>m.darf>0&&m.vence>=hj||m.mes===mesH).slice(-3).reverse();
-  if(!ab.length)return '';
-  const pagos=(S.cfg&&S.cfg.darfPago)||{};
-  const linha=m=>{const aberto=m.mes===mesH,pago=!!pagos[m.mes];
-    const st=aberto?`mês em andamento · ${m.imposto>0?'até agora '+brl((m.imposto+m.acumulado)/100):'sem imposto até agora'}`
-      :m.darf>0?(pago?'pago':`vence ${fmtData(m.vence)}`):'sem DARF';
-    return `<div class="tx irRow"><div class="txt"><b>${esc(irMesNome(m.mes))}</b><small>${st}${m.isento&&m.gAcoes>0?' · ações isentas (vendas até R$ 20 mil)':''}${m.dt?' · tem venda no dia da compra: day trade não está nesta conta':''}${m.resto>0&&!aberto?' · '+brl(m.resto/100)+' passa para o mês seguinte':''}</small></div>
-      <div class="val ${m.darf>0&&!pago&&!aberto?'neg':''}">${aberto?'':m.darf>0?brl(m.darf/100):'R$ 0'}</div>${m.darf>0&&!aberto?`<div class="acts"><button data-act="darf-pago" data-id="${m.mes}" title="${pago?'desmarcar':'marcar como pago'}" aria-label="${pago?'desmarcar pago':'marcar como pago'}">${I(pago?'close':'check')}</button></div>`:''}</div>`;};
-  const ult=A[A.length-1];
-  return `<div class="card irCard"><div class="irHead"><span class="irIc">${I('receipt')}</span><div><b>Imposto das vendas</b><small>DARF código 6015 · estimativa pelo que você registrou</small></div></div>
-    <div class="lista">${ab.map(linha).join('')}</div>
-    ${ult.prejC>0||ult.prejF>0?`<p class="small irPrej">prejuízo para abater depois: ${ult.prejC>0?'ações, ETFs e BDRs '+brl(ult.prejC/100):''}${ult.prejC>0&&ult.prejF>0?' · ':''}${ult.prejF>0?'FIIs '+brl(ult.prejF/100):''}</p>`:''}
-    <p class="small irNota">Gere o DARF no Sicalc da Receita ou no app da corretora. Cripto e day trade não entram nesta conta.</p></div>`;
-}
-/* avisos no sino: DARF do mês passado a pagar (do dia 1 até o vencimento) e preço que chegou no alvo */
-function irAvisos(){
-  const out=[],hj=hojeISO(),pagos=(S.cfg&&S.cfg.darfPago)||{};
-  if(!MVP_MODE&&notifOn('darf'))irApura().forEach(m=>{if(!(m.darf>0)||pagos[m.mes]||m.mes>=hj.slice(0,7)||m.vence<hj)return;
-    const d=Math.round((new Date(m.vence+'T12:00:00')-new Date(hj+'T12:00:00'))/864e5);
-    out.push({id:'darf|'+m.mes+'|'+(d<=3?'3':'p'),k:d<=3?'venc':'aviso',h:`${I('receipt')} DARF das vendas de <b>${esc(irMesNome(m.mes))}</b>: ${brl(m.darf/100)} · ${d===0?'vence hoje':d===1?'vence amanhã':'vence em '+d+' dias ('+fmtData(m.vence)+')'}`});});
   if(notifOn('alvoPreco'))(S.fiis||[]).forEach(f=>{if(!(f.alvoP>0)||!(f.preco>0))return;const sob=f.alvoDir!=='abaixo';
     if(sob?f.preco<f.alvoP:f.preco>f.alvoP)return;
     out.push({id:'alvo|'+f.id+'|'+f.alvoDir+'|'+f.alvoP,k:'aviso',h:`${I('up')} <b>${esc(f.ticker)}</b> ${sob?'subiu':'caiu'} para ${brl(f.preco)} · seu alerta era ${sob?'acima':'abaixo'} de ${brl(f.alvoP)} <button class="btn2 sm" data-act="alvo-fii" data-id="${f.id}">ajustar</button>`});});
@@ -2759,7 +2690,6 @@ function alvoForm(fid){
     if(!(f.alvoP>0)||f.alvoP!==a||f.alvoDir!==(v.dir==='abaixo'?'abaixo':'acima'))f.alvoEm=Date.now(); // v10.162: criação do alerta (alertas-push: o mais antigo vale no Grátis)
     f.alvoP=a;f.alvoDir=v.dir==='abaixo'?'abaixo':'acima';salvar();render();atualizaSino();toast('Alerta salvo: '+f.ticker+(f.alvoDir==='acima'?' acima de ':' abaixo de ')+brl(a));});
 }
-function darfPago(mes){S.cfg.darfPago=Object.assign({},(S.cfg&&S.cfg.darfPago)||{});if(S.cfg.darfPago[mes])delete S.cfg.darfPago[mes];else S.cfg.darfPago[mes]=hojeISO();salvar();render();atualizaSino();}
 function aplicaOps(f){const r=calcOps(f.ops||[]);f.cotas=r.qtd;f.pago=r.pago;f.realizado=r.realizado;f.proventos=r.proventos;}
 function garanteInicial(f){
   if(!f.ops)f.ops=[];
@@ -2997,7 +2927,7 @@ function abreRapido(){
    As telas de detalhe (Extrato, Orçamentos, Cartões, Planejamento, Relatório, Metas, Bancos, Patrimônio líquido) continuam
    iguais e ficam dentro da aba do grupo: a barra de baixo acende a aba do grupo e a tela ganha "voltar". */
 const MVP_GRUPO={inicio:'inicio',gastos:'gastos',lanc:'gastos',orc:'gastos',cartoes:'gastos',plan:'gastos',rel:'gastos',fii:'fii',pat:'fii',metas:'fii',bancos:'fii',cfg:'cfg'};
-function grupoDe(t){return MVP_MODE?(MVP_GRUPO[t]||t):t;}
+function grupoDe(t){return MVP_GRUPO[t]||t;}
 /* nomes antigos e atalhos de link (#radar, #ajustes, gv-tab de outra versão) */
 const ROTA_ALIAS={gastos:'gastos',cartao:'cartoes',faturas:'cartoes',fatura:'cartoes',orcamento:'orc',orcamentos:'orc',despesas:'lanc',lancamentos:'lanc',extrato:'lanc',
   planejamento:'plan',relatorio:'rel',patrimonio:'fii',investimentos:'fii',carteira:'fii',cotacoes:'fii',radar:'fii',alertas:'fii',bens:'pat',liquido:'pat',
@@ -3006,12 +2936,12 @@ function rotaResolve(t){
   t=String(t||'').toLowerCase();
   if(VIEWS[t])return t;
   if(ROTA_ALIAS[t])return ROTA_ALIAS[t];
-  if(/^(ir|imposto|darf)$/.test(t))return 'fii'; // o imposto das vendas ficava na carteira
+  if(/^(ir|imposto)$/.test(t))return 'fii'; // links antigos da carteira
   return 'inicio';
 }
 function pintaNav(){
   const g=grupoDe(TAB),principal=new Set(NAV.map(n=>n.t));
-  document.querySelectorAll('.sb-item[data-tab]').forEach(b=>{const t=b.dataset.tab;b.classList.toggle('on',MVP_MODE&&principal.has(t)?t===g:t===TAB);});
+  document.querySelectorAll('.sb-item[data-tab]').forEach(b=>{const t=b.dataset.tab;b.classList.toggle('on',principal.has(t)?t===g:t===TAB);});
   document.querySelectorAll('#tabbar [data-tab]').forEach(b=>{const on=b.dataset.tab===g;b.classList.toggle('on',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
 }
 /* faixa "voltar" das telas de detalhe: volta para onde a pessoa estava, senão para a aba do grupo */
@@ -3022,19 +2952,20 @@ function mvpVoltaHTML(){
 
 /* ---------- origem do lançamento (selo discreto no extrato) ----------
    novos lançamentos guardam t.origem ('ia' | 'recibo' | 'manual') no próprio JSON do lançamento (tabela tx, coluna data):
-   sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Banco/extrato importado:
-   pluggyId, importado ou impId. Lançamento antigo sem nenhuma marca = Manual. */
+   sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Extrato importado ou
+   lançamento antigo da conexão bancária (origem 'banco'): importado, impId ou origem 'banco', sempre com o selo "Importado".
+   Lançamento antigo sem nenhuma marca = Manual. */
 const ORIGEM_L={ia:'IA',wa:'WhatsApp',rec:'Recibo',man:'Manual',imp:'Importado'};
 function origemTx(t){
   if(!t)return 'man';
   if(t.origem==='ia')return 'ia';
   if(t.origem==='recibo')return 'rec';
   if(t.origem==='whatsapp'||(Array.isArray(t.tags)&&t.tags.includes('whatsapp')))return 'wa';
-  if(t.origem==='banco'||t.pluggyId||t.importado||t.impId)return 'imp';
+  if(t.origem==='banco'||t.importado||t.impId)return 'imp';
   return 'man';
 }
 function origemBadge(t){
-  if(!MVP_MODE||!t||t.faturaKey)return '';
+  if(!t||t.faturaKey)return '';
   const k=origemTx(t);
   return `<span class="txOrg o-${k}" title="lançado por: ${ORIGEM_L[k]}">${ORIGEM_L[k]}</span>`;
 }
@@ -3345,7 +3276,7 @@ function restauraAba(){
 }
 function go(t){
   if(!VIEWS[t])t=rotaResolve(t); // v10.160: nomes antigos (radar, investimentos, ajustes...) caem na aba certa
-  if(MVP_MODE&&t==='fii'&&FMODO==='radar'){FMODO='carteira';try{localStorage.setItem('gv-fmodo','carteira');}catch(e){}}
+  if(t==='fii'&&FMODO==='radar'){FMODO='carteira';try{localStorage.setItem('gv-fmodo','carteira');}catch(e){}}
   TAB=t;NAV_EXPLICITA=true;
   gravaAba(t);
   if(t==='fii'){atualizaCotacoes();atualizaCripto();atualizaCDI();}
@@ -3358,7 +3289,7 @@ function go(t){
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
 const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes',gastos:'Gastos & Cartões'};
-if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'WhatsApp & Conta'});
+Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'WhatsApp & Conta'});
 const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
@@ -3417,7 +3348,7 @@ function saldoLivre(){
 }
 function pintaSaldoHd(){
   const el=$('#hdSaldo');if(!el)return;
-  if(!MVP_MODE||!USER||!((S.bancos||[]).length)){el.hidden=true;return;}
+  if(!USER||!((S.bancos||[]).length)){el.hidden=true;return;}
   let v=0;try{v=saldoLivre();}catch(e){el.hidden=true;return;}
   el.hidden=false;el.innerHTML=`<small>saldo livre</small><b class="${v<0&&!OCULTO?'neg':''}">${OCULTO?'R$ •••••':brl(v)}</b>`;
   el.setAttribute('aria-label','saldo livre: '+(OCULTO?'oculto':brl(v)));
@@ -3428,16 +3359,16 @@ function render(){
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)&&/[?&]gvtest\b/.test(location.search)))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
   if(!window.__alOk&&USER&&/[?&]alertas=1/.test(location.search)){window.__alOk=1;history.replaceState(null,'',location.pathname);setTimeout(abrirAlertas,300);}
-  if(MVP_MODE&&!window.__hsOk){window.__hsOk=1;const h=/^#\/?([a-z]+)$/i.exec(location.hash||'');if(h){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}const t=rotaResolve(h[1].toLowerCase());if(t!==TAB)setTimeout(()=>go(t),0);}} // v10.160: links #gastos, #patrimonio, #radar...
-  if(!window.__rdOk&&USER&&/[?&]radar=1/.test(location.search)){window.__rdOk=1;history.replaceState(null,'',location.pathname);FMODO=MVP_MODE?'carteira':'radar';try{localStorage.setItem('gv-fmodo','radar');}catch(e){}setTimeout(()=>go('fii'),200);} // v10.155: push do Radar
+  if(!window.__hsOk){window.__hsOk=1;const h=/^#\/?([a-z]+)$/i.exec(location.hash||'');if(h){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}const t=rotaResolve(h[1].toLowerCase());if(t!==TAB)setTimeout(()=>go(t),0);}} // v10.160: links #gastos, #patrimonio, #radar...
+  if(!window.__rdOk&&USER&&/[?&]radar=1/.test(location.search)){window.__rdOk=1;history.replaceState(null,'',location.pathname);FMODO='carteira';try{localStorage.setItem('gv-fmodo','radar');}catch(e){}setTimeout(()=>go('fii'),200);} // v10.155: push do Radar
   const v=$('#view');
   MEMO={};const memoTok=MEMO;setTimeout(()=>{if(MEMO===memoTok)MEMO=null;},120); // aba em segundo plano não roda rAF: a memória não pode ficar viva
   if(TAB==='inicio'||TAB==='metas')setTimeout(()=>{try{mtLembra();}catch(e){}},0); // v10.87
   const recT=TAB_RECURSO[TAB],bloq=!!(recT&&!pode(recT)); // v10.82: aba de outro plano mostra o convite (os dados ficam guardados)
   const espera=!!(recT&&USER&&!PLANO_LIDO&&!PLANO_FALHA&&window.GVP); // v10.129: logado e plano ainda não lido: não mostra a aba paga liberada
-  if(MVP_MODE){try{document.documentElement.dataset.gvTab=TAB;}catch(e){}}
+  try{document.documentElement.dataset.gvTab=TAB;}catch(e){}
   let html;try{html=espera?`<div class="head"><h2>${esc(TAB_NOME[TAB]||'')}</h2></div><div class="card plEspera" aria-busy="true">Carregando…</div>`:bloq?viewBloqueio(recT):VIEWS[TAB]();}catch(e){MEMO=null;throw e;}
-  if(MVP_MODE&&grupoDe(TAB)!==TAB&&html.indexOf('class="navVolta"')<0)html=mvpVoltaHTML()+html; // v10.160: tela de detalhe volta para a aba dela
+  if(grupoDe(TAB)!==TAB&&html.indexOf('class="navVolta"')<0)html=mvpVoltaHTML()+html; // v10.160: tela de detalhe volta para a aba dela
   /* v10.91: sem "piscar". a mesma tela redesenhada (sync, cotações, CDI, volta ao app) só troca o que mudou:
      HTML igual = nada é tocado (nem os nós, nem a rolagem, nem os gráficos); HTML diferente = troca só os blocos
      de primeiro nível que mudaram, sem a animação de entrada e mantendo a rolagem. a animação fica só para troca de aba. */
@@ -3459,7 +3390,7 @@ function render(){
     RENDER_QUIETO=quieto;
     if(!bloq&&AFTER[TAB])AFTER[TAB]();
     RENDER_QUIETO=false;
-    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();atualizaWaUI();}
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaWaUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
     try{cabeNum(v);}catch(e){}
@@ -3478,7 +3409,7 @@ let CABE_T;addEventListener('resize',()=>{clearTimeout(CABE_T);CABE_T=setTimeout
 
 const VIEWS={
   gastos:viewGastos,
-  inicio:MVP_MODE?viewInicioMVP:viewInicio,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
+  inicio:viewInicioMVP,lanc:viewLanc,orc:viewOrc,fii:viewFii,metas:viewMetas,pat:viewPat,plan:viewPlan,cartoes:viewCartoes,bancos:viewBancos,rel:viewRel,cfg:viewCfg
 };
 const AFTER={
   cartoes:()=>{ccIniciaTilt();ccDepois();ccPinta();},
@@ -3488,7 +3419,7 @@ const AFTER={
     if(bc)drawBars(bc,1);if(dc)drawDonut(dc,1);
     animar(1000,p=>{if(bc)drawBars(bc,p);if(dc)drawDonut(dc,p);});
   },
-  fii:()=>{updCountdown();if(FMODO==='radar'||MVP_MODE)radarAtualiza(false);},
+  fii:()=>{updCountdown();radarAtualiza(false);},
   rel:()=>{const c=$('#cRel'),d=$('#cRelDia');if(c||d)animar(800,p=>{if(c)drawRel(c,p);if(d)drawRelDia(d,p);});const ps=$('#rsPills');if(ps){const on=ps.querySelector('.on');if(on)ps.scrollLeft=on.offsetLeft-ps.clientWidth/2+on.clientWidth/2;}}
 };
 
@@ -3538,23 +3469,6 @@ function sparkPer(per){
   return {vals:out,lab};
 }
 const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
-/* v10.99: gráfico de gastos acumulados desenhado em SVG pelo próprio app (antes biblioteca de 210 KB só para este gráfico).
-   sai pronto no HTML da tela, então o redesenho por diferença (v10.91) só troca o gráfico quando os números mudam */
-function gastoSVG(per){
-  const sp=sparkPer(per),v=sp.vals;if(!v.length)return '';
-  const W=300,H=120,T=8,B=6,mx=Math.max(...v,0)||1,n=v.length;
-  const L=6,R=W-6,X=i=>n===1?R:L+i*(R-L)/(n-1),Y=y=>T+(H-T-B)*(1-y/mx),f=x=>x.toFixed(1);
-  const P=v.map((y,i)=>[X(i),Y(y)]);
-  /* curva monótona: suave como antes, sem passar acima ou abaixo dos pontos */
-  let d;
-  if(n===1)d='M'+L+' '+f(P[0][1])+'L'+R+' '+f(P[0][1]);
-  else{d='M'+f(P[0][0])+' '+f(P[0][1]);const m=[];
-    for(let i=0;i<n;i++){const a=i>0?(P[i][1]-P[i-1][1])/(P[i][0]-P[i-1][0]):null,b=i<n-1?(P[i+1][1]-P[i][1])/(P[i+1][0]-P[i][0]):null;
-      m.push(a===null?b:b===null?a:a*b<=0?0:(a+b)/2);}
-    for(let i=0;i<n-1;i++){const h=(P[i+1][0]-P[i][0])/3;d+='C'+f(P[i][0]+h)+' '+f(P[i][1]+m[i]*h)+' '+f(P[i+1][0]-h)+' '+f(P[i+1][1]-m[i+1]*h)+' '+f(P[i+1][0])+' '+f(P[i+1][1]);}}
-  const ul=P[n-1];
-  return `<div class="spk" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="spkG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3e635" stop-opacity=".35"/><stop offset="1" stop-color="#a3e635" stop-opacity="0"/></linearGradient></defs><path class="spkA" d="${d}L${R} ${H}L${L} ${H}Z" fill="url(#spkG)"/><path class="spkL" d="${d}" fill="none" stroke="#a3e635" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg><i class="spkP" style="left:${(ul[0]/W*100).toFixed(2)}%;top:${(ul[1]/H*100).toFixed(2)}%"></i></div>`;
-}
 /* previsão do fim do mês: saldo de hoje + o que ainda está previsto até o fim do mês
    (receitas − despesas previstas, inclusive atrasadas) − compras no cartão cujo ciclo fecha até o fim do mês.
    faturas fechadas e ainda não pagas (o saldo só desconta fatura paga) entram pelo que falta pagar, se vencem até o fim do mês. */
@@ -3610,7 +3524,7 @@ function ppEstado(){
   if(S.cfg.onbOk)return null;
   const m=mesAtual(),P=[
     ['bank','Adicione sua conta','o banco onde seu dinheiro fica','novo-banco',(S.bancos||[]).length>0],
-    ['plus','Registre um gasto ou receita',MVP_MODE?'por frase, foto do recibo ou WhatsApp':'ou conecte o banco e importe sozinho','q-gasto',S.tx.length>0],
+    ['plus','Registre um gasto ou receita','por frase, foto do recibo ou WhatsApp','q-gasto',S.tx.length>0],
     ['receipt','Cadastre uma conta fixa','aluguel, internet, salário','nova-fixa',(S.fixas||[]).length>0],
     ['gauge','Defina um orçamento','um limite por categoria no mês','hm-go-orc',Object.values(limOrc(m)).some(v=>v>0)]];
   const ok=P.filter(p=>p[4]).length;if(ok===P.length||S.tx.length>=30)return null;
@@ -3631,7 +3545,6 @@ function primeirosPassosHTML(topo){
 }
 /* v10.67: estado vazio com ícone, título, texto e ação */
 function vazioHTML(ic,tit,txt,acts){return `<div class="card vz"><span class="vz-ic">${I(ic)}</span><b>${tit}</b><p>${txt}</p>${acts?`<div class="vz-a">${acts}</div>`:''}</div>`;}
-function homeVar(){return 'b';}
 function serieSaldo(dias){
   const hj=new Date();const ini=new Date(hj.getFullYear(),hj.getMonth(),hj.getDate()-dias+1);const iniISO=isoDe(ini);
   let base=0;const delta={};
@@ -3653,112 +3566,9 @@ function sparkSVG(vals,w,h,id){
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
 const HM_AT=[['lanc','receipt','Despesas','#f472b6','Gastos'],['orc','gauge','Orçamentos','#fbbf24','Orçamento'],['cartoes','card','Cartões','#60a5fa','Cartões'],['rel','report','Relatório','#a78bfa','Relatório'],['plan','compass','Planejamento','#34d399','Planejar'],['pat','scale','Patrimônio','#22d3ee','Patrimônio']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
-function homeTopo(v,o){
-  const {saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}=o;
-  const ser=serieSaldo(30),var30=ser.length>1?ser[ser.length-1]-ser[0]:0;
-  const bp=brlParts(saldo);
-  const mesAnt=MESES[+mesOff(per&&per.auto?2:1).slice(5,7)-1]; // v10.89: mês anterior automático compara com o mês antes dele
-  const gastoPct=rec>0?Math.round(des/rec*100):null;
-  const eye=`<button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button>`;
-  const chips=`<div class="hPer" role="tablist">${PER_OPS.map(([k])=>`<button class="hPerC${PER.k===k?' on':''}" data-act="hm-per" data-id="${k}" role="tab" aria-selected="${PER.k===k}">${PER_CURTO[k]}</button>`).join('')}</div>${PER.k==='custom'?`<div class="perBar hPerCustom"><input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até"></div>`:''}`;
-  const pc=pou===null?0:Math.max(0,Math.min(100,pou));
-  const R=34,C=2*Math.PI*R;
-  // variante B: cartão vibrante
-  return `
-  ${primeirosPassosHTML(true)}
-  <div class="hB-hero${saldo<0?' hNeg':''}">
-    <div class="hB-blob b1"></div><div class="hB-blob b2"></div><div class="hB-noise"></div>
-    <div class="hB-top">${saldo<0?'<span class="hB-brand hB-brandNeg"><i class="hB-led"></i>Saldo negativo</span>':`<span class="hB-brand">${I('wallet')}Saldo total</span>`}${eye}</div>
-    <div class="hB-tap tap" data-act="nav-contas" role="button" tabindex="0" aria-label="ver suas contas"><div class="hB-saldo nw fit${bp.s?' hB-saldoNeg':''}" aria-label="${OCULTO?'saldo oculto':(bp.s?'saldo negativo de ':'saldo de ')+brl(Math.abs(saldo))}"><span class="hB-cur">R$</span><span class="hB-num">${OCULTO?'•••••':bp.i+bp.d}</span></div>
-    <div class="hB-sub">${Math.abs(var30)<0.005?'<span class="hB-var">sem variação</span> nos últimos 30 dias':`<span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias`}</div>
-    ${I('chevR','hB-tapCh')}</div>
-    ${(()=>{const r=mtReservado();return r>0?`<button type="button" class="hB-mt" data-act="hm-go" data-id="metas" aria-label="${OCULTO?'valor oculto':brl(r)} reservado em metas, abrir metas">${I('piggy')}<span><b class="nw">${brl(r)}</b> reservado em metas</span>${I('chevR')}</button>`:'';})()}
-    ${semanasHTML()}
-    <div class="hB-strip">
-      <div class="tap" data-act="nav-rec" role="button" tabindex="0" aria-label="ver receitas · ${esc(pl)}"><small><i class="hB-dot g"></i>Entrou</small><b class="nw fit">${brl(rec)}</b></div>
-      <div class="tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><small><i class="hB-dot r"></i>Saiu</small><b class="nw fit">${brl(des)}</b></div>
-      <div class="tap" data-act="nav-tudo" role="button" tabindex="0" aria-label="ver todos os lançamentos · ${esc(pl)}"><small><i class="hB-dot ${sal<0?'r':'w'}"></i>${sal<0?'Faltou':'Sobrou'}</small><b class="nw fit${sal<0?' hB-red':''}">${brl(Math.abs(sal))}</b></div>
-    </div>
-  </div>
-  <div class="hB-at" role="navigation" aria-label="atalhos">${HM_AT.map(([t,ic,l,c,cu])=>`<button class="hB-a" data-act="hm-go" data-id="${t}" style="--c:${c}" aria-label="${l}"><span class="hB-ai">${I(ic)}</span><span class="hB-al">${t==='plan'||t==='orc'?cu:l}</span>${I('chevR','hB-ch')}</button>`).join('')}</div>
-  <button class="hB-ask" data-act="assist">${I('chat','hB-askI')}<span><b>Pergunte sobre seu dinheiro</b><small>quanto gastei, maior categoria, parcelas, metas</small></span>${I('chevR','hB-ch')}</button>
-  ${primeirosPassosHTML()}${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  ${chips}${mesAntHTML(per)}
-  <div class="hB-res">
-    <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
-    <div class="hB-row tap" data-act="nav-rel" role="button" tabindex="0" aria-label="ver relatório do mês"><div class="hB-rl"><span class="hB-ri g">${I('piggy')}</span><div><b>Você guardou</b><small>${pou===null?'sem receitas no período':(sal<0?'gastou mais do que entrou':'da renda do período')}</small></div></div><b class="hB-rv ${sal<0?'neg':'pos'}">${pou===null?'—':(OCULTO?'••%':pou+'%')}</b></div>
-    <div class="hB-bar"><i class="g" style="width:${pc}%"></i><span style="left:20%"></span></div>
-    <p class="hB-tip">${pou===null?'':pou>=20?'acima da meta de 20% recomendada':'meta recomendada: guardar 20% da renda'}</p>
-    <div class="hB-row tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hB-rl"><span class="hB-ri r">${I('arrowDown')}</span><div><b>Gastos vs ${MESES_LONGO[MESES.indexOf(mesAnt)]||mesAnt}</b><small>${per&&per.auto?'mês inteiro':'até o dia '+dia} · ${brlK(desAnt)} → ${brlK(des)}</small></div></div><b class="hB-rv ${dDes>0?'neg':'pos'}">${dDes===null?'—':(dDes>0?'+':dDes<0?'−':'')+Math.abs(dDes)+'%'}</b></div>
-    <div class="hB-bar two"><i class="m" style="width:${Math.round(desAnt/Math.max(des,desAnt,1)*100)}%"></i><i class="r" style="width:${Math.round(des/Math.max(des,desAnt,1)*100)}%"></i></div>
-  </div>`;
-}
 function mesAntHTML(per){
   if(!per||!per.auto)return '';const h=new Date(),at=MESES_LONGO[h.getMonth()],an=MESES_LONGO[new Date(h.getFullYear(),h.getMonth()-1,1).getMonth()];
   return `<div class="card mesAnt" role="status">${I('calendar')}<span><b>Mostrando ${an}, o mês anterior.</b><small>${at.charAt(0).toUpperCase()+at.slice(1)} começou há pouco. Até o dia 3 a Início mostra o mês fechado.</small></span><button type="button" class="btn2 sm" data-act="per-atual">ver ${at}</button></div>`;
-}
-function viewInicio(){
-  const per=periodo(),pl=per.label,ehMes=PER.k==='mes'&&!per.auto;
-  const saldo=saldoTotal(),rec=somaMes(per,'receita'),des=somaMes(per,'despesa'),sal=(cents(rec)-cents(des))/100;
-  const sl=despesasPorCat(per),tot=sl.reduce((a,s)=>a+s.v,0);
-  const p=proximoPag(),pv=previsaoMes();
-  const hoje=new Date(),dia=hoje.getDate();
-  /* comparação justa no mês corrente: até o mesmo dia do mês anterior */
-  const desAnt=ehMes?despAte(mesOff(1),dia):per.auto?somaMes(mesOff(2),'despesa'):0;
-  const dDes=(ehMes||per.auto)&&desAnt?Math.round((des-desAnt)/desAnt*100):null;
-  const pou=rec>0?Math.round(sal/rec*100):null;
-  const mxF=Math.max(rec,des,1);
-  const tile=(cls,ic,lb,val,sub)=>`<div class="rsT ${cls}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b>${sub}</div>`;
-  const nome=nomeUsuario();
-  const dataLonga=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  /* últimos lançamentos */
-  const ult=S.tx.filter(t=>t.data&&t.data<=hojeISO()&&(t.tipo==='receita'||t.tipo==='despesa')).sort((a,b)=>b.data<a.data?-1:b.data>a.data?1:0).slice(0,5);
-  const ultHTML=ult.length?`<div class="card hmUlt"><div class="hmH"><h4>últimos lançamentos</h4><button class="hmLink" data-act="ir-lanc">ver todos${I('chevR')}</button></div>${ult.map(t=>{const r=t.tipo==='receita';const cc=r?'#4ade80':corCat(t.categoria);return `<div class="rmRow tap" data-act="tx-menu" data-id="${t.id}" role="button" tabindex="0" aria-label="abrir lançamento"><span class="rmI" style="--cc:${cc}">${I(catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${esc(t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status&&t.status!=='pago'?' · '+esc(t.status):''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':'−'} ${brl(t.valor)}</span></div>`;}).join('')}</div>`:'';
-  /* categorias */
-  const catHTML=`<div class="card hmCat"><div class="hmH"><h4>para onde foi o dinheiro</h4><span class="hmSub">${pl}</span></div>
-    ${sl.length?`<div class="donutWrap"><canvas id="cDonut"></canvas></div><div class="topCats1">${sl.slice(0,6).map(s=>`<div class="tcRow tap" data-act="nav-cat" data-id="${esc(s.l)}" role="button" tabindex="0" aria-label="ver despesas de ${esc(s.l)}"><div class="tcTop"><span class="tcN"><i class="dot" style="background:${s.color}"></i><span>${esc(s.l)}</span></span><span class="tcV">${brl(s.v)}${I('chevR','tapCh')}</span></div><div class="tcBar"><i style="width:${(s.v/(sl[0].v||1)*100).toFixed(1)}%;background:${s.color}"></i></div><span class="tcP">${tot?Math.round(s.v/tot*100):0}% das despesas</span></div>`).join('')}${sl.length>6?`<button class="hmLink hmMais" data-act="ir-rel">mais ${sl.length-6} ${sl.length-6>1?'categorias':'categoria'} no relatório${I('chevR')}</button>`:''}</div>`:'<p class="vazio">sem despesas neste período.</p>'}
-  </div>`;
-  /* previsão */
-  const prevHTML=pv.tem?`<div class="card hmPrev tap" data-act="prev-abre" role="button" tabindex="0" aria-label="ver o que entra na previsão"><div class="hmH"><h4>previsão para o fim do mês</h4>${I('chevR','tapCh')}</div>
-    <div class="hmPrevV ${pv.fim<0?'neg':'pos'} nw">${brl(pv.fim)}</div>
-    <div class="hmPrevL"><span><small>hoje</small><b class="nw">${brl(pv.hoje)}</b></span>${pv.rec?`<span><small>a receber</small><b class="nw pos">+ ${brl(pv.rec)}</b></span>`:''}${pv.emp?`<span><small>empréstimos</small><b class="nw pos">+ ${brl(pv.emp)}</b></span>`:''}${pv.des?`<span><small>a pagar</small><b class="nw neg">− ${brl(pv.des)}</b></span>`:''}${pv.cart?`<span><small>cartão</small><b class="nw neg">− ${brl(pv.cart)}</b></span>`:''}</div>
-    ${(()=>{const L=receitasAtrasadas();return L.length?`<button type="button" class="hmTrab" data-act="trab-lote">${I('calendar')}<span>${L.length===1?'1 receita atrasada':L.length+' receitas atrasadas'} · ainda não recebeu? informe quando cai</span>${I('chevR')}</button>`:'';})()}
-    <p class="hmNota">estimativa com o que já está lançado como previsto.</p></div>`:'';
-  /* carteira só aparece se houver investimentos */
-  const patr=patrimonio(),dm=divMensal();
-  /* v10.157: card da carteira redesenhado (rótulos curtos, variação do dia, resultado, próximo provento com valor e prazo; toque abre a Carteira) */
-  const cartHTML=(patr||dm||p)?carteiraInicioHTML(patr,dm,p):'';
-  const HV=homeVar();
-  const TOPO=HV?homeTopo(HV,{saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}):null;
-  const avisoMesAnt=mesAntHTML(per);
-  return `
-  <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
-  ${omniHTML()}
-  ${TOPO!==null?TOPO+'<!--':''}<div class="hmHero ${saldo<0?'neg':''}">
-    <div class="hmHeroTop"><span>saldo total</span><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
-    <div class="hmSaldo nw">${brl(saldo)}</div>
-    <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
-  </div>
-  <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  ${avisoMesAnt}<div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
-    ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
-  <div class="relRes hmRes">
-    ${tile('rec','arrowUp','receitas',brl(rec),'<span class="rsD">entradas pagas</span>')}
-    ${tile('des','arrowDown','despesas',brl(des),dDes===null?'<span class="rsD">saídas pagas</span>':`<span class="rsD ${dDes>0?'neg':'pos'}">${dDes>0?'▲':dDes<0?'▼':'='} ${Math.abs(dDes)}% vs ${MESES[+mesOff(1).slice(5,7)-1]} até dia ${dia}</span>`)}
-    ${tile('sal '+(sal<0?'neg':''),'wallet','saldo do período',brl(sal),`<span class="rsD">${sal<0?'gastou mais do que entrou':'sobrou no período'}</span>`)}
-    ${tile('pou','piggy','você guardou',pou===null?'—':(OCULTO?'••%':pou+'%'),`<span class="rsD">${pou===null?'sem receitas no período':'da renda do período'}</span>`)}
-  </div>${TOPO!==null?'-->':''}
-  <div class="hmDuo">${prevHTML}
-  <div class="card hmSpark tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}${I('chevR','tapCh')}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]" id="cSpark">${gastoSVG(per)}</div></div></div>
-  <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${assinHTML()}${orcInicioHTML()}${ultHTML}</div></div>
-  <div class="card tap" data-act="nav-rel" role="button" tabindex="0" aria-label="abrir relatório">
-    <h4 class="hmH0">Receitas x despesas ${per.meses>=3?'· '+pl:'· últimos 6 meses'}${I('chevR','tapCh')}</h4>
-    <canvas id="cBar" class="cv"></canvas>
-    <div class="legend"><span><i class="dot" style="background:${COR_REC()}"></i>receitas</span><span><i class="dot" style="background:${COR_DES()}"></i>despesas</span></div>
-  </div>
-  ${cartHTML}
-  ${dicaInstalarHTML(false)}`;
 }
 function proximosVenc(dias){const h=new Date();return vencEntre(hojeISO(),isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),true);}
 /* v10.79: o que vence entre ini e ate (atrasados=true também traz as previstas de antes de ini). a função alertas-push repete esta regra no resumo semanal */
@@ -3977,7 +3787,7 @@ function viewLanc(){
     </div>`;
   return `
   ${voltaHTML()}<div class="head lHead"><h2>${F.st==='aberto'?'A pagar e a receber':F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
-  <div class="ltools">${PLUGGY_ON()?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
+  <div class="ltools"><button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
   <div class="seg lseg">${[['despesa','Despesas'],['receita','Receitas'],['transf','Transf.'],['','Tudo']].map(([k,l])=>`<button class="${F.tipo===k?'on':''}" data-act="set-tipo" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="lfil">
     <label class="lsrch">${I('search')}<input type="search" data-filter="q" value="${esc(F.q)}" placeholder="Buscar lançamento" aria-label="buscar"></label>
@@ -3997,7 +3807,7 @@ function viewLanc(){
     if(F.tipo==='receita')return `<div class="card lsum"><small>Recebido ${F.mes?'no mês':'no período'}</small><b class="pos">${brl(tr)}</b><p>${prvR?`+ ${brl(prvR)} previsto`:cnt}</p></div>`;
     if(F.tipo==='transf')return `<div class="card lsum"><small>Movimentado entre suas contas</small><b>${brl(somaC(ef.filter(t=>t.tipo==='transf'),t=>t.valor))}</b><p>${cnt} · não contam como gasto</p></div>`;
     return `<div class="card lsum lsum3"><div class="ls3top"><small>Saldo ${F.mes?'do mês':'do período'}</small><b class="${tr-td>=0?'pos':'neg'}">${brl(tr-td)}</b></div><div><small>Entrou</small><b class="pos">${brl(tr)}</b></div><div><small>Saiu</small><b class="neg">${brl(td)}</b></div>${tdCartao?`<p>+ ${brl(tdCartao)} em compras no cartão, que saem pela fatura</p>`:''}</div>`;})()}
-  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):(S.tx.length?'<p class="vazio">nenhum lançamento com esses filtros.</p>':vazioHTML('report','Nenhum lançamento ainda',(MVP_MODE?'Registre seus gastos e receitas aqui, por frase, foto do recibo ou WhatsApp, ou importe o extrato.':'Registre seus gastos e receitas aqui, ou conecte o banco para importar sozinho.'),'<button class="btn sm" data-act="q-gasto">+ gasto</button><button class="btn2 sm" data-act="q-receita">+ receita</button>'))}</div>
+  <div class="card lista">${lista.length?lista.slice(0,LIM_LISTA).map(item).join('')+(lista.length>LIM_LISTA?`<button class="btn2 full maisLista" data-act="mais-lista">mostrar mais (${Math.min(50,lista.length-LIM_LISTA)} de ${lista.length-LIM_LISTA} restantes)</button>`:''):(S.tx.length?'<p class="vazio">nenhum lançamento com esses filtros.</p>':vazioHTML('report','Nenhum lançamento ainda','Registre seus gastos e receitas aqui, por frase, foto do recibo ou WhatsApp, ou importe o extrato.','<button class="btn sm" data-act="q-gasto">+ gasto</button><button class="btn2 sm" data-act="q-receita">+ receita</button>'))}</div>
   ${fixasCard()}`;
 }
 
@@ -4349,12 +4159,7 @@ function rpAtualiza(){
 }
 function pctAloc(x){if(!(x>0))return '0%';if(x<1)return x<0.1?'<0,1%':num(x).replace(/0$/,'').replace(/,$/,'')+'%';return Math.round(x)+'%';}
 function viewFii(){
-  if(MVP_MODE)return viewFiiCarteira(''); // v10.160: Carteira + cotações + alertas numa tela só
-  /* v10.155: Carteira | Radar */
-  const nR=radarL().length;
-  const modo=`<div class="seg rrModo" role="tablist" aria-label="Investimentos"><button type="button" role="tab" data-act="fmodo" data-id="carteira" class="${FMODO==='radar'?'':'on'}" aria-selected="${FMODO!=='radar'}">Carteira</button><button type="button" role="tab" data-act="fmodo" data-id="radar" class="${FMODO==='radar'?'on':''}" aria-selected="${FMODO==='radar'}">Radar${nR?`<span class="rrModoN">${nR}</span>`:''}</button></div>`;
-  if(FMODO==='radar')return `<div class="head fiiHead"><h2>Investimentos</h2></div>${modo}${viewRadar()}`;
-  return viewFiiCarteira(modo);
+  return viewFiiCarteira(''); // v10.160: Carteira + cotações + alertas numa tela só
 }
 function viewFiiCarteira(modo){
   const pat=patrimonio(),dm=divMensal();
@@ -4403,15 +4208,15 @@ function viewFiiCarteira(modo){
       </div>
       ${meta.length?`<div class="astMeta${rf?' rfm':''}">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
       ${chips.length?`<div class="rfChips">${chips.map(([k,txt,cl])=>`<span class="rfChip ${cl||''}">${k==='dia'?'<i></i>':''}${esc(txt)}</span>`).join('')}</div>`:''}
-      ${rf&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
-      <div class="astFoot"><small>${info}</small><div class="acts">${MVP_MODE&&!rf?rdBellHTML(f):''}${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
+      ${rf&&rfIdxOf(f)!=='fixo'&&!(f.bancoData&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
+      <div class="astFoot"><small>${info}</small><div class="acts">${!rf?rdBellHTML(f):''}${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
   const usados=new Set(S.fiis.map(tipoOf));
   const tabs=`<div class="seg ftabs">${TIPOS.filter(t=>t.k==='todos'||usados.has(t.k)||FTAB===t.k).map(t=>`<button data-act="ftab" data-id="${t.k}" class="${FTAB===t.k?'on':''}">${t.l}</button>`).join('')}</div>`;
   const cotAuto=COT.st==='auto';
   return `
-  ${MVP_MODE?patHeadMVP():`<div class="head fiiHead"><h2>Investimentos</h2><button class="btn" data-act="novo-fii">+ ativo</button></div>`}
+  ${patHeadMVP()}
   ${modo}
   <div class="card wHero">
     <div class="wTop"><small>patrimônio investido</small><button class="wSt ${cotAuto?'on':''}" data-act="cot-now" title="atualizar cotações" aria-label="atualizar cotações"><i></i>${cotAuto?'cotações ao vivo':'valores manuais'}<span class="wRf">${I('cloud')}</span></button></div>
@@ -4420,7 +4225,7 @@ function viewFiiCarteira(modo){
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados${semCusto?` · ${semCusto} ${semCusto>1?'ativos sem':'ativo sem'} preço pago fora da conta`:''}</small></div>`:''}
     ${barra}
   </div>
-  ${MVP_MODE?conquistasDivHTML():''}
+  ${conquistasDivHTML()}
   ${temRV||S.fiis.length?`<div class="wKpi${temRV?'':' semRV'}">
     ${temRV?`<div class="card mini wRenda"><small>renda mensal</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>`:''}
     <div class="card mini wDk"><small>total aplicado</small><b>${brl(aplic)}</b><small class="wHint">custo das compras</small></div>
@@ -4430,10 +4235,9 @@ function viewFiiCarteira(modo){
   ${p?provCardHTML(p)
      :temRV?'<p class="wTip">Cadastre o dia de pagamento dos fundos para ver a contagem até o próximo provento.</p>':''}
   ${S.fiis.length?(R=>rpCardHTML(R)+(R.temProv?yocCardHTML(yocCalc()):''))(rpCalc()):''}
-  ${S.fiis.length?irCardHTML():''}
   <div class="wSec"><h3>Seus ativos <span>${filtrados.length}</span></h3></div>
   ${al.length>1||FTAB!=='todos'?tabs:''}
-  <div class="astList">${filtrados.length?lista:((S.fiis||[]).length?'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>':vazioHTML('scale','Nenhum ativo ainda','Cadastre ações, FIIs ou cripto para ver cotação, preço médio, variação e proventos.','<button class="btn sm" data-act="novo-fii">+ ativo</button><button class="btn2 sm" data-act="rd-busca">'+I('bell')+'alerta de preço</button>'))}</div>${MVP_MODE?rdSecHTML():''}`;
+  <div class="astList">${filtrados.length?lista:((S.fiis||[]).length?'<div class="card"><p class="vazio">nenhum ativo nesta aba.</p></div>':vazioHTML('scale','Nenhum ativo ainda','Cadastre ações, FIIs ou cripto para ver cotação, preço médio, variação e proventos.','<button class="btn sm" data-act="novo-fii">+ ativo</button><button class="btn2 sm" data-act="rd-busca">'+I('bell')+'alerta de preço</button>'))}</div>${rdSecHTML()}`;
 }
 
 /* ---------- v10.155: Radar (Investimentos) ----------
@@ -4563,7 +4367,7 @@ async function radarDisparos(forca){
 }
 function radarAtualiza(forca){radarCota(forca);radarDisparos(forca);}
 setInterval(()=>{if(rdNaTela()&&document.visibilityState==='visible')radarAtualiza(false);},60000);
-function rdNaTela(){return TAB==='fii'&&(FMODO==='radar'||MVP_MODE);} // v10.160: no MVP o Radar mora dentro da carteira
+function rdNaTela(){return TAB==='fii';} // v10.160: o Radar mora dentro da carteira
 /* ---------- migração do alerta antigo por ativo (fiis.alvoP/alvoDir, v10.111) ---------- */
 function radarMigra(){
   let mudou=false;
@@ -4800,7 +4604,7 @@ function rdAvisos(){
     out.push({id:rdChave(it,a),k:'aviso',h:`${I(a.tp==='acima'?'up':'down')} <b>${esc(it.t)}</b> ${a.tp==='queda'?'caiu mais de '+esc(rdNumTxt(a.v))+'% no dia':(a.tp==='acima'?'chegou acima de ':'chegou abaixo de ')+rdPreco(a.v)}${d.preco>0?' ('+rdPreco(d.preco)+')':''} · ${esc(rdDataHora(d.em))} <button class="btn2 sm" data-act="rd-ver" data-id="${esc(rdQKey(it))}">ver no Radar</button>`});}));
   return out;
 }
-function rdVer(){closeModal();if(MVP_MODE){if(TAB!=='fii')go('fii');setTimeout(()=>{const e=document.getElementById('rdSec')||document.querySelector('.astBell.hit');if(e)e.scrollIntoView({block:'center'});},120);return;}if(TAB!=='fii')go('fii');rdModoSet('radar');}
+function rdVer(){closeModal();if(TAB!=='fii')go('fii');setTimeout(()=>{const e=document.getElementById('rdSec')||document.querySelector('.astBell.hit');if(e)e.scrollIntoView({block:'center'});},120);}
 
 function updCountdown(){
   const el=document.getElementById('cd');if(!el)return;
@@ -4938,8 +4742,8 @@ function notifCardHTML(){return `  <div class="card">
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
   return `
-  <div class="head"><h2>${MVP_MODE?'WhatsApp &amp; Conta':'Ajustes'}</h2></div>
-  ${MVP_MODE?waHeroHTML()+notifCardHTML()+cardPlanoCfg():cardPlanoCfg()}
+  <div class="head"><h2>WhatsApp &amp; Conta</h2></div>
+  ${waHeroHTML()+notifCardHTML()+cardPlanoCfg()}
   <div class="card">
     <h4>Tema</h4>
     <div class="seg">
@@ -4958,17 +4762,6 @@ function viewCfg(){
     ${S.cats.length>10?`<button type="button" class="catMaisBtn" data-act="cats-toggle">${CATS_ABERTAS?'mostrar menos':'ver todas as '+S.cats.length+' categorias'}</button>`:''}
   </div>
   ${lockCardHTML()}
-  ${MVP_MODE?'':notifCardHTML()}
-  ${MVP_MODE?'':`  <div class="card bcCard">
-    <div class="bcHd"><span class="bcIc">${I('bank')}</span><div><h4>Conexão bancária</h4><small>Open Finance · Meu Pluggy</small></div><span class="bcSt" id="bcSt"></span></div>
-    <div class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</div>
-    <div class="pushBtns" id="bcBtns"></div>
-  </div>
-  <div class="card bcCard waCard">
-    <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>WhatsApp</h4><small>lance por mensagem</small></div><span class="bcSt" id="waSt"></span></div>
-    <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
-    <div class="pushBtns" id="waBtns"></div>
-  </div>`}
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('lu_chart_candlestick')}</span><div><h4>Cotações</h4><small>preços de ações e FIIs da carteira</small></div></div>
     <div class="lkList"><button class="lkRow" data-act="brapi-token"><span class="lkRi">${I('lu_key_round')}</span><span class="lkRt"><b>Token brapi</b><small>opcional, deixa as cotações mais rápidas</small></span><span class="dkSt${S.cfg.brapi?' on':''}">${S.cfg.brapi?'configurado':'não configurado'}</span><span class="lkCh">${I('chevR')}</span></button></div>
@@ -4997,7 +4790,7 @@ function viewCfg(){
       <a class="lkRow" href="site/termos.html" target="_blank" rel="noopener"><span class="lkRi">${I('list')}</span><span class="lkRt"><b>Termos de uso</b><small>planos, pagamento e cancelamento</small></span><span class="lkCh">${I('chevR')}</span></a>
     </div>
   </div>
-  ${MVP_MODE&&USER?`<div class="card sairCard"><div><h4>Conta</h4><small class="nw elp">${esc(USER.email||'conectado')}</small></div><button type="button" class="btn2 sm danger" data-act="sair-conta">${I('logout')}Sair</button></div>`:''}
+  ${USER?`<div class="card sairCard"><div><h4>Conta</h4><small class="nw elp">${esc(USER.email||'conectado')}</small></div><button type="button" class="btn2 sm danger" data-act="sair-conta">${I('logout')}Sair</button></div>`:''}
   <p class="rod">GranaViva v${GV_BUILD} · seus dados ficam na sua conta e sincronizam entre dispositivos, com uma cópia local para quando estiver offline</p>`;
 }
 
@@ -5426,14 +5219,13 @@ function ccFmHTML(c,E){
   const emAb=L.reduce((a,f)=>a+cents(f.rest),0)/100;
   const pills=vis.map(f=>`<button type="button" class="ccFmP${f===sel?' on':''} st-${f.estado}" data-act="cc-fm" data-id="${esc(f.key)}" aria-pressed="${f===sel}"><b>${MESES[+f.vence.slice(5,7)-1]}${f.vence.slice(0,4)!==hojeISO().slice(0,4)?' '+f.vence.slice(2,4):''}</b><small class="nw">${f.valor>0.004?brl(f.valor):'—'}</small></button>`).join('');
   const rows=sel.txs.slice(0,5).map(t=>`<div class="ccFmR"><span class="ccFmRd">${ccDM(t.data)}</span><span class="ccFmRn">${esc(nomeTx(t).n||t.descricao||t.categoria)}${t.parcelas>1?' <em>'+t.parcela+'/'+t.parcelas+'</em>':''}</span><b class="nw">${brl(t.valor)}</b></div>`).join('');
-  const bco=c.bancoData&&c.bancoUsado!=null&&isFinite(c.bancoUsado);
   return `<div class="ccFm" aria-label="faturas por mês">
     <div class="ccFmH"><span>faturas por mês</span><small>${L.filter(f=>f.estado==='futura').length?L.filter(f=>f.estado==='futura').length+(L.filter(f=>f.estado==='futura').length>1?' próximas':' próxima'):'nenhuma próxima'}</small></div>
     <div class="ccFmPs rolaH" role="group" aria-label="escolher a fatura">${pills}</div>
     <div class="ccFmD"><div class="ccFmDh"><span><b>Fatura de ${ccFmNome(sel)}</b><small>${CC_FM_L[sel.estado]} · fecha ${ccDM(sel.fecha)} · vence ${ccDM(sel.vence)}</small></span><b class="nw ccFmV">${brl(sel.valor)}</b></div>
       ${rows||'<p class="ccFmVz">nenhum lançamento nesta fatura.</p>'}
       ${sel.txs.length?`<button type="button" class="ccLink" data-act="fat-abre" data-id="${esc(sel.ft?sel.ft.id:sel.key)}">${sel.txs.length>5?'ver todos os '+sel.txs.length+' lançamentos':'ver detalhes'}</button>`:''}</div>
-    <p class="ccFmT">em aberto (fechadas a pagar + atual + próximas): <b class="nw">${brl(emAb)}</b>${bco?` · o banco informa <b class="nw">${brl(c.bancoUsado)}</b> usados`:' = limite usado'}</p>
+    <p class="ccFmT">em aberto (fechadas a pagar + atual + próximas): <b class="nw">${brl(emAb)}</b> = limite usado</p>
   </div>`;
 }
 function ccFatHTML(c){
@@ -5455,7 +5247,6 @@ function ccFatHTML(c){
     <div class="ccLimR"><span><b class="nw ${disp<0?'neg':''}">${brl(disp)}</b> disponível</span><span class="nw">limite ${brl(lim)}</span></div>`:`<div class="ccLimR"><span>limite não informado</span><button type="button" class="ccLink" data-act="edit-cartao" data-id="${c.id}">informar</button></div>`}
     <div class="ccChips">${chips}</div>
     ${E.tipo==='fechada'?`<p class="ccProx">fatura aberta até ${ccDM(E.prox.fecha)}: <b class="nw">${brl(E.prox.valor)}</b></p>`:''}
-    ${E.tipo==='aberta'&&!(E.valor>0.004)&&c.bancoData&&c.bancoUsado>0?`<p class="ccProx ccBcoNota">o banco informa <b class="nw">${brl(c.bancoUsado)}</b> usados do limite, mas nenhuma compra deste ciclo chegou ao app. Parcelas de compras antigas e compras novas entram na próxima sincronização.</p>`:''}
     <div class="ccActs"><button type="button" class="btn2" data-act="fat-abre" data-id="${esc(E.abre)}">${I('list')}ver lançamentos</button>${E.pagar?`<button type="button" class="btn" data-act="pagar-fat" data-id="${E.pagar}">${I('check')}pagar fatura</button>`:`<button type="button" class="btn ccOff" data-act="cc-pagar-aberta" data-id="${c.id}" aria-disabled="true">${I('lock')}pagar fatura</button>`}</div>
     ${ccFmHTML(c,E)}
   </div>`;
@@ -5498,7 +5289,7 @@ function ccMaisHTML(c){
   const fl=faturasCartaoHTML(c);
   return `<div class="card ccMais"><h3>Mais do ${esc(ccNome(c))}</h3>
     ${fl||'<p class="small ccSemFat">nenhuma fatura fechada ainda.</p>'}
-    <div class="walLimGr ccLimGr"><span><small>${c.bancoData?'usado · banco '+fmtData(c.bancoData).slice(0,5):'usado'}</small><b class="nw">${brl(usedT)}</b></span><span class="wlPct"><small>uso</small><b class="nw ${nivel}">${OCULTO?'•••':Math.round(pctR)+'%'}</b></span><span><small>fecha · vence</small><b class="nw">dia ${c.fechamento} · ${c.vencimento}</b></span></div>
+    <div class="walLimGr ccLimGr"><span><small>usado</small><b class="nw">${brl(usedT)}</b></span><span class="wlPct"><small>uso</small><b class="nw ${nivel}">${OCULTO?'•••':Math.round(pctR)+'%'}</b></span><span><small>fecha · vence</small><b class="nw">dia ${c.fechamento} · ${c.vencimento}</b></span></div>
     ${custoAtrasoHTML(c)}
     <div class="walActs ccMaisActs" role="group" aria-label="ações do cartão ${esc(ccNome(c))}"><button type="button" class="walAct ccViraB" data-act="cc-vira" data-id="${c.id}">${I('ccVira')}<span>virar</span></button><button type="button" class="walAct" data-act="edit-cartao" data-id="${c.id}">${I('edit')}<span>editar</span></button><button type="button" class="walAct" data-act="arq-cartao" data-id="${c.id}">${I('arquivo')}<span>arquivar</span></button><button type="button" class="walAct perigo" data-act="del-cartao" data-id="${c.id}">${I('trash')}<span>excluir</span></button></div>
   </div>`;
@@ -5519,7 +5310,7 @@ function viewCartoes(){
       <p>${S.cartoes.length?'Desarquive um cartão abaixo ou adicione outro para ver a fatura, o limite e o melhor dia de compra.':'Adicione seu cartão de crédito para acompanhar a fatura, o limite, as parcelas e saber qual cartão usar em cada dia.'}</p>
       <button type="button" class="btn" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`+arq;
   const at=ccAtual(CA);
-  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+(PLUGGY_ON()||S.tx.some(t=>t.cartao&&(t.pluggyId||t.parcGer))?prcBotaoHTML():'')+arq;
+  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+arq;
 }
 /* ---------- carrossel: escolha por rolagem, pontos, toque ---------- */
 let CC_ROL=0,CC_ROL_T=0,CC_DET_T=0;
@@ -5586,7 +5377,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} conta</button></div>
-  <div class="bkActs">${PLUGGY_ON()?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
+  <div class="bkActs"><button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
   ${S.bancos.length?(()=>{const st=saldoTotal(),sc=(cents(st)-cents(total))/100;return `<div class="card bkHero${total<0?' bkNeg':''}"><small>total em bancos</small><div class="bkBig nw">${total<0?'−':''}${brl(Math.abs(total))}</div>${total<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
@@ -5844,7 +5635,7 @@ const REGRAS_CAT=[
   [/amazon|mercado ?livre|shopee|magalu|magazine luiza|americanas|casas bahia|aliexpress|temu/,'Compras'],
   [/leroy|telhanorte|material de constru|madeireira|tok ?& ?stok|camicado|ikea/,'Casa e reformas'],
   [/iof|tarifa|anuidade|juros|encargo|multa|mora\b/,'Tarifas e juros'],
-  [/darf|ipva|iptu|detran|licenciamento|receita federal|gru\b|das\b|simples nacional/,'Impostos e taxas'],
+  [/ipva|iptu|detran|licenciamento|receita federal|gru\b|das\b|simples nacional/,'Impostos e taxas'],
   [/doacao|vakinha|unicef|dizimo|oferta/,'Doações'],
   [/ifood|rappi|restaur|lanchon|padaria|mercado|supermerc|atacad|assai|carrefour|pao de acucar|hortifruti|acougue|burger|mc ?donald|pizza|cafe|almoco|jantar|lanche|sorvet|acai|bk\b|subway|outback|feira|big box|dia\b|extra\b|atacadao|comida|marmita/,'Alimentação'],
   [/uber|99 ?(app|pop|tecnologia)?|cabify|posto|combust|gasolina|etanol|alcool|ipiranga|shell|petrobras br|estacion|metro|onibus|\bbus\b|mobilida|brt|pedagio|sem parar|veloe|passagem|mecanic|oficina|ipva|licenciament|seguro auto/,'Transporte'],
@@ -5897,17 +5688,6 @@ function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
   S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
   S.cfg.migPropria=2;salvar();return k;}
-/* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
-/* v10.160: no MVP a conexão bancária some da tela e nenhuma chamada (automática ou não) vai ao pluggy-sync.
-   o que já entrou do banco continua no app como qualquer lançamento. */
-function PLUGGY_ON(){return !MVP_MODE&&!!(S.cfg&&S.cfg.pluggyOn);}
-async function pluggy(body){
-  if(MVP_MODE)throw new Error('conexão bancária indisponível nesta versão');
-  const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
-  if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
-  if(data&&data.erro)throw new Error(data.erro);
-  return data;
-}
 /* v10.136: WhatsApp. O app só gera o código de ligação e mostra o estado; ler e salvar acontece no servidor (whatsapp-webhook).
    O lançamento salvo pelo WhatsApp chega aqui na próxima sincronização (tag "whatsapp"). */
 let WA_ST=null;
@@ -5943,8 +5723,10 @@ async function waLigar(){
   const url='https://wa.me/'+String(o.numero).replace(/\D/g,'')+'?text='+encodeURIComponent('GV '+o.codigo);
   confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir',alt:'Copiar código',altCb:()=>{copiaTexto('GV '+o.codigo).then(()=>toast('Código copiado: GV '+o.codigo)).catch(()=>toast('Não consegui copiar.',true));}},()=>{location.href=url;});
 }
-/* v10.165: resumo semanal pelo WhatsApp (toda segunda às 8h de Brasília, grátis). O servidor guarda em wa_vinculo.resumo_semanal
-   (função whatsapp-vincular {acao:'resumo'}) e o pg_cron das 11:00 UTC de segunda manda (função whatsapp-webhook). */
+/* v10.165: resumo semanal pelo WhatsApp (toda segunda às 8h de Brasília, grátis). Fase 1: a preferência fica na coluna
+   settings.whatsapp_resumo_semanal (padrão ligado). O app lê pelo status e grava pela função whatsapp-vincular {acao:'resumo'}
+   (service role, com recuo para wa_vinculo.resumo_semanal se a coluna ainda não existir); o pg_cron das 11:00 UTC de segunda
+   manda (função whatsapp-webhook). */
 function waResumoHTML(on){
   return `<div class="ntList waRes"><button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="wa-resumo"><span class="ntIc" style="--c:#25d366">${I('calendar')}</span><span class="ntTx"><b>Resumo semanal toda segunda às 8h</b><small>gastos e entradas da semana, onde mais foi e o ritmo do mês, no seu WhatsApp</small></span><span class="ntSw${on?' on':''}"><i></i></span></button></div>`;
 }
@@ -5967,171 +5749,7 @@ function waDesligar(){
   confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
     try{await waChama('desvincular');WA_ST=null;toast('WhatsApp desligado');atualizaWaUI();}catch(e){toast(e.message,true);}});
 }
-let BC_ST=null;
-async function atualizaBancoUI(){
-  if(MVP_MODE)return;
-  const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
-  if(!USER){bt.innerHTML='';return;}
-  try{
-    /* v10.54: status guardado por 5 min (antes: uma chamada ao servidor a cada vez que a tela desenhava) */
-    const st=(BC_ST&&BC_ST.uid===USER.id&&Date.now()-BC_ST.t<300000)?BC_ST.st:await pluggy({acao:'status'});
-    BC_ST={st,t:BC_ST&&BC_ST.st===st?BC_ST.t:Date.now(),uid:USER.id};
-    if(!!st.conectado!==!!S.cfg.pluggyOn){S.cfg.pluggyOn=!!st.conectado;salvar();}
-    if(st.conectado){
-      const ul=st.ultima?new Date(st.ultima):null,sc=$('#bcSt');if(sc){sc.className='bcSt on';sc.innerHTML='<i></i>conectado';}
-      const bks=[...new Set(S.bancos.map(b=>b.nome))].filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n));
-      tx.innerHTML=`<div class="bcGrid"><span><small>conexões</small><b>${st.itens}</b></span><span><small>última busca</small><b>${ul?ul.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' · '+ul.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—'}</b></span>${bks.length?`<span class="bcBks"><small>instituições</small><b>${bks.map(n=>{const x=BANCOS_BR.find(y=>y.n===n);return bancoLogoHTML(bancoLogo(x.d),n,'bcLg',bancoLogo2(x.d));}).join('')}${bks.length===1?esc(NOME_CURTO[bks[0]]||bks[0]):''}</b></span>`:''}</div><p class="bcNota">${I('refresh')}o banco atualiza os dados cerca de uma vez por dia.</p>`;
-      bt.innerHTML=`<button class="btn bcSync" data-act="banco-sync">${I('refresh')}buscar agora</button><div class="bcSec"><button class="btn2" data-act="banco-config">${I('sliders')}editar conexão</button><button class="bcDel" data-act="banco-remover">${I('logout')}desconectar</button></div><button class="btn2 bcParc" data-act="parc-verif">${I('card')}verificar parcelas</button>`;
-    }else{
-      {const sc=$('#bcSt');if(sc){sc.className='bcSt';sc.innerHTML='<i></i>desligado';}}
-      tx.classList.add('bcIntro');tx.innerHTML='traga os lançamentos das suas contas e cartões direto do banco, sem digitar. usa o Meu Pluggy, gratuito para uso pessoal. você revisa tudo antes de entrar no app.';
-      bt.innerHTML=`<button class="btn" data-act="banco-config">${I('link')}conectar banco</button>`;
-    }
-  }catch(e){tx.textContent='a conexão com o banco ainda não está disponível no servidor.';bt.innerHTML='';}
-}
-function bancoConfig(){
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  form('Conectar banco',[
-    {name:'clientId',label:'Client ID (dashboard.pluggy.ai → Aplicações)',value:'',required:true,placeholder:'xxxxxxxx-xxxx-…'},
-    {name:'clientSecret',label:'Client Secret',type:'password',value:'',required:true,placeholder:'aparece uma vez só, quando você gera'},
-    {name:'itemIds',label:'itemId (um por conexão, separe por vírgula)',type:'textarea',value:'',required:true,placeholder:'Demo → Itens conectados → copie o id'}
-  ],v=>{
-    if(!String(v.clientId).trim()||!String(v.clientSecret).trim()||!String(v.itemIds).trim())return 'Preencha os três campos.';
-    (async()=>{toast('Conferindo com o Pluggy…');
-    try{BC_ST=null;const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
-      S.cfg.pluggyOn=true;salvar();render();toast('Banco conectado · '+r.contas+' '+(r.contas===1?'conta encontrada':'contas encontradas'));setTimeout(bancoSync,400);
-    }catch(e){toast(e.message,true);}
-    })();
-  });
-}
-const CAT_PLUGGY=[[/groceries|supermarket/i,'Mercado'],[/food delivery/i,'Delivery'],[/restaurant|eating out/i,'Restaurantes'],[/gas station|fuel/i,'Combustível'],[/taxi|ride/i,'Uber e táxi'],[/public transport/i,'Transporte público'],[/vehicle maintenance|car maintenance/i,'Manutenção do carro'],[/electricity|water|utilities/i,'Contas da casa'],[/telecom|internet|mobile/i,'Internet e celular'],[/streaming|digital services|subscription/i,'Assinaturas'],[/pharmac|drug/i,'Farmácia'],[/gym|fitness/i,'Academia'],[/pet/i,'Pets'],[/travel|airline|accommodation|hotel/i,'Viagem'],[/clothing/i,'Roupas'],[/electronics/i,'Eletrônicos'],[/online shopping|shopping/i,'Compras'],[/bank fees|interest charge|late payment/i,'Tarifas e juros'],[/taxes/i,'Impostos e taxas'],[/donation/i,'Doações'],[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
-function catDoBanco(l){
-  const sg=sugestaoCat(l.desc,l.valor<0?'despesa':'receita');if(sg&&sg.por!=='palavra')return sg.c;
-  const lista=l.valor<0?S.cats:CATS_RECEITA;
-  for(const [re,c] of CAT_PLUGGY)if(re.test(l.catBanco||'')&&lista.includes(c))return c;
-  return sg?sg.c:catSugerida(l.desc,l.valor<0?'despesa':'receita');
-}
-/* v10.54: lê o que o webhook do Pluggy já guardou no servidor (pluggy_tx / pluggy_acc). null = usar 'sincronizar' */
-let IMP_VISTO='';
-async function bancoDaTabela(){
-  try{
-    const visto=S.cfg.pluggyVisto||'';
-    const {data:accs,error:e1}=await sb.from('pluggy_acc').select('id,item_id,data,updated_at');
-    if(e1||!accs||!accs.length)return null;               // tabela vazia / sem webhook ainda → fallback
-    const desde=S.cfg.pluggyDesde
-      ?new Date(new Date(S.cfg.pluggyDesde).getTime()-5*864e5).toISOString().slice(0,10)
-      :new Date(Date.now()-60*864e5).toISOString().slice(0,10);
-    const rows=[];let maxUpd=visto;
-    for(let de=0;de<20000;de+=1000){                       // PostgREST devolve no máx. 1000 por página
-      let q=sb.from('pluggy_tx').select('id,account_id,data,removed,updated_at').order('updated_at',{ascending:true}).range(de,de+999);
-      q=visto?q.gt('updated_at',visto):q.gte('data->>data',desde);
-      const {data,error}=await q;if(error)return null;
-      rows.push(...data);if(data.length<1000)break;
-    }
-    rows.forEach(t=>{if(t.updated_at>maxUpd)maxUpd=t.updated_at;});
-    accs.forEach(a=>{if(a.updated_at>maxUpd)maxUpd=a.updated_at;});
-    IMP_VISTO=maxUpd;
-    const porConta={};
-    rows.forEach(t=>{if(t.removed)return;(porConta[t.account_id]||(porConta[t.account_id]=[])).push(t.data);});
-    const contas=accs.map(a=>({...a.data,tx:(porConta[a.id]||[]).sort((x,y)=>x.data<y.data?-1:x.data>y.data?1:0)}));
-    let investimentos=null;
-    /* investimentos não ficam na tabela: 1 busca ao vivo por dia só para eles */
-    if(S.cfg.pluggyInvDia!==hojeISO()){
-      try{const r2=await pluggy({acao:'sincronizar',dias:7});investimentos=r2.investimentos||[];S.cfg.pluggyInvDia=hojeISO();}catch(e){}
-    }
-    return {ok:true,desde:visto?visto.slice(0,10):desde,contas,investimentos,tabela:true};
-  }catch(e){return null;}
-}
-async function bancoSync(forcar=false){
-  if(MVP_MODE){toast('A conexão com o banco não está disponível nesta versão. Importe o extrato em Gastos & Cartões.',true);return;}
-  BC_ST=null;
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
-  toast('Buscando lançamentos no banco…');
-  try{
-    IMP_VISTO='';
-    const r=(!forcar&&await bancoDaTabela())||await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
-    if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-    r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
-    let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
-    const ni=investDoBanco(r.investimentos||[]);if(ni)toast(ni+' investimento'+(ni>1?'s':'')+' atualizado'+(ni>1?'s':'')+' pelo banco');
-    geraRecorrentes();render();
-    if(novos)toast(novos===1?'Cartão do banco adicionado em Cartões':novos+' cartões do banco adicionados');
-    const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
-      const cartao=c.tipo==='CREDIT';
-      const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
-      return {nome:c.nome,conta:c.id,cartao,linhas,saldo:c.saldo};
-    }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
-      .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
-    /* v10.51: a data da última busca só avança quando a revisão termina (fechar no X não perde lançamentos) */
-    if(!fila.length){S.cfg.pluggyDesde=hojeISO();if(IMP_VISTO)S.cfg.pluggyVisto=IMP_VISTO;salvar();toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
-    IMP_CURSOR=hojeISO();IMP_VISTO_CURSOR=IMP_VISTO;IMP_FILA=fila;proxImportBanco();
-  }catch(e){toast(e.message,true);}
-}
-let IMP_FILA=[],IMP_CURSOR='',IMP_VISTO_CURSOR='';
 function arqCartao(c){c.arq=true;c.arqEm=hojeISO();salvar();render();toast('Cartão arquivado');}
-/* v10.20: posições de investimento do banco (Pluggy /investments) entram em Investimentos */
-function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
-  if(t==='EQUITY'){if(st==='REAL_ESTATE_FUND')return 'fii';if(st==='BDR')return 'bdr';if(st==='ETF')return 'etf';return 'acao';}
-  if(t==='ETF')return 'etf';if(st==='REAL_ESTATE_FUND')return 'fii';return 'rf';}
-function investDoBanco(L0){let n=0;const hj=hojeISO();
-  /* renda fixa do mesmo emissor vira uma posição só (o Nubank manda cada aplicação de CDB separada) */
-  const G={},L=[];
-  L0.forEach(v=>{if(tipoInvBanco(v)!=='rf'){L.push(v);return;}
-    const nm=String(v.nome||'Renda fixa').replace(/\s*-\s*SOCIEDADE.*$/i,'').replace(/ S\.?A\.?.*$/i,'').trim();
-    const k='g:'+norm((v.subtipo||'')+'|'+nm);
-    const g=G[k]||(G[k]={id:k,nome:nm,codigo:(v.subtipo||'RF')+' '+nm.split(/[\s-]+/).filter(x=>x.length>1&&!/^(CDB|LCI|LCA|LC|RDB)$/i.test(x))[0],tipo:v.tipo,subtipo:v.subtipo,saldo:0,original:0,status:'TOTAL_WITHDRAWAL',vencimento:''});
-    if(v.status!=='TOTAL_WITHDRAWAL'&&+v.saldo>0){g.saldo+= +v.saldo;g.original+= +v.original||0;g.status='ACTIVE';if(v.vencimento&&(!g.vencimento||v.vencimento<g.vencimento))g.vencimento=v.vencimento;}});
-  Object.values(G).forEach(g=>{g.saldo=c2(g.saldo);g.original=c2(g.original);L.push(g);});
-  L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
-    let f=S.fiis.find(x=>x.pluggyInv===v.id);
-    const tk=tp==='rf'?rfCodigo(v.codigo||v.nome||''):String(v.codigo||v.nome).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV'; // v10.98: rf sem cortar palavra
-    if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
-    if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
-    if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
-    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento&&!f.semVenc)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
-    if(f.manual||f.idx==='cdi'){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
-    if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
-    else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
-    n++;});
-  if(n)salvar();return n;}
-/* v10.18: o cartão do banco aparece em Cartões com limite, usado, fechamento e vencimento informados pelo banco */
-function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
-  if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-  let id=typeof mapa[c.id]==='string'&&mapa[c.id][0]==='c'?mapa[c.id].slice(2):'';
-  let cc=id&&S.cartoes.find(x=>x.id===id);
-  const errado=cc&&k.final&&cc.final&&cc.final!==k.final?cc:null; // estava ligado a outro cartão seu
-  if(errado)cc=null;
-  if(!cc&&k.final)cc=S.cartoes.find(x=>x.final===k.final);
-  let criou=false;
-  if(!cc){cc={id:uid(),nome:String(c.nome||'Cartão').replace(/\s*··\d+$/,'').slice(0,60)||'Cartão',banco:String(k.banco||c.nome||'').slice(0,60),final:k.final||'',limite:0,fechamento:1,vencimento:10,cor:S.cartoes.length%CARD_COR.length,rotativo:0,multaPct:2,moraPct:1};S.cartoes.push(cc);criou=true;}
-  mapa[c.id]='c:'+cc.id;
-  if(errado){const ids=new Set((c.tx||[]).map(t=>'plg-'+t.id));S.tx.forEach(t=>{if(t.cartao===errado.id&&t.pluggyId&&(ids.has(t.pluggyId)||t.origem==='banco'))t.cartao=cc.id;});}
-  const lim=+k.limite,disp=+k.disponivel;
-  if(isFinite(lim)&&lim>0)cc.limite=c2(lim);
-  if(isFinite(lim)&&lim>0&&isFinite(disp)){cc.bancoUsado=c2(Math.max(0,lim-disp));cc.bancoData=hojeISO();}
-  const dia=x=>{const d=String(x||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?parseInt(d.slice(8),10):0;};
-  if(dia(k.fecha))cc.fechamento=dia(k.fecha);if(dia(k.vence))cc.vencimento=dia(k.vence);
-  if(k.final&&!cc.final)cc.final=k.final;
-  if(k.bandeira&&!cc.bandeira){const bd=String(k.bandeira).toLowerCase();cc.bandeira=/master/.test(bd)?'mastercard':/visa/.test(bd)?'visa':/elo/.test(bd)?'elo':/amex|american/.test(bd)?'amex':/hiper/.test(bd)?'hipercard':'';}
-  if(!bancoDoCartao(cc)){const bs=[...new Set(S.bancos.map(b=>b.nome).filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n)))];if(bs.length===1&&!cc.bancoAuto){cc.bancoAuto=bs[0];}}
-  salvar();return criou;}
-/* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
-function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
-function fimFilaBanco(){if(IMP_FILA.length||!IMP_CURSOR)return;S.cfg.pluggyDesde=IMP_CURSOR;IMP_CURSOR='';if(IMP_VISTO_CURSOR){S.cfg.pluggyVisto=IMP_VISTO_CURSOR;IMP_VISTO_CURSOR='';}salvar();}
-function proxImportBanco(){
-  const c=IMP_FILA.shift();if(!c){fimFilaBanco();return;}
-  const mapa=S.cfg.pluggyMap||{};
-  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true,saldo:c.saldo};
-  const salvo=mapa[c.conta];
-  /* v10.123: destino salvo que foi arquivado não recebe importação */
-  if(salvo&&((salvo[0]==='c'&&cartoesAtivos().some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&bancosAtivos().some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
-  else if(c.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
-  else if(!c.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
-  /* v10.56: conta que você já importou antes entra sozinha; os lançamentos ficam na caixa Revisar */
-  if(salvo&&IMP.destino===salvo&&S.cfg.autoImp!==false){IMP.silent=true;montaImport();confirmaImport();return;}
-  montaImport();
-}
 function importarExtrato(){
   if(IA_PEND.extrato){toast('Ainda lendo o extrato anterior…');return;} // v10.162
   const inp=document.createElement('input');inp.type='file';inp.accept='.ofx,.csv,.txt,text/csv,application/x-ofx,application/pdf,.pdf,image/*';
@@ -6211,10 +5829,10 @@ function montaImport(){
     if(l.data0)l.data=l.data0;
     l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
-    if(IMP.banco)l.id=l.fitid;else{const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;}
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))&&parcelaIgual(t,l)); // v10.54 · v10.95: parcela diferente não é duplicata: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    {const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;}
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&t.origem!=='banco'&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l)); // v10.54 · v10.95: parcela diferente não é duplicata: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
-    const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
+    const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
     /* v10.79: empréstimo ou devolução lançado à mão que o banco trouxe agora: liga um ao outro em vez de duplicar */
     const vm=!dup&&ehConta&&!l.propria&&!l.transf?empManualIgual(l,d,usados):null;
@@ -6231,10 +5849,8 @@ function montaImport(){
     const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     /* v10.88: planilha do próprio app importada de volta: fatura e transferência/empréstimo que já estão no app não entram de novo
        (antes as faturas viravam despesas duplicadas e a transferência virava receita) */
-    const trPlan=!IMP.banco&&/transfer|emprest|devolu/.test(l.tipoPlan||'');
-    const dupPlan=!dup&&!IMP.banco&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
-    /* v10.96: parcela gerada por "verificar parcelas" que agora chegou do banco: fica com o id da Pluggy em vez de entrar de novo */
-    l.adota=dup&&IMP.banco&&ehCartao?((S.tx.find(t=>t.parcGer&&!t.pluggyId&&t.cartao===d.slice(2)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&parcelaIgual(t,l))||{}).id||''):'';
+    const trPlan=/transfer|emprest|devolu/.test(l.tipoPlan||'');
+    const dupPlan=!dup&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
     if(dup||dupT||dupPlan)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup||dupPlan)ign='já está no app';
     else if(trPlan)ign='transferência ou empréstimo na planilha · confira antes de importar';
@@ -6245,17 +5861,16 @@ function montaImport(){
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
-    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
+    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
     l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
   });
-  if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
   const catOpts=(c,tp)=>(tp==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===c?'selected':''}>${esc(x)}</option>`).join('');
   const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;
   const box=$('#modal');
-  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>${IMP.banco?'Lançamentos do banco':'Importar extrato'}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}${IMP.banco&&IMP_FILA.length?' · depois: '+IMP_FILA.length+(IMP_FILA.length>1?' contas':' conta'):''}</p>
+  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
@@ -6263,7 +5878,7 @@ function montaImport(){
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.trab&&l.valor>0?' · trabalhado '+fmtDataCurta(l.trab):''}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
-    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
+    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
   </div>`;
   box.classList.add('on');
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
@@ -6272,7 +5887,6 @@ function montaImport(){
   box.querySelectorAll('input[data-emp]').forEach(c=>c.onchange=()=>{const l=IMP.linhas[+c.dataset.emp];l.empOk=c.checked;if(c.checked&&!l.on){l.on=true;const ck=box.querySelector('input[data-i="'+c.dataset.emp+'"]');if(ck){ck.checked=true;ck.closest('.impRow').classList.remove('off');}resumoImp();}});
   box.querySelectorAll('select[data-p]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.p].para=s.value;});
   box.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.imp==='pular'||b.dataset.imp==='nunca'){if(b.dataset.imp==='nunca'){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]='x';salvar();}const eb=IMP.banco;IMP=null;closeModal();if(IMP_FILA.length)setTimeout(proxImportBanco,250);else if(eb)fimFilaBanco();return;}
     const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
@@ -6316,15 +5930,12 @@ function confirmaImport(){
   let n=0,lig=0,rcb=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
-    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.adota&&IMP.banco){const m=S.tx.find(t=>t.id===l.adota);if(m&&!m.pluggyId&&!S.tx.some(t=>t.pluggyId===l.fitid)){m.pluggyId=l.fitid;m.origem='banco';}return;}
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&m.origem!=='banco'&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&m.origem!=='banco'&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&m.origem!=='banco'&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
-    if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
-    if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
     else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
     else if(ehCartao){t.forma='cartao';t.cartao=alvo;}else{t.forma='pix';t.conta=alvo;}
@@ -6333,192 +5944,19 @@ function confirmaImport(){
     else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     if(l.trab&&t.tipo==='receita'&&ISO_RE.test(l.trab))t.trab=l.trab; // v10.84: dia trabalhado vindo da planilha
     S.tx.push(t);n++;});
-  if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
-    if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
-    /* o que ficou desmarcado não volta a aparecer nas próximas buscas */
-    const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
-    S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
-  const eraBanco=IMP.banco,mudo=IMP.silent;
   /* v10.165: extrato lido pela IA com linhas marcadas como provável conta fixa (assinatura, streaming, academia...):
      depois de importar, oferece salvar como contas fixas mensais, com uma caixa de seleção por assinatura */
   const sugFixos=IMP.ia?fixosDoImport(IMP.linhas,alvo,!ehCartao):[];
-  IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
-  if(sugFixos.length&&!mudo)setTimeout(()=>fixosImportAbre(sugFixos),400);
-  if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
-  else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
-  if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
+  IMP=null;geraRecorrentes();salvar();closeModal();render();
+  if(sugFixos.length)setTimeout(()=>fixosImportAbre(sugFixos),400);
+  toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
 }
 
-/* ---------- v10.96: verificar parcelas ----------
-   até a v10.94, quando o banco mandava a parcela 2+ com a data da COMPRA, ela caía num ciclo antigo ou era descartada
-   como duplicata da parcela 1 (e o id ia para pluggyIgn, então nunca mais voltava). a v10.95 corrigiu as importações novas;
-   isto recupera as antigas: roda sozinho uma vez na abertura (marca cfg.parcVerif) e pelo botão "verificar parcelas".
-   fontes: (1) o banco ao vivo pelo pluggy-sync com a janela máxima do servidor (365 dias), com os ids reais da Pluggy;
-   (2) a cópia que o webhook guarda no servidor (pluggy_tx, só leitura); (3) as parcelas que ficaram no app
-   (k/n, valor e descrição): as que faltam são geradas até a fatura aberta.
-   só mexe numa compra quando há prova de que o banco usou a data da compra: duas parcelas diferentes dela com a mesma data.
-   chave de cada parcela: cartão + descrição sem "parc k/n" + total de parcelas + valor + data da compra + número; e o id da Pluggy.
-   nunca vai antes da 1ª fatura com lançamentos do banco no cartão nem depois da fatura aberta. desfazer tira tudo. */
-let PRC_BUSY=false,PRC=null;
-function prcNum(t){const p=parcelaDesc(t.bancoDesc||t.descricao);if(p)return p;
-  if(t.parcela>0&&t.parcelas>1)return {k:t.parcela,n:t.parcelas};
-  const m=String(t.descricao||'').match(/\((\d{1,2})\/(\d{1,2})\)\s*$/);return m&&+m[2]>1&&+m[1]>=1&&+m[1]<=+m[2]?{k:+m[1],n:+m[2]}:null;}
-function prcChave(cid,desc,n,vc,dc){return cid+'|'+parcelaBase(desc)+'|'+n+'|'+vc+'|'+dc;}
-function prcDescK(desc,k){return String(desc||'').replace(/(parc(?:ela)?\.?\s*)(\d{1,2})(\s*(?:\/|de)\s*\d{1,2})/i,(m,a,b,c)=>a+String(k).padStart(b.length,'0')+c);}
-/* linhas do banco (fonte 1 e 2) por cartão do app. devolve {linhas:[{fitid,data,valor,desc,cat,cartao}],fontes:[],ok} */
-async function prcFontes(){
-  const out={linhas:[],fontes:[],ok:true};
-  if(!USER||!PLUGGY_ON()||!navigator.onLine)return out;
-  const mapa=S.cfg.pluggyMap||{},vistos=new Set();
-  const cartaoDe=acc=>{const m=mapa[acc];return typeof m==='string'&&m[0]==='c'&&S.cartoes.some(c=>c.id===m.slice(2))?m.slice(2):'';};
-  const add=(acc,t)=>{const cid=cartaoDe(acc);if(!cid||!t||!t.id||!ISO_RE.test(String(t.data).slice(0,10)))return;const fitid='plg-'+t.id;if(vistos.has(fitid))return;vistos.add(fitid);
-    out.linhas.push({fitid,data:String(t.data).slice(0,10),valor:+t.valor||0,desc:String(t.desc||'').slice(0,120),cat:t.cat||'',cartao:cid});};
-  let falhas=0;
-  try{const r=await pluggy({acao:'sincronizar',dias:365});(r.contas||[]).forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x')(c.tx||[]).forEach(t=>add(c.id,t));});out.fontes.push('banco');}catch(e){falhas++;}
-  try{
-    for(let de=0;de<20000;de+=1000){
-      const {data,error}=await sb.from('pluggy_tx').select('id,account_id,data,removed').order('id',{ascending:true}).range(de,de+999);
-      if(error)throw error;(data||[]).forEach(r=>{if(!r.removed)add(r.account_id,r.data);});if(!data||data.length<1000)break;}
-    out.fontes.push('servidor');
-  }catch(e){falhas++;}
-  out.ok=falhas<2;return out;
-}
-/* o que falta (puro: só lê S e as linhas). {add:[tx], mov:[{id,de,para}], compras:[...], n, x, total} */
-function prcDetecta(linhas){
-  linhas=linhas||[];const hj=hojeISO(),add=[],mov=[],compras={};
-  const pids=new Set();S.tx.forEach(t=>{if(t.pluggyId)pids.add(t.pluggyId);if(t.par&&t.par.pluggyId)pids.add(t.par.pluggyId);});
-  S.cartoes.forEach(c=>{
-    const doC=S.tx.filter(t=>t.cartao===c.id&&t.tipo==='despesa');
-    const banco=doC.filter(t=>t.pluggyId||t.parcGer);
-    if(!banco.length)return;
-    const semParc=banco.filter(t=>t.pluggyId&&!parcelaDesc(t.descricao)).map(t=>t.data).sort();
-    const ini=semParc[0]||banco.map(t=>t.data).sort()[0],iniF=fechamentoDe(c,ini).fecha,atuF=fechamentoDe(c,hj).fecha;
-    /* compras: cada parcela conhecida (app + banco) agrupada pela data da compra */
-    const G={},grupo=(desc,p,vc,dc)=>{const ch=prcChave(c.id,desc,p.n,vc,dc);return G[ch]||(G[ch]={ch,desc,n:p.n,vc,dc,ks:new Set(),tx:[],ln:[]});};
-    banco.forEach(t=>{const p=parcelaDesc(t.descricao);if(!p)return;const g=grupo(t.descricao,p,cents(t.valor),t.dataCompra||t.data);g.ks.add(p.k);g.tx.push({t,k:p.k});});
-    linhas.forEach(l=>{if(l.cartao!==c.id||!(l.valor<0))return;const p=parcelaDesc(l.desc);if(!p)return;const g=grupo(l.desc,p,cents(Math.abs(l.valor)),l.data);g.ks.add(p.k);g.ln.push({l,k:p.k});});
-    /* já existe no app algo com esse número de parcela, esse valor, nessa fatura (de qualquer origem, inclusive manual) */
-    const jaTem=(k,n,vc,data)=>{const f=fechamentoDe(c,data).fecha;return doC.some(t=>{const p=prcNum(t);return p&&p.k===k&&p.n===n&&cents(t.valor)===vc&&fechamentoDe(c,t.data).fecha===f;})||add.some(t=>t.cartao===c.id&&t._k===k&&t._n===n&&cents(t.valor)===vc&&fechamentoDe(c,t.data).fecha===f);};
-    const naFaixa=d=>{const f=fechamentoDe(c,d).fecha;return f>=iniF&&f<=atuF;};
-    Object.values(G).forEach(g=>{
-      if(g.ks.size<2)return; // sem prova de que o banco usou a data da compra: não mexe
-      const cat=(g.tx[0]&&g.tx[0].t.categoria)||'';const cp={ch:g.ch,cartao:c.id,desc:g.desc,n:g.n,vc:g.vc,dc:g.dc,novas:[],movidas:[]};
-      const tem=new Map();g.tx.forEach(x=>{if(!tem.has(x.k))tem.set(x.k,x.t);});
-      /* parcela no app na fatura da compra (ciclo antigo): vai para a fatura dela */
-      g.tx.forEach(({t,k})=>{if(k<2||t.dataCompra||t.parcGer||tem.get(k)!==t)return;const nd=dataParcela(c,t.data,k-1);
-        if(fechamentoDe(c,nd).fecha===fechamentoDe(c,t.data).fecha||fechamentoDe(c,nd).fecha>atuF)return;
-        if(doC.some(o=>o!==t&&(()=>{const p=prcNum(o);return p&&p.k===k&&p.n===g.n&&cents(o.valor)===g.vc&&fechamentoDe(c,o.data).fecha===fechamentoDe(c,nd).fecha;})()))return;
-        mov.push({id:t.id,de:t.data,para:nd,ch:g.ch});cp.movidas.push({k,data:nd,valor:t.valor});});
-      /* parcela que o banco tem e o app não (descartada como duplicata ou fora da janela) */
-      g.ln.forEach(({l,k})=>{if(pids.has(l.fitid)||tem.has(k))return;const nd=k>=2?dataParcela(c,l.data,k-1):l.data;
-        if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))return;
-        const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catDoBanco({desc:l.desc,valor:l.valor,catBanco:l.cat}),descricao:String(l.desc||'').slice(0,120),data:nd,
-          importado:true,forma:'cartao',cartao:c.id,pluggyId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
-        if(nd!==l.data)t.dataCompra=l.data;
-        tem.set(k,t);add.push(t);cp.novas.push({k,data:nd,valor:t.valor,fonte:'banco'});});
-      /* fonte 3: gera pelos metadados as que nem o banco trouxe, até a fatura aberta */
-      for(let k=1;k<=g.n;k++){if(tem.has(k))continue;const nd=dataParcela(c,g.dc,k-1);if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))continue;
-        const mod=(g.tx[0]&&g.tx[0].t.descricao)||(g.ln[0]&&g.ln[0].l.desc)||g.desc;
-        const h=hashObj(g.ch).replace(/[^0-9]/g,'').slice(-9);
-        const t={id:'prc-'+h+'-'+k,tipo:'despesa',valor:g.vc/100,categoria:cat||catDoBanco({desc:mod,valor:-g.vc/100,catBanco:''}),descricao:prcDescK(mod,k).slice(0,120),data:nd,
-          importado:true,forma:'cartao',cartao:c.id,parcGer:1,_k:k,_n:g.n,_ch:g.ch};
-        if(nd!==g.dc)t.dataCompra=g.dc;
-        if(S.tx.some(x=>x.id===t.id)||add.some(x=>x.id===t.id))continue;
-        tem.set(k,t);add.push(t);cp.novas.push({k,data:nd,valor:t.valor,fonte:'app'});}
-      if(cp.novas.length||cp.movidas.length)compras[g.ch]=cp;});
-  });
-  const L=Object.values(compras);
-  return {add,mov,compras:L,n:add.length,x:L.filter(cp=>cp.novas.length).length,total:add.reduce((a,t)=>a+cents(t.valor),0)/100};
-}
-function prcNomeCompra(cp){const s=String(cp.desc||'').replace(/[-–·|]?\s*parc(?:ela)?\.?\s*\d{1,2}\s*(?:\/|de)\s*\d{1,2}/i,' ').replace(/\s+/g,' ').trim();return s||'Compra parcelada';}
-function prcListaK(ks){ks=ks.slice().sort((a,b)=>a-b);return ks.length===1?String(ks[0]):ks.slice(0,-1).join(', ')+' e '+ks[ks.length-1];}
-function prcResumo(R){const sel=R.compras.filter(cp=>!R.fora.has(cp.ch)),n=sel.reduce((a,cp)=>a+cp.novas.length,0),x=sel.filter(cp=>cp.novas.length).length,m=sel.reduce((a,cp)=>a+cp.movidas.length,0);
-  const tot=sel.reduce((a,cp)=>a+cp.novas.reduce((b,p)=>b+cents(p.valor),0),0)/100;return {n,x,m,tot,sel};}
-function prcTexto(r){
-  const pl=(q,s,p)=>q+' '+(q===1?s:p);
-  let t=r.n?'Encontrei '+pl(r.n,'parcela faltando','parcelas faltando')+' em '+pl(r.x,'compra','compras')+', total '+brl(r.tot)+'.':'';
-  if(r.m)t+=(t?' ':'')+(r.m===1?'1 parcela está na fatura errada e vai para a certa.':r.m+' parcelas estão na fatura errada e vão para a certa.');
-  return t;}
-/* prévia: lista por compra (dá para desmarcar uma compra), total e confirmar */
-function prcPrevia(R){
-  PRC=R;R.fora=R.fora||new Set();const box=$('#modal');$('#toast').classList.remove('on');clearTimeout(toastT);const r=prcResumo(R);
-  const cart=id=>S.cartoes.find(c=>c.id===id);
-  const mesFat=(c,d)=>c?nomeMesMin(fechamentoDe(c,d).vence.slice(0,7)):'';
-  box.innerHTML=`<div class="sheet prcSheet" role="dialog" aria-modal="true" aria-label="Verificar parcelas"><div class="sh-head"><h3>Verificar parcelas</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <p class="prcTop" id="prcTop">${esc(prcTexto(r))}</p>
-    <p class="small prcNota">Parcelas que o banco mandou com a data da compra e o app deixou de fora antes da atualização. Cada uma entra na fatura em que foi cobrada.</p>
-    <div class="prcLista">${R.compras.map((cp,i)=>{const c=cart(cp.cartao);const ks=cp.novas.map(p=>p.k),km=cp.movidas.map(p=>p.k);
-      const fats=[...new Set(cp.novas.concat(cp.movidas).sort((a,b)=>a.data<b.data?-1:1).map(p=>mesFat(c,p.data)))].join(', ');
-      return `<label class="prcIt${R.fora.has(cp.ch)?' off':''}"><input type="checkbox" data-pc="${i}" ${R.fora.has(cp.ch)?'':'checked'} aria-label="incluir ${esc(prcNomeCompra(cp))}">
-      <span class="prcTx"><b>${esc(prcNomeCompra(cp))}</b><small>${ks.length?(ks.length>1?'parcelas ':'parcela ')+prcListaK(ks)+' de '+cp.n:''}${km.length?(ks.length?' · '+(km.length>1?'as ':'a ')+prcListaK(km):(km.length>1?'parcelas ':'parcela ')+prcListaK(km)+' de '+cp.n)+(km.length>1?' mudam de fatura':' muda de fatura'):''}${c?' · '+esc(ccNome(c)):''}</small><small>${fats?'fatura'+(fats.indexOf(',')>0?'s':'')+' de '+esc(fats):''}</small></span>
-      <b class="nw prcV">${ks.length?brl(cp.novas.reduce((a,p)=>a+cents(p.valor),0)/100):'—'}</b></label>`;}).join('')}</div>
-    <div class="cfBtns"><button class="btn2" type="button" data-prc="nao">Agora não</button><button class="btn" type="button" id="prcOk" data-prc="ok" ${r.n||r.m?'':'disabled'}>${prcBtnTxt(r)}</button></div>
-  </div>`;
-  box.classList.add('on');
-  box.querySelectorAll('input[data-pc]').forEach(ck=>ck.onchange=()=>{const cp=R.compras[+ck.dataset.pc];if(ck.checked)R.fora.delete(cp.ch);else R.fora.add(cp.ch);ck.closest('.prcIt').classList.toggle('off',!ck.checked);
-    const r2=prcResumo(R);$('#prcTop').textContent=prcTexto(r2)||'Nenhuma compra marcada.';const ok=$('#prcOk');ok.textContent=prcBtnTxt(r2);ok.disabled=!(r2.n||r2.m);});
-  box.querySelector('[data-prc="nao"]').onclick=()=>{PRC=null;closeModal();};
-  $('#prcOk').onclick=()=>{const R0=PRC;PRC=null;closeModal();if(R0)prcAplica(R0);};
-}
-function prcBtnTxt(r){return r.n?'Adicionar '+r.n+(r.n>1?' parcelas':' parcela'):r.m?'Mover '+r.m+(r.m>1?' parcelas':' parcela'):'Adicionar';}
-/* aplica o que está marcado. guarda o lote em cfg.parcUlt para o desfazer */
-function prcAplica(R){
-  const fora=R.fora||new Set(),ok=new Set(R.compras.filter(cp=>!fora.has(cp.ch)).map(cp=>cp.ch));
-  const lote='pr'+Date.now().toString(36),ids=[],movs=[];
-  R.add.forEach(t=>{if(!ok.has(t._ch))return;if(S.tx.some(x=>x.id===t.id||(t.pluggyId&&x.pluggyId===t.pluggyId)))return;
-    const n=Object.assign({},t,{parcRec:lote});delete n._k;delete n._n;delete n._ch;S.tx.push(n);ids.push(n.id);});
-  R.mov.forEach(m=>{const t=S.tx.find(x=>x.id===m.id);if(!t||t.data!==m.de||t.dataCompra||!ok.has(m.ch))return;
-    movs.push([t.id,t.data,0]);t.dataCompra=t.data;t.data=m.para;t.parcMov=lote;});
-  if(!ids.length&&!movs.length){toast('Nada para adicionar.');return 0;}
-  S.cfg.parcUlt={lote,em:hojeISO(),add:ids,mov:movs};
-  S.cfg.parcVerif=Object.assign({},S.cfg.parcVerif||{},{em:hojeISO(),n:ids.length,m:movs.length});
-  geraRecorrentes();salvar();render();
-  const msg=(ids.length?ids.length+(ids.length>1?' parcelas adicionadas':' parcela adicionada'):'')+(ids.length&&movs.length?' · ':'')+(movs.length?movs.length+(movs.length>1?' movidas':' movida')+' para a fatura certa':'');
-  prcToastDesfazer(msg);
-  return ids.length+movs.length;
-}
-function prcToastDesfazer(m){const t=$('#toast');t.className='';t.innerHTML='<span>'+esc(m)+'</span><button type="button" class="tDesf">desfazer</button>';t.classList.add('on');
-  t.querySelector('.tDesf').onclick=()=>{t.classList.remove('on');clearTimeout(alDesT);prcDesfaz();};clearTimeout(toastT);clearTimeout(alDesT);alDesT=setTimeout(()=>t.classList.remove('on'),8000);}
-/* desfaz a última recuperação: tira as parcelas adicionadas e devolve as movidas para a data de antes */
-function prcDesfaz(){
-  const U=S.cfg.parcUlt;if(!U||!U.lote)return 0;
-  const ids=new Set(U.add||[]);const antes=S.tx.length;
-  S.tx=S.tx.filter(t=>!(t.parcRec===U.lote&&ids.has(t.id)));
-  let mv=0;(U.mov||[]).forEach(([id,de,tinha])=>{const t=S.tx.find(x=>x.id===id);if(!t||t.parcMov!==U.lote)return;t.data=de;if(!tinha)delete t.dataCompra;delete t.parcMov;mv++;});
-  const n=antes-S.tx.length;delete S.cfg.parcUlt;
-  geraRecorrentes();salvar();render();toast('Recuperação desfeita'+(n?' · '+n+(n>1?' parcelas removidas':' parcela removida'):'')+(mv?' · '+mv+(mv>1?' voltaram':' voltou')+' para onde estava':''));
-  return n+mv;
-}
-/* auto: uma vez na abertura, depois de baixar os dados. botão: sempre */
-async function prcVerifica(o={}){
-  if(PRC_BUSY)return null;PRC_BUSY=true;
-  try{
-    if(!o.auto)toast('Procurando parcelas que ficaram de fora…');
-    const F=o.linhas?{linhas:o.linhas,fontes:['teste'],ok:true}:await prcFontes();
-    if(o.auto&&!F.ok)return null; // offline/servidor fora: tenta de novo na próxima abertura
-    const R=prcDetecta(F.linhas);R.fontes=F.fontes;
-    if(!R.add.length&&!R.mov.length){
-      S.cfg.parcVerif=Object.assign({},S.cfg.parcVerif||{},{em:hojeISO(),n:0});salvar();
-      if(!o.auto){if(S.cfg.parcUlt&&S.cfg.parcUlt.lote)prcSemNada();else toast('Nenhuma parcela faltando.');}
-      return R;}
-    if(o.auto){ // espera a tela ficar livre (PIN, outra folha aberta, digitando)
-      for(let i=0;i<40;i++){const ocupado=$('#modal').classList.contains('on')||$('#lock').classList.contains('on')||(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));if(!ocupado)break;await new Promise(r=>setTimeout(r,3000));}
-      if($('#modal').classList.contains('on')||$('#lock').classList.contains('on'))return R;}
-    S.cfg.parcVerif=Object.assign({},S.cfg.parcVerif||{},{em:hojeISO(),achou:R.n,mov:R.mov.length});salvar();
-    prcPrevia(R);return R;
-  }catch(e){if(!o.auto)toast(e.message||'Não consegui verificar agora.',true);return null;}
-  finally{PRC_BUSY=false;}
-}
-/* nada novo, mas existe uma recuperação anterior: oferece desfazer */
-function prcSemNada(){const U=S.cfg.parcUlt;const n=(U.add||[]).length+(U.mov||[]).length;
-  confirma({titulo:'Nenhuma parcela faltando',texto:'Está tudo nas faturas. A última recuperação ('+fmtData(U.em)+') mexeu em '+n+(n>1?' parcelas':' parcela')+'; dá para desfazer se algo não estava certo.',ok:'Fechar',alt:'Desfazer recuperação',altPerigo:true,altCb:prcDesfaz},()=>{});}
-function prcAuto(){if(S.cfg.parcVerif||!USER)return;setTimeout(()=>{if(!S.cfg.parcVerif&&USER)prcVerifica({auto:true});},4000);}
-function prcBotaoHTML(){return `<button type="button" class="card prcBtn" data-act="parc-verif"><span class="prcIc">${I('card')}</span><span class="prcBt"><b>Verificar parcelas</b><small>procura parcelas do banco que ficaram fora das faturas</small></span>${I('chevR')}</button>`;}
 
 /* ---------- v10.56: caixa Revisar ----------
    lançamentos que vieram do banco sozinhos ficam marcados (t.rev). confirmar tira a marca; trocar a categoria
    ensina a regra (S.cfg.regras) e aplica aos parecidos que ainda estão na caixa. */
-let REV_NOVOS=0;
+
 function revPend(){return S.tx.filter(t=>t.rev&&t.status!=='cancelado').sort((a,b)=>a.data<b.data?1:a.data>b.data?-1:0);}
 function revisarHTML(){const n=revPend().length;if(!n)return '';
   return `<button type="button" class="card revCard" data-act="rev-abre"><span class="revIc">${I('inbox')}</span><span class="revTx"><b>Revisar ${n} lançamento${n>1?'s':''} do banco</b><small>confira as categorias em poucos toques</small></span>${I('chevR')}</button>`;}
@@ -6661,7 +6099,7 @@ function abreEmp(id){
   const jur=empJurosTot(id);
   const linha=x=>{if(x.empJuros)return `<div class="tx empH juros"><span class="ic receita">${I('plus')}</span><div class="txt"><b>juros/lucro</b><small>${fmtDataCurta(x.data)} · receita${x.conta?' · '+esc(nomeLado('b:'+x.conta)):''}</small></div><div class="val pos">+ ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;
     const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
-    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.pluggyId?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
+    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.origem==='banco'?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="${esc(e.pessoa)}"><div class="sh-head"><h3>${esc(e.pessoa)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero">${empAvatar(e.pessoa)}<small>${t.aberto>0?'falta receber':t.perdoado>0?'encerrado':'quitado'}</small><b>${brl(t.aberto)}</b><span><span class="empModo">${EMP_MODO[empModo(e)]}</span> <span class="badge ${k}">${l}</span></span></div>
     <div class="empProg">${empBarHTML(t)}<p class="empProgT"><b>${esc(empResumo(t))}</b></p>
@@ -6952,11 +6390,11 @@ function empAntMarca(t){if(!t||!t.emp||t.empDir!=='out'||t.empAnt)return false;i
 function empAntDesfaz(t){if(!t||!t.empAnt)return false;const d=t.empAntDe&&S.bancos.some(b=>'b:'+b.id===t.empAntDe)?t.empAntDe:(bancoPadrao()?'b:'+bancoPadrao():'');
   if(t.empDir==='in')t.para=d;else t.de=d;delete t.empAnt;delete t.empAntDe;return true;}
 /* saídas que dá para corrigir: lançadas à mão (as que vieram do banco aconteceram de verdade na conta) */
-function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.pluggyId&&!t.importado&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
+function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&t.origem!=='banco'&&!t.importado&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
 /* dica: a saída deixou a conta negativa, ou é anterior a tudo que foi lançado naquela conta */
 function empSuspeitos(){
   const out=[],ign=new Set(S.cfg.empAntIgn||[]);
-  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.pluggyId||t.importado||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
+  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.origem==='banco'||t.importado||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
     const e=empPorId(t.emp),b=S.bancos.find(x=>'b:'+x.id===t.de);if(!e||!b)return;
     if(b.saldoData&&t.data<b.saldoData)return; // anterior ao saldo informado: já não desconta nada
     const sb=saldoBanco(b);
@@ -6994,7 +6432,7 @@ function empAntForm(id){
 function difDias(a,b){return Math.abs(Math.round((new Date(a+'T12:00')-new Date(b+'T12:00'))/864e5));}
 function txBancoIgual(contaSel,tipo,valor,data){
   const id=/^b:/.test(contaSel||'')?contaSel.slice(2):'';if(!id)return null;
-  const L=S.tx.filter(t=>t.pluggyId&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
+  const L=S.tx.filter(t=>t.origem==='banco'&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
   return L.sort((a,b)=>difDias(a.data,data)-difDias(b.data,data))[0]||null;
 }
 function empTokens(n){return norm(n).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>=3&&!['das','dos','del'].includes(w));}
@@ -7011,13 +6449,13 @@ function empCasa(desc,valor,data,dir){
 /* v10.80: receita prevista (manual) que corresponde a uma entrada do extrato: mesmo valor, conta igual (ou sem conta), até 3 dias da data de recebimento */
 function prevReceitaIgual(l,d,usados){
   const id=d.slice(2),v=cents(l.valor);
-  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&t.origem!=='banco'&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data)||(a.conta===id?-1:1))[0]||null;
 }
 /* lançamento manual de empréstimo que corresponde a uma linha do extrato (mesma conta, valor, até 3 dias) */
 function empManualIgual(l,d,usados){
   const sai=l.valor<0,v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.emp&&!t.pluggyId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.emp&&t.origem!=='banco'&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* ---------- v10.58: conciliação de transferências ----------
@@ -7051,8 +6489,7 @@ function concCache(){const k=S.tx.length+'|'+(S.cfg.concIgn||[]).length+'|'+S.tx
 function juntaPar(p){
   const o=S.tx.find(x=>x.id===p.o.id),i=S.tx.find(x=>x.id===p.i.id);if(!o||!i)return false;
   Object.assign(o,{tipo:'transf',de:'b:'+p.de,para:'b:'+p.para,categoria:'Transferência',conta:'',forma:'',cartao:''});
-  delete o.rev;o.par={id:i.id,pluggyId:i.pluggyId||'',desc:i.descricao||'',data:i.data};
-  if(i.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(i.pluggyId).slice(-3000);
+  delete o.rev;o.par={id:i.id,desc:i.descricao||'',data:i.data};
   if(i.anexos&&i.anexos.length)o.anexos=(o.anexos||[]).concat(i.anexos);
   S.tx=S.tx.filter(x=>x!==i);return true;
 }
@@ -7515,12 +6952,7 @@ function omniInvConfirma(iv){
   const mf=$('#mf');if(mf){const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Confirmar compra';}
 }
 function omniHTML(){
-  if(MVP_MODE)return smartBarHTML();
-  return `<form class="omni" id="omniF" role="search" aria-label="lançar numa frase" autocomplete="off" novalidate>
-    <span class="omniIc" aria-hidden="true">${I('sparkle')}</span>
-    <input id="omniTxt" type="text" enterkeyhint="send" maxlength="600" value="${esc(OMNI_TXT)}" placeholder="Uber 28 pix · Comprei 10 MXRF11 a 10,15" aria-label="o que você gastou, recebeu ou investiu">
-    <button type="submit" class="omniGo" aria-label="lançar">${I('arrowUp')}</button>
-  </form>`;
+  return smartBarHTML();
 }
 async function omniEnvia(){
   const inp=$('#omniTxt'),fm=$('#omniF');if(!inp||IA_PEND.omni||(fm&&fm.classList.contains('busy')))return; // v10.162: um pedido por vez
@@ -8085,7 +7517,7 @@ function rfCresce(v,d0,idx,taxa,ate,c){
 /* posição de hoje: bruto, imposto, IOF, taxa B3 e líquido, somando aporte por aporte */
 function rfPosicao(f,c){
   c=c||cdiCache();const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),tx=rfTaxaOf(f),hj=hojeISO(),A=rfAportes(f);
-  if(idx==='fixo'||!A.length||f.pluggyInv&&!f.manual){
+  if(idx==='fixo'||!A.length||f.bancoData&&!f.manual){
     const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
     if(!f.aplicEm||!f.pago)return {bruto:c2(posi),liq:null,ir:0,iof:0,cust:0,aliq:null,est:false,itens:[]};
     const dias=Math.max(1,diasEntre(f.aplicEm,hj)),iof=P.iof!==0&&dias<30?ganho*IOF_T[dias-1]/100:0,ir=P.ir?(ganho-iof)*IR_RF(dias)/100:0;
@@ -8126,7 +7558,7 @@ function rfRecalc(c){
     if(tipoOf(f)!=='rf')return;
     if(f.idx==='cdi'&&f.cdiBase&&!f.ap){f.ap=rfAportes(f);mud=true;}
     if(!f.prod){f.prod=rfProdOf(f);mud=true;}
-    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length||(f.pluggyInv&&!f.manual))return;
+    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length||(f.bancoData&&!f.manual))return;
     const P=rfPosicao(f,c);
     if(f.cotas!==1){f.cotas=1;mud=true;}
     if(P.bruto!==f.preco){f.preco=P.bruto;mud=true;}
@@ -8150,7 +7582,7 @@ async function bcbSerie(cod,ini,fim){
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.bancoData&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
   if(!rfs.length&&!mCdi&&!mIpca)return;
   const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');if(mIpca)usa.add('ipca');
   /* v10.87: a caixinha da meta rende desde a base e cada aporte; o alvo com IPCA corrige desde alvoEm */
@@ -8244,7 +7676,7 @@ function rfForm(f){
   ['prod','idx','liq'].forEach(n=>Q(n).addEventListener('change',sync));sync();
 }
 /* v10.105: aporte e resgate da renda fixa escolhem a conta. Vira transferência (não é gasto nem renda), como compra/venda de cotas.
-   Se o banco (Pluggy) já trouxe a mesma movimentação em até 3 dias, ela é reaproveitada em vez de duplicar. */
+   Se um lançamento antigo que veio do banco já tem a mesma movimentação em até 3 dias, ela é reaproveitada em vez de duplicar. */
 function rfContaCampo(f,res){
   const ats=bancosAtivos();if(!ats.length)return {name:'conta',type:'hidden',value:''};
   const pr=f.rfConta!=null&&(f.rfConta===''||ats.some(b=>b.id===f.rfConta))?f.rfConta:((S.bancos.find(b=>b.principal)||ats[0]||{}).id||'');
@@ -8254,7 +7686,7 @@ function rfContaCampo(f,res){
 function rfLancaConta(f,n,d,conta,res){
   if(!S.cats.includes('Investimentos'))S.cats.push('Investimentos');
   const desc=(res?'Resgate ':'Aporte ')+(f.nome||'renda fixa');
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>t.origem==='banco'&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     (res?((t.tipo==='receita'&&t.conta===conta)||(t.tipo==='transf'&&t.para==='b:'+conta&&!t.de)):((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))))
     .sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){delete ig.rev;Object.assign(ig,res?{tipo:'transf',de:'',para:'b:'+conta}:{tipo:'transf',de:'b:'+conta,para:''},{categoria:'Investimentos',conta:'',forma:'',cartao:'',invRf:f.id});return ig.id;}
@@ -8289,7 +7721,7 @@ function rfCardInfo(f,posi){
   const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),X=rfPosicao(f),meta=[];let info='';
   if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
   meta.push(['rende',rfRotulo(f)]);
-  if(idx!=='fixo'&&rfAportes(f).length&&!(f.pluggyInv&&!f.manual)){
+  if(idx!=='fixo'&&rfAportes(f).length&&!(f.bancoData&&!f.manual)){
     const an=rfAnual(f),mes=posi*(Math.pow(1+an/100,1/12)-1);
     if(mes>0)meta.push(['por mês','≈ '+brl(mes*(1-(P.ir?(X.aliq||15)/100:0)))+(P.ir?' líq.':'')]);
     if(X.liq!=null&&X.liq<posi-0.004)meta.push(['se resgatar hoje',brl(X.liq)]);
@@ -8305,7 +7737,7 @@ function rfCardInfo(f,posi){
   if(P.cust)chips.push(['b3',P.isen?'taxa B3 só acima de R$ 10 mil':'taxa B3 0,20% a.a.','']);
   chips.push(['g',P.g==='fgc'?'FGC até R$ 250 mil':P.g==='tn'?'garantia do Tesouro':'sem FGC',P.g?'':'warn']);
   if(idx==='fixo')info=(f.manual?'saldo atualizado por você':f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para o app calcular o rendimento';
-  else if(f.pluggyInv&&!f.manual)info=f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'saldo do banco';
+  else if(f.bancoData&&!f.manual)info=f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'saldo do banco';
   else{const c=cdiCache(),k=Object.keys(idx==='selic'?(c.sel||{}):c.s||{}).sort().pop();
     info=(['cdi','cdimais'].includes(idx)&&CDI.taxa?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a.':idx==='selic'&&k?'Selic '+num(cdiAnual(c.sel[k]))+'% a.a.':idx==='poup'?'poupança: '+num(poupTaxaMes(c,hojeISO())*100)+'% ao mês':idx==='ipca'?'inflação dos últimos 12 meses no cálculo':'taxa travada')+(X.est?' · últimos dias estimados até o Banco Central publicar':'')+(CDI.st==='erro'?' · sem conexão com o Banco Central':'')+(P.mm?' · valor na curva, o preço de mercado varia':'');}
   return {meta,info,chips,tag:P.c};
@@ -8466,7 +7898,7 @@ function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.cei
    Saldo = caixinha (+ rendimento do CDI das partes com data) + Σ(valor de mercado × pct) + proventos reinvestidos.
    Alvo: valor fixo, fixo corrigido pelo IPCA (SGS 433) ou um veículo da tabela FIPE (m.fipe, guarda o último valor).
    Aporte ("guardei"): vira histórico (m.aportes) e, quando sai de uma conta, um lançamento tipo transf (t.meta) que
-   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Um Pix do banco igual (Pluggy) é ligado, não duplicado. */
+   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Um Pix igual que já veio do banco é ligado, não duplicado. */
 const MT_VOL={BTC:.55,ETH:.7,SOL:.9,XRP:.85,BNB:.65,ADA:.85,DOGE:1,LINK:.9,USDT:.03,USDC:.03}; // volatilidade anual de referência (aprox. histórica)
 const MT_COR={caixa:'#22c55e',rf:'#0ea5e9',fii:'#a78bfa',acao:'#f59e0b',cripto:'#f97316',plano:'#94a3b8'};
 const MT_GL={caixa:'caixinha',rf:'renda fixa',fii:'FII',acao:'ações',cripto:'cripto',plano:'a comprar'};
@@ -8770,7 +8202,7 @@ function abreMeta(id){
   const fonteL=[];
   if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
   mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
-    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.bancoData?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
   (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(mtPlanoNome(pl)||'ativo')}</b><small>a comprar · ${(MT_PK_T.find(k=>k[0]===pl.tipo)||['',MT_GL[mtGrupo(pl.tipo)]])[1]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
   const hist=(m.aportes||[]).slice().reverse().slice(0,24);
   const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
@@ -8921,7 +8353,7 @@ function metaFontes(id){
     return `<div class="mtSrc mtSrc2" data-fid="${esc(f.id)}" data-val="${val}" data-livre="${livre}">
       <div class="mtSrcTop">${ic}<div class="mtSrcT"><b class="mtSrcN">${esc(nm)}</b>
         <span class="mtSrcV"><b class="nw">${brl(val)}</b>${tx?`<em class="mtTx">${esc(tx)}</em>`:''}</span>
-        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${f.pluggyInv?' · do banco':''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
+        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${f.bancoData?' · do banco':''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
       <div class="mtPctC" role="group" aria-label="quanto de ${esc(nm)} vai para esta meta">
         <div class="mtChips">${ch.length?ch.map(p=>`<button type="button" class="mtChip${v0===p?' on':''}" data-pq="${p}" aria-pressed="${v0===p}">${p===livre&&livre<100&&![25,50,75].includes(p)?'livre ':''}${pc(p)}%</button>`).join(''):'<span class="mtSemLivre">100% já está em outras metas</span>'}</div>
         <div class="mtStep"><button type="button" class="mtStB" data-ps="-5" aria-label="menos 5%">−</button><label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?v0:''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(nm)} para a meta (até ${pc(livre)}%)"><span>%</span></label><button type="button" class="mtStB" data-ps="5" aria-label="mais 5%">+</button></div>
@@ -9022,9 +8454,9 @@ function aporte(id){
     toast(fonte!=='manual'?'Aporte registrado. Lance a compra em Investimentos se ainda não lançou.':s2.n>sq.n&&s2.n>1?'Guardado. '+s2.n+' meses seguidos':'Aporte registrado');
   });
 }
-/* sai da conta como transferência para a meta. Se o banco (Pluggy) já trouxe a saída igual, ela vira o aporte (não duplica). */
+/* sai da conta como transferência para a meta. Se um lançamento que veio do banco já tem a saída igual, ela vira o aporte (não duplica). */
 function mtLancaAporte(m,n,d,conta){
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>t.origem==='banco'&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     ((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))).sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){ig.metaOrig={tipo:ig.tipo,categoria:ig.categoria,conta:ig.conta||'',forma:ig.forma||''};
     Object.assign(ig,{tipo:'transf',de:'b:'+conta,para:'',meta:m.id,categoria:'Meta',conta:'',forma:'',cartao:''});delete ig.rev;return ig.id;}
@@ -9035,16 +8467,16 @@ function mtLancaAporte(m,n,d,conta){
 function mtApDel(m,apId){
   const L=m.aportes||[],i=L.findIndex(a=>a.id===apId);if(i<0)return false;const a=L[i];
   if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));
-  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.pluggyId&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
+  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.origem==='banco'&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
   L.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;return true;
 }
 /* lançamento de meta excluído em Lançamentos: o aporte sai do histórico e da caixinha */
 function mtTxSaiu(t){const m=(S.metas||[]).find(x=>x.id===t.meta);if(!m)return;const a=(m.aportes||[]).find(x=>x.tx===t.id);if(!a)return;
   const i=m.aportes.indexOf(a);if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));m.aportes.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;}
-/* extrato/Pluggy: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
+/* extrato importado: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
 function metaManualIgual(l,d,usados){
   if(!(l.valor<0))return null;const v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.pluggyId&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&t.origem!=='banco'&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
@@ -9198,7 +8630,7 @@ function txMenu(id){
   if(t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita'))ops.push(['tx-propria','swap','Foi pra outra conta minha']);
   if(t.tipo==='despesa'&&!t.emp&&!t.cartao&&!t.faturaKey&&!temSplit(t)&&efetivo(t))ops.push(['tx-emp','handCoins','Emprestei (vai voltar)']);
   if(t.tipo==='receita'&&efetivo(t))ops.push(['tx-empv','handCoins','Devolução de empréstimo']);
-  if(t.emp&&t.empDir==='out'&&!t.pluggyId&&!t.importado)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
+  if(t.emp&&t.empDir==='out'&&t.origem!=='banco'&&!t.importado)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
   if(t.emp&&t.empDir!=='perdao')ops.push(['tx-desemp','close','Não foi empréstimo']);
   ops.push(['del-tx','trash','Excluir',1]);
   const box=$('#modal');
@@ -9443,13 +8875,9 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
-  'banco-sync':()=>bancoSync(),
   'wa-ligar':()=>waLigar(),
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
-  'parc-verif':()=>prcVerifica(),
-  'banco-config':()=>bancoConfig(),
-  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
@@ -9550,7 +8978,6 @@ const ACT={
   'rd-atualiza':()=>{radarAtualiza(true);toast('Atualizando cotações…');},
   'rd-ver':()=>rdVer(),
   'rd-add-rapido':t=>{const x=rdCatalogo().find(c=>c.t===t);if(!x)return;const it=radarAdd(x);if(it){render();setTimeout(()=>radarAlertasAbre(rdQKey(it),true),250);}},
-  'darf-pago':m=>darfPago(m),
   'op-venda':id=>opForm(id,'venda'),
   'op-provento':id=>opForm(id,'provento'),
   'prov-receber':id=>opForm(id,'provento',true),
@@ -9636,7 +9063,7 @@ const ACT={
   'conc-todos':()=>{let n=0;concCache().slice(0,100).forEach(p=>{if(juntaPar(p))n++;});salvar();render();closeModal();toast(n+' transferência'+(n>1?'s':'')+' juntada'+(n>1?'s':''));},
   'rev-ok':id=>{const t=S.tx.find(x=>x.id===id);if(t){delete t.rev;salvar();render();}abreRevisar();},
   'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
-  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
+  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
   'ir-cal':()=>{CAL_M=0;go('plan');},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;PLAN.dia=false;PLAN.itens=[];render();},
   'sim-add':id=>{if(!SIM_TIPOS[id])return;if(PLAN.itens.length>=8){toast('até 8 itens na simulação');return;}PLAN.itens.push({t:id,v:0,n:id==='parc'?10:0,k:id==='gun'||id==='run'||id==='parc'?0:1});render();setTimeout(()=>{const ins=document.querySelectorAll('[data-sim$="|v"]');const el=ins[ins.length-1];if(el)el.focus();},60);},
@@ -9713,7 +9140,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#syncTxt')){syncDetalhe();return;}
   if(e.target.id==='ov'||e.target.closest('#btnClose')){toggleSide(false);return;}
   const tb=e.target.closest('[data-tab]');
-  if(tb){if(MVP_MODE&&tb.closest('#tabbar,#sbNav'))NAV_PILHA=[];go(tb.dataset.tab);return;}
+  if(tb){if(tb.closest('#tabbar,#sbNav'))NAV_PILHA=[];go(tb.dataset.tab);return;}
   if(e.target.id==='modal'){closeModal();return;}
   const t=e.target.closest('[data-act]');
   if(!t)return;
@@ -9764,7 +9191,7 @@ document.addEventListener('change',e=>{
    script do próprio site (a CSP só aceita 'self'), sem atributo onload no HTML; o service worker guarda junto com o app.
    cada parte se registra em window.__gvParte[nome] e recebe o contexto X (funções do app e getters do estado que muda). */
 const PARTES={};
-const PARTE_X={get MVP(){return MVP_MODE;},$,I,esc,logoSVG,go,abreRapido,salvar,get S(){return S;},get USER(){return USER;},get TAB(){return TAB;}};
+const PARTE_X={$,I,esc,logoSVG,go,abreRapido,salvar,get S(){return S;},get USER(){return USER;},get TAB(){return TAB;}};
 function carregaParte(nome){
   if(PARTES[nome])return PARTES[nome];
   return PARTES[nome]=new Promise((ok,falha)=>{
@@ -9787,8 +9214,8 @@ function tourTalvez(){
   try{
     if(tourAberto()||S.cfg.tourVisto||localStorage.getItem('gv-tour-'+(USER&&USER.id)))return;
     if((S.tx||[]).length||(S.cartoes||[]).length||(S.bancos||[]).length)return;
-    if(MVP_MODE){if(metaMes()>0)return;setTimeout(()=>{if(USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on')&&!$('#lock').classList.contains('on'))metaOnbAbre();},600);return;} // v10.160: sem tour no primeiro acesso
-    setTimeout(()=>{if(!tourAberto()&&USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on'))tourAbre();},900);
+    if(metaMes()>0)return;
+    setTimeout(()=>{if(USER&&!$('#modal').classList.contains('on')&&!$('#auth').classList.contains('on')&&!$('#lock').classList.contains('on'))metaOnbAbre();},600); // v10.160: sem tour no primeiro acesso (o tour fica em Ajustes)
   }catch(e){}
 }
 function tourAbre(){
@@ -9801,13 +9228,13 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,planoAplica,geraRecorrentes,getS:()=>S,lockDesconecta,numExt,temPendencia,csvCel,dataValida,aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
 $('#sbNav').innerHTML='<div class="sb-sec">navegação</div>'+NAV.map(n=>'<button class="sb-item" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join('')
-  +(MVP_MODE?'<div class="sb-sec">mais</div>'+NAV_MVP_MAIS.map(n=>'<button class="sb-item sbSub" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join(''):'');
-if(MVP_MODE){document.documentElement.classList.add('mvp');const tb=document.createElement('nav');tb.id='tabbar';tb.className='tabbar';tb.setAttribute('aria-label','abas principais');
+  +'<div class="sb-sec">mais</div>'+NAV_MVP_MAIS.map(n=>'<button class="sb-item sbSub" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join('');
+{document.documentElement.classList.add('mvp');const tb=document.createElement('nav');tb.id='tabbar';tb.className='tabbar';tb.setAttribute('aria-label','abas principais');
   tb.innerHTML=NAV_MVP.map(n=>'<button type="button" class="tbItem" data-tab="'+n.t+'">'+I(n.i)+'<span>'+esc(n.l)+'</span></button>').join('');document.body.appendChild(tb);pintaNav();}
 $('#logo').innerHTML=logoSVG();
 $('#btnMenu').innerHTML=I('menu');
@@ -10299,7 +9726,7 @@ async function entraComSessao(sess){
     if(radarMigra())salvar(); // v10.155
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
-    prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
+    tourTalvez(); // v10.103: tour na conta nova
   }
 }
 // bootstrap explícito: após o redirect do Google a sessão vem no hash (#access_token)
@@ -10368,7 +9795,7 @@ sb.auth.onAuthStateChange(async (ev,sess)=>{
     if(radarMigra())salvar(); // v10.155
     // v10.73: a tela já mostra a cópia deste aparelho e a nuvem não trouxe nada novo: não redesenha (nem pula de aba)
     if(!(igual&&!ger&&CR_TELA)){restauraAba();applyCfg();render();}
-    prcAuto();tourTalvez(); // v10.96: verificar parcelas, uma vez; v10.103: tour na conta nova
+    tourTalvez(); // v10.103: tour na conta nova
   }
 });
 if(!navigator.onLine){

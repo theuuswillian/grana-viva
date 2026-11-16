@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},origemBadge,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -22,8 +22,11 @@ T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
 const S=T.S;S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
 S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
 const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
-ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
+// fase 1: sem chave de modo; o app tem sempre as 4 abas
+ok(doc.documentElement.classList.contains('mvp')&&doc.querySelectorAll('#tabbar [data-tab]').length===4,'4 abas na barra de baixo');
+// lançamento antigo da conexão bancária (origem 'banco') aparece com o selo "Importado"
+ok(/txOrg o-imp[^>]*>Importado</.test(T.origemBadge({id:'x',tipo:'despesa',valor:1,data:'2026-01-01',origem:'banco'})),'selo "Importado" no lançamento antigo do banco');
 const view=()=>doc.querySelector('#view').innerHTML;
 try{T.render();}catch(e){console.log('render inicio',e.stack.split('\n').slice(0,3).join(' | '));}
 ok(/Preencher exemplo para explorar/.test(view()),'conta vazia mostra "Preencher exemplo"');
@@ -65,6 +68,9 @@ T.demoLimpa();ok(!T.S.tx.some(t=>t.demo),'Limpar exemplo apaga tudo de exemplo')
 // privacidade
 T.go('inicio');doc.querySelector('#btnEye').click();ok(/•••••/.test(view())&&w.localStorage.getItem('gv-oculto')==='1','olho do cabeçalho mascara os valores e grava');
 doc.querySelector('#btnEye').click();
+// fase 1: nenhuma aba mostra a conexão bancária automática nem o imposto das vendas
+{const txt=[];for(const tab of ['inicio','gastos','lanc','cartoes','bancos','fii','cfg']){try{T.go(tab);txt.push(view());}catch(e){ok(false,'aba '+tab+': '+e.message);}}
+ ok(!/imposto das vendas|conectar banco|banco-sync|banco-config|parc-verif|bcTxt|\birCard/i.test(txt.join('')),'sem conexão bancária automática e sem imposto das vendas nas telas');}
 const e2=erros.filter(x=>!/Not implemented|Could not parse CSS|navigation/.test(x));
 if(e2.length)console.log('erros do jsdom:',e2.slice(0,8));
 setTimeout(()=>process.exit(process.exitCode||0),300);
