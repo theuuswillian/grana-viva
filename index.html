@@ -3858,6 +3858,62 @@ html.claro .qcUndo{color:#b91c1c}
 .waCmdB{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border-radius:999px;font-size:13px;color:var(--txt);background:color-mix(in srgb,#25d366 10%,transparent);border:1px solid color-mix(in srgb,#25d366 28%,transparent);cursor:pointer}
 .waCmdB .i{width:14px;height:14px;color:#25d366}
 html.claro .waCmdB .i{color:#15803d}
+</style><style id="f3ui">/* fase 3: acabamento FinTech (vale para as 4 abas; claro, escuro e preto) */
+:root{--f3-bd:color-mix(in srgb,var(--txt) 9%,transparent);--f3-r:16px;--f3-r2:14px}
+/* superfícies limpas: fundo liso, borda 1px sutil, raio 16 (cards) e 14 (blocos internos), sem sombra */
+html.mvp #view .card:not(.card .card):not(.esqPh),html.mvp #view .ast{background:var(--card)!important;background-image:none!important;border:1px solid var(--f3-bd)!important;border-radius:var(--f3-r)!important;box-shadow:none!important}
+html.mvp #view .card.wHero,html.mvp #view .card.ccBest{background-image:none!important}
+html.mvp #view .card .card{box-shadow:none!important}
+html.mvp #view .rsT,html.mvp #view .gsLk,html.mvp #view .mini{border-radius:var(--f3-r2)!important;box-shadow:none!important}
+html.mvp #view .rsT{border:1px solid var(--f3-bd)!important;background:var(--card)!important;background-image:none!important}
+/* sombra só na Barra Inteligente e na barra de baixo */
+.omni{box-shadow:0 10px 28px -14px rgba(0,0,0,.55),0 1px 2px rgba(0,0,0,.18)!important;border-color:var(--f3-bd)}
+html.claro .omni{box-shadow:0 10px 26px -14px rgba(15,23,42,.28),0 1px 2px rgba(15,23,42,.06)!important}
+html.mvp .tabbar{box-shadow:0 -10px 28px -18px rgba(0,0,0,.6)}
+html.claro.mvp .tabbar{box-shadow:0 -10px 26px -18px rgba(15,23,42,.25)}
+/* Barra Inteligente processando: a borda pulsa (sem movimento com prefers-reduced-motion) */
+.omni.busy{border-color:var(--a1)!important;animation:f3Pulso 1.2s ease-in-out infinite}
+@keyframes f3Pulso{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--a1) 45%,transparent),0 10px 28px -14px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--a1) 0%,transparent),0 10px 28px -14px rgba(0,0,0,.55)}}
+@media(prefers-reduced-motion:reduce){.omni.busy{animation:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--a1) 35%,transparent)!important}}
+.omni.busy input{cursor:progress}
+/* exemplos de 1 toque (só com a barra vazia) */
+.omniChips{display:flex;gap:8px;margin:10px 0 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px}
+.omniChips::-webkit-scrollbar{display:none}.omniChips[hidden]{display:none}
+.omniChip{flex:none;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--f3-bd);background:color-mix(in srgb,var(--txt) 4%,transparent);color:var(--txt);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
+.omniChip:active{transform:scale(.96);background:color-mix(in srgb,var(--a1) 14%,transparent)}
+.omniChip:focus-visible,.omniManual:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+.omniWrap .omniManual{margin-top:6px}
+/* logo real do banco: avatar circular 32x32 (inicial quando não há logo) */
+.bkAv{position:relative;flex:none;display:inline-block;width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--card2);border:1px solid var(--f3-bd);box-sizing:border-box}
+.bkAv .bl-ini{position:absolute;inset:0;border:0;box-shadow:none;border-radius:50%;font-size:13px;font-weight:700;color:var(--a1);background:color-mix(in srgb,var(--a1) 12%,var(--card2))}
+html.claro .bkAv .bl-ini{color:#3f6212;background:color-mix(in srgb,#65a30d 12%,#fff)}
+.bkAv img{border-radius:50%}
+.rmRow>.bkAv,.tx>.bkAv{margin-left:auto}
+.rmRow>.bkAv+.rmV{margin-left:0}
+.selBk{display:flex;align-items:center;gap:10px}.selBk>select{flex:1;min-width:0}.selBk.semAv .selBkAv{display:none}
+.selBkAv{flex:none;display:inline-flex}
+/* aviso de fatura fechada */
+.fatFechada{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:#fbbf24}.fatFechada .i{width:12px;height:12px}
+html.claro .fatFechada{color:#92400e}
+/* estado vazio dentro de um card */
+.vzMini{text-align:center;padding:14px 8px 6px}
+.vzMini .vz-ic{width:48px;height:48px;margin:0 auto 10px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--a1) 14%,transparent);color:var(--a1)}
+.vzMini .vz-ic .i{width:22px;height:22px}
+.vzMini b{display:block;font-size:15px;color:var(--txt)}.vzMini p{margin:4px auto 0;max-width:280px;font-size:13.5px;color:var(--mut);line-height:1.45}
+.vzMini .vz-a{margin-top:12px}
+/* esqueleto do primeiro carregamento: os blocos reais ficam no lugar (sem pulo), cobertos pelo brilho */
+html.esq [data-esq]{position:relative;pointer-events:none;overflow:hidden}
+html.esq [data-esq] *{visibility:hidden}
+html.esq [data-esq]::after{content:"";position:absolute;inset:0;border-radius:inherit;visibility:visible;background:linear-gradient(90deg,color-mix(in srgb,var(--txt) 5%,var(--card)) 0%,color-mix(in srgb,var(--txt) 11%,var(--card)) 50%,color-mix(in srgb,var(--txt) 5%,var(--card)) 100%);background-size:200% 100%;animation:skMove 1.3s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){html.esq [data-esq]::after{animation:none}}
+.esqPh{border:1px solid var(--f3-bd)!important;border-radius:var(--f3-r)!important;box-shadow:none!important;background:var(--card)!important}
+.esqPh.gsCc{min-height:132px}.esqPh.ptTot{min-height:150px}.esqPh.esqAst{min-height:96px;margin-bottom:12px}
+/* cabeçalho de vidro: sem suporte a backdrop-filter, fundo sólido (texto legível) */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html.mvp .topBar,html.mvp .tabbar,.qcCard{background:var(--card)!important}}
+/* toque e foco */
+.bkAv,.omniChip,.rmRow,.tx{-webkit-tap-highlight-color:transparent}
+.rmRow.tap:active,.tx.txTap:active{background:color-mix(in srgb,var(--txt) 4%,transparent)}
+@media(prefers-reduced-motion:reduce){.omniChip,.rmRow{transition:none}}
 </style></head>
 <body>
 <aside class="side" id="side">
