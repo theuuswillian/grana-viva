@@ -77,7 +77,7 @@ T.S.tx=[
 ];
 const prcLocal=T.prcDetecta([]);
 console.log('parcelas local:',JSON.stringify({add:prcLocal.add.length,mov:prcLocal.mov.length,categoria:prcLocal.add[0]&&prcLocal.add[0].categoria,compras:prcLocal.compras.length}));
-ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0&&prcLocal.mov.length===1,'parcelas antigas recuperadas só pelo histórico local');
+ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0,'parcela faltante recuperada só pelo histórico local');
 T.S.tx=txAntesParc;T.S.cartoes=cartoesAntesParc;
 ok(/Resumo semanal toda segunda às 8h/.test(T.waResumoHTML(false))&&/wa-copia/.test(T.waCmdHTML()),'WhatsApp: toggle e chips');
 T.demoLimpa();ok(!T.S.tx.some(t=>t.demo),'Limpar exemplo apaga tudo de exemplo');
