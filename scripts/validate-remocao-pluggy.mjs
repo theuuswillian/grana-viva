@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const sql = readFileSync('supabase/migrations/20261118_remocao_pluggy.sql', 'utf8');
 const app = readFileSync('app.js', 'utf8');
+const legacyBundle = readFileSync('app.min.js', 'utf8');
 const html = readFileSync('index.html', 'utf8');
 const sw = readFileSync('sw.js', 'utf8');
 
@@ -18,8 +19,10 @@ assert.ok(!app.includes('function PLUGGY_ON('), 'legacy Pluggy feature switch mu
 assert.ok(!app.includes("functions.invoke('pluggy-sync'") && !app.includes('functions.invoke("pluggy-sync"'), 'frontend must not invoke the legacy Pluggy Edge Function');
 assert.ok(!app.includes(".from('pluggy_tx')") && !app.includes(".from('pluggy_acc')") && !app.includes(".from('pluggy_cfg')"), 'frontend must not query legacy Pluggy tables');
 assert.ok(!app.includes('async function pluggy('), 'legacy Pluggy API wrapper must be removed');
+assert.ok(!legacyBundle.includes('function PLUGGY_ON(') && !legacyBundle.includes('async function pluggy('), 'legacy app.min.js bundle must not retain the Pluggy integration');
+assert.ok(!legacyBundle.includes("functions.invoke('pluggy-sync'") && !legacyBundle.includes(".from('pluggy_tx')") && !legacyBundle.includes(".from('pluggy_acc')") && !legacyBundle.includes(".from('pluggy_cfg')"), 'legacy app.min.js bundle must not call Pluggy endpoints or tables');
 for (const obsolete of ['IMP.banco', 'IMP_FILA', 'proxImportBanco', 'fimFilaBanco', 'catDoBanco(']) {
-  assert.ok(!app.includes(obsolete), 'legacy bank-import path must be removed: ' + obsolete);
+  assert.ok(!app.includes(obsolete) && !legacyBundle.includes(obsolete), 'legacy bank-import path must be removed: ' + obsolete);
 }
 assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}"), 'installment recovery must use local history only');
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
