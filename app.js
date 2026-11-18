@@ -1,9 +1,8 @@
 
 (function(){
 'use strict';
-/* v10.160: MVP enxuto. true = 4 abas (Início, Gastos & Cartões, Patrimônio, WhatsApp & Conta), barra inteligente com recibo,
-   alertas de preço na carteira, Pluggy (Open Finance) e imposto das vendas (IR/DARF) escondidos. false = app completo como na v10.159.
-   Nada do servidor é apagado: só a interface e as chamadas automáticas ao pluggy-sync mudam. */
+/* GranaViva: integração Pluggy descontinuada. A interface não oferece conexão ou sincronização bancária.
+   Dados históricos identificados como Pluggy são tratados pela migração dedicada, nunca por chamadas do frontend. */
 const MVP_MODE=true;
 /* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
    (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
@@ -3459,7 +3458,7 @@ function render(){
     RENDER_QUIETO=quieto;
     if(!bloq&&AFTER[TAB])AFTER[TAB]();
     RENDER_QUIETO=false;
-    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();atualizaWaUI();}
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaWaUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
     try{cabeNum(v);}catch(e){}
