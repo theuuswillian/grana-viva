@@ -5,8 +5,7 @@ begin;
 
 -- Lançamentos importados diretamente do Pluggy.
 delete from public.tx
-where coalesce(data, '{}'::jsonb) ? 'pluggyId'
-   or data ->> 'origem' = 'banco';
+where coalesce(data, '{}'::jsonb) ? 'pluggyId';
 
 -- Posições de investimento criadas/vinculadas à sincronização Pluggy.
 delete from public.fiis
@@ -46,8 +45,8 @@ where coalesce(data, '{}'::jsonb) ?| array[
   'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
 ];
 
-drop table if exists public.pluggy_tx cascade;
-drop table if exists public.pluggy_acc cascade;
-drop table if exists public.pluggy_cfg cascade;
+drop table if exists public.pluggy_tx;
+drop table if exists public.pluggy_acc;
+drop table if exists public.pluggy_cfg;
 
 commit;
