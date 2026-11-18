@@ -23,6 +23,7 @@ for (const obsolete of ['IMP.banco', 'IMP_FILA', 'proxImportBanco', 'fimFilaBanc
 }
 assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}"), 'installment recovery must use local history only');
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
-assert.ok(html.includes('app.js?v=10.166'), 'HTML must load the versioned app source');
-assert.ok(sw.includes('app.js?v=10.166'), 'service worker must precache the same app source');
+assert.ok(html.includes("const GV_BUILD='10.167';"), 'HTML build version must be bumped');
+assert.ok(html.includes('app.js?v=10.167') && html.includes('planos.js?v=10.167'), 'HTML must load the versioned app and plans sources');
+assert.ok(sw.includes("const V='gv-v10.167';") && sw.includes('app.js?v=10.167') && sw.includes('planos.js?v=10.167') && sw.includes('tour.min.js?v=10.167'), 'service worker cache and precache URLs must match the app version');
 console.log('Pluggy removal static checks passed.');
