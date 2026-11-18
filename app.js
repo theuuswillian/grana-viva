@@ -5892,17 +5892,6 @@ function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
   S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
   S.cfg.migPropria=2;salvar();return k;}
-/* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
-/* v10.160: no MVP a conexão bancária some da tela e nenhuma chamada (automática ou não) vai ao pluggy-sync.
-   o que já entrou do banco continua no app como qualquer lançamento. */
-function PLUGGY_ON(){return false;}
-async function pluggy(body){
-  if(MVP_MODE)throw new Error('conexão bancária indisponível nesta versão');
-  const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
-  if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
-  if(data&&data.erro)throw new Error(data.erro);
-  return data;
-}
 /* v10.136: WhatsApp. O app só gera o código de ligação e mostra o estado; ler e salvar acontece no servidor (whatsapp-webhook).
    O lançamento salvo pelo WhatsApp chega aqui na próxima sincronização (tag "whatsapp"). */
 let WA_ST=null;
@@ -5962,171 +5951,7 @@ function waDesligar(){
   confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
     try{await waChama('desvincular');WA_ST=null;toast('WhatsApp desligado');atualizaWaUI();}catch(e){toast(e.message,true);}});
 }
-let BC_ST=null;
-async function atualizaBancoUI(){
-  if(MVP_MODE)return;
-  const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
-  if(!USER){bt.innerHTML='';return;}
-  try{
-    /* v10.54: status guardado por 5 min (antes: uma chamada ao servidor a cada vez que a tela desenhava) */
-    const st=(BC_ST&&BC_ST.uid===USER.id&&Date.now()-BC_ST.t<300000)?BC_ST.st:await pluggy({acao:'status'});
-    BC_ST={st,t:BC_ST&&BC_ST.st===st?BC_ST.t:Date.now(),uid:USER.id};
-    if(!!st.conectado!==!!S.cfg.pluggyOn){S.cfg.pluggyOn=!!st.conectado;salvar();}
-    if(st.conectado){
-      const ul=st.ultima?new Date(st.ultima):null,sc=$('#bcSt');if(sc){sc.className='bcSt on';sc.innerHTML='<i></i>conectado';}
-      const bks=[...new Set(S.bancos.map(b=>b.nome))].filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n));
-      tx.innerHTML=`<div class="bcGrid"><span><small>conexões</small><b>${st.itens}</b></span><span><small>última busca</small><b>${ul?ul.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' · '+ul.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—'}</b></span>${bks.length?`<span class="bcBks"><small>instituições</small><b>${bks.map(n=>{const x=BANCOS_BR.find(y=>y.n===n);return bancoLogoHTML(bancoLogo(x.d),n,'bcLg',bancoLogo2(x.d));}).join('')}${bks.length===1?esc(NOME_CURTO[bks[0]]||bks[0]):''}</b></span>`:''}</div><p class="bcNota">${I('refresh')}o banco atualiza os dados cerca de uma vez por dia.</p>`;
-      bt.innerHTML=`<button class="btn bcSync" data-act="banco-sync">${I('refresh')}buscar agora</button><div class="bcSec"><button class="btn2" data-act="banco-config">${I('sliders')}editar conexão</button><button class="bcDel" data-act="banco-remover">${I('logout')}desconectar</button></div><button class="btn2 bcParc" data-act="parc-verif">${I('card')}verificar parcelas</button>`;
-    }else{
-      {const sc=$('#bcSt');if(sc){sc.className='bcSt';sc.innerHTML='<i></i>desligado';}}
-      tx.classList.add('bcIntro');tx.innerHTML='traga os lançamentos das suas contas e cartões direto do banco, sem digitar. usa o Meu Pluggy, gratuito para uso pessoal. você revisa tudo antes de entrar no app.';
-      bt.innerHTML=`<button class="btn" data-act="banco-config">${I('link')}conectar banco</button>`;
-    }
-  }catch(e){tx.textContent='a conexão com o banco ainda não está disponível no servidor.';bt.innerHTML='';}
-}
-function bancoConfig(){
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  form('Conectar banco',[
-    {name:'clientId',label:'Client ID (dashboard.pluggy.ai → Aplicações)',value:'',required:true,placeholder:'xxxxxxxx-xxxx-…'},
-    {name:'clientSecret',label:'Client Secret',type:'password',value:'',required:true,placeholder:'aparece uma vez só, quando você gera'},
-    {name:'itemIds',label:'itemId (um por conexão, separe por vírgula)',type:'textarea',value:'',required:true,placeholder:'Demo → Itens conectados → copie o id'}
-  ],v=>{
-    if(!String(v.clientId).trim()||!String(v.clientSecret).trim()||!String(v.itemIds).trim())return 'Preencha os três campos.';
-    (async()=>{toast('Conferindo com o Pluggy…');
-    try{BC_ST=null;const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
-      S.cfg.pluggyOn=true;salvar();render();toast('Banco conectado · '+r.contas+' '+(r.contas===1?'conta encontrada':'contas encontradas'));setTimeout(bancoSync,400);
-    }catch(e){toast(e.message,true);}
-    })();
-  });
-}
-const CAT_PLUGGY=[[/groceries|supermarket/i,'Mercado'],[/food delivery/i,'Delivery'],[/restaurant|eating out/i,'Restaurantes'],[/gas station|fuel/i,'Combustível'],[/taxi|ride/i,'Uber e táxi'],[/public transport/i,'Transporte público'],[/vehicle maintenance|car maintenance/i,'Manutenção do carro'],[/electricity|water|utilities/i,'Contas da casa'],[/telecom|internet|mobile/i,'Internet e celular'],[/streaming|digital services|subscription/i,'Assinaturas'],[/pharmac|drug/i,'Farmácia'],[/gym|fitness/i,'Academia'],[/pet/i,'Pets'],[/travel|airline|accommodation|hotel/i,'Viagem'],[/clothing/i,'Roupas'],[/electronics/i,'Eletrônicos'],[/online shopping|shopping/i,'Compras'],[/bank fees|interest charge|late payment/i,'Tarifas e juros'],[/taxes/i,'Impostos e taxas'],[/donation/i,'Doações'],[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
-function catDoBanco(l){
-  const sg=sugestaoCat(l.desc,l.valor<0?'despesa':'receita');if(sg&&sg.por!=='palavra')return sg.c;
-  const lista=l.valor<0?S.cats:CATS_RECEITA;
-  for(const [re,c] of CAT_PLUGGY)if(re.test(l.catBanco||'')&&lista.includes(c))return c;
-  return sg?sg.c:catSugerida(l.desc,l.valor<0?'despesa':'receita');
-}
-/* v10.54: lê o que o webhook do Pluggy já guardou no servidor (pluggy_tx / pluggy_acc). null = usar 'sincronizar' */
-let IMP_VISTO='';
-async function bancoDaTabela(){
-  try{
-    const visto=S.cfg.pluggyVisto||'';
-    const {data:accs,error:e1}=await sb.from('pluggy_acc').select('id,item_id,data,updated_at');
-    if(e1||!accs||!accs.length)return null;               // tabela vazia / sem webhook ainda → fallback
-    const desde=S.cfg.pluggyDesde
-      ?new Date(new Date(S.cfg.pluggyDesde).getTime()-5*864e5).toISOString().slice(0,10)
-      :new Date(Date.now()-60*864e5).toISOString().slice(0,10);
-    const rows=[];let maxUpd=visto;
-    for(let de=0;de<20000;de+=1000){                       // PostgREST devolve no máx. 1000 por página
-      let q=sb.from('pluggy_tx').select('id,account_id,data,removed,updated_at').order('updated_at',{ascending:true}).range(de,de+999);
-      q=visto?q.gt('updated_at',visto):q.gte('data->>data',desde);
-      const {data,error}=await q;if(error)return null;
-      rows.push(...data);if(data.length<1000)break;
-    }
-    rows.forEach(t=>{if(t.updated_at>maxUpd)maxUpd=t.updated_at;});
-    accs.forEach(a=>{if(a.updated_at>maxUpd)maxUpd=a.updated_at;});
-    IMP_VISTO=maxUpd;
-    const porConta={};
-    rows.forEach(t=>{if(t.removed)return;(porConta[t.account_id]||(porConta[t.account_id]=[])).push(t.data);});
-    const contas=accs.map(a=>({...a.data,tx:(porConta[a.id]||[]).sort((x,y)=>x.data<y.data?-1:x.data>y.data?1:0)}));
-    let investimentos=null;
-    /* investimentos não ficam na tabela: 1 busca ao vivo por dia só para eles */
-    if(S.cfg.pluggyInvDia!==hojeISO()){
-      try{const r2=await pluggy({acao:'sincronizar',dias:7});investimentos=r2.investimentos||[];S.cfg.pluggyInvDia=hojeISO();}catch(e){}
-    }
-    return {ok:true,desde:visto?visto.slice(0,10):desde,contas,investimentos,tabela:true};
-  }catch(e){return null;}
-}
-async function bancoSync(forcar=false){
-  if(MVP_MODE){toast('A conexão com o banco não está disponível nesta versão. Importe o extrato em Gastos & Cartões.',true);return;}
-  BC_ST=null;
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
-  toast('Buscando lançamentos no banco…');
-  try{
-    IMP_VISTO='';
-    const r=(!forcar&&await bancoDaTabela())||await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
-    if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-    r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
-    let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
-    const ni=investDoBanco(r.investimentos||[]);if(ni)toast(ni+' investimento'+(ni>1?'s':'')+' atualizado'+(ni>1?'s':'')+' pelo banco');
-    geraRecorrentes();render();
-    if(novos)toast(novos===1?'Cartão do banco adicionado em Cartões':novos+' cartões do banco adicionados');
-    const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
-      const cartao=c.tipo==='CREDIT';
-      const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
-      return {nome:c.nome,conta:c.id,cartao,linhas,saldo:c.saldo};
-    }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
-      .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
-    /* v10.51: a data da última busca só avança quando a revisão termina (fechar no X não perde lançamentos) */
-    if(!fila.length){S.cfg.pluggyDesde=hojeISO();if(IMP_VISTO)S.cfg.pluggyVisto=IMP_VISTO;salvar();toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
-    IMP_CURSOR=hojeISO();IMP_VISTO_CURSOR=IMP_VISTO;IMP_FILA=fila;proxImportBanco();
-  }catch(e){toast(e.message,true);}
-}
-let IMP_FILA=[],IMP_CURSOR='',IMP_VISTO_CURSOR='';
 function arqCartao(c){c.arq=true;c.arqEm=hojeISO();salvar();render();toast('Cartão arquivado');}
-/* v10.20: posições de investimento do banco (Pluggy /investments) entram em Investimentos */
-function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
-  if(t==='EQUITY'){if(st==='REAL_ESTATE_FUND')return 'fii';if(st==='BDR')return 'bdr';if(st==='ETF')return 'etf';return 'acao';}
-  if(t==='ETF')return 'etf';if(st==='REAL_ESTATE_FUND')return 'fii';return 'rf';}
-function investDoBanco(L0){let n=0;const hj=hojeISO();
-  /* renda fixa do mesmo emissor vira uma posição só (o Nubank manda cada aplicação de CDB separada) */
-  const G={},L=[];
-  L0.forEach(v=>{if(tipoInvBanco(v)!=='rf'){L.push(v);return;}
-    const nm=String(v.nome||'Renda fixa').replace(/\s*-\s*SOCIEDADE.*$/i,'').replace(/ S\.?A\.?.*$/i,'').trim();
-    const k='g:'+norm((v.subtipo||'')+'|'+nm);
-    const g=G[k]||(G[k]={id:k,nome:nm,codigo:(v.subtipo||'RF')+' '+nm.split(/[\s-]+/).filter(x=>x.length>1&&!/^(CDB|LCI|LCA|LC|RDB)$/i.test(x))[0],tipo:v.tipo,subtipo:v.subtipo,saldo:0,original:0,status:'TOTAL_WITHDRAWAL',vencimento:''});
-    if(v.status!=='TOTAL_WITHDRAWAL'&&+v.saldo>0){g.saldo+= +v.saldo;g.original+= +v.original||0;g.status='ACTIVE';if(v.vencimento&&(!g.vencimento||v.vencimento<g.vencimento))g.vencimento=v.vencimento;}});
-  Object.values(G).forEach(g=>{g.saldo=c2(g.saldo);g.original=c2(g.original);L.push(g);});
-  L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
-    let f=S.fiis.find(x=>x.pluggyInv===v.id);
-    const tk=tp==='rf'?rfCodigo(v.codigo||v.nome||''):String(v.codigo||v.nome).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV'; // v10.98: rf sem cortar palavra
-    if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
-    if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
-    if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
-    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento&&!f.semVenc)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
-    if(f.manual||f.idx==='cdi'){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
-    if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
-    else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
-    n++;});
-  if(n)salvar();return n;}
-/* v10.18: o cartão do banco aparece em Cartões com limite, usado, fechamento e vencimento informados pelo banco */
-function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
-  if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-  let id=typeof mapa[c.id]==='string'&&mapa[c.id][0]==='c'?mapa[c.id].slice(2):'';
-  let cc=id&&S.cartoes.find(x=>x.id===id);
-  const errado=cc&&k.final&&cc.final&&cc.final!==k.final?cc:null; // estava ligado a outro cartão seu
-  if(errado)cc=null;
-  if(!cc&&k.final)cc=S.cartoes.find(x=>x.final===k.final);
-  let criou=false;
-  if(!cc){cc={id:uid(),nome:String(c.nome||'Cartão').replace(/\s*··\d+$/,'').slice(0,60)||'Cartão',banco:String(k.banco||c.nome||'').slice(0,60),final:k.final||'',limite:0,fechamento:1,vencimento:10,cor:S.cartoes.length%CARD_COR.length,rotativo:0,multaPct:2,moraPct:1};S.cartoes.push(cc);criou=true;}
-  mapa[c.id]='c:'+cc.id;
-  if(errado){const ids=new Set((c.tx||[]).map(t=>'plg-'+t.id));S.tx.forEach(t=>{if(t.cartao===errado.id&&t.pluggyId&&(ids.has(t.pluggyId)||t.origem==='banco'))t.cartao=cc.id;});}
-  const lim=+k.limite,disp=+k.disponivel;
-  if(isFinite(lim)&&lim>0)cc.limite=c2(lim);
-  if(isFinite(lim)&&lim>0&&isFinite(disp)){cc.bancoUsado=c2(Math.max(0,lim-disp));cc.bancoData=hojeISO();}
-  const dia=x=>{const d=String(x||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?parseInt(d.slice(8),10):0;};
-  if(dia(k.fecha))cc.fechamento=dia(k.fecha);if(dia(k.vence))cc.vencimento=dia(k.vence);
-  if(k.final&&!cc.final)cc.final=k.final;
-  if(k.bandeira&&!cc.bandeira){const bd=String(k.bandeira).toLowerCase();cc.bandeira=/master/.test(bd)?'mastercard':/visa/.test(bd)?'visa':/elo/.test(bd)?'elo':/amex|american/.test(bd)?'amex':/hiper/.test(bd)?'hipercard':'';}
-  if(!bancoDoCartao(cc)){const bs=[...new Set(S.bancos.map(b=>b.nome).filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n)))];if(bs.length===1&&!cc.bancoAuto){cc.bancoAuto=bs[0];}}
-  salvar();return criou;}
-/* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
-function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
-function fimFilaBanco(){if(IMP_FILA.length||!IMP_CURSOR)return;S.cfg.pluggyDesde=IMP_CURSOR;IMP_CURSOR='';if(IMP_VISTO_CURSOR){S.cfg.pluggyVisto=IMP_VISTO_CURSOR;IMP_VISTO_CURSOR='';}salvar();}
-function proxImportBanco(){
-  const c=IMP_FILA.shift();if(!c){fimFilaBanco();return;}
-  const mapa=S.cfg.pluggyMap||{};
-  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true,saldo:c.saldo};
-  const salvo=mapa[c.conta];
-  /* v10.123: destino salvo que foi arquivado não recebe importação */
-  if(salvo&&((salvo[0]==='c'&&cartoesAtivos().some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&bancosAtivos().some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
-  else if(c.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
-  else if(!c.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
-  /* v10.56: conta que você já importou antes entra sozinha; os lançamentos ficam na caixa Revisar */
-  if(salvo&&IMP.destino===salvo&&S.cfg.autoImp!==false){IMP.silent=true;montaImport();confirmaImport();return;}
-  montaImport();
-}
 function importarExtrato(){
   if(IA_PEND.extrato){toast('Ainda lendo o extrato anterior…');return;} // v10.162
   const inp=document.createElement('input');inp.type='file';inp.accept='.ofx,.csv,.txt,text/csv,application/x-ofx,application/pdf,.pdf,image/*';
@@ -6360,24 +6185,6 @@ function prcNum(t){const p=parcelaDesc(t.bancoDesc||t.descricao);if(p)return p;
   const m=String(t.descricao||'').match(/\((\d{1,2})\/(\d{1,2})\)\s*$/);return m&&+m[2]>1&&+m[1]>=1&&+m[1]<=+m[2]?{k:+m[1],n:+m[2]}:null;}
 function prcChave(cid,desc,n,vc,dc){return cid+'|'+parcelaBase(desc)+'|'+n+'|'+vc+'|'+dc;}
 function prcDescK(desc,k){return String(desc||'').replace(/(parc(?:ela)?\.?\s*)(\d{1,2})(\s*(?:\/|de)\s*\d{1,2})/i,(m,a,b,c)=>a+String(k).padStart(b.length,'0')+c);}
-/* linhas do banco (fonte 1 e 2) por cartão do app. devolve {linhas:[{fitid,data,valor,desc,cat,cartao}],fontes:[],ok} */
-async function prcFontes(){
-  const out={linhas:[],fontes:[],ok:true};
-  if(!USER||!PLUGGY_ON()||!navigator.onLine)return out;
-  const mapa=S.cfg.pluggyMap||{},vistos=new Set();
-  const cartaoDe=acc=>{const m=mapa[acc];return typeof m==='string'&&m[0]==='c'&&S.cartoes.some(c=>c.id===m.slice(2))?m.slice(2):'';};
-  const add=(acc,t)=>{const cid=cartaoDe(acc);if(!cid||!t||!t.id||!ISO_RE.test(String(t.data).slice(0,10)))return;const fitid='plg-'+t.id;if(vistos.has(fitid))return;vistos.add(fitid);
-    out.linhas.push({fitid,data:String(t.data).slice(0,10),valor:+t.valor||0,desc:String(t.desc||'').slice(0,120),cat:t.cat||'',cartao:cid});};
-  let falhas=0;
-  try{const r=await pluggy({acao:'sincronizar',dias:365});(r.contas||[]).forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x')(c.tx||[]).forEach(t=>add(c.id,t));});out.fontes.push('banco');}catch(e){falhas++;}
-  try{
-    for(let de=0;de<20000;de+=1000){
-      const {data,error}=await sb.from('pluggy_tx').select('id,account_id,data,removed').order('id',{ascending:true}).range(de,de+999);
-      if(error)throw error;(data||[]).forEach(r=>{if(!r.removed)add(r.account_id,r.data);});if(!data||data.length<1000)break;}
-    out.fontes.push('servidor');
-  }catch(e){falhas++;}
-  out.ok=falhas<2;return out;
-}
 /* o que falta (puro: só lê S e as linhas). {add:[tx], mov:[{id,de,para}], compras:[...], n, x, total} */
 function prcDetecta(linhas){
   linhas=linhas||[];const hj=hojeISO(),add=[],mov=[],compras={};
@@ -9793,7 +9600,7 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,planoAplica,geraRecorrentes,getS:()=>S,lockDesconecta,numExt,temPendencia,csvCel,dataValida,aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
