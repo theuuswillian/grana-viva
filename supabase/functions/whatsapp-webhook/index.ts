@@ -191,23 +191,25 @@ async function botao(tel: string, uid: string, bid: string) {
   let nv = 0;
   try { nv = await nivelDe(uid); } catch (e) { await registraErro(sb, FN, "plano", e); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
   if (await cotaBloqueia(tel, uid, nv)) return;
-  // Consumo atômico após as validações: em dois toques simultâneos, só uma execução recebe a linha.
-  const { data: pd, error: pe } = await sb.from("wa_pendente").delete().eq("id", m[2]).eq("user_id", uid).select("id,lanc");
-  if (pe) { await registraErro(sb, FN, "pendente-reservar", pe); await texto(tel, "Não consegui preparar o salvamento agora. Tente novamente."); return; }
-  const p = pd?.[0];
-  if (!p) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
-  const itens: any[] = Array.isArray(p.lanc?.itens) ? p.lanc.itens : [p.lanc];
+  // A RPC valida a cota, grava os lançamentos e remove o pendente na mesma transação.
+  // Se a gravação falhar, o banco desfaz tudo e o usuário pode tentar novamente.
+  const itens: any[] = Array.isArray(previa.lanc?.itens) ? previa.lanc.itens : [previa.lanc];
   const agora = new Date().toISOString(), base = novoId();
   const linhas = itens.map((l: any, k: number) => {
     const id = itens.length > 1 ? base + k : base;
     const data: any = { id, tipo: l.tipo, valor: l.valor, categoria: l.categoria, descricao: l.descricao, sub: "", tags: ["whatsapp"], obs: "", data: l.data, cartao: "", forma: l.forma || (l.pagoCom ? "" : "pix"), conta: "", pagoCom: "", status: "pago", multa: 0, juros: 0, desconto: 0 };
-    if (l.pagoCom) data.waPago = l.pagoCom; // v10.154: o app acha o cartão/banco pelo nome na próxima sincronização
-    if (l.recorrente && !(l.parcelas > 1)) data.waFixa = 1; // v10.153: o app transforma em conta fixa mensal
-    return { user_id: uid, id, data, updated_at: agora };
+    if (l.pagoCom) data.waPago = l.pagoCom;
+    if (l.recorrente && !(l.parcelas > 1)) data.waFixa = 1;
+    return { id, data, updated_at: agora };
   });
-  const { error } = await sb.from("tx").insert(linhas);
-  if (error) { await registraErro(sb, FN, "salvar", error); await texto(tel, "Não consegui salvar agora. Mande de novo em instantes."); return; }
-  await registraUso(sb, uid, "whatsapp"); // uma mensagem salva = um lançamento pelo WhatsApp na cota do mês
+  const limitePlano = GVP.limite(nv, "whatsapp_lancamento_mes");
+  const limiteAtomico = GVP.ilimitado(limitePlano) ? 1000000 : limitePlano;
+  const { data: resultado, error: se } = await sb.rpc("wa_salva_pendente_com_cota", {
+    p_uid: uid, p_pendente_id: m[2], p_dia: hojeBR(), p_lim: limiteAtomico, p_linhas: linhas,
+  });
+  if (se) { await registraErro(sb, FN, "salvar-atomico", se); await texto(tel, "Não consegui salvar agora. Seu lançamento continua pendente; tente novamente."); return; }
+  if (resultado === "limite") { await texto(tel, msgCotaWhatsApp(Number(limitePlano) || 5)); return; }
+  if (resultado !== "salvo") { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (itens.length > 1) { await texto(tel, `Salvos! ✅ ${itens.length} lançamentos. Aparecem no app na próxima vez que você abrir.`); return; }
   const l = itens[0];
   await texto(tel, `Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}${l.recorrente && !(l.parcelas > 1) ? ", como conta fixa todo mês" : ""}. Aparece no app na próxima vez que você abrir.`);
