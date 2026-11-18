@@ -3022,7 +3022,7 @@ function mvpVoltaHTML(){
 /* ---------- origem do lançamento (selo discreto no extrato) ----------
    novos lançamentos guardam t.origem ('ia' | 'recibo' | 'manual') no próprio JSON do lançamento (tabela tx, coluna data):
    sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Banco/extrato importado:
-   pluggyId, importado ou impId. Lançamento antigo sem nenhuma marca = Manual. */
+   identificadores históricos pluggyId, ou as marcas atuais importado/impId. Lançamento antigo sem marca = Manual. */
 const ORIGEM_L={ia:'IA',wa:'WhatsApp',rec:'Recibo',man:'Manual',imp:'Importado'};
 function origemTx(t){
   if(!t)return 'man';
@@ -6158,15 +6158,10 @@ function confirmaImport(){
 }
 
 /* ---------- v10.96: verificar parcelas ----------
-   até a v10.94, quando o banco mandava a parcela 2+ com a data da COMPRA, ela caía num ciclo antigo ou era descartada
-   como duplicata da parcela 1 (e o id ia para pluggyIgn, então nunca mais voltava). a v10.95 corrigiu as importações novas;
-   isto recupera as antigas: roda sozinho uma vez na abertura (marca cfg.parcVerif) e pelo botão "verificar parcelas".
-   fontes: (1) o banco ao vivo pelo pluggy-sync com a janela máxima do servidor (365 dias), com os ids reais da Pluggy;
-   (2) a cópia que o webhook guarda no servidor (pluggy_tx, só leitura); (3) as parcelas que ficaram no app
-   (k/n, valor e descrição): as que faltam são geradas até a fatura aberta.
-   só mexe numa compra quando há prova de que o banco usou a data da compra: duas parcelas diferentes dela com a mesma data.
-   chave de cada parcela: cartão + descrição sem "parc k/n" + total de parcelas + valor + data da compra + número; e o id da Pluggy.
-   nunca vai antes da 1ª fatura com lançamentos do banco no cartão nem depois da fatura aberta. desfazer tira tudo. */
+   Recupera parcelas antigas usando somente registros que já existem no aparelho. Os campos pluggyId identificam
+   transações importadas pela integração antiga; parcGer identifica parcelas reconstruídas localmente.
+   A rotina não consulta APIs, webhooks ou tabelas remotas. Com duas parcelas conhecidas da mesma compra,
+   calcula as parcelas que faltam até a fatura aberta e permite desfazer a recuperação. */
 let PRC_BUSY=false,PRC=null;
 function prcNum(t){const p=parcelaDesc(t.bancoDesc||t.descricao);if(p)return p;
   if(t.parcela>0&&t.parcelas>1)return {k:t.parcela,n:t.parcelas};
@@ -8036,7 +8031,7 @@ function rfForm(f){
   ['prod','idx','liq'].forEach(n=>Q(n).addEventListener('change',sync));sync();
 }
 /* v10.105: aporte e resgate da renda fixa escolhem a conta. Vira transferência (não é gasto nem renda), como compra/venda de cotas.
-   Se o banco (Pluggy) já trouxe a mesma movimentação em até 3 dias, ela é reaproveitada em vez de duplicar. */
+   Movimentações importadas antigas são reaproveitadas quando coincidem em até 3 dias, evitando duplicidade. */
 function rfContaCampo(f,res){
   const ats=bancosAtivos();if(!ats.length)return {name:'conta',type:'hidden',value:''};
   const pr=f.rfConta!=null&&(f.rfConta===''||ats.some(b=>b.id===f.rfConta))?f.rfConta:((S.bancos.find(b=>b.principal)||ats[0]||{}).id||'');
@@ -8258,7 +8253,7 @@ function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.cei
    Saldo = caixinha (+ rendimento do CDI das partes com data) + Σ(valor de mercado × pct) + proventos reinvestidos.
    Alvo: valor fixo, fixo corrigido pelo IPCA (SGS 433) ou um veículo da tabela FIPE (m.fipe, guarda o último valor).
    Aporte ("guardei"): vira histórico (m.aportes) e, quando sai de uma conta, um lançamento tipo transf (t.meta) que
-   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Um Pix do banco igual (Pluggy) é ligado, não duplicado. */
+   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Uma movimentação importada antiga igual é ligada, não duplicada. */
 const MT_VOL={BTC:.55,ETH:.7,SOL:.9,XRP:.85,BNB:.65,ADA:.85,DOGE:1,LINK:.9,USDT:.03,USDC:.03}; // volatilidade anual de referência (aprox. histórica)
 const MT_COR={caixa:'#22c55e',rf:'#0ea5e9',fii:'#a78bfa',acao:'#f59e0b',cripto:'#f97316',plano:'#94a3b8'};
 const MT_GL={caixa:'caixinha',rf:'renda fixa',fii:'FII',acao:'ações',cripto:'cripto',plano:'a comprar'};
@@ -8814,7 +8809,7 @@ function aporte(id){
     toast(fonte!=='manual'?'Aporte registrado. Lance a compra em Investimentos se ainda não lançou.':s2.n>sq.n&&s2.n>1?'Guardado. '+s2.n+' meses seguidos':'Aporte registrado');
   });
 }
-/* sai da conta como transferência para a meta. Se o banco (Pluggy) já trouxe a saída igual, ela vira o aporte (não duplica). */
+/* sai da conta como transferência para a meta. Se já existe movimentação importada igual no histórico, ela vira o aporte (não duplica). */
 function mtLancaAporte(m,n,d,conta){
   const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     ((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))).sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
@@ -8833,7 +8828,7 @@ function mtApDel(m,apId){
 /* lançamento de meta excluído em Lançamentos: o aporte sai do histórico e da caixinha */
 function mtTxSaiu(t){const m=(S.metas||[]).find(x=>x.id===t.meta);if(!m)return;const a=(m.aportes||[]).find(x=>x.tx===t.id);if(!a)return;
   const i=m.aportes.indexOf(a);if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));m.aportes.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;}
-/* extrato/Pluggy: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
+/* extrato importado: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
 function metaManualIgual(l,d,usados){
   if(!(l.valor<0))return null;const v=cents(Math.abs(l.valor));
   const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.pluggyId&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
