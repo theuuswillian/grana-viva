@@ -11,7 +11,7 @@ declare
   v_usado bigint;
   v_ini date;
 begin
-  if p_uid is null or p_dia is null or coalesce(p_k, '') = '' or p_lim < 1 then
+  if p_uid is null or p_dia is null or coalesce(p_k, '') = '' or p_lim is null or p_lim < 1 then
     raise exception 'Parâmetros inválidos para consumo de cota';
   end if;
   v_ini := date_trunc('month', p_dia)::date;
@@ -40,8 +40,8 @@ declare
   v_pendente text;
   v_qtd int;
 begin
-  if p_uid is null or p_pendente_id is null or p_dia is null or p_lim < 1
-     or jsonb_typeof(p_linhas) <> 'array' or jsonb_array_length(p_linhas) < 1 then
+  if p_uid is null or p_pendente_id is null or p_dia is null or p_lim is null or p_lim < 1
+     or jsonb_typeof(p_linhas) is distinct from 'array' or jsonb_array_length(p_linhas) < 1 then
     raise exception 'Parâmetros inválidos para salvar lançamento WhatsApp';
   end if;
   v_ini := date_trunc('month', p_dia)::date;
