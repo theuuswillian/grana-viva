@@ -18,6 +18,9 @@ assert.ok(!app.includes('function PLUGGY_ON('), 'legacy Pluggy feature switch mu
 assert.ok(!app.includes("functions.invoke('pluggy-sync'") && !app.includes('functions.invoke("pluggy-sync"'), 'frontend must not invoke the legacy Pluggy Edge Function');
 assert.ok(!app.includes(".from('pluggy_tx')") && !app.includes(".from('pluggy_acc')") && !app.includes(".from('pluggy_cfg')"), 'frontend must not query legacy Pluggy tables');
 assert.ok(!app.includes('async function pluggy('), 'legacy Pluggy API wrapper must be removed');
+for (const obsolete of ['IMP.banco', 'IMP_FILA', 'proxImportBanco', 'fimFilaBanco', 'catDoBanco(']) {
+  assert.ok(!app.includes(obsolete), 'legacy bank-import path must be removed: ' + obsolete);
+}
 assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}"), 'installment recovery must use local history only');
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
 assert.ok(html.includes('app.js?v=10.166'), 'HTML must load the versioned app source');
