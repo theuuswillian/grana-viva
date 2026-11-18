@@ -6185,6 +6185,9 @@ function prcNum(t){const p=parcelaDesc(t.bancoDesc||t.descricao);if(p)return p;
   const m=String(t.descricao||'').match(/\((\d{1,2})\/(\d{1,2})\)\s*$/);return m&&+m[2]>1&&+m[1]>=1&&+m[1]<=+m[2]?{k:+m[1],n:+m[2]}:null;}
 function prcChave(cid,desc,n,vc,dc){return cid+'|'+parcelaBase(desc)+'|'+n+'|'+vc+'|'+dc;}
 function prcDescK(desc,k){return String(desc||'').replace(/(parc(?:ela)?\.?\s*)(\d{1,2})(\s*(?:\/|de)\s*\d{1,2})/i,(m,a,b,c)=>a+String(k).padStart(b.length,'0')+c);}
+/* Fontes remotas bancárias foram removidas. A verificação local ainda pode recuperar parcelas
+   a partir dos lançamentos históricos já existentes no aparelho, sem chamadas externas. */
+async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}
 /* o que falta (puro: só lê S e as linhas). {add:[tx], mov:[{id,de,para}], compras:[...], n, x, total} */
 function prcDetecta(linhas){
   linhas=linhas||[];const hj=hojeISO(),add=[],mov=[],compras={};
