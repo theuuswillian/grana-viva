@@ -3977,7 +3977,7 @@ function viewLanc(){
     </div>`;
   return `
   ${voltaHTML()}<div class="head lHead"><h2>${F.st==='aberto'?'A pagar e a receber':F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
-  <div class="ltools">${PLUGGY_ON()?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
+  <div class="ltools"><button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
   <div class="seg lseg">${[['despesa','Despesas'],['receita','Receitas'],['transf','Transf.'],['','Tudo']].map(([k,l])=>`<button class="${F.tipo===k?'on':''}" data-act="set-tipo" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="lfil">
     <label class="lsrch">${I('search')}<input type="search" data-filter="q" value="${esc(F.q)}" placeholder="Buscar lançamento" aria-label="buscar"></label>
@@ -4959,11 +4959,7 @@ function viewCfg(){
   </div>
   ${lockCardHTML()}
   ${MVP_MODE?'':notifCardHTML()}
-  ${MVP_MODE?'':`  <div class="card bcCard">
-    <div class="bcHd"><span class="bcIc">${I('bank')}</span><div><h4>Conexão bancária</h4><small>Open Finance · Meu Pluggy</small></div><span class="bcSt" id="bcSt"></span></div>
-    <div class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</div>
-    <div class="pushBtns" id="bcBtns"></div>
-  </div>
+  ${MVP_MODE?'':`
   <div class="card bcCard waCard">
     <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>WhatsApp</h4><small>lance por mensagem</small></div><span class="bcSt" id="waSt"></span></div>
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
@@ -5519,7 +5515,7 @@ function viewCartoes(){
       <p>${S.cartoes.length?'Desarquive um cartão abaixo ou adicione outro para ver a fatura, o limite e o melhor dia de compra.':'Adicione seu cartão de crédito para acompanhar a fatura, o limite, as parcelas e saber qual cartão usar em cada dia.'}</p>
       <button type="button" class="btn" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`+arq;
   const at=ccAtual(CA);
-  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+(PLUGGY_ON()||S.tx.some(t=>t.cartao&&(t.pluggyId||t.parcGer))?prcBotaoHTML():'')+arq;
+  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+''+arq;
 }
 /* ---------- carrossel: escolha por rolagem, pontos, toque ---------- */
 let CC_ROL=0,CC_ROL_T=0,CC_DET_T=0;
@@ -5586,7 +5582,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} conta</button></div>
-  <div class="bkActs">${PLUGGY_ON()?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
+  <div class="bkActs"><button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
   ${S.bancos.length?(()=>{const st=saldoTotal(),sc=(cents(st)-cents(total))/100;return `<div class="card bkHero${total<0?' bkNeg':''}"><small>total em bancos</small><div class="bkBig nw">${total<0?'−':''}${brl(Math.abs(total))}</div>${total<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
@@ -5900,7 +5896,7 @@ function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
 /* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
 /* v10.160: no MVP a conexão bancária some da tela e nenhuma chamada (automática ou não) vai ao pluggy-sync.
    o que já entrou do banco continua no app como qualquer lançamento. */
-function PLUGGY_ON(){return !MVP_MODE&&!!(S.cfg&&S.cfg.pluggyOn);}
+function PLUGGY_ON(){return false;}
 async function pluggy(body){
   if(MVP_MODE)throw new Error('conexão bancária indisponível nesta versão');
   const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
@@ -9443,12 +9439,10 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
-  'banco-sync':()=>bancoSync(),
   'wa-ligar':()=>waLigar(),
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
   'parc-verif':()=>prcVerifica(),
-  'banco-config':()=>bancoConfig(),
   'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
