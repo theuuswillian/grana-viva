@@ -9443,7 +9443,6 @@ const ACT={
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
   'parc-verif':()=>prcVerifica(),
-  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
