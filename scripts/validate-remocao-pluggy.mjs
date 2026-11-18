@@ -14,7 +14,11 @@ for (const table of ['pluggy_tx', 'pluggy_acc', 'pluggy_cfg']) {
 for (const key of ['pluggyOn', 'pluggyMap', 'pluggyIgn', 'pluggyDesde', 'pluggyVisto', 'pluggyInvDia']) {
   assert.ok(sql.includes(key), 'migration must clean setting ' + key);
 }
-assert.ok(app.includes('function PLUGGY_ON(){return false;}'), 'Pluggy must remain disabled in the frontend');
+assert.ok(!/function\\s+PLUGGY_ON\\s*\\(/.test(app), 'legacy Pluggy feature switch must be removed');
+assert.ok(!/functions\\.invoke\\([\"']pluggy-sync/.test(app), 'frontend must not invoke the legacy Pluggy Edge Function');
+assert.ok(!/\\.from\\([\"']pluggy_(tx|acc|cfg)[\"']\\)/.test(app), 'frontend must not query legacy Pluggy tables');
+assert.ok(!/async function pluggy\\s*\\(/.test(app), 'legacy Pluggy API wrapper must be removed');
+assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}"), 'installment recovery must use local history only');
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
 assert.ok(html.includes('app.js?v=10.166'), 'HTML must load the versioned app source');
 assert.ok(sw.includes('app.js?v=10.166'), 'service worker must precache the same app source');
