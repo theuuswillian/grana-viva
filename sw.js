@@ -9,7 +9,7 @@ const BASE=new URL('./',self.location).pathname;
    - FIXO (não troca): fontes, ícones, logos e bibliotecas. Esses arquivos mudam de nome quando o conteúdo muda
      (inter-400-lat.woff2, vendor/*.min.js com SRI), então a cópia salva vale entre versões e não é baixada de novo a cada publicação. */
 const FIXO='gv-fixo';
-const PRE=['./','./index.html','./manifest.webmanifest','./app.min.js?v=10.166','./planos.js?v=10.166','./tour.min.js?v=10.166']; // v10.107: app minificado + partes sob demanda (tour) também offline
+const PRE=['./','./index.html','./manifest.webmanifest','./app.js?v=10.166','./planos.js?v=10.166','./tour.min.js?v=10.166']; // v10.107: app minificado + partes sob demanda (tour) também offline
 const PRE_FIXO=['./fonts/inter-400-lat.woff2','./fonts/inter-600-lat.woff2','./fonts/inter-700-lat.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/supabase.min.js'];
 const abs=u=>new URL(u,self.location).href;
 self.addEventListener('install',e=>{
