@@ -6065,7 +6065,7 @@ function montaImport(){
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
-    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
+    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
     l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
   });
@@ -6217,7 +6217,7 @@ function prcDetecta(linhas){
       /* parcela que o banco tem e o app não (descartada como duplicata ou fora da janela) */
       g.ln.forEach(({l,k})=>{if(pids.has(l.fitid)||tem.has(k))return;const nd=k>=2?dataParcela(c,l.data,k-1):l.data;
         if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))return;
-        const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catDoBanco({desc:l.desc,valor:l.valor,catBanco:l.cat}),descricao:String(l.desc||'').slice(0,120),data:nd,
+        const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catSugerida(l.desc,'despesa'),descricao:String(l.desc||'').slice(0,120),data:nd,
           importado:true,forma:'cartao',cartao:c.id,pluggyId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
         if(nd!==l.data)t.dataCompra=l.data;
         tem.set(k,t);add.push(t);cp.novas.push({k,data:nd,valor:t.valor,fonte:'banco'});});
@@ -6225,7 +6225,7 @@ function prcDetecta(linhas){
       for(let k=1;k<=g.n;k++){if(tem.has(k))continue;const nd=dataParcela(c,g.dc,k-1);if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))continue;
         const mod=(g.tx[0]&&g.tx[0].t.descricao)||(g.ln[0]&&g.ln[0].l.desc)||g.desc;
         const h=hashObj(g.ch).replace(/[^0-9]/g,'').slice(-9);
-        const t={id:'prc-'+h+'-'+k,tipo:'despesa',valor:g.vc/100,categoria:cat||catDoBanco({desc:mod,valor:-g.vc/100,catBanco:''}),descricao:prcDescK(mod,k).slice(0,120),data:nd,
+        const t={id:'prc-'+h+'-'+k,tipo:'despesa',valor:g.vc/100,categoria:cat||catSugerida(mod,'despesa'),descricao:prcDescK(mod,k).slice(0,120),data:nd,
           importado:true,forma:'cartao',cartao:c.id,parcGer:1,_k:k,_n:g.n,_ch:g.ch};
         if(nd!==g.dc)t.dataCompra=g.dc;
         if(S.tx.some(x=>x.id===t.id)||add.some(x=>x.id===t.id))continue;
