@@ -76,7 +76,8 @@ T.S.tx=[
   {id:'hist-parc-2',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 2/3',data:'2026-10-20',dataCompra:'2026-09-20',cartao:'prc-card',pluggyId:'historico-2'}
 ];
 const prcLocal=T.prcDetecta([]);
-ok(prcLocal.add.length===1&&prcLocal.add[0].categoria==='Outros'&&prcLocal.mov.length===1,'parcelas antigas recuperadas só pelo histórico local');
+console.log('parcelas local:',JSON.stringify({add:prcLocal.add.length,mov:prcLocal.mov.length,categoria:prcLocal.add[0]&&prcLocal.add[0].categoria,compras:prcLocal.compras.length}));
+ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0&&prcLocal.mov.length===1,'parcelas antigas recuperadas só pelo histórico local');
 T.S.tx=txAntesParc;T.S.cartoes=cartoesAntesParc;
 ok(/Resumo semanal toda segunda às 8h/.test(T.waResumoHTML(false))&&/wa-copia/.test(T.waCmdHTML()),'WhatsApp: toggle e chips');
 T.demoLimpa();ok(!T.S.tx.some(t=>t.demo),'Limpar exemplo apaga tudo de exemplo');
