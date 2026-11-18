@@ -56,6 +56,9 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   const chave = ["mp", n.topico || "?", n.dataId, n.notifId || n.reqId || "sem-id", n.acao].join(":").slice(0, 200);
   const r = await d.db.reservaEvento(chave, { provedor, topico: n.topico, recurso_id: n.dataId });
   if (r === "concluido") return resp({ ok: true, repetido: true });
+  // Outro worker ainda está processando este evento. Não consultar nem aplicar em paralelo;
+  // o provedor recebe 503 e tenta novamente. A reserva expirada pode ser retomada pelo adaptador do banco.
+  if (r === "pendente") return new Response(JSON.stringify({ erro: "evento em processamento" }), { status: 503, headers: { "content-type": "application/json", "retry-after": "60" } });
 
   // 4. a verdade vem da API do provedor
   let b: MP.Busca;
