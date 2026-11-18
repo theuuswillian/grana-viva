@@ -1,0 +1,20 @@
+name: Validate Pluggy removal
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: ["remocao/pluggy-definitiva-2026-11-18"]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Check Pluggy removal invariants
+        run: node scripts/validate-remocao-pluggy.mjs
