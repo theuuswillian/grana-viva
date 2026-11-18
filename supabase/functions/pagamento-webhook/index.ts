@@ -17,8 +17,21 @@ const db: DB = {
     const { error } = await sb.from("pagamento_eventos").insert({ id, provedor: meta.provedor, topico: meta.topico, recurso_id: meta.recurso_id });
     if (!error) return "novo";
     if (error.code !== "23505") throw error;
-    const { data } = await sb.from("pagamento_eventos").select("processado_em").eq("id", id).maybeSingle();
-    return data?.processado_em ? "concluido" : "pendente";
+    const { data, error: le } = await sb.from("pagamento_eventos").select("processado_em,recebido_em").eq("id", id).maybeSingle();
+    if (le) throw le;
+    if (data?.processado_em) return "concluido";
+    // Recupera reservas abandonadas após 2 minutos. O UPDATE condicional funciona como lease atômico:
+    // só uma execução consegue avançar recebido_em; as demais recebem "pendente".
+    const corte = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    if (data?.recebido_em && data.recebido_em < corte) {
+      const { data: retomado, error: re } = await sb.from("pagamento_eventos")
+        .update({ recebido_em: new Date().toISOString() })
+        .eq("id", id).is("processado_em", null).lt("recebido_em", corte)
+        .select("id");
+      if (re) throw re;
+      if (retomado?.length) return "novo";
+    }
+    return "pendente";
   },
   async concluiEvento(id, resultado, uid) {
     const { error } = await sb.from("pagamento_eventos").update({ processado_em: new Date().toISOString(), resultado: resultado.slice(0, 200), user_id: uid ?? null }).eq("id", id);
