@@ -103,7 +103,11 @@ async function gravaTx(cfg: any, itemId: string, accTipo: Map<string, string>, l
     if (error) throw error;
   }
   // uma tx que já estava guardada e passou a ser filtrada (ex.: zerada) sai da lista do app
-  if (fora.length) await sb.from("pluggy_tx").update({ removed: true, updated_at: agora }).eq("user_id", cfg.user_id).in("id", fora).eq("removed", false);
+  if (fora.length) {
+    const { error } = await sb.from("pluggy_tx").update({ removed: true, updated_at: agora })
+      .eq("user_id", cfg.user_id).eq("item_id", itemId).in("id", fora).eq("removed", false);
+    if (error) throw error;
+  }
   return rows.length;
 }
 
@@ -116,7 +120,8 @@ async function paginas(cfg: any, q: string | null) {
 async function marcaItem(cfg: any, itemId: string, info: any) {
   const { data } = await sb.from("pluggy_cfg").select("item_status").eq("user_id", cfg.user_id).maybeSingle();
   const st = { ...(data?.item_status || {}), [itemId]: { ...info, em: new Date().toISOString() } };
-  await sb.from("pluggy_cfg").update({ item_status: st }).eq("user_id", cfg.user_id);
+  const { error } = await sb.from("pluggy_cfg").update({ item_status: st }).eq("user_id", cfg.user_id);
+  if (error) throw error;
 }
 
 async function processa(cfg: any, ev: any) {
@@ -159,8 +164,11 @@ async function processa(cfg: any, ev: any) {
     }
     case "transactions/deleted": {
       const ids: string[] = Array.isArray(ev.transactionIds) ? ev.transactionIds.map(String) : [];
-      for (let i = 0; i < ids.length; i += 500)
-        await sb.from("pluggy_tx").update({ removed: true, updated_at: new Date().toISOString() }).eq("user_id", cfg.user_id).in("id", ids.slice(i, i + 500));
+      for (let i = 0; i < ids.length; i += 500) {
+        const { error } = await sb.from("pluggy_tx").update({ removed: true, updated_at: new Date().toISOString() })
+          .eq("user_id", cfg.user_id).eq("item_id", itemId).in("id", ids.slice(i, i + 500));
+        if (error) throw error;
+      }
       break;
     }
     case "item/error":
@@ -179,11 +187,15 @@ Deno.serve(async (req) => {
   const k = new URL(req.url).searchParams.get("k") || "";
   if (k.length < 24) return txt("no", 401);
   const ev = await req.json().catch(() => null);
-  const { data: rows } = await sb.from("pluggy_cfg").select("*").not("webhook_secret", "is", null);
+  if (!ev || typeof ev !== "object" || !ev.event || !ev.itemId) return txt("invalid event", 400);
+  const { data: rows, error: lookupError } = await sb.from("pluggy_cfg").select("*").not("webhook_secret", "is", null);
+  if (lookupError) {
+    console.error("pluggy-webhook lookup", lookupError.message);
+    return txt("temporarily unavailable", 503);
+  }
   let cfg: any = null;
   for (const r of rows || []) if (iguais(k, String(r.webhook_secret)) && !cfg) cfg = r; // percorre todas (tempo constante por linha)
   if (!cfg) return txt("no", 401); // 401 não é reenviado pelo Pluggy
-  if (!ev?.event || !ev.itemId) return txt("ok"); // eventos sem item (connector/status_updated etc.) são ignorados
   if (!(cfg.item_ids || []).includes(String(ev.itemId))) return txt("ignored"); // item de outra pessoa / removido
   const p = abre(cfg).then(c => processa(c, ev)).catch(e => { console.error("pluggy-webhook", ev.event, String((e as Error)?.message || e)); return registraErro(sb, "pluggy-webhook", String(ev.event), e); });
   try { (globalThis as any).EdgeRuntime.waitUntil(p); } catch (_) { await p; }
