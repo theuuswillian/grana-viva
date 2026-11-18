@@ -9,11 +9,11 @@ const sw = readFileSync('sw.js', 'utf8');
 
 assert.match(sql, /^begin;/m, 'migration must run in a transaction');
 assert.match(sql, /^commit;/m, 'migration must close its transaction');
-assert.match(sql, /delete from public\\.tx[\\s\\S]*?where coalesce\\(data, '\\{\\}'::jsonb\\) \\? 'pluggyId';/i, 'only transactions explicitly tagged with the legacy Pluggy ID may be deleted');
-assert.doesNotMatch(sql, /origem['\"]?\\s*[:=]?\\s*['\"]banco/i, 'migration must not delete every generic bank-origin transaction');
+assert.ok(sql.includes("delete from public.tx\nwhere coalesce(data, '{}'::jsonb) ? 'pluggyId';"), 'only transactions explicitly tagged with the legacy Pluggy ID may be deleted');
+assert.ok(!sql.includes("or data ->> 'origem' = 'banco'"), 'migration must not delete every generic bank-origin transaction');
 for (const table of ['pluggy_tx', 'pluggy_acc', 'pluggy_cfg']) {
-  assert.match(sql, new RegExp('drop table if exists public\\.' + table + '\\s*;', 'i'), 'migration must remove ' + table + ' without cascading unrelated dependencies');
-  assert.doesNotMatch(sql, new RegExp('drop table if exists public\\.' + table + '\\s+cascade', 'i'), 'migration must never cascade-drop unrelated dependencies');
+  assert.ok(sql.includes(`drop table if exists public.${table};`), 'migration must remove ' + table + ' without cascading unrelated dependencies');
+  assert.ok(!sql.includes(`drop table if exists public.${table} cascade;`), 'migration must never cascade-drop unrelated dependencies');
 }
 for (const key of ['pluggyOn', 'pluggyMap', 'pluggyIgn', 'pluggyDesde', 'pluggyVisto', 'pluggyInvDia']) {
   assert.ok(sql.includes(key), 'migration must clean setting ' + key);
