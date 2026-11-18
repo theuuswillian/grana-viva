@@ -19,7 +19,7 @@ import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
 import { semanaPassada, textoResumo } from "../_shared/resumo-semanal.ts";
 import { leMensagem, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
-import { confereCota, registraUso, hojeSP } from "../_shared/cota.ts";
+import { confereCota, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
