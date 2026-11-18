@@ -12,15 +12,6 @@ where coalesce(data, '{}'::jsonb) ? 'pluggyId'
 delete from public.fiis
 where coalesce(data, '{}'::jsonb) ? 'pluggyInv';
 
--- Apaga referências locais da integração sem mexer no restante das preferências.
-update public.settings
-set data = coalesce(data, '{}'::jsonb) - array[
-  'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
-]
-where coalesce(data, '{}'::jsonb) ?| array[
-  'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
-];
-
 -- Remove os saldos automáticos Pluggy de contas e cartões mapeados, sem excluir os cadastros.
 with mapas as (
   select s.user_id, e.value
@@ -45,6 +36,15 @@ where exists (
   select 1 from mapas m
   where m.user_id = c.user_id and m.value = 'c:' || c.id::text
 );
+
+-- Apaga referências locais da integração sem mexer no restante das preferências.
+update public.settings
+set data = coalesce(data, '{}'::jsonb) - array[
+  'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
+]
+where coalesce(data, '{}'::jsonb) ?| array[
+  'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
+];
 
 drop table if exists public.pluggy_tx cascade;
 drop table if exists public.pluggy_acc cascade;
