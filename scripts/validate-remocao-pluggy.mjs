@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 const sql = readFileSync('supabase/migrations/20261118_remocao_pluggy.sql', 'utf8');
@@ -6,6 +6,8 @@ const app = readFileSync('app.js', 'utf8');
 const legacyBundle = readFileSync('app.min.js', 'utf8');
 const html = readFileSync('index.html', 'utf8');
 const sw = readFileSync('sw.js', 'utf8');
+const accountFunction = readFileSync('supabase/functions/minha-conta/index.ts', 'utf8');
+const privacy = readFileSync('site/privacidade.html', 'utf8');
 
 assert.match(sql, /^begin;/m, 'migration must run in a transaction');
 assert.match(sql, /^commit;/m, 'migration must close its transaction');
@@ -22,6 +24,11 @@ assert.ok(!app.includes('function PLUGGY_ON('), 'legacy Pluggy feature switch mu
 assert.ok(!app.includes("functions.invoke('pluggy-sync'") && !app.includes('functions.invoke("pluggy-sync"'), 'frontend must not invoke the legacy Pluggy Edge Function');
 assert.ok(!app.includes(".from('pluggy_tx')") && !app.includes(".from('pluggy_acc')") && !app.includes(".from('pluggy_cfg')"), 'frontend must not query legacy Pluggy tables');
 assert.ok(!app.includes('async function pluggy('), 'legacy Pluggy API wrapper must be removed');
+assert.ok(!/pluggy/i.test(accountFunction), 'account deletion function must not call Pluggy or retain its secrets');
+assert.ok(!/pluggy/i.test(privacy), 'privacy policy must not advertise the removed Pluggy integration');
+for (const obsoleteFile of ['supabase/functions/pluggy-sync/index.ts', 'supabase/functions/pluggy-webhook/index.ts', 'supabase/functions/minha-conta/pluggy.ts', 'supabase/functions/minha-conta/pluggy_test.ts']) {
+  assert.ok(!existsSync(obsoleteFile), 'removed Pluggy source file must stay deleted: ' + obsoleteFile);
+}
 assert.ok(!legacyBundle.includes('function PLUGGY_ON(') && !legacyBundle.includes('async function pluggy('), 'legacy app.min.js bundle must not retain the Pluggy integration');
 assert.ok(!legacyBundle.includes("functions.invoke('pluggy-sync'") && !legacyBundle.includes(".from('pluggy_tx')") && !legacyBundle.includes(".from('pluggy_acc')") && !legacyBundle.includes(".from('pluggy_cfg')"), 'legacy app.min.js bundle must not call Pluggy endpoints or tables');
 for (const obsolete of ['IMP.banco', 'IMP_FILA', 'proxImportBanco', 'fimFilaBanco', 'catDoBanco(']) {
