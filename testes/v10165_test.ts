@@ -94,3 +94,16 @@ Deno.test("resumo semanal: semana anterior e texto", () => {
   const t = L.join("\n");
   if (!t.includes("R$ 70,00") || !t.includes("R$ 100,00") || !t.includes("Mercado R$ 50,00") || !t.includes("Ritmo do mês")) throw new Error(t);
 });
+
+Deno.test("webhook MP: evento já reservado e ainda em processamento não roda em paralelo", async () => {
+  const f = dbFalso();
+  const db: DB = { ...f.db, async reservaEvento() { return "pendente"; } };
+  let consultou = false;
+  const r = await processaWebhook(req(), {
+    db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}),
+    fetch: (async () => { consultou = true; return new Response("{}", { status: 404 }); }) as unknown as typeof fetch,
+  });
+  eq(r.status, 503);
+  eq(r.headers.get("retry-after"), "60");
+  eq(consultou, false, "não consulta o provedor enquanto outro worker processa");
+});
