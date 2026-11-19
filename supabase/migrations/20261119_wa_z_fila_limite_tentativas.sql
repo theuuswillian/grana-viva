@@ -52,12 +52,14 @@ begin
   end if;
 
   if v_attempts >= v_max_attempts then
-    update public.wa_msg
-       set status = 'falhou',
-           lease_until = null,
-           lease_token = null,
-           last_error = left(coalesce(last_error, 'Limite de tentativas atingido') || ' | Limite de 8 tentativas atingido; requer análise manual.', 1000)
-     where id = p_id;
+    if v_status <> 'falhou' then
+      update public.wa_msg
+         set status = 'falhou',
+             lease_until = null,
+             lease_token = null,
+             last_error = left('Limite de 8 tentativas atingido; requer análise manual. Último erro: ' || coalesce(last_error, 'não detalhado'), 1000)
+       where id = p_id;
+    end if;
     return 'esgotada';
   end if;
 
