@@ -150,23 +150,24 @@ const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gaste
 
 async function vincula(tel: string, codigo: string, msgId: string, sandbox: boolean) {
   const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
-  const { data: c, error: ce } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
-  if (ce) throw ce;
-  if (!c || new Date(c.expira).getTime() < Date.now()) {
-    const { data: vinculoAtual, error: erroVinculo } = await sb.from("wa_vinculo")
-      .select("user_id").eq("telefone", tel).maybeSingle();
-    if (erroVinculo) throw erroVinculo;
-    if (vinculoAtual) { await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\\n\\n" + AJUDA); return; }
+  const { data: resultado, error } = await sb.rpc("wa_vincula_codigo", {
+    p_telefone: tel,
+    p_codigo: codigo,
+  });
+  if (error) throw error;
+  if (resultado === "vinculado") {
+    await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\\n\\n" + AJUDA);
+    return;
+  }
+  if (resultado === "ja_vinculado") {
+    await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\\n\\n" + AJUDA);
+    return;
+  }
+  if (resultado === "codigo_expirado") {
     await responder("Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp.");
     return;
   }
-  const { error: de } = await sb.from("wa_vinculo").delete().or(`telefone.eq.${tel},user_id.eq.${c.user_id}`);
-  if (de) throw de;
-  const { error: ie } = await sb.from("wa_vinculo").insert({ user_id: c.user_id, telefone: tel });
-  if (ie) throw ie;
-  const { error: ce2 } = await sb.from("wa_codigo").delete().eq("user_id", c.user_id);
-  if (ce2) throw ce2;
-  await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
+  throw new Error("Resultado desconhecido ao vincular WhatsApp: " + String(resultado));
 }
 
 type Entrada = { texto: string; midia: Midia | null; msgId: string; diaCota: string; sandbox: boolean };
