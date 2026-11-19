@@ -26,7 +26,7 @@ insert into public.fiis (id,user_id,data) values
 
 insert into public.settings (user_id,data) values
 ('11111111-1111-4111-8111-111111111111',
- '{"pluggyOn":true,"pluggyMap":{"acc-1":"b:bank-1","card-1":"c:card-1"},"pluggyIgn":["legacy-123"],"tema":"dark"}'::jsonb);
+ '{"pluggyOn":true,"pluggyMap":{"acc-1":"b:bank-1","card-1":"c:card-1"},"pluggyIgn":["legacy-123"],"tema":"dark","cfg":{"pluggyIgn":["legacy-123"],"metaCotas":250}}'::jsonb);
 
 insert into public.bancos (id,user_id,data) values
 ('bank-1','11111111-1111-4111-8111-111111111111','{"nome":"Conta mapeada","saldo":1000,"saldoData":"2026-11-18","saldoFecha":"2026-11-18"}'::jsonb),
