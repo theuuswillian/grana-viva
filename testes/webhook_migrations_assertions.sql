@@ -99,8 +99,8 @@ begin
   if not public.wa_saida_finaliza('wa:test:sent','enviada','wamid-provider-1',null) then
     raise exception 'finalização enviada deveria atualizar outbox';
   end if;
-  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'enviada' then
-    raise exception 'envio concluído não pode ser repetido';
+  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"texto alterado após retry"}'::jsonb,90) <> 'enviada' then
+    raise exception 'envio concluído não pode ser repetido mesmo após reconstrução do payload';
   end if;
 
   if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"limite"}'::jsonb,90) <> 'nova' then
@@ -109,8 +109,11 @@ begin
   if not public.wa_saida_finaliza('wa:test:429','falhou_segura',null,'HTTP 429') then
     raise exception 'falha segura deveria finalizar';
   end if;
-  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"limite"}'::jsonb,90) <> 'retomada' then
-    raise exception 'HTTP 429 deveria permitir retry';
+  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"nova tentativa"}'::jsonb,90) <> 'retomada' then
+    raise exception 'HTTP 429 deveria permitir retry seguro';
+  end if;
+  if (select corpo->'text'->>'text' from public.wa_saida where chave='wa:test:429') <> 'nova tentativa' then
+    raise exception 'retry seguro não atualizou o payload ainda não enviado';
   end if;
 
   if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'nova' then
