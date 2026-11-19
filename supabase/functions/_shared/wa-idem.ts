@@ -37,3 +37,21 @@ export async function finalizaMensagem(
 export function erroEnvioRecuperavel(status: number): boolean {
   return status === 429 || status >= 500;
 }
+
+/** Consome a cota de leitura apenas uma vez por wamid, mesmo após retries do webhook. */
+export async function contaLeituraMensagem(
+  sb: SupabaseRpc,
+  userId: string,
+  messageId: string,
+  dia: string,
+  limite: number,
+): Promise<boolean> {
+  const { data, error } = await sb.rpc("wa_conta_leitura_ia", {
+    p_uid: userId,
+    p_msg_id: String(messageId).slice(0, 200),
+    p_dia: dia,
+    p_lim: limite,
+  });
+  if (error) throw error;
+  return data === true;
+}
