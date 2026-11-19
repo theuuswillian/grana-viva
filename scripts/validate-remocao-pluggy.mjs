@@ -45,6 +45,7 @@ assert.ok(app.includes(`e.target.matches('[role="button"][data-act]')`) && app.i
 assert.ok(app.includes("if(e.key==='Tab'&&$('#modal').classList.contains('on'))") && app.includes('first.focus()') && app.includes('last.focus()'), 'modal dialogs must trap keyboard focus');
 assert.ok(app.includes("sh.setAttribute('aria-modal','true')") && app.includes("sh.setAttribute('aria-labelledby',h.id)"), 'modal dialogs must expose an accessible name and modal semantics');
 assert.ok(app.includes('return `<label>${esc(c.label)}<input') && app.includes('return `<label>${esc(c.label)}<textarea'), 'generated form controls must have programmatic labels');
+assert.match(html, /<div id="toast" role="status" aria-live="polite" aria-atomic="true"><\/div>/, 'toast feedback must be announced to assistive technology');
 
 assert.ok(sw.includes("const V='gv-v10.167';") && sw.includes('app.js?v=10.167') && sw.includes('planos.js?v=10.167') && sw.includes('tour.min.js?v=10.167'), 'service worker cache and precache URLs must match the app version');
 console.log('Pluggy removal static checks passed.');
