@@ -159,11 +159,11 @@ async function vincula(tel: string, codigo: string, msgId: string, sandbox: bool
   });
   if (error) throw error;
   if (resultado === "vinculado") {
-    await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\\n\\n" + AJUDA);
+    await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
     return;
   }
   if (resultado === "ja_vinculado") {
-    await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\\n\\n" + AJUDA);
+    await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\n\n" + AJUDA);
     return;
   }
   if (resultado === "codigo_expirado") {
