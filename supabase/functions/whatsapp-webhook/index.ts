@@ -104,7 +104,7 @@ async function vincula(tel: string, codigo: string) {
   await texto(tel, "Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
 }
 
-type Entrada = { texto: string; midia: Midia | null };
+type Entrada = { texto: string; midia: Midia | null; msgId: string };
 async function leMsg(tel: string, uid: string, e: Entrada) {
   let ef: any;
   try { const { data } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle(); ef = GVP.efetivo(data); }
@@ -128,17 +128,50 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   // Fase 2: só lançamento gasta cota (gastaCota); consulta e conversa nunca chegam aqui
   if (gastaCota(L) && await cotaBloqueia(tel, uid, ef.nivel)) return;
   if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await texto(tel, (e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
-  const pid = novoId();
-  await sb.from("wa_pendente").delete().eq("user_id", uid).lt("criado_em", new Date(Date.now() - 24 * 3600e3).toISOString());
-  const { error: pe } = await sb.from("wa_pendente").insert({ id: pid, user_id: uid, telefone: tel, lanc: { itens: L.itens } });
-  if (pe) { await registraErro(sb, FN, "pendente", pe); await texto(tel, "Não consegui guardar agora. Tente de novo em instantes."); return; }
+  // A mesma mensagem de origem sempre reutiliza o mesmo pendente.
+  const { data: existente, error: ee } = await sb.from("wa_pendente")
+    .select("id,lanc,status").eq("origem_msg_id", e.msgId).eq("user_id", uid).maybeSingle();
+  if (ee) throw ee;
+  let pid: string;
+  let itensLanc: Item[];
+  if (existente) {
+    if (existente.status !== "pendente") {
+      await texto(tel, "Essa mensagem já foi processada. Confira seus lançamentos no app.");
+      return;
+    }
+    pid = existente.id;
+    itensLanc = Array.isArray(existente.lanc?.itens) ? existente.lanc.itens : [existente.lanc];
+  } else {
+    // Pendentes legados sem wamid ainda podem ser limpos após 24h. Os novos ficam
+    // como tombstones por 30 dias para bloquear retries da Meta.
+    await sb.from("wa_pendente").delete().eq("user_id", uid).is("origem_msg_id", null)
+      .lt("criado_em", new Date(Date.now() - 24 * 3600e3).toISOString());
+    pid = novoId();
+    itensLanc = L.itens;
+    const { error: pe } = await sb.from("wa_pendente").insert({
+      id: pid, user_id: uid, telefone: tel, lanc: { itens: itensLanc }, origem_msg_id: e.msgId,
+    });
+    if (pe) {
+      if (pe.code !== "23505") throw pe;
+      const { data: corrida, error: ce } = await sb.from("wa_pendente")
+        .select("id,lanc,status").eq("origem_msg_id", e.msgId).eq("user_id", uid).maybeSingle();
+      if (ce) throw ce;
+      if (!corrida) throw pe;
+      if (corrida.status !== "pendente") {
+        await texto(tel, "Essa mensagem já foi processada. Confira seus lançamentos no app.");
+        return;
+      }
+      pid = corrida.id;
+      itensLanc = Array.isArray(corrida.lanc?.itens) ? corrida.lanc.itens : [corrida.lanc];
+    }
+  }
   const FM: Record<string, string> = { pix: "Pix", cartao: "cartão", dinheiro: "dinheiro", boleto: "boleto" };
   const linha = (l: Item) => {
     const pag = [l.forma ? FM[l.forma] : (l.pagoCom ? "" : "Pix"), l.pagoCom].filter(Boolean).join(" ");
     return `${l.tipo === "receita" ? "➕" : "➖"} *${brl(l.valor)}* · ${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n   ${dataBR(l.data, hoje)}${pag ? " · " + pag : ""}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "\n   🔁 conta fixa, todo dia " + parseInt(l.data.slice(8, 10), 10) : ""}`;
   };
-  const n = L.itens.length, tot = L.itens.reduce((a, l) => a + (l.tipo === "receita" ? 0 : l.valor), 0);
-  const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}\n\n` : "") + L.itens.map(linha).join("\n\n");
+  const n = itensLanc.length, tot = itensLanc.reduce((a, l) => a + (l.tipo === "receita" ? 0 : l.valor), 0);
+  const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}\n\n` : "") + itensLanc.map(linha).join("\n\n");
   await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo.slice(0, 1000) }, action: { buttons: [
     { type: "reply", reply: { id: "ok:" + pid, title: n > 1 ? "Salvar todos" : "Salvar" } },
     { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } });
@@ -221,11 +254,13 @@ async function botao(tel: string, uid: string, bid: string) {
   const m = /^(ok|no):([a-z0-9]{6,20})$/.exec(bid);
   if (!m) return;
   // Primeiro lê sem consumir: falhas na consulta de plano/cota não podem apagar o lançamento pendente.
-  const { data: previa, error: le } = await sb.from("wa_pendente").select("id,lanc").eq("id", m[2]).eq("user_id", uid).maybeSingle();
+  const { data: previa, error: le } = await sb.from("wa_pendente").select("id,lanc,status").eq("id", m[2]).eq("user_id", uid).maybeSingle();
   if (le) { await registraErro(sb, FN, "pendente-ler", le); await texto(tel, "Não consegui conferir esse lançamento agora. Tente novamente."); return; }
-  if (!previa) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
+  if (!previa || previa.status !== "pendente") { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (m[1] === "no") {
-    const { data: cancelado, error: ce } = await sb.from("wa_pendente").delete().eq("id", m[2]).eq("user_id", uid).select("id");
+    const { data: cancelado, error: ce } = await sb.from("wa_pendente")
+      .update({ status: "cancelado", finalizado_em: new Date().toISOString() })
+      .eq("id", m[2]).eq("user_id", uid).eq("status", "pendente").select("id");
     if (ce) { await registraErro(sb, FN, "pendente-cancelar", ce); await texto(tel, "Não consegui cancelar agora. Tente novamente."); return; }
     await texto(tel, cancelado?.length ? "Cancelado. Nada foi salvo." : "Esse lançamento já foi salvo ou cancelado.");
     return;
@@ -277,11 +312,11 @@ async function trata(m: any) {
     const midia = await baixaMidia(String(md?.id || ""));
     if (!midia) { await texto(tel, "Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
     if ("erro" in midia) { await texto(tel, midia.erro); return; }
-    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia }); return;
+    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id) }); return;
   }
   if (m.type !== "text") { await texto(tel, "Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
   if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await texto(tel, AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
-  await leMsg(tel, v.user_id, { texto: t, midia: null });
+  await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id) });
 }
 
 /* ---------- v10.165: resumo semanal (segunda 8h de Brasília) ---------- */
