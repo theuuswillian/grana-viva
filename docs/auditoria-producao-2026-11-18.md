@@ -171,3 +171,21 @@ Correções adicionadas nesta branch:
 - O smoke test cobre a cópia local sem snapshot, registros manuais, posição manual e limpeza das referências aninhadas; os testes SQL verificam a limpeza de `settings.cfg` e a preservação de configurações não relacionadas.
 
 A migration continua preservando dados manuais, extratos CSV/OFX e cadastros de contas/cartões. A validação CI da alteração precisa concluir antes da revisão final.
+
+
+### Correção do saldo livre e faturas de cartão (19/11/2026)
+
+O cálculo anterior usava apenas o estado resumido do cartão e deixava de descontar faturas já fechadas, mesmo quando ainda havia saldo pendente. Também não consolidava corretamente múltiplas faturas em atraso.
+
+A função agora percorre as faturas do cartão e desconta o saldo restante de todas as faturas abertas, fechadas, vencidas ou parciais; faturas pagas, excluídas e parcelas futuras ficam fora do cálculo. O saldo das contas não é alterado.
+
+O smoke test cobre duas faturas antigas (uma parcialmente paga e outra vencida), a fatura do ciclo atual e a exclusão de parcelas futuras. Resultado esperado e validado: saldo bancário de R$ 2.000,00, obrigações correntes de R$ 1.100,00 e saldo livre de R$ 900,00.
+
+### Validação após as correções (19/11/2026)
+
+No commit `38d3048`, os dois workflows passaram:
+- validação de remoção e limpeza dos dados legados;
+- smoke tests jsdom, incluindo cache local e saldo livre;
+- testes unitários Deno;
+- migrations PostgreSQL de remoção, cotas, idempotência e reconciliação de schema;
+- verificação de tipos de todas as Edge Functions.
