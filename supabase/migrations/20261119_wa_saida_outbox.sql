@@ -122,6 +122,28 @@ begin
 end;
 $$;
 
+-- Reconcilia leases abandonados sem reenviar; retém estados ambíguos para auditoria.
+do $
+begin
+  if exists (select 1 from cron.job where jobname='granaviva-wa-saida-limpeza') then
+    perform cron.unschedule('granaviva-wa-saida-limpeza');
+  end if;
+  perform cron.schedule(
+    'granaviva-wa-saida-limpeza',
+    '*/5 * * * *',
+    $cmd$
+      update public.wa_saida
+         set status='incerta', lease_until=null,
+             ultimo_erro='Lease expirou sem confirmação; envio requer reconciliação',
+             atualizado_em=now()
+       where status='enviando' and lease_until < now();
+      delete from public.wa_saida
+       where status in ('enviada','falhou')
+         and atualizado_em < now() - interval '30 days';
+    $cmd$
+  );
+end $;
+
 revoke all on function public.wa_saida_reserva(text, text, jsonb, integer) from public, anon, authenticated;
 revoke all on function public.wa_saida_finaliza(text, text, text, text) from public, anon, authenticated;
 grant execute on function public.wa_saida_reserva(text, text, jsonb, integer) to service_role;
