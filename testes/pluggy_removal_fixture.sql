@@ -18,7 +18,7 @@ insert into auth.users values ('11111111-1111-4111-8111-111111111111');
 insert into public.tx (id,user_id,data) values
 ('tx-pluggy','11111111-1111-4111-8111-111111111111','{"pluggyId":"legacy-123","origem":"banco","valor":100}'::jsonb),
 ('tx-bank-generic','11111111-1111-4111-8111-111111111111','{"origem":"banco","valor":200}'::jsonb),
-('tx-manual','11111111-1111-4111-8111-111111111111','{"origem":"manual","valor":300}'::jsonb);
+('tx-manual','11111111-1111-4111-8111-111111111111','{"origem":"manual","valor":300,"par":{"id":"par-1","pluggyId":"legacy-nested"}}'::jsonb);
 
 insert into public.fiis (id,user_id,data) values
 ('fii-pluggy','11111111-1111-4111-8111-111111111111','{"pluggyInv":"legacy-investment","nome":"Importado"}'::jsonb),
