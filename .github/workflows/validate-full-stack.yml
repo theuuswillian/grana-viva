@@ -64,6 +64,16 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pluggy_removal_fixture.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_remocao_pluggy.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pluggy_removal_assertions.sql
+      - name: Test atomic monthly quota migration and concurrency in PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_cota_mensal_atomica.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_assertions.sql
+          bash testes/cota_mensal_atomica_concurrency.sh
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
