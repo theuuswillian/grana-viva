@@ -80,6 +80,7 @@ jobs:
           createdb -h 127.0.0.1 -U postgres granaviva_cota_test
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_fixture.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_cota_mensal_atomica.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_pendente_idempotente.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_assertions.sql
           bash testes/cota_mensal_atomica_concurrency.sh
       - name: Test webhook idempotency and weekly summary migrations in PostgreSQL
