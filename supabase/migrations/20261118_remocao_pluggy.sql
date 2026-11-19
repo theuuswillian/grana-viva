@@ -45,6 +45,18 @@ where coalesce(data, '{}'::jsonb) ?| array[
   'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
 ];
 
+-- A cópia sincronizada do app guarda parte das preferências dentro de data.cfg.
+-- Limpa também a lista antiga de identificadores nesse nível, preservando as demais configurações.
+update public.settings
+set data = jsonb_set(
+  coalesce(data, '{}'::jsonb),
+  '{cfg}',
+  data->'cfg' - array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'],
+  true
+)
+where jsonb_typeof(data->'cfg') = 'object'
+  and data->'cfg' ?| array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'];
+
 drop table if exists public.pluggy_tx;
 drop table if exists public.pluggy_acc;
 drop table if exists public.pluggy_cfg;
