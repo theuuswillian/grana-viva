@@ -201,3 +201,10 @@ Agora:
 - o yield on cost exclui proventos anteriores à entrada na carteira.
 
 O smoke test cobre provento anterior à compra, provento durante a posição, posição manual sem histórico e o total recebido considerado no yield on cost. Os workflows completos passaram no commit `49bcf29`.
+
+
+A mesma revisão encontrou que a reconstrução de cotas históricas percorria as operações na ordem em que foram cadastradas, não pela data efetiva. Uma compra retroativa adicionada depois de uma venda podia alterar a quantidade histórica usada no cálculo dos proventos. A rotina agora ordena as operações cronologicamente, seguindo a mesma regra do cálculo da posição atual; o smoke test cobre esse cenário.
+
+Os testes de yield on cost também confirmam que posições manuais sem histórico continuam usando a quantidade atual como fallback, enquanto carteiras com histórico respeitam a quantidade efetivamente detida em cada data.
+
+Os workflows completos passaram no commit `6dcf85b`.
