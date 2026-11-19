@@ -268,11 +268,19 @@ async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> 
   const tok = Deno.env.get("WA_TOKEN");
   if (!tok || !/^[0-9]{5,30}$/.test(id)) return null;
   try {
-    const m = await fetch(`${GRAPH}/${id}`, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(10000) }).then((r) => r.json());
+    const meta = await fetch(`${GRAPH}/${id}`, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(10000) });
+    if (!meta.ok) {
+      if (erroEnvioRecuperavel(meta.status)) throw new Error(`Falha transitória ao consultar mídia WhatsApp (HTTP ${meta.status})`);
+      return null;
+    }
+    const m = await meta.json();
     if (!m?.url) return null;
     if (Number(m.file_size) > ARQ_MAX) return { erro: MSG_GRANDE };
     const r = await fetch(m.url, { headers: { authorization: "Bearer " + tok }, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      if (erroEnvioRecuperavel(r.status)) throw new Error(`Falha transitória ao baixar mídia WhatsApp (HTTP ${r.status})`);
+      return null;
+    }
     const cl = Number(r.headers.get("content-length") || 0);
     if (cl > ARQ_MAX) { try { await r.body?.cancel(); } catch { /* */ } return { erro: MSG_GRANDE }; }
     const buf = new Uint8Array(await r.arrayBuffer());
