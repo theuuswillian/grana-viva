@@ -14,10 +14,14 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
+const limpo=T.sanea({tx:[{id:'legado',pluggyId:'old-1',data:'2026-11-18',tipo:'despesa',valor:10},{id:'manual',data:'2026-11-18',tipo:'despesa',valor:20,par:{id:'par',pluggyId:'old-2'}}],fiis:[{id:'legado-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:10},{id:'manual-fii',ticker:'MXRF11',cotas:1,preco:10}],cfg:{tema:'dark',pluggyIgn:['old-1']}});
+ok(limpo.tx.length===1&&limpo.tx[0].id==='manual'&&!limpo.tx[0].par.pluggyId,'cópia local descarta registros antigos e limpa referência aninhada');
+ok(limpo.fiis.length===1&&limpo.fiis[0].id==='manual-fii'&&!('pluggyInv' in limpo.fiis[0]),'cópia local descarta posição importada antiga');
+ok(!('pluggyIgn' in limpo.cfg),'cópia local limpa lista antiga de identificadores');
 T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
 const S=T.S;S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
 S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
@@ -72,8 +76,8 @@ ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.l
 const txAntesParc=T.S.tx,cartoesAntesParc=T.S.cartoes;
 T.S.cartoes=[{id:'prc-card',fechamento:20,vencimento:27}];
 T.S.tx=[
-  {id:'hist-parc-1',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 1/3',data:'2026-09-20',dataCompra:'2026-09-20',cartao:'prc-card',pluggyId:'historico-1'},
-  {id:'hist-parc-2',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 2/3',data:'2026-10-20',dataCompra:'2026-09-20',cartao:'prc-card',pluggyId:'historico-2'}
+  {id:'hist-parc-1',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 1/3',data:'2026-09-20',dataCompra:'2026-09-20',cartao:'prc-card',importado:true,impId:'historico-1'},
+  {id:'hist-parc-2',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 2/3',data:'2026-10-20',dataCompra:'2026-09-20',cartao:'prc-card',importado:true,impId:'historico-2'}
 ];
 const prcLocal=T.prcDetecta([]);
 ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0,'parcela faltante recuperada só pelo histórico local');
