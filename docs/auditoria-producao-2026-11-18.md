@@ -129,3 +129,30 @@ Nenhuma dessas configurações foi alterada durante esta auditoria.
 - Migration aditiva para as tabelas de cache/radar e preferência semanal.
 - Fixture e assertions para validar RLS, grants, constraints, default e isolamento por usuário.
 - Nenhuma alteração em produção.
+
+
+## Auditoria complementar do frontend (19/11/2026)
+
+### Arquitetura e distribuição
+
+- `app.js` tem 975.944 bytes (aprox. 0,93 MiB) e concentra o aplicativo em um único arquivo. Isso aumenta o custo de manutenção e torna regressões mais difíceis de isolar.
+- `app.min.js` tem o mesmo tamanho e o mesmo blob Git de `app.js` nesta branch; portanto, atualmente não representa uma versão minificada independente.
+- `index.html` carrega `app.js?v=10.167`, e o precache do service worker também lista `app.js`. Já os comentários de `bump.sh` e `sw.js` descrevem o fluxo como se `app.min.js` fosse o arquivo servido. A documentação do processo de build está inconsistente com o HTML efetivamente publicado.
+- O `bump.sh` tenta gerar `app.min.js` com esbuild, mas a página não o carrega no estado inspecionado. A próxima melhoria deve alinhar, em uma única alteração testada, o arquivo gerado, a referência do HTML, o precache/offline e o smoke test. Não trocar o arquivo servido sem validar atualização do service worker e abertura offline.
+
+### Cobertura de testes do produto
+
+- Há smoke test com jsdom para renderização, lançamento rápido, importação local, faturas e alguns fluxos de interface.
+- Há testes de planos, cotas, webhook, validação da IA, arquivos, Mercado Pago e schema PostgreSQL.
+- Não foi encontrada uma suíte dedicada e isolada para as regras centrais de finanças do frontend (cálculo de saldo por conta, transferências, cartão/fatura/parcelas, recorrências, patrimônio, preço médio, dividendos/renda passiva e agregações por período). O smoke test cobre caminhos de interface, mas não substitui testes unitários de regras financeiras.
+- Prioridade recomendada: extrair funções puras de cálculo para módulos pequenos e testáveis, sem reescrever a interface inteira. Criar casos de regressão com valores em centavos, virada de mês/ano, datas em fuso de Brasília, estornos, transferências entre contas, compras parceladas e lançamentos previstos versus pagos.
+
+### Backlog priorizado
+
+1. **Alta — consistência financeira:** mapear e extrair os cálculos de saldo, cartão, parcelas, patrimônio e renda passiva; cobrir com testes unitários antes de alterar os resultados exibidos.
+2. **Alta — pipeline de assets:** alinhar `app.js`/`app.min.js`, `index.html`, `sw.js`, `bump.sh` e os testes de fumaça; validar atualização e modo offline.
+3. **Média — modularização gradual:** separar domínio financeiro, persistência/sincronização, interface e integrações em módulos independentes; manter contratos e comportamento existentes.
+4. **Média — testes de integração:** acrescentar testes de sincronização Supabase, isolamento multiusuário e concorrência nos fluxos que alteram lançamentos e faturas.
+5. **Média — acessibilidade e UX:** complementar smoke test com navegação por teclado, foco, leitores de tela, telas pequenas e estados de erro/rede.
+
+Esses itens são achados e recomendações; nenhum cálculo financeiro do frontend foi alterado nesta etapa, para evitar mudar resultados de usuários sem uma matriz de comportamento esperada e testes de regressão.
