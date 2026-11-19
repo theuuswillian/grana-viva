@@ -56,16 +56,34 @@ async function envia(tel: string, corpo: Record<string, unknown>) {
   if (viaSandbox && dk) {
     try {
       const r = await fetch(D360, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "D360-API-KEY": dk, "content-type": "application/json" }, body: JSON.stringify(msg) });
-      if (!r.ok) await registraErro(sb, FN, "enviar-sandbox", (await r.text()).slice(0, 200), r.status);
-    } catch (e) { await registraErro(sb, FN, "enviar-sandbox", e); }
+      if (!r.ok) {
+        const detalhe = (await r.text()).slice(0, 200);
+        await registraErro(sb, FN, "enviar-sandbox", detalhe, r.status);
+        if (r.status === 429 || r.status >= 500) throw new Error(`Falha transitória no envio sandbox (HTTP ${r.status}): ${detalhe}`);
+      }
+    } catch (e) {
+      await registraErro(sb, FN, "enviar-sandbox", e);
+      throw e;
+    }
     return;
   }
   const tok = Deno.env.get("WA_TOKEN"), pid = Deno.env.get("WA_PHONE_ID");
-  if (!tok || !pid) { await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg }); return; }
+  if (!tok || !pid) {
+    const { error } = await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg });
+    if (error) throw error;
+    return;
+  }
   try {
     const r = await fetch(`${GRAPH}/${pid}/messages`, { method: "POST", signal: AbortSignal.timeout(15000), headers: { authorization: "Bearer " + tok, "content-type": "application/json" }, body: JSON.stringify(msg) });
-    if (!r.ok) await registraErro(sb, FN, "enviar", (await r.text()).slice(0, 200), r.status);
-  } catch (e) { await registraErro(sb, FN, "enviar", e); }
+    if (!r.ok) {
+      const detalhe = (await r.text()).slice(0, 200);
+      await registraErro(sb, FN, "enviar", detalhe, r.status);
+      if (r.status === 429 || r.status >= 500) throw new Error(`Falha transitória no envio WhatsApp (HTTP ${r.status}): ${detalhe}`);
+    }
+  } catch (e) {
+    await registraErro(sb, FN, "enviar", e);
+    throw e;
+  }
 }
 const texto = (tel: string, t: string) => envia(tel, { type: "text", text: { body: t, preview_url: false } });
 
