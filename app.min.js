@@ -5008,7 +5008,7 @@ const CARD_MARCA={'Nubank':['#9b2fe0','#5f0a9e','#fff'],'Banco Inter':['#ff8a00'
 const BANDEIRAS=[{v:'',t:'não sei'},{v:'mastercard',t:'Mastercard'},{v:'visa',t:'Visa'},{v:'elo',t:'Elo'},{v:'amex',t:'American Express'},{v:'hipercard',t:'Hipercard'}];
 function bancoDoCartao(c){
   const tx=String(c.banco||'')+' '+String(c.nome||'');
-  let b=BANCOS_BR.find(x=>x.c&&x.n===c.banco)||BANCOS_BR.find(x=>x.c&&x.n.length>3&&new RegExp('\\b'+x.n.split(' ')[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(tx)&&!/^banco$/i.test(x.n.split(' ')[0]));
+  let b=BANCOS_BR.find(x=>x.c&&x.n===c.banco)||BANCOS_BR.find(x=>x.c&&x.n.length>3&&new RegExp('\\b'+x.n.split(' ')[0].replace(/[.*+?^()|[\]\\]/g,'\\$&')+'\\b','i').test(tx)&&!/^banco$/i.test(x.n.split(' ')[0]));
   if(!b&&/\bnu\b|nubank|roxinho|ultravioleta/i.test(tx))b=BANCOS_BR.find(x=>x.n==='Nubank');
   if(!b&&c.bancoAuto)b=BANCOS_BR.find(x=>x.n===c.bancoAuto);
   return b||null;
@@ -8557,7 +8557,7 @@ function abreMeta(id){
   const fonteL=[];
   if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
   mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
-    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
   (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(mtPlanoNome(pl)||'ativo')}</b><small>a comprar · ${(MT_PK_T.find(k=>k[0]===pl.tipo)||['',MT_GL[mtGrupo(pl.tipo)]])[1]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
   const hist=(m.aportes||[]).slice().reverse().slice(0,24);
   const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
@@ -8708,7 +8708,7 @@ function metaFontes(id){
     return `<div class="mtSrc mtSrc2" data-fid="${esc(f.id)}" data-val="${val}" data-livre="${livre}">
       <div class="mtSrcTop">${ic}<div class="mtSrcT"><b class="mtSrcN">${esc(nm)}</b>
         <span class="mtSrcV"><b class="nw">${brl(val)}</b>${tx?`<em class="mtTx">${esc(tx)}</em>`:''}</span>
-        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
+        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
       <div class="mtPctC" role="group" aria-label="quanto de ${esc(nm)} vai para esta meta">
         <div class="mtChips">${ch.length?ch.map(p=>`<button type="button" class="mtChip${v0===p?' on':''}" data-pq="${p}" aria-pressed="${v0===p}">${p===livre&&livre<100&&![25,50,75].includes(p)?'livre ':''}${pc(p)}%</button>`).join(''):'<span class="mtSemLivre">100% já está em outras metas</span>'}</div>
         <div class="mtStep"><button type="button" class="mtStB" data-ps="-5" aria-label="menos 5%">−</button><label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?v0:''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(nm)} para a meta (até ${pc(livre)}%)"><span>%</span></label><button type="button" class="mtStB" data-ps="5" aria-label="mais 5%">+</button></div>
