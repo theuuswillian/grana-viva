@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PSQL=(psql -X -qAt -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1)
+PSQL=(psql -X -qAt -h 127.0.0.1 -U postgres -d "${PGDATABASE:-granaviva_test}" -v ON_ERROR_STOP=1)
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
