@@ -66,8 +66,31 @@ $$;
 alter table public.cotacao_cache alter column ticker set not null, alter column v set not null;
 alter table public.radar_disparos alter column user_id set not null, alter column chave set not null;
 
-do $$
+do $
+declare
+  v_pk_columns text[];
 begin
+  -- Não aceita silenciosamente uma PK existente sobre colunas diferentes.
+  select array_agg(a.attname::text order by k.ord)
+    into v_pk_columns
+    from pg_constraint c
+    cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+    join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+   where c.conrelid='public.cotacao_cache'::regclass and c.contype='p';
+  if v_pk_columns is not null and v_pk_columns <> array['ticker']::text[] then
+    raise exception 'cotacao_cache já possui PK incompatível (%); revisar manualmente sem remover a chave existente', v_pk_columns;
+  end if;
+
+  select array_agg(a.attname::text order by k.ord)
+    into v_pk_columns
+    from pg_constraint c
+    cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+    join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+   where c.conrelid='public.radar_disparos'::regclass and c.contype='p';
+  if v_pk_columns is not null and v_pk_columns <> array['user_id','chave']::text[] then
+    raise exception 'radar_disparos já possui PK incompatível (%); revisar manualmente sem remover a chave existente', v_pk_columns;
+  end if;
+
   if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and contype='p') then
     alter table public.cotacao_cache add constraint cotacao_cache_pkey primary key (ticker);
   end if;
