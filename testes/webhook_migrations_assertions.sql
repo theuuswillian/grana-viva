@@ -137,6 +137,14 @@ begin
     raise exception 'falha permanente não pode ser repetida';
   end if;
 
+  select schedule,command into v_schedule,v_command
+    from cron.job where jobname='granaviva-wa-saida-limpeza';
+  if v_schedule <> '*/5 * * * *'
+     or v_command not ilike '%status=''incerta''%'
+     or v_command not ilike '%30 days%' then
+    raise exception 'job de reconciliação/retention da outbox incorreto';
+  end if;
+
   if not (select relrowsecurity from pg_class where oid='public.wa_saida'::regclass) then
     raise exception 'RLS não está habilitada em wa_saida';
   end if;
