@@ -123,7 +123,7 @@ end;
 $$;
 
 -- Reconcilia leases abandonados sem reenviar; retém estados ambíguos para auditoria.
-do $
+do $$
 begin
   if exists (select 1 from cron.job where jobname='granaviva-wa-saida-limpeza') then
     perform cron.unschedule('granaviva-wa-saida-limpeza');
@@ -142,7 +142,7 @@ begin
          and atualizado_em < now() - interval '30 days';
     $cmd$
   );
-end $;
+end $$;
 
 revoke all on function public.wa_saida_reserva(text, text, jsonb, integer) from public, anon, authenticated;
 revoke all on function public.wa_saida_finaliza(text, text, text, text) from public, anon, authenticated;
