@@ -22,6 +22,12 @@ begin
   if (select data->>'tema' from public.settings limit 1) <> 'dark' then
     raise exception 'preferências não relacionadas foram perdidas';
   end if;
+  if (select (data->'cfg') ? 'pluggyIgn' from public.settings limit 1) then
+    raise exception 'lista antiga de identificadores permaneceu dentro de settings.cfg';
+  end if;
+  if (select (data->'cfg'->>'metaCotas')::int from public.settings limit 1) <> 250 then
+    raise exception 'preferências não relacionadas dentro de cfg foram perdidas';
+  end if;
   if (select data ?| array['saldo','saldoData','saldoFecha'] from public.bancos where id='bank-1') then
     raise exception 'saldo automático Pluggy não foi removido da conta mapeada';
   end if;
