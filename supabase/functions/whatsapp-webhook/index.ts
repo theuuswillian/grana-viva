@@ -28,7 +28,7 @@ import { reservaSaida, finalizaSaida } from "../_shared/wa-outbox.ts";
 import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, janelaResumo, enviaEmLote } from "../_shared/resumo-semanal.ts";
 import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 // Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
-import { confereBytes, ARQ_MAX, MSG_GRANDE, MSG_TIPO } from "../_shared/arquivo.ts";
+import { confereBytes, leStreamLimitado, ARQ_MAX, MSG_GRANDE, MSG_TIPO } from "../_shared/arquivo.ts";
 import { confereCota, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
@@ -328,7 +328,8 @@ async function baixaMidia(id: string, sandbox = false): Promise<Midia | { erro: 
     }
     const cl = Number(r.headers.get("content-length") || 0);
     if (cl > ARQ_MAX) { try { await r.body?.cancel(); } catch { /* */ } return { erro: MSG_GRANDE }; }
-    const buf = new Uint8Array(await r.arrayBuffer());
+    const buf = await leStreamLimitado(r.body, ARQ_MAX);
+    if (buf === null) return { erro: MSG_GRANDE };
     const c = confereBytes(buf, String(m.mime_type || ""), { audio: true });
     if (!c.ok) return { erro: c.erro };
     let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
