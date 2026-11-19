@@ -1,6 +1,7 @@
 -- Stubs de extensões para testar as migrations sem executar cron, HTTP ou acessar segredos reais.
 DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $;
+DO $ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $;
 
 create schema cron;
 create table cron.job (
@@ -41,3 +42,6 @@ create table public.wa_vinculo (
   telefone text,
   vinculado_em timestamptz default now()
 );
+
+-- Registro legado deve ser tratado como concluído pela migration da fila.
+insert into public.wa_msg(id) values ('wamid-legacy-before-queue');
