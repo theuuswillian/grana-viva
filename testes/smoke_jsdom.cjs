@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,hojeISO,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -40,13 +40,13 @@ const mesN=(n)=>{const d=new Date(hoje+'T12:00:00');d.setDate(1);d.setMonth(d.ge
 const dataPg=mesN(1).slice(0,8)+'20';
 S.bancos=[{id:'b-fin',nome:'Conta teste',saldo:2000,saldoData:hoje,saldoFecha:true}];
 S.cartoes=[{id:'c-fin',nome:'Cartão teste',fechamento:15,vencimento:25,limite:5000}];
+delete S.cfg.pagDesde;T.resetMemo();
 S.tx=[
  {id:'fat-parcial',faturaKey:'fat|c-fin|'+mesN(1).slice(0,7),data:mesN(1),tipo:'despesa',cartao:'c-fin',valor:1000,pagoValor:400,pagamentos:[{valor:400,data:dataPg,conta:'b-fin'}]},
  {id:'fat-vencida',faturaKey:'fat|c-fin|'+mesN(2).slice(0,7),data:mesN(2),tipo:'despesa',cartao:'c-fin',valor:300,pagoValor:0,pagamentos:[]},
  {id:'compra-ciclo',tipo:'despesa',data:hoje,valor:200,cartao:'c-fin',forma:'cartao'}
 ];
-const stTeste=T.saldoTotal(),fatTeste=T.ccFaturasLista(S.cartoes[0]),slTeste=T.saldoLivre();
-console.log('DEBUG saldo',stTeste,slTeste,'faturas',fatTeste.map(f=>({fecha:f.fecha,estado:f.estado,valor:f.valor,rest:f.rest})));
+const stTeste=T.saldoTotal(),slTeste=T.saldoLivre();
 ok(Math.abs(stTeste-2000)<0.01,'saldo total mantém o saldo bancário após pagamento já refletido na conta');
 ok(Math.abs(slTeste-900)<0.01,'saldo livre desconta duas faturas antigas e o ciclo atual, sem somar parcelas futuras');
 S.tx=[];S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
