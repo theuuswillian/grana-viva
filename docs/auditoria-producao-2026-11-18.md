@@ -29,22 +29,22 @@ Todas as dez funções abaixo estavam ativas na consulta. O campo `verify_jwt` e
 | radar-precos | 12 | ACTIVE |
 | assinatura | 22 | ACTIVE |
 
-As entradas de `radar-precos` e `assinatura` coincidiram byte a byte com a branch de referência consultada. As outras oito entradas divergiram do código versionado. Portanto, não se deve fazer deploy dessas funções a partir do GitHub até revisar as diferenças e identificar quais alterações são posteriores, anteriores ou específicas da produção.
+Na primeira comparação, oito entradas divergiam. Após a reconciliação desta branch, `whatsapp-vincular` e `cotacoes` também passaram a coincidir byte a byte com produção; agora há quatro correspondências exatas (`whatsapp-vincular`, `cotacoes`, `radar-precos` e `assinatura`). As seis diferenças restantes são intencionais e descritas abaixo. Ainda assim, não se deve fazer deploy em lote: cada função precisa ser validada contra as migrations e secrets correspondentes.
 
 ### Diferenças funcionais identificadas
 
-- **minha-conta:** a produção tinha confirmação do cancelamento no Mercado Pago antes da exclusão e remoção de envios simulados pelo telefone. Essas proteções foram portadas para esta branch, junto com a lista centralizada de tabelas.
+- **minha-conta:** a produção tinha confirmação do cancelamento no Mercado Pago antes da exclusão e remoção de envios simulados pelo telefone. Essas proteções foram portadas, junto com a lista centralizada de tabelas; a branch também verifica erros na limpeza dos envios simulados antes de prosseguir.
 - **assistente:** produção ainda usava o contador diário antigo; a branch contém consumo mensal atômico de cotas. Manter a implementação versionada, mas só publicar junto das migrations correspondentes.
 - **ler-comprovante:** produção tinha validação de tamanho real, MIME e bytes mágicos (5 MB), além de validação estrita do JSON da IA. Essas proteções foram portadas; o consumo mensal atômico da branch foi preservado.
 - **whatsapp-webhook:** as proteções de produção (resumo semanal em lotes, reserva idempotente, validação de arquivos/áudio e consultas de saldo/fatura) foram integradas à branch. A gravação do botão de confirmação continua usando a RPC atômica da branch, que valida a cota, grava as transações e remove o pendente na mesma transação.
 - **pagamento-webhook:** a branch contém recuperação de reservas de webhook abandonadas por lease condicional; produção ainda usa a versão anterior. Preservar a implementação versionada e seus testes.
-- **whatsapp-vincular:** produção já grava a preferência do resumo semanal em `settings.whatsapp_resumo_semanal`, com fallback para a coluna antiga. Essa implementação foi portada.
-- **cotacoes:** produção já tinha cache persistente e fallback para último preço conhecido. Essa implementação foi portada, junto do helper `cache.ts`.
+- **whatsapp-vincular:** a implementação da produção que grava a preferência em `settings.whatsapp_resumo_semanal`, com fallback para a coluna antiga, foi portada e agora coincide byte a byte.
+- **cotacoes:** o cache persistente e o fallback para último preço conhecido foram portados junto do helper `cache.ts`; a entrada agora coincide byte a byte com produção.
 - **valida-ia:** a produção tinha sanitização de entrada para prompts, aviso explícito contra prompt injection e validação estrita do schema JSON. O helper completo foi portado e ganhou testes.
 - **alertas-push:** a branch contém avisos de DARF que não estão na função implantada; a produção usa o helper `alvos.ts`. A implementação mais nova da branch foi preservada; não substituir pela versão implantada sem revisão.
 - **radar-precos** e **assinatura:** correspondência exata.
 
-Os módulos compartilhados `planos.js`, `erros.ts` e `seguro.ts` coincidiram byte a byte. `cota.ts` diverge porque a branch implementa consumo mensal atômico, enquanto produção ainda usa incremento diário legado. `mercadopago.ts` tinha na produção a função `cancelaConfirmando`, agora portada para a branch.
+Os módulos compartilhados `planos.js`, `erros.ts`, `seguro.ts`, `valida-ia.ts`, `ia-whatsapp.ts` e `resumo-semanal.ts` coincidem com as fontes de produção após a reconciliação. `cota.ts` diverge porque a branch implementa consumo mensal atômico, enquanto produção ainda usa incremento diário legado. `mercadopago.ts` inclui a função de confirmação de cancelamento recuperada da produção.
 
 ## Arquivos auxiliares recuperados
 
