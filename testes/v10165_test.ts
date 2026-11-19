@@ -92,7 +92,7 @@ Deno.test("resumo semanal: semana anterior e texto", () => {
   ];
   const L = textoResumo(tx, "2026-11-09", "2026-11-15", "2026-11-16", 1000);
   const t = L.join("\n");
-  if (!t.includes("R$ 70,00") || !t.includes("R$ 100,00") || !t.includes("Mercado R$ 50,00") || !t.includes("Ritmo do mês")) throw new Error(t);
+  if (!t.includes("Gasto nos últimos 7 dias: *R$ 70,00*") || !t.includes("Saldo livre no mês: *R$ 930,00*") || t.includes("R$ 999,00")) throw new Error(t);
 });
 
 Deno.test("webhook MP: evento já reservado e ainda em processamento não roda em paralelo", async () => {
