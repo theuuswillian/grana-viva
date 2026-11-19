@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,hojeISO,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -34,6 +34,20 @@ ok(S.fiis.length===0&&!('pluggyIgn' in S.cfg),'limpeza do cache antes de sincron
 S.tx=[];S.fiis=[];
 S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
 S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
+// saldo livre: inclui faturas vencidas/fechadas, parciais e o ciclo atual; ignora parcelas futuras.
+const hoje=T.hojeISO();
+const mesN=(n)=>{const d=new Date(hoje+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()-n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-15';};
+const dataPg=mesN(1).slice(0,8)+'20';
+S.bancos=[{id:'b-fin',nome:'Conta teste',saldo:2000,saldoData:hoje,saldoFecha:true}];
+S.cartoes=[{id:'c-fin',nome:'Cartão teste',fechamento:15,vencimento:25,limite:5000}];
+S.tx=[
+ {id:'fat-parcial',faturaKey:'fat|c-fin|'+mesN(1).slice(0,7),data:mesN(1),tipo:'despesa',cartao:'c-fin',valor:1000,pagoValor:400,pagamentos:[{valor:400,data:dataPg,conta:'b-fin'}]},
+ {id:'fat-vencida',faturaKey:'fat|c-fin|'+mesN(2).slice(0,7),data:mesN(2),tipo:'despesa',cartao:'c-fin',valor:300,pagoValor:0,pagamentos:[]},
+ {id:'compra-ciclo',tipo:'despesa',data:hoje,valor:200,cartao:'c-fin',forma:'cartao'}
+];
+ok(Math.abs(T.saldoTotal()-2000)<0.01,'saldo total mantém o saldo bancário após pagamento já refletido na conta');
+ok(Math.abs(T.saldoLivre()-900)<0.01,'saldo livre desconta duas faturas antigas e o ciclo atual, sem somar parcelas futuras');
+S.tx=[];S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
 const view=()=>doc.querySelector('#view').innerHTML;
