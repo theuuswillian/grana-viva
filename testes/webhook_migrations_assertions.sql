@@ -4,6 +4,8 @@ declare
   v_count integer;
   v_schedule text;
   v_command text;
+  token_a uuid := '20000000-0000-4000-8000-000000000001';
+  token_b uuid := '20000000-0000-4000-8000-000000000002';
 begin
   select count(*) into v_count from cron.job
    where jobname in ('granaviva-wa-msg-limpeza','granaviva-wa-resumo-semanal');
@@ -90,50 +92,50 @@ begin
 
 
   -- Outbox: uma resposta enviada não é repetida; uma recusa 429 pode ser retomada.
-  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'nova' then
+  if public.wa_saida_reserva('wa:test:sent',token_b,'5561999999999,'{"type":"text","text":"oi"}'::jsonb,90) <> 'nova' then
     raise exception 'primeiro envio deveria reservar outbox';
   end if;
   if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'ocupada' then
     raise exception 'reserva ativa deveria bloquear segundo worker';
   end if;
-  if not public.wa_saida_finaliza('wa:test:sent','enviada','wamid-provider-1',null) then
+  if not public.wa_saida_finaliza('wa:test:sent',token_a,'enviada','wamid-provider-1',null) then
     raise exception 'finalização enviada deveria atualizar outbox';
   end if;
   if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"texto alterado após retry"}'::jsonb,90) <> 'enviada' then
     raise exception 'envio concluído não pode ser repetido mesmo após reconstrução do payload';
   end if;
 
-  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"limite"}'::jsonb,90) <> 'nova' then
+  if public.wa_saida_reserva('wa:test:429',token_a,'5561999999999,'{"type":"text","text":"limite"}'::jsonb,90) <> 'nova' then
     raise exception 'reserva inicial 429 falhou';
   end if;
-  if not public.wa_saida_finaliza('wa:test:429','falhou_segura',null,'HTTP 429') then
+  if not public.wa_saida_finaliza('wa:test:429',token_a,'falhou_segura',null,'HTTP 429') then
     raise exception 'falha segura deveria finalizar';
   end if;
-  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"nova tentativa"}'::jsonb,90) <> 'retomada' then
+  if public.wa_saida_reserva('wa:test:429',token_b,'5561999999999,'{"type":"text","text":"nova tentativa"}'::jsonb,90) <> 'retomada' then
     raise exception 'HTTP 429 deveria permitir retry seguro';
   end if;
   if (select corpo->'text'->>'text' from public.wa_saida where chave='wa:test:429') <> 'nova tentativa' then
     raise exception 'retry seguro não atualizou o payload ainda não enviado';
   end if;
 
-  if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'nova' then
+  if public.wa_saida_reserva('wa:test:crash',token_a,'5561999999999,'{"type":"text","text":"crash"}'::jsonb,90) <> 'nova' then
     raise exception 'reserva de crash falhou';
   end if;
   update public.wa_saida set lease_until=now()-interval '1 second' where chave='wa:test:crash';
-  if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'incerta' then
+  if public.wa_saida_reserva('wa:test:crash',token_b,'5561999999999,'{"type":"text","text":"crash"}'::jsonb,90) <> 'incerta' then
     raise exception 'lease expirado deve virar incerto, nunca reenviar automaticamente';
   end if;
   if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'incerta' then
     raise exception 'envio incerto não pode ser reenviado';
   end if;
 
-  if public.wa_saida_reserva('wa:test:4xx','5561999999999','{"type":"text","text":"bad"}'::jsonb,90) <> 'nova' then
+  if public.wa_saida_reserva('wa:test:4xx',token_a,'5561999999999,'{"type":"text","text":"bad"}'::jsonb,90) <> 'nova' then
     raise exception 'reserva 4xx falhou';
   end if;
-  if not public.wa_saida_finaliza('wa:test:4xx','falhou',null,'HTTP 400') then
+  if not public.wa_saida_finaliza('wa:test:4xx',token_a,'falhou',null,'HTTP 400') then
     raise exception 'falha permanente deveria finalizar';
   end if;
-  if public.wa_saida_reserva('wa:test:4xx','5561999999999','{"type":"text","text":"bad"}'::jsonb,90) <> 'falhou' then
+  if public.wa_saida_reserva('wa:test:4xx',token_b,'5561999999999,'{"type":"text","text":"bad"}'::jsonb,90) <> 'falhou' then
     raise exception 'falha permanente não pode ser repetida';
   end if;
 
