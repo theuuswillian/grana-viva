@@ -208,3 +208,6 @@ A mesma revisão encontrou que a reconstrução de cotas históricas percorria a
 Os testes de yield on cost também confirmam que posições manuais sem histórico continuam usando a quantidade atual como fallback, enquanto carteiras com histórico respeitam a quantidade efetivamente detida em cada data.
 
 Os workflows completos passaram no commit `6dcf85b`.
+
+
+A revisão final da migration também identificou identificadores antigos que podiam permanecer dentro de `tx.data.par.pluggyId` em transferências manuais. A migration agora remove apenas essa propriedade aninhada, mantendo a transferência e o restante do vínculo. O fixture PostgreSQL verifica que o identificador desaparece e que o ID manual associado permanece intacto.
