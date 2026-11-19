@@ -61,8 +61,8 @@ begin
    for update;
 
   if not found then raise exception 'Registro de outbox desapareceu'; end if;
-  if v_telefone <> p_telefone or v_corpo is distinct from p_corpo then
-    raise exception 'Chave de outbox reutilizada com payload diferente';
+  if v_telefone <> p_telefone then
+    raise exception 'Chave de outbox reutilizada para outro destinatário';
   end if;
 
   if v_status = 'enviada' then return 'enviada'; end if;
@@ -82,6 +82,7 @@ begin
   if v_status = 'falhou_segura' then
     update public.wa_saida
        set status = 'enviando',
+           corpo = p_corpo,
            lease_until = now() + make_interval(secs => p_lease_seconds),
            tentativas = tentativas + 1,
            ultimo_erro = null,
