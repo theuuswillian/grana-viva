@@ -69,6 +69,6 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ## Estado desta preparação
 
 - PR #20: fencing da outbox de saída, CI completo aprovado.
-- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `aedab925aff3b07ce6bd84f8ac9c904a3d498ef8`.
+- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `6b683b1467be5da1ada24c1ca5b751dad0bca429`.
 - PR #19: permanece draft e não deve ser integrada separadamente, pois sua base ficou desatualizada.
 - Nenhuma migration foi aplicada no Supabase de produção; nenhuma Edge Function foi publicada; nenhuma PR foi mesclada.
