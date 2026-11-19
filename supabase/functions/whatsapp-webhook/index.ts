@@ -265,7 +265,8 @@ async function trata(m: any) {
   // v10.165: reserva o id ANTES de processar (insert numa chave primária = "on conflict do nothing" atômico).
   // 23505 = a Meta reenviou uma mensagem já processada: ignora. Outro erro: registra e não processa (melhor perder do que gravar 2x).
   const rs = await reservaMensagem(sb, mid);
-  if (rs !== "nova") { if (rs === "erro") await registraErro(sb, FN, "idempotencia", "falha ao reservar o id da mensagem"); return; }
+  if (rs === "erro") throw new Error("Falha ao reservar o id da mensagem; a Meta deve tentar novamente");
+  if (rs === "repetida") return;
   const t = m.type === "text" ? String(m.text?.body || "").trim() : "";
   const cod = /^\s*(?:gv\s*)?(\d{6})\s*$/i.exec(t);
   if (cod) { await vincula(tel, cod[1]); return; }
@@ -362,6 +363,23 @@ Deno.serve(async (req) => {
   let b: any; try { b = JSON.parse(raw); } catch { return new Response("ok"); }
   const msgs: any[] = [];
   for (const e of b?.entry || []) for (const c of e?.changes || []) for (const m of c?.value?.messages || []) msgs.push(m);
-  for (const m of msgs.slice(0, 20)) { try { await trata(m); } catch (e) { await registraErro(sb, FN, "tratar", e); } }
-  return new Response("ok");
+  // Não descarte mensagens acima de 20: cada evento é idempotente e a Meta pode reenviar o lote em caso de falha.
+  let falhou = false;
+  for (const m of msgs) {
+    try { await trata(m); }
+    catch (e) {
+      falhou = true;
+      await registraErro(sb, FN, "tratar", e);
+      // Se o processamento lançou uma exceção, libera a reserva para que a reentrega possa tentar novamente.
+      // As operações financeiras de confirmação usam RPC transacional e removem o pendente atomicamente.
+      const id = String(m?.id || "");
+      if (id) {
+        const { error: de } = await sb.from("wa_msg").delete().eq("id", id);
+        if (de) await registraErro(sb, FN, "idempotencia-liberar", de);
+      }
+    }
+  }
+  return falhou
+    ? new Response("falha temporária; tente novamente", { status: 503, headers: { "retry-after": "60" } })
+    : new Response("ok");
 });
