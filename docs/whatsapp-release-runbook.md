@@ -58,6 +58,7 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 
 - A reserva de entrada usa lease padrão de 180 segundos (permitido entre 30 e 900); a finalização exige o mesmo token e lease ainda válido. O webhook não possui renovação/heartbeat do lease. Antes de liberar tráfego, confirmar que o tempo máximo efetivo de execução da Edge Function e das etapas de IA permanece abaixo de 180 segundos; se a plataforma/projeto permitir execução mais longa, implementar heartbeat ou ajustar lease e testes antes do deploy.
 - A fila de entrada permite até 8 tentativas. Ao esgotar, mantém a mensagem em `falhou`, sem lease/token, registra o evento `tentativas-esgotadas` e não continua o ciclo de 503; a análise e eventual reprocessamento passam a ser manuais. Ainda não há backoff persistente por mensagem.
+- O download de mídia do WhatsApp é lido em stream e cancelado assim que ultrapassa 5 MB; `Content-Length` é usado apenas como rejeição antecipada, não como única proteção.
 - A outbox vincula cada chave ao destinatário e ao payload; só permite alterar o corpo após `falhou_segura` (HTTP 429), quando o provedor recusou o envio. Reutilização da chave com destinatário/payload divergente é rejeitada. Usa lease padrão de 90 segundos e POST ao provedor com timeout de 15 segundos. HTTP 429 é classificado como `falhou_segura` e pode ser tentado novamente; HTTP 5xx, timeout, crash e lease expirado são `incerta` e não podem ser reenviados automaticamente. Confirmar os estados incertos com o provedor antes de qualquer reenvio manual.
 - Os registros `incerta` são mantidos para reconciliação. O job de limpeza converte leases abandonados em `incerta`; não representa uma confirmação de entrega.
 
@@ -80,6 +81,6 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ## Estado desta preparação
 
 - PR #20: fencing da outbox de saída, CI completo aprovado.
-- PR #21: vinculação atômica, limite de 8 tentativas e hardening do `search_path`; CI integrado aprovado no SHA `275d592746905f0c7a76059fe117a1b3f3c7f635`.
+- PR #21: vinculação atômica, limite de 8 tentativas e hardening do `search_path`; CI integrado aprovado no SHA `4b538ba735b40c12764633f049971504a10ebc5b`.
 - PR #19: encerrada como substituída pela #21; manter apenas como histórico, sem integração separada.
 - Nenhuma migration foi aplicada no Supabase de produção; nenhuma Edge Function foi publicada; nenhuma PR foi mesclada.
