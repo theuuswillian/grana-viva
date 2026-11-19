@@ -24,6 +24,7 @@ import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
 import { reservaMensagem, finalizaMensagem, erroEnvioRecuperavel, contaLeituraMensagem } from "../_shared/wa-idem.ts";
+import { reservaSaida, finalizaSaida } from "../_shared/wa-outbox.ts";
 import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, janelaResumo, enviaEmLote } from "../_shared/resumo-semanal.ts";
 import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 // Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
@@ -49,43 +50,78 @@ async function assinaturaOk(raw: string, cab: string | null): Promise<boolean> {
   return d === 0;
 }
 
-async function envia(tel: string, corpo: Record<string, unknown>) {
+async function envia(tel: string, corpo: Record<string, unknown>, chave?: string) {
   const dest = tel.startsWith("u:") ? { recipient: tel.slice(2) } : { to: tel };
   const msg = { messaging_product: "whatsapp", recipient_type: "individual", ...dest, ...corpo };
-  const dk = Deno.env.get("WA_D360_KEY");
-  if (viaSandbox && dk) {
-    try {
-      const r = await fetch(D360, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "D360-API-KEY": dk, "content-type": "application/json" }, body: JSON.stringify(msg) });
-      if (!r.ok) {
-        const detalhe = (await r.text()).slice(0, 200);
-        if (erroEnvioRecuperavel(r.status)) throw new Error(`Falha transitória no envio sandbox (HTTP ${r.status}): ${detalhe}`);
-        await registraErro(sb, FN, "enviar-sandbox", detalhe, r.status);
-      }
-    } catch (e) {
-      await registraErro(sb, FN, "enviar-sandbox", e);
-      throw e;
+  let outbox = false;
+  let finalizada = false;
+  if (chave) {
+    const estado = await reservaSaida(sb, chave, tel, msg);
+    if (estado === "enviada") return;
+    if (estado === "ocupada") return; // outro worker já está enviando; nunca duplicar
+    if (estado === "incerta" || estado === "falhou") {
+      await registraErro(sb, FN, "outbox-" + estado, "Envio não repetido automaticamente: " + chave);
+      return;
     }
-    return;
+    if (estado !== "nova" && estado !== "retomada") throw new Error("Não foi possível reservar envio WhatsApp: " + estado);
+    outbox = true;
   }
+  const concluir = async (status: "enviada" | "falhou_segura" | "falhou" | "incerta", providerId?: string | null, erro?: unknown) => {
+    if (!outbox) return;
+    const ok = await finalizaSaida(sb, chave!, status, providerId, erro);
+    if (!ok) throw new Error("Não foi possível finalizar envio na outbox: " + chave);
+    finalizada = true;
+  };
+  const dk = Deno.env.get("WA_D360_KEY");
   const tok = Deno.env.get("WA_TOKEN"), pid = Deno.env.get("WA_PHONE_ID");
   if (!tok || !pid) {
-    const { error } = await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg });
-    if (error) throw error;
-    return;
+    try {
+      const { error } = await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg });
+      if (error) throw error;
+      await concluir("enviada", "modo-teste");
+      return;
+    } catch (e) {
+      if (outbox && !finalizada) await concluir("incerta", null, e);
+      throw e;
+    }
   }
   try {
-    const r = await fetch(`${GRAPH}/${pid}/messages`, { method: "POST", signal: AbortSignal.timeout(15000), headers: { authorization: "Bearer " + tok, "content-type": "application/json" }, body: JSON.stringify(msg) });
+    const url = viaSandbox && dk ? D360 : `${GRAPH}/${pid}/messages`;
+    const headers = viaSandbox && dk
+      ? { "D360-API-KEY": dk, "content-type": "application/json" }
+      : { authorization: "Bearer " + tok, "content-type": "application/json" };
+    const r = await fetch(url, { method: "POST", signal: AbortSignal.timeout(15000), headers, body: JSON.stringify(msg) });
     if (!r.ok) {
       const detalhe = (await r.text()).slice(0, 200);
-      if (r.status === 429 || r.status >= 500) throw new Error(`Falha transitória no envio WhatsApp (HTTP ${r.status}): ${detalhe}`);
+      const erro = new Error(`Falha no envio WhatsApp (HTTP ${r.status}): ${detalhe}`);
+      if (r.status === 429) {
+        await concluir("falhou_segura", null, erro);
+        throw erro; // o provedor recusou por limite; retry é seguro
+      }
+      if (r.status >= 500) {
+        await concluir("incerta", null, erro); // 5xx pode ocorrer após o provedor aceitar a mensagem
+        await registraErro(sb, FN, "enviar-incerto", erro);
+        return;
+      }
+      await concluir("falhou", null, erro);
       await registraErro(sb, FN, "enviar", detalhe, r.status);
+      return;
     }
+    let resposta: any = null;
+    try { resposta = await r.json(); } catch { /* HTTP 2xx sem corpo legível ainda é ambíguo para auditoria */ }
+    const providerId = resposta?.messages?.[0]?.id ? String(resposta.messages[0].id) : null;
+    if (outbox && !providerId) {
+      await concluir("incerta", null, "HTTP 2xx sem ID de mensagem retornado pelo provedor");
+      return;
+    }
+    await concluir("enviada", providerId);
   } catch (e) {
+    if (outbox && !finalizada) await concluir("incerta", null, e);
     await registraErro(sb, FN, "enviar", e);
     throw e;
   }
 }
-const texto = (tel: string, t: string) => envia(tel, { type: "text", text: { body: t, preview_url: false } });
+const texto = (tel: string, t: string, chave?: string) => envia(tel, { type: "text", text: { body: t, preview_url: false } }, chave);
 
 const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const dataBR = (d: string, hoje: string) => d === hoje ? "hoje" : d.slice(8, 10) + "/" + d.slice(5, 7) + (d.slice(0, 4) !== hoje.slice(0, 4) ? "/" + d.slice(0, 4) : "");
