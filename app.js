@@ -1,8 +1,7 @@
 
 (function(){
 'use strict';
-/* GranaViva: integração Pluggy descontinuada. A interface não oferece conexão ou sincronização bancária.
-   Dados históricos identificados como Pluggy são tratados pela migração dedicada, nunca por chamadas do frontend. */
+/* Importação de extratos é local (CSV/OFX); não há conexão bancária automática. */
 const MVP_MODE=true;
 /* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
    (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
@@ -404,8 +403,11 @@ function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
-  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.fiis=arr(o.fiis).filter(f=>!f.pluggyInv).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  if(o.cfg)delete o.cfg.pluggyIgn;
+  o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
+  o.fiis.forEach(f=>delete f.pluggyInv);
   if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
@@ -1141,7 +1143,7 @@ function saldoBanco0(b){
   let s=cents(b.saldo);
   /* saldoFecha: o saldo informado pelo banco já inclui os lançamentos do próprio dia QUE VIERAM DO BANCO.
      v10.52: lançamento manual feito hoje (sem origem no banco) também entra no saldo do dia. */
-  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.pluggyId))));
+  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.importado))));
   S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!antes(o.data))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
     if(t.faturaKey)pagsFatura(t).forEach(p=>{if(p.conta===b.id&&p.data&&!antes(p.data,p))s-=cents(p.valor);}); // cada pagamento na sua data e conta
@@ -3022,14 +3024,14 @@ function mvpVoltaHTML(){
 /* ---------- origem do lançamento (selo discreto no extrato) ----------
    novos lançamentos guardam t.origem ('ia' | 'recibo' | 'manual') no próprio JSON do lançamento (tabela tx, coluna data):
    sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Banco/extrato importado:
-   identificadores históricos pluggyId, ou as marcas atuais importado/impId. Lançamento antigo sem marca = Manual. */
+   importações locais usam as marcas importado/impId. Lançamento antigo sem marca = Manual. */
 const ORIGEM_L={ia:'IA',wa:'WhatsApp',rec:'Recibo',man:'Manual',imp:'Importado'};
 function origemTx(t){
   if(!t)return 'man';
   if(t.origem==='ia')return 'ia';
   if(t.origem==='recibo')return 'rec';
   if(t.origem==='whatsapp'||(Array.isArray(t.tags)&&t.tags.includes('whatsapp')))return 'wa';
-  if(t.origem==='banco'||t.pluggyId||t.importado||t.impId)return 'imp';
+  if(t.origem==='banco'||t.importado||t.impId)return 'imp';
   return 'man';
 }
 function origemBadge(t){
@@ -4402,7 +4404,7 @@ function viewFiiCarteira(modo){
       </div>
       ${meta.length?`<div class="astMeta${rf?' rfm':''}">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
       ${chips.length?`<div class="rfChips">${chips.map(([k,txt,cl])=>`<span class="rfChip ${cl||''}">${k==='dia'?'<i></i>':''}${esc(txt)}</span>`).join('')}</div>`:''}
-      ${rf&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
+      ${rf&&rfIdxOf(f)!=='fixo'?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
       <div class="astFoot"><small>${info}</small><div class="acts">${MVP_MODE&&!rf?rdBellHTML(f):''}${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
@@ -6032,7 +6034,7 @@ function montaImport(){
     l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
     const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l));
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
@@ -6133,9 +6135,9 @@ function confirmaImport(){
   let n=0,lig=0,rcb=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
-    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.pluggyId&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
@@ -6158,7 +6160,7 @@ function confirmaImport(){
 }
 
 /* ---------- v10.96: verificar parcelas ----------
-   Recupera parcelas antigas usando somente registros que já existem no aparelho. Os campos pluggyId identificam
+   Recupera parcelas antigas usando somente registros que já existem no aparelho. Os campos impId identificam
    transações importadas pela integração antiga; parcGer identifica parcelas reconstruídas localmente.
    A rotina não consulta APIs, webhooks ou tabelas remotas. Com duas parcelas conhecidas da mesma compra,
    calcula as parcelas que faltam até a fatura aberta e permite desfazer a recuperação. */
@@ -6174,12 +6176,12 @@ async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true
 /* o que falta (puro: só lê S e as linhas). {add:[tx], mov:[{id,de,para}], compras:[...], n, x, total} */
 function prcDetecta(linhas){
   linhas=linhas||[];const hj=hojeISO(),add=[],mov=[],compras={};
-  const pids=new Set();S.tx.forEach(t=>{if(t.pluggyId)pids.add(t.pluggyId);if(t.par&&t.par.pluggyId)pids.add(t.par.pluggyId);});
+  const pids=new Set();S.tx.forEach(t=>{if(t.impId)pids.add(t.impId);if(t.par&&t.par.impId)pids.add(t.par.impId);});
   S.cartoes.forEach(c=>{
     const doC=S.tx.filter(t=>t.cartao===c.id&&t.tipo==='despesa');
-    const banco=doC.filter(t=>t.pluggyId||t.parcGer);
+    const banco=doC.filter(t=>t.importado||t.impId||t.parcGer);
     if(!banco.length)return;
-    const semParc=banco.filter(t=>t.pluggyId&&!parcelaDesc(t.descricao)).map(t=>t.data).sort();
+    const semParc=banco.filter(t=>t.importado&&!parcelaDesc(t.descricao)).map(t=>t.data).sort();
     const ini=semParc[0]||banco.map(t=>t.data).sort()[0],iniF=fechamentoDe(c,ini).fecha,atuF=fechamentoDe(c,hj).fecha;
     /* compras: cada parcela conhecida (app + banco) agrupada pela data da compra */
     const G={},grupo=(desc,p,vc,dc)=>{const ch=prcChave(c.id,desc,p.n,vc,dc);return G[ch]||(G[ch]={ch,desc,n:p.n,vc,dc,ks:new Set(),tx:[],ln:[]});};
@@ -6201,7 +6203,7 @@ function prcDetecta(linhas){
       g.ln.forEach(({l,k})=>{if(pids.has(l.fitid)||tem.has(k))return;const nd=k>=2?dataParcela(c,l.data,k-1):l.data;
         if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))return;
         const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catSugerida(l.desc,'despesa'),descricao:String(l.desc||'').slice(0,120),data:nd,
-          importado:true,forma:'cartao',cartao:c.id,pluggyId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
+          importado:true,forma:'cartao',cartao:c.id,impId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
         if(nd!==l.data)t.dataCompra=l.data;
         tem.set(k,t);add.push(t);cp.novas.push({k,data:nd,valor:t.valor,fonte:'banco'});});
       /* fonte 3: gera pelos metadados as que nem o banco trouxe, até a fatura aberta */
@@ -6253,7 +6255,7 @@ function prcBtnTxt(r){return r.n?'Adicionar '+r.n+(r.n>1?' parcelas':' parcela')
 function prcAplica(R){
   const fora=R.fora||new Set(),ok=new Set(R.compras.filter(cp=>!fora.has(cp.ch)).map(cp=>cp.ch));
   const lote='pr'+Date.now().toString(36),ids=[],movs=[];
-  R.add.forEach(t=>{if(!ok.has(t._ch))return;if(S.tx.some(x=>x.id===t.id||(t.pluggyId&&x.pluggyId===t.pluggyId)))return;
+  R.add.forEach(t=>{if(!ok.has(t._ch))return;if(S.tx.some(x=>x.id===t.id||(t.impId&&x.impId===t.impId)))return;
     const n=Object.assign({},t,{parcRec:lote});delete n._k;delete n._n;delete n._ch;S.tx.push(n);ids.push(n.id);});
   R.mov.forEach(m=>{const t=S.tx.find(x=>x.id===m.id);if(!t||t.data!==m.de||t.dataCompra||!ok.has(m.ch))return;
     movs.push([t.id,t.data,0]);t.dataCompra=t.data;t.data=m.para;t.parcMov=lote;});
@@ -6448,7 +6450,7 @@ function abreEmp(id){
   const jur=empJurosTot(id);
   const linha=x=>{if(x.empJuros)return `<div class="tx empH juros"><span class="ic receita">${I('plus')}</span><div class="txt"><b>juros/lucro</b><small>${fmtDataCurta(x.data)} · receita${x.conta?' · '+esc(nomeLado('b:'+x.conta)):''}</small></div><div class="val pos">+ ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;
     const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
-    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.pluggyId?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
+    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.importado?' · importado':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="${esc(e.pessoa)}"><div class="sh-head"><h3>${esc(e.pessoa)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero">${empAvatar(e.pessoa)}<small>${t.aberto>0?'falta receber':t.perdoado>0?'encerrado':'quitado'}</small><b>${brl(t.aberto)}</b><span><span class="empModo">${EMP_MODO[empModo(e)]}</span> <span class="badge ${k}">${l}</span></span></div>
     <div class="empProg">${empBarHTML(t)}<p class="empProgT"><b>${esc(empResumo(t))}</b></p>
@@ -6739,11 +6741,11 @@ function empAntMarca(t){if(!t||!t.emp||t.empDir!=='out'||t.empAnt)return false;i
 function empAntDesfaz(t){if(!t||!t.empAnt)return false;const d=t.empAntDe&&S.bancos.some(b=>'b:'+b.id===t.empAntDe)?t.empAntDe:(bancoPadrao()?'b:'+bancoPadrao():'');
   if(t.empDir==='in')t.para=d;else t.de=d;delete t.empAnt;delete t.empAntDe;return true;}
 /* saídas que dá para corrigir: lançadas à mão (as que vieram do banco aconteceram de verdade na conta) */
-function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.pluggyId&&!t.importado&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
+function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.importado&&!t.impId&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
 /* dica: a saída deixou a conta negativa, ou é anterior a tudo que foi lançado naquela conta */
 function empSuspeitos(){
   const out=[],ign=new Set(S.cfg.empAntIgn||[]);
-  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.pluggyId||t.importado||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
+  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.importado||t.impId||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
     const e=empPorId(t.emp),b=S.bancos.find(x=>'b:'+x.id===t.de);if(!e||!b)return;
     if(b.saldoData&&t.data<b.saldoData)return; // anterior ao saldo informado: já não desconta nada
     const sb=saldoBanco(b);
@@ -6781,7 +6783,7 @@ function empAntForm(id){
 function difDias(a,b){return Math.abs(Math.round((new Date(a+'T12:00')-new Date(b+'T12:00'))/864e5));}
 function txBancoIgual(contaSel,tipo,valor,data){
   const id=/^b:/.test(contaSel||'')?contaSel.slice(2):'';if(!id)return null;
-  const L=S.tx.filter(t=>t.pluggyId&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
+  const L=S.tx.filter(t=>(t.importado||t.impId)&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
   return L.sort((a,b)=>difDias(a.data,data)-difDias(b.data,data))[0]||null;
 }
 function empTokens(n){return norm(n).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>=3&&!['das','dos','del'].includes(w));}
@@ -6798,13 +6800,13 @@ function empCasa(desc,valor,data,dir){
 /* v10.80: receita prevista (manual) que corresponde a uma entrada do extrato: mesmo valor, conta igual (ou sem conta), até 3 dias da data de recebimento */
 function prevReceitaIgual(l,d,usados){
   const id=d.slice(2),v=cents(l.valor);
-  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data)||(a.conta===id?-1:1))[0]||null;
 }
 /* lançamento manual de empréstimo que corresponde a uma linha do extrato (mesma conta, valor, até 3 dias) */
 function empManualIgual(l,d,usados){
   const sai=l.valor<0,v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.emp&&!t.pluggyId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.emp&&!t.importado&&!t.impId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* ---------- v10.58: conciliação de transferências ----------
@@ -6838,8 +6840,7 @@ function concCache(){const k=S.tx.length+'|'+(S.cfg.concIgn||[]).length+'|'+S.tx
 function juntaPar(p){
   const o=S.tx.find(x=>x.id===p.o.id),i=S.tx.find(x=>x.id===p.i.id);if(!o||!i)return false;
   Object.assign(o,{tipo:'transf',de:'b:'+p.de,para:'b:'+p.para,categoria:'Transferência',conta:'',forma:'',cartao:''});
-  delete o.rev;o.par={id:i.id,pluggyId:i.pluggyId||'',desc:i.descricao||'',data:i.data};
-  if(i.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(i.pluggyId).slice(-3000);
+  delete o.rev;o.par={id:i.id,impId:i.impId||'',desc:i.descricao||'',data:i.data};
   if(i.anexos&&i.anexos.length)o.anexos=(o.anexos||[]).concat(i.anexos);
   S.tx=S.tx.filter(x=>x!==i);return true;
 }
@@ -7872,7 +7873,7 @@ function rfCresce(v,d0,idx,taxa,ate,c){
 /* posição de hoje: bruto, imposto, IOF, taxa B3 e líquido, somando aporte por aporte */
 function rfPosicao(f,c){
   c=c||cdiCache();const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),tx=rfTaxaOf(f),hj=hojeISO(),A=rfAportes(f);
-  if(idx==='fixo'||!A.length||f.pluggyInv&&!f.manual){
+  if(idx==='fixo'||!A.length){
     const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
     if(!f.aplicEm||!f.pago)return {bruto:c2(posi),liq:null,ir:0,iof:0,cust:0,aliq:null,est:false,itens:[]};
     const dias=Math.max(1,diasEntre(f.aplicEm,hj)),iof=P.iof!==0&&dias<30?ganho*IOF_T[dias-1]/100:0,ir=P.ir?(ganho-iof)*IR_RF(dias)/100:0;
@@ -7913,7 +7914,7 @@ function rfRecalc(c){
     if(tipoOf(f)!=='rf')return;
     if(f.idx==='cdi'&&f.cdiBase&&!f.ap){f.ap=rfAportes(f);mud=true;}
     if(!f.prod){f.prod=rfProdOf(f);mud=true;}
-    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length||(f.pluggyInv&&!f.manual))return;
+    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length)return;
     const P=rfPosicao(f,c);
     if(f.cotas!==1){f.cotas=1;mud=true;}
     if(P.bruto!==f.preco){f.preco=P.bruto;mud=true;}
@@ -7937,7 +7938,7 @@ async function bcbSerie(cod,ini,fim){
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
   if(!rfs.length&&!mCdi&&!mIpca)return;
   const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');if(mIpca)usa.add('ipca');
   /* v10.87: a caixinha da meta rende desde a base e cada aporte; o alvo com IPCA corrige desde alvoEm */
@@ -8041,7 +8042,7 @@ function rfContaCampo(f,res){
 function rfLancaConta(f,n,d,conta,res){
   if(!S.cats.includes('Investimentos'))S.cats.push('Investimentos');
   const desc=(res?'Resgate ':'Aporte ')+(f.nome||'renda fixa');
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>(t.importado||t.impId)&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     (res?((t.tipo==='receita'&&t.conta===conta)||(t.tipo==='transf'&&t.para==='b:'+conta&&!t.de)):((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))))
     .sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){delete ig.rev;Object.assign(ig,res?{tipo:'transf',de:'',para:'b:'+conta}:{tipo:'transf',de:'b:'+conta,para:''},{categoria:'Investimentos',conta:'',forma:'',cartao:'',invRf:f.id});return ig.id;}
@@ -8076,7 +8077,7 @@ function rfCardInfo(f,posi){
   const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),X=rfPosicao(f),meta=[];let info='';
   if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
   meta.push(['rende',rfRotulo(f)]);
-  if(idx!=='fixo'&&rfAportes(f).length&&!(f.pluggyInv&&!f.manual)){
+  if(idx!=='fixo'&&rfAportes(f).length){
     const an=rfAnual(f),mes=posi*(Math.pow(1+an/100,1/12)-1);
     if(mes>0)meta.push(['por mês','≈ '+brl(mes*(1-(P.ir?(X.aliq||15)/100:0)))+(P.ir?' líq.':'')]);
     if(X.liq!=null&&X.liq<posi-0.004)meta.push(['se resgatar hoje',brl(X.liq)]);
@@ -8092,7 +8093,6 @@ function rfCardInfo(f,posi){
   if(P.cust)chips.push(['b3',P.isen?'taxa B3 só acima de R$ 10 mil':'taxa B3 0,20% a.a.','']);
   chips.push(['g',P.g==='fgc'?'FGC até R$ 250 mil':P.g==='tn'?'garantia do Tesouro':'sem FGC',P.g?'':'warn']);
   if(idx==='fixo')info=(f.manual?'saldo atualizado por você':f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para o app calcular o rendimento';
-  else if(f.pluggyInv&&!f.manual)info=f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'saldo do banco';
   else{const c=cdiCache(),k=Object.keys(idx==='selic'?(c.sel||{}):c.s||{}).sort().pop();
     info=(['cdi','cdimais'].includes(idx)&&CDI.taxa?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a.':idx==='selic'&&k?'Selic '+num(cdiAnual(c.sel[k]))+'% a.a.':idx==='poup'?'poupança: '+num(poupTaxaMes(c,hojeISO())*100)+'% ao mês':idx==='ipca'?'inflação dos últimos 12 meses no cálculo':'taxa travada')+(X.est?' · últimos dias estimados até o Banco Central publicar':'')+(CDI.st==='erro'?' · sem conexão com o Banco Central':'')+(P.mm?' · valor na curva, o preço de mercado varia':'');}
   return {meta,info,chips,tag:P.c};
@@ -8557,7 +8557,7 @@ function abreMeta(id){
   const fonteL=[];
   if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
   mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
-    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
   (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(mtPlanoNome(pl)||'ativo')}</b><small>a comprar · ${(MT_PK_T.find(k=>k[0]===pl.tipo)||['',MT_GL[mtGrupo(pl.tipo)]])[1]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
   const hist=(m.aportes||[]).slice().reverse().slice(0,24);
   const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
@@ -8708,7 +8708,7 @@ function metaFontes(id){
     return `<div class="mtSrc mtSrc2" data-fid="${esc(f.id)}" data-val="${val}" data-livre="${livre}">
       <div class="mtSrcTop">${ic}<div class="mtSrcT"><b class="mtSrcN">${esc(nm)}</b>
         <span class="mtSrcV"><b class="nw">${brl(val)}</b>${tx?`<em class="mtTx">${esc(tx)}</em>`:''}</span>
-        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${f.pluggyInv?' · do banco':''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
+        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
       <div class="mtPctC" role="group" aria-label="quanto de ${esc(nm)} vai para esta meta">
         <div class="mtChips">${ch.length?ch.map(p=>`<button type="button" class="mtChip${v0===p?' on':''}" data-pq="${p}" aria-pressed="${v0===p}">${p===livre&&livre<100&&![25,50,75].includes(p)?'livre ':''}${pc(p)}%</button>`).join(''):'<span class="mtSemLivre">100% já está em outras metas</span>'}</div>
         <div class="mtStep"><button type="button" class="mtStB" data-ps="-5" aria-label="menos 5%">−</button><label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?v0:''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(nm)} para a meta (até ${pc(livre)}%)"><span>%</span></label><button type="button" class="mtStB" data-ps="5" aria-label="mais 5%">+</button></div>
@@ -8811,7 +8811,7 @@ function aporte(id){
 }
 /* sai da conta como transferência para a meta. Se já existe movimentação importada igual no histórico, ela vira o aporte (não duplica). */
 function mtLancaAporte(m,n,d,conta){
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>(t.importado||t.impId)&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     ((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))).sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){ig.metaOrig={tipo:ig.tipo,categoria:ig.categoria,conta:ig.conta||'',forma:ig.forma||''};
     Object.assign(ig,{tipo:'transf',de:'b:'+conta,para:'',meta:m.id,categoria:'Meta',conta:'',forma:'',cartao:''});delete ig.rev;return ig.id;}
@@ -8822,7 +8822,7 @@ function mtLancaAporte(m,n,d,conta){
 function mtApDel(m,apId){
   const L=m.aportes||[],i=L.findIndex(a=>a.id===apId);if(i<0)return false;const a=L[i];
   if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));
-  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.pluggyId&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
+  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.importado&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
   L.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;return true;
 }
 /* lançamento de meta excluído em Lançamentos: o aporte sai do histórico e da caixinha */
@@ -8831,7 +8831,7 @@ function mtTxSaiu(t){const m=(S.metas||[]).find(x=>x.id===t.meta);if(!m)return;c
 /* extrato importado: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
 function metaManualIgual(l,d,usados){
   if(!(l.valor<0))return null;const v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.pluggyId&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.importado&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
@@ -8985,7 +8985,7 @@ function txMenu(id){
   if(t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita'))ops.push(['tx-propria','swap','Foi pra outra conta minha']);
   if(t.tipo==='despesa'&&!t.emp&&!t.cartao&&!t.faturaKey&&!temSplit(t)&&efetivo(t))ops.push(['tx-emp','handCoins','Emprestei (vai voltar)']);
   if(t.tipo==='receita'&&efetivo(t))ops.push(['tx-empv','handCoins','Devolução de empréstimo']);
-  if(t.emp&&t.empDir==='out'&&!t.pluggyId&&!t.importado)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
+  if(t.emp&&t.empDir==='out'&&!t.importado&&!t.impId)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
   if(t.emp&&t.empDir!=='perdao')ops.push(['tx-desemp','close','Não foi empréstimo']);
   ops.push(['del-tx','trash','Excluir',1]);
   const box=$('#modal');
@@ -9420,7 +9420,7 @@ const ACT={
   'conc-todos':()=>{let n=0;concCache().slice(0,100).forEach(p=>{if(juntaPar(p))n++;});salvar();render();closeModal();toast(n+' transferência'+(n>1?'s':'')+' juntada'+(n>1?'s':''));},
   'rev-ok':id=>{const t=S.tx.find(x=>x.id===id);if(t){delete t.rev;salvar();render();}abreRevisar();},
   'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
-  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
+  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
   'ir-cal':()=>{CAL_M=0;go('plan');},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;PLAN.dia=false;PLAN.itens=[];render();},
   'sim-add':id=>{if(!SIM_TIPOS[id])return;if(PLAN.itens.length>=8){toast('até 8 itens na simulação');return;}PLAN.itens.push({t:id,v:0,n:id==='parc'?10:0,k:id==='gun'||id==='run'||id==='parc'?0:1});render();setTimeout(()=>{const ins=document.querySelectorAll('[data-sim$="|v"]');const el=ins[ins.length-1];if(el)el.focus();},60);},
