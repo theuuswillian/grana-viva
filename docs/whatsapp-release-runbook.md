@@ -22,7 +22,8 @@ A ordem abaixo consolida as dependências e os testes isolados atuais. Antes da 
 6. `20261119_wa_leitura_ia_idempotente.sql`
 7. `20261119_wa_saida_outbox.sql`
 8. `20261119_wa_saida_lease_fencing.sql`
-9. `20261119_wa_vinculo_atomico.sql`
+9. `20261119_zz_wa_saida_payload_guard.sql`
+10. `20261119_wa_vinculo_atomico.sql`
 
 ### Trilha de pendentes e cotas
 
@@ -57,7 +58,7 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 
 - A reserva de entrada usa lease padrão de 180 segundos (permitido entre 30 e 900); a finalização exige o mesmo token e lease ainda válido. O webhook não possui renovação/heartbeat do lease. Antes de liberar tráfego, confirmar que o tempo máximo efetivo de execução da Edge Function e das etapas de IA permanece abaixo de 180 segundos; se a plataforma/projeto permitir execução mais longa, implementar heartbeat ou ajustar lease e testes antes do deploy.
 - A fila de entrada permite até 8 tentativas. Ao esgotar, mantém a mensagem em `falhou`, sem lease/token, registra o evento `tentativas-esgotadas` e não continua o ciclo de 503; a análise e eventual reprocessamento passam a ser manuais. Ainda não há backoff persistente por mensagem.
-- A outbox usa lease padrão de 90 segundos e o POST ao provedor tem timeout de 15 segundos. HTTP 429 é classificado como `falhou_segura` e pode ser tentado novamente; HTTP 5xx, timeout, crash e lease expirado são `incerta` e não podem ser reenviados automaticamente. Confirmar os estados incertos com o provedor antes de qualquer reenvio manual.
+- A outbox vincula cada chave ao destinatário e ao payload; só permite alterar o corpo após `falhou_segura` (HTTP 429), quando o provedor recusou o envio. Reutilização da chave com destinatário/payload divergente é rejeitada. Usa lease padrão de 90 segundos e POST ao provedor com timeout de 15 segundos. HTTP 429 é classificado como `falhou_segura` e pode ser tentado novamente; HTTP 5xx, timeout, crash e lease expirado são `incerta` e não podem ser reenviados automaticamente. Confirmar os estados incertos com o provedor antes de qualquer reenvio manual.
 - Os registros `incerta` são mantidos para reconciliação. O job de limpeza converte leases abandonados em `incerta`; não representa uma confirmação de entrega.
 
 ## Observabilidade e reconciliação
