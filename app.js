@@ -4222,7 +4222,12 @@ function rpCotasNaData(f,data){
   return q;
 }
 /* valor por cota de um provento: valor recebido ÷ cotas na data (sem histórico de cotas, usa as cotas de hoje) */
-function rpPorCota(f,o){const q=rpCotasNaData(f,o.data)||(+f.cotas||0);return q>0?(+o.valor||0)/q:0;}
+function rpPorCota(f,o){
+  const q=rpCotasNaData(f,o.data);
+  if(q>0)return (+o.valor||0)/q;
+  const temHistorico=(f.ops||[]).some(x=>x.tipo==='inicial'||x.tipo==='compra'||x.tipo==='venda');
+  return !temHistorico&&(+f.cotas||0)>0?(+o.valor||0)/(+f.cotas):0;
+}
 /* desde quando o ativo está na carteira: 1ª compra ou posição inicial com data. posição inicial sem data
    (o ativo já existia antes do app) conta a partir do 1º provento registrado, que é quando o histórico começa. */
 function rpInicio(f){
@@ -4273,9 +4278,10 @@ function yocCalc(hj){
   hj=hj||hojeISO();const d=new Date(hj+'T12:00:00'),umAno=isoDe(new Date(d.getFullYear()-1,d.getMonth(),d.getDate()));
   const L=[];let rendaC=0,custoC=0,rendaM=0,mercC=0;
   S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f))&&f.cotas>0).forEach(f=>{
-    const pv=(f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&o.data>umAno&&o.data<=hj&&+o.valor>0);
+    const ini=rpInicio(f);
+    const pv=(f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&o.data>umAno&&o.data<=hj&&(!ini||o.data>=ini)&&+o.valor>0);
     const pcTTM=pv.reduce((a,o)=>a+rpPorCota(f,o),0),recebido=pv.reduce((a,o)=>a+cents(o.valor),0)/100;
-    const ini=rpInicio(f);let meses=12,anualiz=false;
+    let meses=12,anualiz=false;
     if(ini&&ini>umAno){meses=Math.max(1,Math.min(12,Math.round((d-new Date(ini+'T12:00:00'))/864e5/30.4375)));anualiz=meses<12;}
     const pcAno=anualiz?pcTTM*12/meses:pcTTM;
     const pm=f.pago>0?f.pago/f.cotas:0,renda=pcAno*f.cotas;
