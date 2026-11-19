@@ -50,6 +50,14 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 6. Repetir webhooks e callbacks de teste para confirmar que não há lançamentos ou respostas duplicados.
 7. Verificar logs, fila, outbox e jobs agendados antes de liberar tráfego normal.
 
+
+### Limites operacionais da fila e da outbox
+
+- A reserva de entrada usa lease padrão de 180 segundos (permitido entre 30 e 900); a finalização exige o mesmo token e lease ainda válido. O webhook não possui renovação/heartbeat do lease. Antes de liberar tráfego, confirmar que o tempo máximo efetivo de execução da Edge Function e das etapas de IA permanece abaixo de 180 segundos; se a plataforma/projeto permitir execução mais longa, implementar heartbeat ou ajustar lease e testes antes do deploy.
+- A fila de entrada registra `attempts` e `last_error` mas não impõe limite máximo de tentativas nem backoff persistente. Monitorar mensagens repetidamente falhas; definir política de dead-letter/limite e alertas antes de escalar volume.
+- A outbox usa lease padrão de 90 segundos e o POST ao provedor tem timeout de 15 segundos. HTTP 429 é classificado como `falhou_segura` e pode ser tentado novamente; HTTP 5xx, timeout, crash e lease expirado são `incerta` e não podem ser reenviados automaticamente. Confirmar os estados incertos com o provedor antes de qualquer reenvio manual.
+- Os registros `incerta` são mantidos para reconciliação. O job de limpeza converte leases abandonados em `incerta`; não representa uma confirmação de entrega.
+
 ## Observabilidade e reconciliação
 
 - `wa_msg`: acompanhar `processando`, `falhou`, `concluida`, tentativas e leases.
@@ -69,6 +77,6 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ## Estado desta preparação
 
 - PR #20: fencing da outbox de saída, CI completo aprovado.
-- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `deae00020332e5b0a923339e2e34bfd0104eaa8f`.
-- PR #19: permanece draft e não deve ser integrada separadamente, pois sua base ficou desatualizada.
+- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `88e0875c538f8942cf7b6494d3b9674592cb977c`.
+- PR #19: encerrada como substituída pela #21; manter apenas como histórico, sem integração separada.
 - Nenhuma migration foi aplicada no Supabase de produção; nenhuma Edge Function foi publicada; nenhuma PR foi mesclada.
