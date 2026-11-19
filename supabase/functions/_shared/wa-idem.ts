@@ -1,6 +1,6 @@
 // Fila recuperável do WhatsApp: reserva com lease e finalização explícita.
 // A RPC serializa concorrência no Postgres; leases expirados e falhas podem ser retomados.
-type SupabaseRpc = { rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> };
+type SupabaseRpc = { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> };
 
 export type ReservaMensagem = "nova" | "retomada" | "repetida" | "ocupada" | "erro";
 
