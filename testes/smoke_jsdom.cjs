@@ -18,6 +18,7 @@ const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,go:typeof go!==
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
+const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
 const limpo=T.sanea({tx:[{id:'legado',pluggyId:'old-1',data:'2026-11-18',tipo:'despesa',valor:10},{id:'manual',data:'2026-11-18',tipo:'despesa',valor:20,par:{id:'par',pluggyId:'old-2'}}],fiis:[{id:'legado-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:10},{id:'manual-fii',ticker:'MXRF11',cotas:1,preco:10}],cfg:{tema:'dark',pluggyIgn:['old-1']}});
 ok(limpo.tx.length===1&&limpo.tx[0].id==='manual'&&!limpo.tx[0].par.pluggyId,'cópia local descarta registros antigos e limpa referência aninhada');
 ok(limpo.fiis.length===1&&limpo.fiis[0].id==='manual-fii'&&!('pluggyInv' in limpo.fiis[0]),'cópia local descarta posição importada antiga');
@@ -25,7 +26,6 @@ ok(!('pluggyIgn' in limpo.cfg),'cópia local limpa lista antiga de identificador
 T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
 const S=T.S;S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
 S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
-const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
 const view=()=>doc.querySelector('#view').innerHTML;
