@@ -19,6 +19,20 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: granaviva_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d granaviva_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,6 +55,15 @@ jobs:
           if [ -f supabase/functions/minha-conta/pluggy_test.ts ]; then
             deno test -A supabase/functions/minha-conta/pluggy_test.ts
           fi
+      - name: Test Pluggy cleanup migration in isolated PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pluggy_removal_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_remocao_pluggy.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pluggy_removal_assertions.sql
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
