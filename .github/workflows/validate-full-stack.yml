@@ -76,6 +76,20 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_cota_mensal_atomica.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_assertions.sql
           bash testes/cota_mensal_atomica_concurrency.sh
+      - name: Test webhook idempotency and weekly summary migrations in PostgreSQL
+        env:
+          PGPASSWORD: postgres
+          PGDATABASE: granaviva_webhooks_test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          createdb -h 127.0.0.1 -U postgres granaviva_webhooks_test
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
