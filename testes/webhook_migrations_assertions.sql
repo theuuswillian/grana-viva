@@ -101,7 +101,7 @@ begin
   if not public.wa_saida_finaliza('wa:test:sent',token_a,'enviada','wamid-provider-1',null) then
     raise exception 'finalização enviada deveria atualizar outbox';
   end if;
-  if public.wa_saida_reserva('wa:test:sent',token_b,'5561999999999','{"type":"text","text":"texto alterado após retry"}'::jsonb,90) <> 'enviada' then
+  if public.wa_saida_reserva('wa:test:sent',token_b,'5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'enviada' then
     raise exception 'envio concluído não pode ser repetido mesmo após reconstrução do payload';
   end if;
 
