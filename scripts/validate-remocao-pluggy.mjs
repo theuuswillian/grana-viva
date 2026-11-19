@@ -39,9 +39,9 @@ assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app so
 assert.ok(html.includes("const GV_BUILD='10.167';"), 'HTML build version must be bumped');
 assert.ok(html.includes('app.js?v=10.167') && html.includes('planos.js?v=10.167'), 'HTML must load the versioned app and plans sources');
 assert.doesNotMatch(html, /maximum-scale\s*=\s*1|user-scalable\s*=\s*no/i, 'viewport must preserve browser zoom for low-vision users');
-assert.match(html, /:focus-visible\\s*\\{[^}]*outline:/, 'interactive controls must have a visible keyboard focus indicator');
-assert.match(html, /prefers-reduced-motion\\s*:\\s*reduce/, 'the app must respect reduced-motion preferences');
-assert.ok(app.includes("e.target.matches('[role=\\"button\\"][data-act]')") && app.includes("e.key==='Enter'||e.key===' '"), 'custom button controls must support Enter and Space');
+assert.match(html, /:focus-visible\s*\{[^}]*outline:/, 'interactive controls must have a visible keyboard focus indicator');
+assert.match(html, /prefers-reduced-motion\s*:\s*reduce/, 'the app must respect reduced-motion preferences');
+assert.ok(app.includes(`e.target.matches('[role="button"][data-act]')`) && app.includes("e.key==='Enter'||e.key===' '"), 'custom button controls must support Enter and Space');
 assert.ok(app.includes("if(e.key==='Tab'&&$('#modal').classList.contains('on'))") && app.includes('first.focus()') && app.includes('last.focus()'), 'modal dialogs must trap keyboard focus');
 assert.ok(app.includes("sh.setAttribute('aria-modal','true')") && app.includes("sh.setAttribute('aria-labelledby',h.id)"), 'modal dialogs must expose an accessible name and modal semantics');
 assert.ok(app.includes('return `<label>${esc(c.label)}<input') && app.includes('return `<label>${esc(c.label)}<textarea'), 'generated form controls must have programmatic labels');
