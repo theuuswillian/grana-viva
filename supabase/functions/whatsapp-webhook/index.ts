@@ -394,7 +394,7 @@ async function trata(m: any, sandbox: boolean) {
   }
   if (m.type !== "text") { await responder("Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
   if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await responder(AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
-  await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp) });
+  await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp), sandbox });
 }
 
 /* ---------- v10.165: resumo semanal (segunda 8h de Brasília) ---------- */
