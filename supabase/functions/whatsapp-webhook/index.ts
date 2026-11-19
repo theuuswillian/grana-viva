@@ -152,7 +152,14 @@ async function vincula(tel: string, codigo: string, msgId: string, sandbox: bool
   const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
   const { data: c, error: ce } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
   if (ce) throw ce;
-  if (!c || new Date(c.expira).getTime() < Date.now()) { await responder("Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp."); return; }
+  if (!c || new Date(c.expira).getTime() < Date.now()) {
+    const { data: vinculoAtual, error: erroVinculo } = await sb.from("wa_vinculo")
+      .select("user_id").eq("telefone", tel).maybeSingle();
+    if (erroVinculo) throw erroVinculo;
+    if (vinculoAtual) { await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\\n\\n" + AJUDA); return; }
+    await responder("Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp.");
+    return;
+  }
   const { error: de } = await sb.from("wa_vinculo").delete().or(`telefone.eq.${tel},user_id.eq.${c.user_id}`);
   if (de) throw de;
   const { error: ie } = await sb.from("wa_vinculo").insert({ user_id: c.user_id, telefone: tel });
