@@ -118,12 +118,15 @@ async function nivelDe(uid: string): Promise<number> {
 const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gastei 32 no almoço\n• uber 18,50 ontem\n• recebi 2500 de salário";
 
 async function vincula(tel: string, codigo: string) {
-  const { data: c } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
+  const { data: c, error: ce } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
+  if (ce) throw ce;
   if (!c || new Date(c.expira).getTime() < Date.now()) { await texto(tel, "Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp."); return; }
-  await sb.from("wa_codigo").delete().eq("user_id", c.user_id);
-  await sb.from("wa_vinculo").delete().or(`telefone.eq.${tel},user_id.eq.${c.user_id}`);
-  const { error } = await sb.from("wa_vinculo").insert({ user_id: c.user_id, telefone: tel });
-  if (error) { await registraErro(sb, FN, "vincular", error); await texto(tel, "Não consegui ligar agora. Tente de novo em instantes."); return; }
+  const { error: de } = await sb.from("wa_vinculo").delete().or(`telefone.eq.${tel},user_id.eq.${c.user_id}`);
+  if (de) throw de;
+  const { error: ie } = await sb.from("wa_vinculo").insert({ user_id: c.user_id, telefone: tel });
+  if (ie) throw ie;
+  const { error: ce2 } = await sb.from("wa_codigo").delete().eq("user_id", c.user_id);
+  if (ce2) throw ce2;
   await texto(tel, "Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
 }
 
@@ -217,7 +220,7 @@ async function responde(tel: string, uid: string, p: Pergunta) {
       sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", j.de).lte("data->>data", j.ate).limit(10000),
       sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
       p.tipo === "fatura" ? sb.from("cartoes").select("data").eq("user_id", uid) : Promise.resolve({ data: [] as any[] })]);
-    if (er) { await registraErro(sb, FN, "pergunta", er); await texto(tel, "Não consegui consultar agora. Tente de novo em instantes."); return; }
+    if (er) throw er;
     const txs = (rs || []).map((x: any) => x.data || {});
     if (p.tipo === "fatura") {
       let cs = (kc || []).map((x: any) => x.data || {});
@@ -236,7 +239,7 @@ async function responde(tel: string, uid: string, p: Pergunta) {
     return;
   }
   const { data: rows, error } = await sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", p.de).lte("data->>data", p.ate).limit(5000);
-  if (error) { await registraErro(sb, FN, "pergunta", error); await texto(tel, "Não consegui consultar agora. Tente de novo em instantes."); return; }
+  if (error) throw error;
   const txs = (rows || []).map((x: any) => x.data || {}).filter((t: any) => t.status !== "previsto" && !t.faturaKey && (t.tipo === "despesa" || t.tipo === "receita"));
   const casa = (t: any) => (!p.categoria || t.categoria === p.categoria) && (!p.busca || String(t.descricao || "").toLowerCase().includes(p.busca));
   const soma = (tp: string) => txs.filter((t: any) => t.tipo === tp && casa(t)).reduce((a: number, t: any) => a + (Number(t.valor) || 0), 0);
@@ -277,7 +280,7 @@ async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> 
     if (!c.ok) return { erro: c.erro };
     let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
     return { mime: c.mime, b64: btoa(bin) };
-  } catch (e) { await registraErro(sb, FN, "midia", e); return null; }
+  } catch (e) { await registraErro(sb, FN, "midia", e); throw e; }
 }
 
 async function botao(tel: string, uid: string, bid: string) {
@@ -285,19 +288,19 @@ async function botao(tel: string, uid: string, bid: string) {
   if (!m) return;
   // Primeiro lê sem consumir: falhas na consulta de plano/cota não podem apagar o lançamento pendente.
   const { data: previa, error: le } = await sb.from("wa_pendente").select("id,lanc,status").eq("id", m[2]).eq("user_id", uid).maybeSingle();
-  if (le) { await registraErro(sb, FN, "pendente-ler", le); await texto(tel, "Não consegui conferir esse lançamento agora. Tente novamente."); return; }
+  if (le) throw le;
   if (!previa || previa.status !== "pendente") { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (m[1] === "no") {
     const { data: cancelado, error: ce } = await sb.from("wa_pendente")
       .update({ status: "cancelado", finalizado_em: new Date().toISOString() })
       .eq("id", m[2]).eq("user_id", uid).eq("status", "pendente").select("id");
-    if (ce) { await registraErro(sb, FN, "pendente-cancelar", ce); await texto(tel, "Não consegui cancelar agora. Tente novamente."); return; }
+    if (ce) throw ce;
     await texto(tel, cancelado?.length ? "Cancelado. Nada foi salvo." : "Esse lançamento já foi salvo ou cancelado.");
     return;
   }
   // Confere plano e cota antes de consumir o pendente. Se a validação falhar, o botão continua utilizável.
   let nv = 0;
-  try { nv = await nivelDe(uid); } catch (e) { await registraErro(sb, FN, "plano", e); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
+  nv = await nivelDe(uid);
   if (await cotaBloqueia(tel, uid, nv)) return;
   // A RPC valida a cota, grava os lançamentos e remove o pendente na mesma transação.
   // Se a gravação falhar, o banco desfaz tudo e o usuário pode tentar novamente.
@@ -315,7 +318,7 @@ async function botao(tel: string, uid: string, bid: string) {
   const { data: resultado, error: se } = await sb.rpc("wa_salva_pendente_com_cota", {
     p_uid: uid, p_pendente_id: m[2], p_dia: hojeBR(), p_lim: limiteAtomico, p_linhas: linhas,
   });
-  if (se) { await registraErro(sb, FN, "salvar-atomico", se); await texto(tel, "Não consegui salvar agora. Seu lançamento continua pendente; tente novamente."); return; }
+  if (se) throw se;
   if (resultado === "limite") { await texto(tel, msgCotaWhatsApp(Number(limitePlano) || 5)); return; }
   if (resultado !== "salvo") { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   if (itens.length > 1) { await texto(tel, `Salvos! ✅ ${itens.length} lançamentos. Aparecem no app na próxima vez que você abrir.`); return; }
