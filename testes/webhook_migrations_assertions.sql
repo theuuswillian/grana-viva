@@ -175,6 +175,14 @@ begin
   if public.wa_vincula_codigo('5561000000003','654321') <> 'codigo_expirado' then
     raise exception 'código ausente deveria ser rejeitado';
   end if;
+  insert into public.wa_codigo(codigo,user_id,expira)
+  values ('654321','00000000-0000-0000-0000-000000000103',now()-interval '1 minute');
+  if public.wa_vincula_codigo('5561000000003','654321') <> 'codigo_expirado' then
+    raise exception 'código vencido deveria ser rejeitado';
+  end if;
+  if exists (select 1 from public.wa_vinculo where telefone='5561000000003') then
+    raise exception 'código vencido não pode criar vínculo';
+  end if;
   if has_function_privilege('anon','public.wa_vincula_codigo(text,text)','execute')
      or has_function_privilege('authenticated','public.wa_vincula_codigo(text,text)','execute')
      or not has_function_privilege('service_role','public.wa_vincula_codigo(text,text)','execute') then
