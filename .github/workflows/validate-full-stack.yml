@@ -7,6 +7,8 @@ on:
       - correcoes/whatsapp-preservar-pendente-2026-11-18
       - correcoes/cota-mensal-atomica-2026-11-18
       - remocao/pluggy-definitiva-2026-11-18
+      - auditoria/reconciliacao-producao-2026-11-18
+      - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
       - revisao-lancamento-v10.165
@@ -14,6 +16,7 @@ on:
       - correcoes/whatsapp-preservar-pendente-2026-11-18
       - correcoes/cota-mensal-atomica-2026-11-18
       - remocao/pluggy-definitiva-2026-11-18
+      - auditoria/reconciliacao-producao-2026-11-18
 permissions:
   contents: read
 jobs:
