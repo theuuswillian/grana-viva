@@ -42,6 +42,3 @@ create table public.wa_vinculo (
   telefone text,
   vinculado_em timestamptz default now()
 );
-
--- Registro legado deve ser tratado como concluído pela migration da fila.
-insert into public.wa_msg(id) values ('wamid-legacy-before-queue');
