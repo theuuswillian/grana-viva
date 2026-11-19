@@ -38,6 +38,6 @@ assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['hi
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
 assert.ok(html.includes("const GV_BUILD='10.167';"), 'HTML build version must be bumped');
 assert.ok(html.includes('app.js?v=10.167') && html.includes('planos.js?v=10.167'), 'HTML must load the versioned app and plans sources');
-assert.doesNotMatch(html, /maximum-scale\\s*=\\s*1|user-scalable\\s*=\\s*no/i, 'viewport must preserve browser zoom for low-vision users');
+assert.doesNotMatch(html, /maximum-scale\s*=\s*1|user-scalable\s*=\s*no/i, 'viewport must preserve browser zoom for low-vision users');
 assert.ok(sw.includes("const V='gv-v10.167';") && sw.includes('app.js?v=10.167') && sw.includes('planos.js?v=10.167') && sw.includes('tour.min.js?v=10.167'), 'service worker cache and precache URLs must match the app version');
 console.log('Pluggy removal static checks passed.');
