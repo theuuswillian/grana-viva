@@ -53,6 +53,8 @@ S.tx=[];S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,ve
 const ativoYield={id:'yield-test',tipo:'fii',ticker:'TST11',cotas:10,pago:100,preco:10,ops:[{tipo:'compra',data:mesN(1),qtd:10,preco:10},{tipo:'provento',data:mesN(2),valor:100},{tipo:'provento',data:hoje,valor:10}]};
 ok(T.rpPorCota(ativoYield,ativoYield.ops[1])===0,'yield não atribui provento anterior à compra');
 ok(Math.abs(T.rpPorCota(ativoYield,ativoYield.ops[2])-1)<0.001,'yield calcula provento com cotas efetivas na data');
+const ymOps=mesN(1).slice(0,7),foraOrdem={cotas:3,ops:[{tipo:'compra',data:ymOps+'-01',qtd:10},{tipo:'venda',data:ymOps+'-10',qtd:12},{tipo:'compra',data:ymOps+'-05',qtd:5}]};
+ok(Math.abs(T.rpPorCota(foraOrdem,{data:ymOps+'-12',valor:3})-1)<0.001,'yield reconstrói cotas em ordem cronológica mesmo com compra retroativa');
 S.fiis=[ativoYield];
 const yieldTeste=T.yocCalc(hoje).lista[0];
 ok(Math.abs(yieldTeste.recebido-10)<0.01,'yield on cost exclui provento anterior à entrada na carteira');
