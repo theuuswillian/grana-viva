@@ -46,7 +46,7 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 
 1. Aplicar migrations uma por vez na ordem acima, validando cada resultado antes de seguir.
 2. Conferir as RPCs `wa_reserva_mensagem`, `wa_finaliza_mensagem`, `wa_conta_leitura_ia`, `wa_saida_reserva`, `wa_saida_finaliza`, `wa_vincula_codigo` e `wa_salva_pendente_com_cota`.
-3. Conferir RLS e privilégios: tabelas internas sem acesso de `anon`/`authenticated`; RPCs privilegiadas executáveis apenas por `service_role`.
+3. Conferir RLS e privilégios: tabelas internas sem acesso de `anon`/`authenticated`; RPCs privilegiadas executáveis apenas por `service_role`; funções `SECURITY DEFINER` com `search_path=pg_catalog, public`.
 4. Publicar a Edge Function `whatsapp-webhook` exatamente na versão da ponta #21, junto com os helpers compartilhados.
 5. Fazer teste controlado de vinculação, mensagem de texto, confirmação por botão, cancelamento, mídia e consulta financeira.
 6. Repetir webhooks e callbacks de teste para confirmar que não há lançamentos ou respostas duplicados.
@@ -56,7 +56,7 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ### Limites operacionais da fila e da outbox
 
 - A reserva de entrada usa lease padrão de 180 segundos (permitido entre 30 e 900); a finalização exige o mesmo token e lease ainda válido. O webhook não possui renovação/heartbeat do lease. Antes de liberar tráfego, confirmar que o tempo máximo efetivo de execução da Edge Function e das etapas de IA permanece abaixo de 180 segundos; se a plataforma/projeto permitir execução mais longa, implementar heartbeat ou ajustar lease e testes antes do deploy.
-- A fila de entrada registra `attempts` e `last_error` mas não impõe limite máximo de tentativas nem backoff persistente. Monitorar mensagens repetidamente falhas; definir política de dead-letter/limite e alertas antes de escalar volume.
+- A fila de entrada permite até 8 tentativas. Ao esgotar, mantém a mensagem em `falhou`, sem lease/token, registra o evento `tentativas-esgotadas` e não continua o ciclo de 503; a análise e eventual reprocessamento passam a ser manuais. Ainda não há backoff persistente por mensagem.
 - A outbox usa lease padrão de 90 segundos e o POST ao provedor tem timeout de 15 segundos. HTTP 429 é classificado como `falhou_segura` e pode ser tentado novamente; HTTP 5xx, timeout, crash e lease expirado são `incerta` e não podem ser reenviados automaticamente. Confirmar os estados incertos com o provedor antes de qualquer reenvio manual.
 - Os registros `incerta` são mantidos para reconciliação. O job de limpeza converte leases abandonados em `incerta`; não representa uma confirmação de entrega.
 
@@ -79,6 +79,6 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ## Estado desta preparação
 
 - PR #20: fencing da outbox de saída, CI completo aprovado.
-- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `88e0875c538f8942cf7b6494d3b9674592cb977c`.
+- PR #21: vinculação atômica, limite de 8 tentativas e hardening do `search_path`; CI integrado aprovado no SHA `275d592746905f0c7a76059fe117a1b3f3c7f635`.
 - PR #19: encerrada como substituída pela #21; manter apenas como histórico, sem integração separada.
 - Nenhuma migration foi aplicada no Supabase de produção; nenhuma Edge Function foi publicada; nenhuma PR foi mesclada.
