@@ -16,3 +16,10 @@ create table public.settings (
   data jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+-- Estado preexistente parcial: settings já tem dados, mas ainda não possui a coluna nova.
+insert into auth.users(id) values
+ ('00000000-0000-0000-0000-000000000001'),
+ ('00000000-0000-0000-0000-000000000002');
+insert into public.settings(user_id,data) values
+ ('00000000-0000-0000-0000-000000000001','{"preservar":"dado-existente"}'::jsonb);
