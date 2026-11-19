@@ -10,6 +10,7 @@ on:
       - auditoria/reconciliacao-producao-2026-11-18
       - auditoria/robustez-webhook-build-schema-2026-11-19
       - auditoria/reconciliacao-schema-parcial-2026-11-19
+      - auditoria/whatsapp-fila-recuperavel-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
@@ -94,7 +95,9 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_fila_recuperavel.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_fila_assertions.sql
       - name: Test production schema reconciliation in isolated PostgreSQL
         env:
           PGPASSWORD: postgres
