@@ -26,6 +26,8 @@ on:
       - remocao/pluggy-definitiva-2026-11-18
       - auditoria/reconciliacao-producao-2026-11-18
       - auditoria/whatsapp-fila-recuperavel-2026-11-19
+      - auditoria/whatsapp-pendente-idempotente-2026-11-19
+      - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
 permissions:
   contents: read
 jobs:
