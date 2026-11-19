@@ -7,6 +7,18 @@ begin;
 delete from public.tx
 where coalesce(data, '{}'::jsonb) ? 'pluggyId';
 
+-- Transferências manuais podem guardar somente o identificador antigo no vínculo aninhado.
+-- Preserva a transferência e remove apenas o metadado legado.
+update public.tx
+set data = jsonb_set(
+  coalesce(data, '{}'::jsonb),
+  '{par}',
+  (data->'par') - 'pluggyId',
+  true
+)
+where jsonb_typeof(data->'par') = 'object'
+  and data->'par' ? 'pluggyId';
+
 -- Posições de investimento criadas/vinculadas à sincronização Pluggy.
 delete from public.fiis
 where coalesce(data, '{}'::jsonb) ? 'pluggyInv';
