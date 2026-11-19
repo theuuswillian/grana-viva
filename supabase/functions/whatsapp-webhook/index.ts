@@ -23,7 +23,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
-import { reservaMensagem, finalizaMensagem } from "../_shared/wa-idem.ts";
+import { reservaMensagem, finalizaMensagem, erroEnvioRecuperavel } from "../_shared/wa-idem.ts";
 import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, janelaResumo, enviaEmLote } from "../_shared/resumo-semanal.ts";
 import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 // Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
@@ -58,7 +58,7 @@ async function envia(tel: string, corpo: Record<string, unknown>) {
       const r = await fetch(D360, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "D360-API-KEY": dk, "content-type": "application/json" }, body: JSON.stringify(msg) });
       if (!r.ok) {
         const detalhe = (await r.text()).slice(0, 200);
-        if (r.status === 429 || r.status >= 500) throw new Error(`Falha transitória no envio sandbox (HTTP ${r.status}): ${detalhe}`);
+        if (erroEnvioRecuperavel(r.status)) throw new Error(`Falha transitória no envio sandbox (HTTP ${r.status}): ${detalhe}`);
         await registraErro(sb, FN, "enviar-sandbox", detalhe, r.status);
       }
     } catch (e) {
