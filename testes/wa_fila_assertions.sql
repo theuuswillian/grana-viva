@@ -45,6 +45,16 @@ begin
   v := public.wa_reserva_mensagem('wamid-queue-test', token_d, 180);
   if v <> 'repetida' then raise exception 'mensagem concluída deveria ser ignorada: %', v; end if;
 
+  -- Após oito tentativas, a mensagem permanece preservada e não entra em retry infinito.
+  insert into public.wa_msg(id,status,attempts,last_error)
+  values ('wamid-max-attempts-test','falhou',8,'falhas transitórias repetidas');
+  v := public.wa_reserva_mensagem('wamid-max-attempts-test', token_d, 180);
+  if v <> 'esgotada' then raise exception 'mensagem com oito tentativas deveria ser esgotada: %', v; end if;
+  if exists (select 1 from public.wa_msg where id='wamid-max-attempts-test'
+             and (status <> 'falhou' or lease_until is not null or lease_token is not null or attempts <> 8)) then
+    raise exception 'mensagem esgotada deve permanecer sem lease e preservada para análise';
+  end if;
+
   if has_function_privilege('anon','public.wa_reserva_mensagem(text,uuid,integer)','EXECUTE')
      or has_function_privilege('authenticated','public.wa_reserva_mensagem(text,uuid,integer)','EXECUTE')
      or not has_function_privilege('service_role','public.wa_reserva_mensagem(text,uuid,integer)','EXECUTE') then
