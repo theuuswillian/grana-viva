@@ -51,7 +51,7 @@ update public.settings
 set data = jsonb_set(
   coalesce(data, '{}'::jsonb),
   '{cfg}',
-  data->'cfg' - array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'],
+  (data->'cfg') - array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'],
   true
 )
 where jsonb_typeof(data->'cfg') = 'object'
