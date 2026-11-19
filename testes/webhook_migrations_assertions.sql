@@ -61,6 +61,33 @@ begin
   exception when unique_violation then
     null;
   end;
+
+  -- Uma mensagem reentregue não consome novamente a leitura diária.
+  insert into public.wa_msg(id) values ('wamid-ai-quota-once');
+  if not public.wa_conta_leitura_ia('00000000-0000-0000-0000-000000000001', 'wamid-ai-quota-once', date '2026-11-19', 2) then
+    raise exception 'primeira leitura deveria ser permitida';
+  end if;
+  if not public.wa_conta_leitura_ia('00000000-0000-0000-0000-000000000001', 'wamid-ai-quota-once', date '2026-11-19', 2) then
+    raise exception 'retry da mesma mensagem deve reutilizar a autorização';
+  end if;
+  if (select n from public.ia_uso where user_id='00000000-0000-0000-0000-000000000001' and dia=date '2026-11-19' and k='leitura') <> 1 then
+    raise exception 'retry duplicou o consumo da cota IA';
+  end if;
+
+  insert into public.wa_msg(id) values ('wamid-ai-quota-limit');
+  if public.wa_conta_leitura_ia('00000000-0000-0000-0000-000000000001', 'wamid-ai-quota-limit', date '2026-11-19', 1) then
+    raise exception 'mensagem nova deveria respeitar cota esgotada';
+  end if;
+  if public.wa_conta_leitura_ia('00000000-0000-0000-0000-000000000001', 'wamid-ai-quota-limit', date '2026-11-19', 5) then
+    raise exception 'retry não pode liberar retroativamente uma mensagem bloqueada';
+  end if;
+  if (select n from public.ia_uso where user_id='00000000-0000-0000-0000-000000000001' and dia=date '2026-11-19' and k='leitura') <> 1 then
+    raise exception 'retry de mensagem bloqueada alterou a cota';
+  end if;
+  if public.wa_conta_leitura_ia('00000000-0000-0000-0000-000000000001', 'wamid-ai-quota-once', date '2026-11-20', 5) then
+    raise exception 'mensagem não pode trocar de dia de cota durante retry';
+  end if;
+
   if exists (select 1 from pg_policies where schemaname='public' and tablename='wa_vinculo') then
     raise exception 'wa_vinculo não deve receber policies para acesso direto do cliente';
   end if;
