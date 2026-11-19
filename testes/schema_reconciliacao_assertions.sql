@@ -32,6 +32,19 @@ begin
     raise exception 'service_role sem permissões esperadas';
   end if;
 
+  if (select array_agg(a.attname::text order by k.ord)
+        from pg_constraint c
+        cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+        join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+       where c.conrelid='public.cotacao_cache'::regclass and c.contype='p') <> array['ticker']::text[]
+     or (select array_agg(a.attname::text order by k.ord)
+        from pg_constraint c
+        cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+        join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+       where c.conrelid='public.radar_disparos'::regclass and c.contype='p') <> array['user_id','chave']::text[] then
+    raise exception 'PKs existentes não correspondem às chaves naturais esperadas';
+  end if;
+
   if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_pkey')
      or not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_ticker_check')
      or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_pkey')
