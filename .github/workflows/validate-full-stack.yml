@@ -9,6 +9,7 @@ on:
       - remocao/pluggy-definitiva-2026-11-18
       - auditoria/reconciliacao-producao-2026-11-18
       - auditoria/robustez-webhook-build-schema-2026-11-19
+      - auditoria/reconciliacao-schema-parcial-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
