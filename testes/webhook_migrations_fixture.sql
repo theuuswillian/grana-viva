@@ -51,3 +51,9 @@ create table public.ia_uso (
   n integer not null default 0,
   primary key (user_id, dia, k)
 );
+
+create table public.wa_codigo (
+  codigo text primary key,
+  user_id uuid not null,
+  expira timestamptz not null
+);
