@@ -487,7 +487,7 @@ Deno.serve(async (req) => {
     if (!id) { falhou = true; await registraErro(sb, FN, "mensagem-sem-id", "Mensagem recebida sem wamid"); continue; }
     const reserva = await reservaMensagem(sb, id);
     if (reserva.status === "repetida") continue;
-    if (reserva.status === "ocupada" || reserva.status === "erro") {
+    if (reserva.status === "esgotada") {\n      await registraErro(sb, FN, "tentativas-esgotadas", `Mensagem ${id} atingiu 8 tentativas; preservada para análise manual`);\n      continue;\n    }\n    if (reserva.status === "ocupada" || reserva.status === "erro") {
       falhou = true;
       await registraErro(sb, FN, "reserva", `Reserva WhatsApp: ${reserva.status}`);
       continue;
