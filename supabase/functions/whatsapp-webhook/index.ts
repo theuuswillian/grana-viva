@@ -87,7 +87,7 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
   }
   try {
     const url = viaSandbox && dk ? D360 : `${GRAPH}/${pid}/messages`;
-    const headers = viaSandbox && dk
+    const headers: Record<string, string> = viaSandbox && dk
       ? { "D360-API-KEY": dk, "content-type": "application/json" }
       : { authorization: "Bearer " + tok, "content-type": "application/json" };
     const r = await fetch(url, { method: "POST", signal: AbortSignal.timeout(15000), headers, body: JSON.stringify(msg) });
