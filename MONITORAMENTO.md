@@ -1,40 +1,73 @@
-# Monitoramento das funções (v10.93)
+# Monitoramento das funções (v10.167)
 
-As Edge Functions gravam uma linha em `public.erros_fn` quando algo falha em:
-`pluggy-sync`, `pluggy-webhook`, `pagamento-webhook`, `assinatura` e `minha-conta`.
+Este documento descreve o registro de erros implementado no código versionado. A existência de uma função ou rotina no código não prova, por si só, que ela esteja implantada ou agendada em produção.
 
-- Colunas: `ts`, `funcao`, `etapa` (ação ou evento), `codigo` (ex.: 500, 23505), `mensagem` (até 300 caracteres).
-- **Sem dados pessoais**: `_shared/erros.ts` troca e-mails, ids (uuid), tokens/JWT, sequências longas e números de 6+ dígitos
-  por marcadores (`<email>`, `<id>`, `<oculto>`, `<jwt>`, `<longo>`, `<n>`) antes de gravar.
-- Ninguém do app lê ou escreve (RLS ligada, sem policies, sem grants para `anon`/`authenticated`). Só as funções (service role)
-  e você pelo SQL Editor do Supabase.
-- Guarda 30 dias: o job `granaviva-erros-fn-limpeza` (pg_cron, 06:30 UTC) apaga o resto.
-- Registrar nunca derruba a função (falha ao gravar é ignorada).
+## Registro de erros
 
-## Ver os últimos erros (SQL Editor do Supabase)
+O helper `supabase/functions/_shared/erros.ts` grava eventos em `public.erros_fn` com:
+
+- `ts`: horário do registro;
+- `funcao`: função que registrou o erro;
+- `etapa`: operação/evento;
+- `codigo`: código de erro, quando disponível;
+- `mensagem`: mensagem sanitizada, limitada a 300 caracteres.
+
+A sanitização remove e-mails, UUIDs, JWTs, tokens/segredos e sequências longas. A falha ao registrar não deve interromper a operação original.
+
+### Funções que usam o helper no código desta branch
+
+- `minha-conta`
+- `whatsapp-webhook`
+- `pagamento-webhook`
+- `radar-precos`
+- `assinatura`
+
+As demais funções podem ter logs próprios; esta lista se refere especificamente ao uso de `registraErro`.
+
+## Consultar os registros
+
+No SQL Editor do Supabase:
 
 ```sql
--- últimos 50
+-- últimos 50 registros
 select ts at time zone 'America/Sao_Paulo' as quando, funcao, etapa, codigo, mensagem
-from public.erros_fn order by ts desc limit 50;
+from public.erros_fn
+order by ts desc
+limit 50;
 
--- resumo das últimas 24 h por função e etapa
-select funcao, etapa, codigo, count(*) as vezes, max(ts) at time zone 'America/Sao_Paulo' as ultima
-from public.erros_fn where ts > now() - interval '24 hours'
-group by 1, 2, 3 order by vezes desc;
+-- resumo das últimas 24 horas
+select funcao, etapa, codigo, count(*) as vezes,
+       max(ts) at time zone 'America/Sao_Paulo' as ultima
+from public.erros_fn
+where ts > now() - interval '24 hours'
+group by 1, 2, 3
+order by vezes desc;
 ```
 
-## Segredos
+A tabela é destinada ao uso do servidor. Na auditoria de produção, RLS estava habilitada sem policies e sem privilégios de leitura/escrita para `anon` e `authenticated`; o acesso administrativo deve ser feito pelo SQL Editor ou por serviço autorizado.
 
-Tudo vem de `Deno.env.get` (secrets das funções) ou do Supabase Vault:
-`SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `PLUGGY_ENC_KEY`, `GEMINI_API_KEY`, `CRON_SECRET`,
-`VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY`. O job diário do `alertas-push` lê o `x-cron-secret` do Vault (`gv_cron_secret`).
-O app (navegador) só tem a chave publicável (`sb_publishable_…`), protegida pelas regras RLS.
+## Retenção e rotinas agendadas
 
-## Alarme por push (v10.126)
+Na inspeção de produção de 18/11/2026 foram observados estes jobs:
 
-- Job `granaviva-saude` (pg_cron, a cada 30 min) chama `alertas-push` com `{so:'saude'}`.
-- Se `erros_fn` tiver falha nos últimos 35 min em `pagamento-webhook` (inclusive assinatura inválida), `assinatura`, `auth` ou `minha-conta`,
-  manda um push para o dono (`GV_ADMIN_UID`, padrão = conta Fundadora). Repete no máximo uma vez a cada 6 h por função+etapa (`push_log`).
-- O app avisa falha de cadastro/login do lado do servidor (ex.: SMTP) com `{so:'erro-auth'}`, sem e-mail. Grava em `erros_fn` com função `auth`.
-  Limite global de 30 por hora.
+- `granaviva-alertas-push`: diariamente às 12:00 UTC;
+- `granaviva-alertas-precos`: dias úteis às 21:30 UTC;
+- `granaviva-wa-msg-limpeza`: diariamente às 03:40 UTC;
+- `granaviva-wa-resumo-semanal`: segunda-feira às 11:00 UTC;
+- `granaviva-wa-resumo-semanal-lote`: segunda-feira às 11:15, 11:30 e 11:45 UTC.
+
+A rotina `granaviva-erros-fn-limpeza` e o job `granaviva-saude` citados em versões anteriores deste documento não apareceram na relação de jobs ativos consultada nessa auditoria. Portanto, não se deve presumir que a retenção automática de 30 dias ou o alerta de saúde estejam ativos. Confirmar no painel/SQL do Supabase antes de depender dessas rotinas.
+
+## Segredos e configuração
+
+As Edge Functions dependem de variáveis de ambiente e/ou segredos do Supabase Vault. Entre as integrações ainda presentes no código estão Mercado Pago, Supabase, provedor de IA, WhatsApp e notificações push.
+
+Não registrar valores secretos em logs, documentação, issues ou no repositório. Conferir nomes e presença dos secrets diretamente no painel do Supabase; esta auditoria não exportou nem alterou valores.
+
+## Procedimento operacional
+
+1. Verificar os erros recentes em `public.erros_fn`.
+2. Correlacionar `funcao`, `etapa` e `codigo` com os logs da Edge Function.
+3. Confirmar se os cron jobs esperados estão ativos e com última execução bem-sucedida.
+4. Investigar aumento de falhas antes de reiniciar jobs ou fazer novo deploy.
+5. Não executar migrations, alterar secrets ou implantar funções diretamente em produção sem revisão e autorização.
