@@ -11,6 +11,7 @@ on:
       - auditoria/robustez-webhook-build-schema-2026-11-19
       - auditoria/reconciliacao-schema-parcial-2026-11-19
       - auditoria/whatsapp-fila-recuperavel-2026-11-19
+      - auditoria/whatsapp-pendente-idempotente-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
