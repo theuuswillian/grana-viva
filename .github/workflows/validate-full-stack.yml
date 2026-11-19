@@ -111,6 +111,7 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -c "insert into public.wa_msg(id) values ('wamid-legacy-before-queue')"
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_fila_recuperavel.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_lease_fencing.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_z_fila_limite_tentativas.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_leitura_ia_idempotente.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_outbox.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_lease_fencing.sql
