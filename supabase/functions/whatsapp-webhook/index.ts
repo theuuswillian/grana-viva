@@ -74,7 +74,7 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
   };
   const dk = Deno.env.get("WA_D360_KEY");
   const tok = Deno.env.get("WA_TOKEN"), pid = Deno.env.get("WA_PHONE_ID");
-  if (!tok || !pid) {
+  if ((!tok || !pid) && !(viaSandbox && dk)) {
     try {
       const { error } = await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg });
       if (error) throw error;
@@ -110,10 +110,6 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
     let resposta: any = null;
     try { resposta = await r.json(); } catch { /* HTTP 2xx sem corpo legível ainda é ambíguo para auditoria */ }
     const providerId = resposta?.messages?.[0]?.id ? String(resposta.messages[0].id) : null;
-    if (outbox && !providerId) {
-      await concluir("incerta", null, "HTTP 2xx sem ID de mensagem retornado pelo provedor");
-      return;
-    }
     await concluir("enviada", providerId);
   } catch (e) {
     if (outbox && !finalizada) await concluir("incerta", null, e);
