@@ -16,6 +16,15 @@ begin
   v := public.wa_saida_reserva('wa-outbox-fence-test', token_b, '5561999999999', corpo, 90);
   if v <> 'retomada' then raise exception 'worker B deveria retomar falha segura: %', v; end if;
 
+  -- Uma chave ativa não pode ser reaproveitada com outro corpo.
+  begin
+    perform public.wa_saida_reserva('wa-outbox-fence-test', token_a, '5561999999999',
+      '{"type":"text","text":{"body":"payload diferente"}}'::jsonb, 90);
+    raise exception 'payload divergente deveria ser rejeitado';
+  exception when others then
+    if sqlerrm <> 'Chave de outbox reutilizada com payload diferente' then raise; end if;
+  end;
+
   ok := public.wa_saida_finaliza('wa-outbox-fence-test', token_a, 'incerta', null, 'resultado tardio de A');
   if ok then raise exception 'worker A não pode finalizar a reserva assumida por B'; end if;
 
