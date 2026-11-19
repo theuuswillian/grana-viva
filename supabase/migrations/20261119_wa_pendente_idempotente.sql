@@ -44,15 +44,15 @@ begin
   end if;
   v_ini := date_trunc('month', p_dia)::date;
   perform pg_advisory_xact_lock(hashtext(p_uid::text), hashtext('whatsapp:' || v_ini::text));
-  select coalesce(sum(n), 0) into v_usado
-    from public.ia_uso
-   where user_id = p_uid and k = 'whatsapp' and dia >= v_ini and dia < (v_ini + interval '1 month')::date;
-  if v_usado >= p_lim then return 'limite'; end if;
-
   select id into v_pendente from public.wa_pendente
    where id = p_pendente_id and user_id = p_uid and status = 'pendente'
    for update;
   if v_pendente is null then return 'pendente_ausente'; end if;
+
+  select coalesce(sum(n), 0) into v_usado
+    from public.ia_uso
+   where user_id = p_uid and k = 'whatsapp' and dia >= v_ini and dia < (v_ini + interval '1 month')::date;
+  if v_usado >= p_lim then return 'limite'; end if;
 
   insert into public.tx(user_id, id, data, updated_at)
   select p_uid, x.id, x.data, x.updated_at
