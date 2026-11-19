@@ -5,7 +5,7 @@
 const V='gv-v10.167'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
 /* v10.99: dois caches.
-   - V (troca a cada versão): página, app.min.js, planos.js, partes sob demanda (tour.min.js) e manifesto.
+   - V (troca a cada versão): página, app.js, planos.js, partes sob demanda (tour.min.js) e manifesto.
    - FIXO (não troca): fontes, ícones, logos e bibliotecas. Esses arquivos mudam de nome quando o conteúdo muda
      (inter-400-lat.woff2, vendor/*.min.js com SRI), então a cópia salva vale entre versões e não é baixada de novo a cada publicação. */
 const FIXO='gv-fixo';
@@ -47,7 +47,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
   const fixo=u.origin===location.origin&&/\/(fonts|icons|vendor|logos)\//.test(u.pathname);
-  const estatico=fixo||(u.origin===location.origin&&/\/(app|app\.min|planos|tour\.min)\.js$/.test(u.pathname)&&u.search); // v10.75: app.min.js com ?v=versão nunca muda: cópia salva primeiro (v10.107: também as partes sob demanda)
+  const estatico=fixo||(u.origin===location.origin&&/\/(app|app\.min|planos|tour\.min)\.js$/.test(u.pathname)&&u.search); // v10.75: app.js com ?v=versão nunca muda: cópia salva primeiro (v10.107: também as partes sob demanda)
   if(estatico){
     e.respondWith((async()=>{const c=await caches.open(fixo?FIXO:V);const hit=await c.match(r.url);
       /* ícones e logos mantêm o nome quando mudam: entrega a cópia salva e confere a versão da rede em segundo plano */
