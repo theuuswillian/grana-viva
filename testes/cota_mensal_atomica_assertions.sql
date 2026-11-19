@@ -28,8 +28,11 @@ begin
   if (select count(*) from public.tx where user_id=uid) <> 2 then
     raise exception 'as duas transações do WhatsApp não foram gravadas';
   end if;
-  if exists (select 1 from public.wa_pendente where id='pending-ok') then
-    raise exception 'pendente salvo não foi consumido';
+  if (select status from public.wa_pendente where id='pending-ok') <> 'salvo' then
+    raise exception 'pendente salvo não foi preservado em estado terminal';
+  end if;
+  if (select count(*) from public.tx where user_id=uid) <> 2 then
+    raise exception 'retry do mesmo pendente não pode inserir lançamentos adicionais';
   end if;
   if (select n from public.ia_uso where user_id=uid and k='whatsapp' and dia=date '2026-11-18') <> 1 then
     raise exception 'cota WhatsApp não foi contabilizada exatamente uma vez';
@@ -42,8 +45,8 @@ begin
     '[{"id":"wa-limit","data":{"descricao":"Não salvar"},"updated_at":"2026-11-18T10:02:00Z"}]'::jsonb
   );
   if r <> 'limite' then raise exception 'deveria retornar limite, recebeu: %',r; end if;
-  if not exists (select 1 from public.wa_pendente where id='pending-limit') then
-    raise exception 'pendente foi apagado ao atingir o limite';
+  if not exists (select 1 from public.wa_pendente where id='pending-limit' and status='pendente') then
+    raise exception 'pendente deve permanecer pendente ao atingir o limite';
   end if;
   if exists (select 1 from public.tx where id='wa-limit') then
     raise exception 'transação foi gravada mesmo com limite excedido';
@@ -60,8 +63,8 @@ begin
   exception when unique_violation then
     null;
   end;
-  if not exists (select 1 from public.wa_pendente where id='pending-rollback') then
-    raise exception 'falha de INSERT apagou o pendente';
+  if not exists (select 1 from public.wa_pendente where id='pending-rollback' and status='pendente') then
+    raise exception 'falha de INSERT alterou o estado do pendente';
   end if;
   if (select n from public.ia_uso where user_id=uid and k='whatsapp' and dia=date '2026-11-18') <> 1 then
     raise exception 'falha de INSERT consumiu cota indevidamente';
