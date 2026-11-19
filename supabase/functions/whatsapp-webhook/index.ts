@@ -475,15 +475,15 @@ Deno.serve(async (req) => {
     const id = String(m?.id || "");
     if (!id) { falhou = true; await registraErro(sb, FN, "mensagem-sem-id", "Mensagem recebida sem wamid"); continue; }
     const reserva = await reservaMensagem(sb, id);
-    if (reserva === "repetida") continue;
-    if (reserva === "ocupada" || reserva === "erro") {
+    if (reserva.status === "repetida") continue;
+    if (reserva.status === "ocupada" || reserva.status === "erro") {
       falhou = true;
-      await registraErro(sb, FN, "reserva", `Reserva WhatsApp: ${reserva}`);
+      await registraErro(sb, FN, "reserva", `Reserva WhatsApp: ${reserva.status}`);
       continue;
     }
     try {
       await trata(m, sbOk);
-      const finalizada = await finalizaMensagem(sb, id, true);
+      const finalizada = await finalizaMensagem(sb, id, reserva.token, true);
       if (!finalizada) {
         falhou = true;
         await registraErro(sb, FN, "finalizar", "Não foi possível marcar a mensagem como concluída; será recuperada após expirar o lease");
@@ -491,7 +491,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       falhou = true;
       await registraErro(sb, FN, "tratar", e);
-      const finalizada = await finalizaMensagem(sb, id, false, e);
+      const finalizada = await finalizaMensagem(sb, id, reserva.token, false, e);
       if (!finalizada) await registraErro(sb, FN, "finalizar-falha", "Não foi possível registrar a falha; o lease expirará e permitirá nova tentativa");
     }
   }
