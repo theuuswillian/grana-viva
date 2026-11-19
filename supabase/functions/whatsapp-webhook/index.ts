@@ -154,7 +154,7 @@ async function nivelDe(uid: string): Promise<number> {
 const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gastei 32 no almoço\n• uber 18,50 ontem\n• recebi 2500 de salário";
 
 async function vincula(tel: string, codigo: string, msgId: string) {
-  const responder = (mensagem: string) => responder(mensagem, "wa:" + msgId + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
   const { data: c, error: ce } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
   if (ce) throw ce;
   if (!c || new Date(c.expira).getTime() < Date.now()) { await responder("Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp."); return; }
@@ -169,7 +169,7 @@ async function vincula(tel: string, codigo: string, msgId: string) {
 
 type Entrada = { texto: string; midia: Midia | null; msgId: string; diaCota: string };
 async function leMsg(tel: string, uid: string, e: Entrada) {
-  const responder = (mensagem: string) => responder(mensagem, "wa:" + e.msgId + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + e.msgId + ":resposta");
   const { data: assinatura, error: erroAssinatura } = await sb.from("assinaturas")
     .select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
   if (erroAssinatura) throw erroAssinatura;
@@ -349,7 +349,7 @@ async function botao(tel: string, uid: string, bid: string, msgId: string) {
   // Confere plano e cota antes de consumir o pendente. Se a validação falhar, o botão continua utilizável.
   let nv = 0;
   nv = await nivelDe(uid);
-  if (await cotaBloqueia(tel, uid, nv)) return;
+  if (await cotaBloqueia(tel, uid, nv, "wa:" + msgId + ":resposta")) return;
   // A RPC valida a cota, grava os lançamentos e remove o pendente na mesma transação.
   // Se a gravação falhar, o banco desfaz tudo e o usuário pode tentar novamente.
   const itens: any[] = Array.isArray(previa.lanc?.itens) ? previa.lanc.itens : [previa.lanc];
@@ -377,12 +377,13 @@ async function botao(tel: string, uid: string, bid: string, msgId: string) {
 async function trata(m: any) {
   const tel = m?.from ? String(m.from).replace(/\D/g, "") : (m?.from_user_id ? "u:" + String(m.from_user_id).slice(0, 80) : "");
   const mid = String(m?.id || "");
-  const responder = (mensagem: string) => responder(mensagem, "wa:" + mid + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + mid + ":resposta");
   if (!tel || !mid) throw new Error("Mensagem WhatsApp sem telefone ou id");
   const t = m.type === "text" ? String(m.text?.body || "").trim() : "";
   const cod = /^\s*(?:gv\s*)?(\d{6})\s*$/i.exec(t);
   if (cod) { await vincula(tel, cod[1], mid); return; }
-  const { data: v } = await sb.from("wa_vinculo").select("user_id").eq("telefone", tel).maybeSingle();
+  const { data: v, error: ve } = await sb.from("wa_vinculo").select("user_id").eq("telefone", tel).maybeSingle();
+  if (ve) throw ve;
   if (!v) { await responder("Olá! Para lançar seus gastos por aqui, abra o GranaViva, vá em Ajustes > WhatsApp e mande o código de 6 dígitos que aparece lá."); return; }
   if (m.type === "interactive" && m.interactive?.type === "button_reply") { await botao(tel, v.user_id, String(m.interactive.button_reply?.id || ""), mid); return; }
   if (m.type === "button") { return; }
