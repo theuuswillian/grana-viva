@@ -27,7 +27,8 @@ A ordem abaixo consolida as dependências e os testes isolados atuais. Antes da 
 ### Trilha de pendentes e cotas
 
 - `20261118_cota_mensal_atomica.sql` deve preceder `20261119_wa_pendente_idempotente.sql`.
-- A migration `20261119_wa_pendente_idempotente.sql` é validada em banco isolado separado no CI; confirmar dependências e histórico remoto antes de aplicá-la.
+- `20261119_zz_security_definer_search_path.sql` deve ser aplicada depois das funções históricas de cotas/assinatura e da RPC de pendentes; ela ajusta o `search_path` das funções `SECURITY DEFINER` para `pg_catalog, public`.
+- As migrations dessa trilha são validadas em banco isolado separado no CI; confirmar dependências e histórico remoto antes de aplicá-las.
 - Não misturar as duas trilhas sem conferir o histórico de migrations já aplicado no Supabase.
 
 Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versionamento e o histórico remoto. Os testes da cadeia de webhook aplicam as migrations da trilha principal em PostgreSQL isolado; a trilha de pendentes/cotas é validada separadamente no banco isolado de cotas. A lista acima é uma referência de dependências, não uma instrução para reaplicar migrations já registradas no projeto.
