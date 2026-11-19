@@ -229,3 +229,21 @@ export async function cancela(id: string, token: string, f: Fetch = fetch) {
   if (!r.ok) throw new Error("mp_cancela " + r.status);
   return true;
 }
+
+/* LGPD: cancelar assinatura antes de excluir a conta e confirmar o estado no provedor.
+   Se o PUT falhar, consulta o recurso; estados já encerrados permitem seguir com a exclusão.
+   Falha de rede ou assinatura ainda ativa interrompe a exclusão antes de apagar dados. */
+export async function cancelaConfirmando(id: string, token: string, f: Fetch = fetch): Promise<"cancelada" | "ja_cancelada"> {
+  try { await cancela(id, token, f); return "cancelada"; }
+  catch (e) {
+    const r = await f(API + "/preapproval/" + encodeURIComponent(id), {
+      method: "GET", signal: AbortSignal.timeout(10000),
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (r.status === 404) return "ja_cancelada";
+    if (!r.ok) throw e;
+    const j: any = await r.json().catch(() => ({}));
+    if (["cancelled", "finished", "expired"].includes(String(j?.status || ""))) return "ja_cancelada";
+    throw e;
+  }
+}
