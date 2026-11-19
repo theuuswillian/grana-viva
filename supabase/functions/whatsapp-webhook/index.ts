@@ -23,7 +23,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
 import { registraErro } from "../_shared/erros.ts";
 import { iguais } from "../_shared/seguro.ts";
-import { reservaMensagem, finalizaMensagem, erroEnvioRecuperavel } from "../_shared/wa-idem.ts";
+import { reservaMensagem, finalizaMensagem, erroEnvioRecuperavel, contaLeituraMensagem } from "../_shared/wa-idem.ts";
 import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, janelaResumo, enviaEmLote } from "../_shared/resumo-semanal.ts";
 import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 // Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
@@ -90,6 +90,13 @@ const texto = (tel: string, t: string) => envia(tel, { type: "text", text: { bod
 const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const dataBR = (d: string, hoje: string) => d === hoje ? "hoje" : d.slice(8, 10) + "/" + d.slice(5, 7) + (d.slice(0, 4) !== hoje.slice(0, 4) ? "/" + d.slice(0, 4) : "");
 const hojeBR = () => hojeSP(); // v10.165: America/Sao_Paulo pelo Intl (mesma função das cotas)
+function diaMensagemSP(timestamp: unknown): string {
+  const segundos = Number(timestamp);
+  if (!Number.isFinite(segundos) || segundos <= 0) return hojeBR();
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(segundos * 1000));
+  const parte = (tipo: string) => partes.find((p) => p.type === tipo)?.value || "";
+  return parte("year") + "-" + parte("month") + "-" + parte("day");
+}
 const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 // v10.161: plano Grátis = 5 lançamentos pelo WhatsApp por mês (contados ao salvar); consultas são sempre liberadas.
 const APP = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
@@ -98,12 +105,10 @@ export function msgCotaWhatsApp(limite: number) {
   return `Seus ${limite} lançamentos grátis pelo WhatsApp deste mês acabaram. 🙂\n\nConsultas continuam liberadas: saldo, quanto posso gastar, fatura e orçamento.\n\nNo Pro, lançar pelo WhatsApp (e com IA no app) é ilimitado:\n${LINK_PRO}\n\nOu lance pelo app: o lançamento manual é sempre grátis.`;
 }
 async function cotaBloqueia(tel: string, uid: string, nivel: number): Promise<boolean> {
-  try {
-    const lim = await confereCota(sb, uid, nivel, "whatsapp");
-    if (!lim) return false;
-    await texto(tel, msgCotaWhatsApp(Number(lim.limite) || 5));
-    return true;
-  } catch (e) { await registraErro(sb, FN, "cota", e); await texto(tel, "Não consegui conferir seu limite agora. Tente de novo em instantes."); return true; }
+  const lim = await confereCota(sb, uid, nivel, "whatsapp");
+  if (!lim) return false;
+  await texto(tel, msgCotaWhatsApp(Number(lim.limite) || 5));
+  return true;
 }
 async function nivelDe(uid: string): Promise<number> {
   const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
@@ -122,25 +127,32 @@ async function vincula(tel: string, codigo: string) {
   await texto(tel, "Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
 }
 
-type Entrada = { texto: string; midia: Midia | null; msgId: string };
+type Entrada = { texto: string; midia: Midia | null; msgId: string; diaCota: string };
 async function leMsg(tel: string, uid: string, e: Entrada) {
-  let ef: any;
-  try { const { data } = await sb.from("assinaturas").select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle(); ef = GVP.efetivo(data); }
-  catch (er) { await registraErro(sb, FN, "plano", er); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
+  const { data: assinatura, error: erroAssinatura } = await sb.from("assinaturas")
+    .select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
+  if (erroAssinatura) throw erroAssinatura;
+  const ef = GVP.efetivo(assinatura);
   // v10.161: WhatsApp liberado em todos os planos. Freio técnico diário igual para todos (GVP.ANTIABUSO.leitura_ia_dia);
   // a cota do plano (lançamentos por mês) é conferida só quando a mensagem é um lançamento, nunca numa consulta.
   const lim = GVP.limite(ef.nivel, "leitura_ia_dia");
   const hoje = hojeBR();
-  const { data: ok, error: ue } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: hoje, p_k: "leitura", p_lim: lim });
-  if (ue) { await registraErro(sb, FN, "limite", ue); await texto(tel, "Não consegui conferir seu limite agora. Tente de novo em instantes."); return; }
-  if (!ok) { await texto(tel, `Você mandou muitas mensagens hoje (${lim}). Amanhã libera de novo, ou lance pelo app.`); return; }
-  const [{ data: st }, { data: kc }, { data: bc }] = await Promise.all([
+  const diaCota = e.diaCota || hoje;
+  const ok = await contaLeituraMensagem(sb, uid, e.msgId, diaCota, lim);
+  if (!ok) { await texto(tel, "Você mandou muitas mensagens hoje (" + lim + "). Amanhã libera de novo, ou lance pelo app."); return; }
+  const [{ data: st, error: es }, { data: kc, error: ek }, { data: bc, error: eb }] = await Promise.all([
     sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
     sb.from("cartoes").select("data").eq("user_id", uid), sb.from("bancos").select("data").eq("user_id", uid)]);
+  if (es || ek || eb) throw es || ek || eb;
   const cats: string[] = Array.isArray(st?.data?.cats) && st.data.cats.length ? st.data.cats.map(String) : CATS_PADRAO;
   const nomes = [...(kc || []), ...(bc || [])].filter((x: any) => x?.data?.nome && !x.data.arq).map((x: any) => String(x.data.nome).slice(0, 40)).slice(0, 30);
   const r = await leMensagem(e.texto, e.midia, cats, nomes, hoje);
-  if (!r.ok) { await registraErro(sb, FN, "ia", r.erro); await texto(tel, "Não consegui ler agora (" + r.erro + "). Tente de novo em 1 minuto."); return; }
+  if (!r.ok) {
+    await registraErro(sb, FN, "ia", r.erro);
+    if (r.recuperavel) throw new Error("Falha transitória na leitura IA: " + r.erro);
+    await texto(tel, "Não consegui ler agora (" + r.erro + "). Tente de novo em 1 minuto.");
+    return;
+  }
   const L = r.r;
   if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta); return; }
   // Fase 2: só lançamento gasta cota (gastaCota); consulta e conversa nunca chegam aqui
@@ -330,11 +342,11 @@ async function trata(m: any) {
     const midia = await baixaMidia(String(md?.id || ""));
     if (!midia) { await texto(tel, "Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
     if ("erro" in midia) { await texto(tel, midia.erro); return; }
-    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id) }); return;
+    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp) }); return;
   }
   if (m.type !== "text") { await texto(tel, "Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
   if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await texto(tel, AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
-  await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id) });
+  await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp) });
 }
 
 /* ---------- v10.165: resumo semanal (segunda 8h de Brasília) ---------- */
