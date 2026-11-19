@@ -42,3 +42,12 @@ create table public.wa_vinculo (
   telefone text,
   vinculado_em timestamptz default now()
 );
+
+-- Quota diária usada pelo webhook; a chave mantém um contador por usuário/dia/tipo.
+create table public.ia_uso (
+  user_id uuid not null,
+  dia date not null,
+  k text not null,
+  n integer not null default 0,
+  primary key (user_id, dia, k)
+);
