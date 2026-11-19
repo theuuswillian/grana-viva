@@ -12,8 +12,10 @@ on:
       - auditoria/reconciliacao-schema-parcial-2026-11-19
       - auditoria/whatsapp-fila-recuperavel-2026-11-19
       - auditoria/whatsapp-pendente-idempotente-2026-11-19
+      - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
       - auditoria/whatsapp-pendente-idempotente-2026-11-19
       - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
+      - auditoria/whatsapp-outbox-envio-seguro-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
@@ -103,6 +105,7 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -c "insert into public.wa_msg(id) values ('wamid-legacy-before-queue')"
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_fila_recuperavel.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_leitura_ia_idempotente.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_outbox.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_fila_assertions.sql
       - name: Test production schema reconciliation in isolated PostgreSQL
