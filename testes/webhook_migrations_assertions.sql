@@ -36,6 +36,31 @@ begin
   if not (select relrowsecurity from pg_class where oid='public.wa_vinculo'::regclass) then
     raise exception 'RLS não está habilitada em wa_vinculo';
   end if;
+  if not (select relrowsecurity from pg_class where oid='public.pagamento_eventos'::regclass)
+     or not (select relrowsecurity from pg_class where oid='public.wa_msg'::regclass) then
+    raise exception 'RLS não está habilitada nas tabelas de idempotência';
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid='public.pagamento_eventos'::regclass and contype='p')
+     or not exists (select 1 from pg_constraint where conrelid='public.wa_msg'::regclass and contype='p') then
+    raise exception 'chave primária de idempotência ausente';
+  end if;
+  if not exists (select 1 from pg_indexes where schemaname='public' and indexname='wa_msg_criado') then
+    raise exception 'índice de limpeza da tabela wa_msg ausente';
+  end if;
+  insert into public.pagamento_eventos(id) values ('mp-duplicate-test');
+  begin
+    insert into public.pagamento_eventos(id) values ('mp-duplicate-test');
+    raise exception 'id duplicado de pagamento deveria falhar';
+  exception when unique_violation then
+    null;
+  end;
+  insert into public.wa_msg(id) values ('wamid-duplicate-test');
+  begin
+    insert into public.wa_msg(id) values ('wamid-duplicate-test');
+    raise exception 'wamid duplicado deveria falhar';
+  exception when unique_violation then
+    null;
+  end;
   if exists (select 1 from pg_policies where schemaname='public' and tablename='wa_vinculo') then
     raise exception 'wa_vinculo não deve receber policies para acesso direto do cliente';
   end if;
