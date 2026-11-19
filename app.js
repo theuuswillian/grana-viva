@@ -2674,8 +2674,19 @@ function infoCot(f){
    op: inicial (posição que já existia: qtd + custo) · compra (qtd, preço, taxas) · venda (qtd, preço, taxas) · provento (valor)
    a quantidade, o custo (pago), o lucro realizado e os proventos do ativo passam a vir do histórico. */
 const Q8=x=>Math.round(x*1e8)/1e8;
+/* Operações históricas sempre seguem a data efetiva. Posição inicial sem data é a base anterior ao histórico;
+   com data, entra naquele dia (antes das demais operações do mesmo dia), nunca antes de operações mais antigas. */
+function ordenaOps(ops){
+  return (ops||[]).slice().sort((a,b)=>{
+    const da=String(a.data||''),db=String(b.data||'');
+    if(da!==db){if(!da)return -1;if(!db)return 1;return da.localeCompare(db);}
+    if(a.tipo==='inicial'&&b.tipo!=='inicial')return -1;
+    if(b.tipo==='inicial'&&a.tipo!=='inicial')return 1;
+    return 0;
+  });
+}
 function calcOps(ops){
-  const ord=ops.slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  const ord=ordenaOps(ops);
   let q=0,custo=0,real=0,prov=0,erro='';
   ord.forEach(o=>{
     if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -2698,7 +2709,7 @@ const IR_TIPOS={acao:'comum',etf:'comum',bdr:'comum',fii:'fii'};
 function irVendas(){
   const out=[];
   (S.fiis||[]).forEach(f=>{const cat=IR_TIPOS[tipoOf(f)];if(!cat)return;
-    const ord=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+    const ord=ordenaOps(f.ops||[]);
     let q=0,custo=0;const compraDia=new Set();
     ord.forEach(o=>{
       if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -4215,7 +4226,7 @@ const RP_TIPOS=['fii','acao','etf','bdr'];
 let RP_SEL='',RP_VER='mes',YOC_ORD='yoc';
 function rpCotasNaData(f,data){
   let q=0;
-  const ops=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  const ops=ordenaOps(f.ops||[]);
   ops.forEach(o=>{
     if(o.tipo==='inicial'){if(!o.data||o.data<=data)q=Q8(q+(+o.qtd||0));}
     else if(o.tipo==='compra'&&o.data&&o.data<=data)q=Q8(q+(+o.qtd||0));
