@@ -88,6 +88,60 @@ begin
     raise exception 'mensagem não pode trocar de dia de cota durante retry';
   end if;
 
+
+  -- Outbox: uma resposta enviada não é repetida; uma recusa 429 pode ser retomada.
+  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'nova' then
+    raise exception 'primeiro envio deveria reservar outbox';
+  end if;
+  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'ocupada' then
+    raise exception 'reserva ativa deveria bloquear segundo worker';
+  end if;
+  if not public.wa_saida_finaliza('wa:test:sent','enviada','wamid-provider-1',null) then
+    raise exception 'finalização enviada deveria atualizar outbox';
+  end if;
+  if public.wa_saida_reserva('wa:test:sent','5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'enviada' then
+    raise exception 'envio concluído não pode ser repetido';
+  end if;
+
+  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"limite"}'::jsonb,90) <> 'nova' then
+    raise exception 'reserva inicial 429 falhou';
+  end if;
+  if not public.wa_saida_finaliza('wa:test:429','falhou_segura',null,'HTTP 429') then
+    raise exception 'falha segura deveria finalizar';
+  end if;
+  if public.wa_saida_reserva('wa:test:429','5561999999999','{"type":"text","text":"limite"}'::jsonb,90) <> 'retomada' then
+    raise exception 'HTTP 429 deveria permitir retry';
+  end if;
+
+  if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'nova' then
+    raise exception 'reserva de crash falhou';
+  end if;
+  update public.wa_saida set lease_until=now()-interval '1 second' where chave='wa:test:crash';
+  if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'incerta' then
+    raise exception 'lease expirado deve virar incerto, nunca reenviar automaticamente';
+  end if;
+  if public.wa_saida_reserva('wa:test:crash','5561999999999','{"type":"text","text":"crash"}'::jsonb,90) <> 'incerta' then
+    raise exception 'envio incerto não pode ser reenviado';
+  end if;
+
+  if public.wa_saida_reserva('wa:test:4xx','5561999999999','{"type":"text","text":"bad"}'::jsonb,90) <> 'nova' then
+    raise exception 'reserva 4xx falhou';
+  end if;
+  if not public.wa_saida_finaliza('wa:test:4xx','falhou',null,'HTTP 400') then
+    raise exception 'falha permanente deveria finalizar';
+  end if;
+  if public.wa_saida_reserva('wa:test:4xx','5561999999999','{"type":"text","text":"bad"}'::jsonb,90) <> 'falhou' then
+    raise exception 'falha permanente não pode ser repetida';
+  end if;
+
+  if not (select relrowsecurity from pg_class where oid='public.wa_saida'::regclass) then
+    raise exception 'RLS não está habilitada em wa_saida';
+  end if;
+  if has_table_privilege('anon','public.wa_saida','select')
+     or has_table_privilege('authenticated','public.wa_saida','select') then
+    raise exception 'outbox não pode ser acessível pelo cliente';
+  end if;
+
   if exists (select 1 from pg_policies where schemaname='public' and tablename='wa_vinculo') then
     raise exception 'wa_vinculo não deve receber policies para acesso direto do cliente';
   end if;
