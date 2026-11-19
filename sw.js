@@ -9,7 +9,7 @@ const BASE=new URL('./',self.location).pathname;
    - FIXO (não troca): fontes, ícones, logos e bibliotecas. Esses arquivos mudam de nome quando o conteúdo muda
      (inter-400-lat.woff2, vendor/*.min.js com SRI), então a cópia salva vale entre versões e não é baixada de novo a cada publicação. */
 const FIXO='gv-fixo';
-const PRE=['./','./index.html','./manifest.webmanifest','./app.js?v=10.167','./planos.js?v=10.167','./tour.min.js?v=10.167']; // v10.107: app minificado + partes sob demanda (tour) também offline
+const PRE=['./','./index.html','./manifest.webmanifest','./app.js?v=10.167','./planos.js?v=10.167','./tour.min.js?v=10.167']; // app.js e partes sob demanda (tour) também offline
 const PRE_FIXO=['./fonts/inter-400-lat.woff2','./fonts/inter-600-lat.woff2','./fonts/inter-700-lat.woff2','./icons/icon-192.png','./icons/apple-touch-icon.png','./vendor/supabase.min.js'];
 const abs=u=>new URL(u,self.location).href;
 self.addEventListener('install',e=>{
@@ -47,7 +47,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
   const fixo=u.origin===location.origin&&/\/(fonts|icons|vendor|logos)\//.test(u.pathname);
-  const estatico=fixo||(u.origin===location.origin&&/\/(app|app\.min|planos|tour\.min)\.js$/.test(u.pathname)&&u.search); // v10.75: app.js com ?v=versão nunca muda: cópia salva primeiro (v10.107: também as partes sob demanda)
+  const estatico=fixo||(u.origin===location.origin&&/\/(app|planos|tour\.min)\.js$/.test(u.pathname)&&u.search); // v10.75: app.js com ?v=versão nunca muda: cópia salva primeiro (v10.107: também as partes sob demanda)
   if(estatico){
     e.respondWith((async()=>{const c=await caches.open(fixo?FIXO:V);const hit=await c.match(r.url);
       /* ícones e logos mantêm o nome quando mudam: entrega a cópia salva e confere a versão da rede em segundo plano */
