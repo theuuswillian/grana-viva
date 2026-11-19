@@ -34,7 +34,6 @@ const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
 const D360 = "https://waba-sandbox.360dialog.io/v1/messages";
-let viaSandbox = false;
 const FN = "whatsapp-webhook";
 
 const enc = new TextEncoder();
@@ -50,7 +49,7 @@ async function assinaturaOk(raw: string, cab: string | null): Promise<boolean> {
   return d === 0;
 }
 
-async function envia(tel: string, corpo: Record<string, unknown>, chave?: string) {
+async function envia(tel: string, corpo: Record<string, unknown>, chave?: string, sandbox = false) {
   const dest = tel.startsWith("u:") ? { recipient: tel.slice(2) } : { to: tel };
   const msg = { messaging_product: "whatsapp", recipient_type: "individual", ...dest, ...corpo };
   let outbox = false;
@@ -74,7 +73,7 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
   };
   const dk = Deno.env.get("WA_D360_KEY");
   const tok = Deno.env.get("WA_TOKEN"), pid = Deno.env.get("WA_PHONE_ID");
-  if ((!tok || !pid) && !(viaSandbox && dk)) {
+  if ((!tok || !pid) && !(sandbox && dk)) {
     try {
       const { error } = await sb.from("wa_saida_teste").insert({ telefone: tel, corpo: msg });
       if (error) throw error;
@@ -86,8 +85,8 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
     }
   }
   try {
-    const url = viaSandbox && dk ? D360 : `${GRAPH}/${pid}/messages`;
-    const headers: Record<string, string> = viaSandbox && dk
+    const url = sandbox && dk ? D360 : `${GRAPH}/${pid}/messages`;
+    const headers: Record<string, string> = sandbox && dk
       ? { "D360-API-KEY": dk, "content-type": "application/json" }
       : { authorization: "Bearer " + tok, "content-type": "application/json" };
     const r = await fetch(url, { method: "POST", signal: AbortSignal.timeout(15000), headers, body: JSON.stringify(msg) });
@@ -117,7 +116,7 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
     throw e;
   }
 }
-const texto = (tel: string, t: string, chave?: string) => envia(tel, { type: "text", text: { body: t, preview_url: false } }, chave);
+const texto = (tel: string, t: string, chave?: string, sandbox = false) => envia(tel, { type: "text", text: { body: t, preview_url: false } }, chave, sandbox);
 
 const brl = (v: number) => "R$ " + v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const dataBR = (d: string, hoje: string) => d === hoje ? "hoje" : d.slice(8, 10) + "/" + d.slice(5, 7) + (d.slice(0, 4) !== hoje.slice(0, 4) ? "/" + d.slice(0, 4) : "");
@@ -136,10 +135,10 @@ export const LINK_PRO = APP + "?planos=pro";
 export function msgCotaWhatsApp(limite: number) {
   return `Seus ${limite} lançamentos grátis pelo WhatsApp deste mês acabaram. 🙂\n\nConsultas continuam liberadas: saldo, quanto posso gastar, fatura e orçamento.\n\nNo Pro, lançar pelo WhatsApp (e com IA no app) é ilimitado:\n${LINK_PRO}\n\nOu lance pelo app: o lançamento manual é sempre grátis.`;
 }
-async function cotaBloqueia(tel: string, uid: string, nivel: number, chave?: string): Promise<boolean> {
+async function cotaBloqueia(tel: string, uid: string, nivel: number, chave?: string, sandbox = false): Promise<boolean> {
   const lim = await confereCota(sb, uid, nivel, "whatsapp");
   if (!lim) return false;
-  await texto(tel, msgCotaWhatsApp(Number(lim.limite) || 5), chave);
+  await texto(tel, msgCotaWhatsApp(Number(lim.limite) || 5), chave, sandbox);
   return true;
 }
 async function nivelDe(uid: string): Promise<number> {
@@ -149,8 +148,8 @@ async function nivelDe(uid: string): Promise<number> {
 }
 const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gastei 32 no almoço\n• uber 18,50 ontem\n• recebi 2500 de salário";
 
-async function vincula(tel: string, codigo: string, msgId: string) {
-  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
+async function vincula(tel: string, codigo: string, msgId: string, sandbox: boolean) {
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
   const { data: c, error: ce } = await sb.from("wa_codigo").select("user_id,expira").eq("codigo", codigo).maybeSingle();
   if (ce) throw ce;
   if (!c || new Date(c.expira).getTime() < Date.now()) { await responder("Esse código não vale mais. Gere um novo no app: Ajustes > WhatsApp."); return; }
@@ -163,9 +162,9 @@ async function vincula(tel: string, codigo: string, msgId: string) {
   await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
 }
 
-type Entrada = { texto: string; midia: Midia | null; msgId: string; diaCota: string };
+type Entrada = { texto: string; midia: Midia | null; msgId: string; diaCota: string; sandbox: boolean };
 async function leMsg(tel: string, uid: string, e: Entrada) {
-  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + e.msgId + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + e.msgId + ":resposta", e.sandbox);
   const { data: assinatura, error: erroAssinatura } = await sb.from("assinaturas")
     .select("plano,status,periodo_fim").eq("user_id", uid).maybeSingle();
   if (erroAssinatura) throw erroAssinatura;
@@ -191,9 +190,9 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
     return;
   }
   const L = r.r;
-  if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta, e.msgId); return; }
+  if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta, e.msgId, e.sandbox); return; }
   // Fase 2: só lançamento gasta cota (gastaCota); consulta e conversa nunca chegam aqui
-  if (gastaCota(L) && await cotaBloqueia(tel, uid, ef.nivel, "wa:" + e.msgId + ":resposta")) return;
+  if (gastaCota(L) && await cotaBloqueia(tel, uid, ef.nivel, "wa:" + e.msgId + ":resposta", e.sandbox)) return;
   if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await responder((e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
   // A mesma mensagem de origem sempre reutiliza o mesmo pendente.
   const { data: existente, error: ee } = await sb.from("wa_pendente")
@@ -241,11 +240,11 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}\n\n` : "") + itensLanc.map(linha).join("\n\n");
   await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo.slice(0, 1000) }, action: { buttons: [
     { type: "reply", reply: { id: "ok:" + pid, title: n > 1 ? "Salvar todos" : "Salvar" } },
-    { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } }, "wa:" + e.msgId + ":resposta");
+    { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } }, "wa:" + e.msgId + ":resposta", e.sandbox);
 }
 
-async function responde(tel: string, uid: string, p: Pergunta, msgId: string) {
-  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
+async function responde(tel: string, uid: string, p: Pergunta, msgId: string, sandbox: boolean) {
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
   const h0 = hojeBR();
   // Fase 2: "qual meu saldo / quanto posso gastar" no mês atual = saldo livre do mês (igual ao termômetro do app) e
   //         "quanto está minha fatura" = fatura atual de cada cartão. Nenhuma das duas gasta cota.
@@ -299,7 +298,7 @@ async function responde(tel: string, uid: string, p: Pergunta, msgId: string) {
 
 // Fase 2: até 5 MB (pelo tamanho que a Meta informa ANTES de baixar e pelos bytes baixados) e tipo conferido pelos bytes
 // mágicos: foto JPG/PNG/WEBP, PDF, CSV ou áudio (OGG/MP3/MP4/AMR). Recusado = mensagem clara, sem chamar a IA.
-async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> {
+async function baixaMidia(id: string, sandbox = false): Promise<Midia | { erro: string } | null> {
   const tok = Deno.env.get("WA_TOKEN");
   if (!tok || !/^[0-9]{5,30}$/.test(id)) return null;
   try {
@@ -326,8 +325,8 @@ async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> 
   } catch (e) { await registraErro(sb, FN, "midia", e); throw e; }
 }
 
-async function botao(tel: string, uid: string, bid: string, msgId: string) {
-  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
+async function botao(tel: string, uid: string, bid: string, msgId: string, sandbox: boolean) {
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
   const m = /^(ok|no):([a-z0-9]{6,20})$/.exec(bid);
   if (!m) return;
   // Primeiro lê sem consumir: falhas na consulta de plano/cota não podem apagar o lançamento pendente.
@@ -345,7 +344,7 @@ async function botao(tel: string, uid: string, bid: string, msgId: string) {
   // Confere plano e cota antes de consumir o pendente. Se a validação falhar, o botão continua utilizável.
   let nv = 0;
   nv = await nivelDe(uid);
-  if (await cotaBloqueia(tel, uid, nv, "wa:" + msgId + ":resposta")) return;
+  if (await cotaBloqueia(tel, uid, nv, "wa:" + msgId + ":resposta", sandbox)) return;
   // A RPC valida a cota, grava os lançamentos e remove o pendente na mesma transação.
   // Se a gravação falhar, o banco desfaz tudo e o usuário pode tentar novamente.
   const itens: any[] = Array.isArray(previa.lanc?.itens) ? previa.lanc.itens : [previa.lanc];
@@ -370,28 +369,28 @@ async function botao(tel: string, uid: string, bid: string, msgId: string) {
   await responder(`Salvo! ✅ ${l.tipo === "receita" ? "Receita" : "Despesa"} de ${brl(l.valor)} em ${l.categoria}${l.recorrente && !(l.parcelas > 1) ? ", como conta fixa todo mês" : ""}. Aparece no app na próxima vez que você abrir.`);
 }
 
-async function trata(m: any) {
+async function trata(m: any, sandbox: boolean) {
   const tel = m?.from ? String(m.from).replace(/\D/g, "") : (m?.from_user_id ? "u:" + String(m.from_user_id).slice(0, 80) : "");
   const mid = String(m?.id || "");
-  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + mid + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + mid + ":resposta", sandbox);
   if (!tel || !mid) throw new Error("Mensagem WhatsApp sem telefone ou id");
   const t = m.type === "text" ? String(m.text?.body || "").trim() : "";
   const cod = /^\s*(?:gv\s*)?(\d{6})\s*$/i.exec(t);
-  if (cod) { await vincula(tel, cod[1], mid); return; }
+  if (cod) { await vincula(tel, cod[1], mid, sandbox); return; }
   const { data: v, error: ve } = await sb.from("wa_vinculo").select("user_id").eq("telefone", tel).maybeSingle();
   if (ve) throw ve;
   if (!v) { await responder("Olá! Para lançar seus gastos por aqui, abra o GranaViva, vá em Ajustes > WhatsApp e mande o código de 6 dígitos que aparece lá."); return; }
-  if (m.type === "interactive" && m.interactive?.type === "button_reply") { await botao(tel, v.user_id, String(m.interactive.button_reply?.id || ""), mid); return; }
+  if (m.type === "interactive" && m.interactive?.type === "button_reply") { await botao(tel, v.user_id, String(m.interactive.button_reply?.id || ""), mid, sandbox); return; }
   if (m.type === "button") { return; }
   if (m.type === "image" || m.type === "audio" || m.type === "document") {
     // Fase 2: documento só foto ou PDF; o resto recebe a mensagem de formato, sem baixar
     if (m.type === "document" && !/^(image\/(jpeg|png|webp)|application\/pdf|text\/csv)$/.test(String(m.document?.mime_type || "").split(";")[0])) { await responder(MSG_TIPO); return; }
     const md = m.image || m.audio || m.document;
-    if (viaSandbox) { await responder("Foto e áudio funcionam quando o número oficial do GranaViva estiver ligado. Por enquanto, mande por texto. 🙂"); return; }
-    const midia = await baixaMidia(String(md?.id || ""));
+    if (sandbox) { await responder("Foto e áudio funcionam quando o número oficial do GranaViva estiver ligado. Por enquanto, mande por texto. 🙂"); return; }
+    const midia = await baixaMidia(String(md?.id || ""), sandbox);
     if (!midia) { await responder("Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
     if ("erro" in midia) { await responder(midia.erro); return; }
-    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp) }); return;
+    await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp), sandbox }); return;
   }
   if (m.type !== "text") { await responder("Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
   if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await responder(AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
@@ -460,14 +459,12 @@ Deno.serve(async (req) => {
   // v10.165: chamada do pg_cron (segunda 11:00 UTC = 8h de Brasília) com o segredo do cron
   if (u.searchParams.get("acao") === "resumo-semanal") {
     if (!(await iguais(req.headers.get("x-cron-secret"), Deno.env.get("CRON_SECRET")))) return new Response("proibido", { status: 403 });
-    viaSandbox = false;
     return new Response(JSON.stringify(await resumoSemanal()), { headers: { "content-type": "application/json" } });
   }
   const raw = await req.text();
   const sbt = Deno.env.get("WA_SB_TOKEN"), sbq = u.searchParams.get("sb") || "";
   let sbOk = false;
   if (sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
-  viaSandbox = sbOk;
   if (!sbOk && !(await assinaturaOk(raw, req.headers.get("x-hub-signature-256")))) return new Response("assinatura inválida", { status: 401 });
   let b: any; try { b = JSON.parse(raw); } catch { return new Response("ok"); }
   const msgs: any[] = [];
@@ -485,7 +482,7 @@ Deno.serve(async (req) => {
       continue;
     }
     try {
-      await trata(m);
+      await trata(m, sbOk);
       const finalizada = await finalizaMensagem(sb, id, true);
       if (!finalizada) {
         falhou = true;
