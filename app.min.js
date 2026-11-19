@@ -4214,7 +4214,9 @@ function provCardHTML(p){
 const RP_TIPOS=['fii','acao','etf','bdr'];
 let RP_SEL='',RP_VER='mes',YOC_ORD='yoc';
 function rpCotasNaData(f,data){
-  let q=0;(f.ops||[]).forEach(o=>{
+  let q=0;
+  const ops=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  ops.forEach(o=>{
     if(o.tipo==='inicial'){if(!o.data||o.data<=data)q=Q8(q+(+o.qtd||0));}
     else if(o.tipo==='compra'&&o.data&&o.data<=data)q=Q8(q+(+o.qtd||0));
     else if(o.tipo==='venda'&&o.data&&o.data<=data)q=Q8(Math.max(0,q-(+o.qtd||0)));
