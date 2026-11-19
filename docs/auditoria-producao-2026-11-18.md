@@ -189,3 +189,15 @@ No commit `38d3048`, os dois workflows passaram:
 - testes unitários Deno;
 - migrations PostgreSQL de remoção, cotas, idempotência e reconciliação de schema;
 - verificação de tipos de todas as Edge Functions.
+
+
+### Correção do yield on cost (19/11/2026)
+
+Foi identificado que `rpPorCota` usava a quantidade atual como fallback sempre que o histórico de cotas na data do provento resultava em zero. Isso podia atribuir dividendos recebidos antes da primeira compra (ou quando a posição estava zerada) à posição atual, inflando o yield on cost e a projeção.
+
+Agora:
+- quando há histórico de compras/vendas/posição inicial, a quantidade efetiva na data é obrigatória; zero cotas significa zero provento atribuível à posição;
+- a quantidade atual só é usada no modo de compatibilidade de posições manuais sem histórico de operações;
+- o yield on cost exclui proventos anteriores à entrada na carteira.
+
+O smoke test cobre provento anterior à compra, provento durante a posição, posição manual sem histórico e o total recebido considerado no yield on cost. Os workflows completos passaram no commit `49bcf29`.
