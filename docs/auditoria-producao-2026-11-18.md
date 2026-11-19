@@ -36,10 +36,11 @@ As entradas de `radar-precos` e `assinatura` coincidiram byte a byte com a branc
 - **minha-conta:** a produção tinha confirmação do cancelamento no Mercado Pago antes da exclusão e remoção de envios simulados pelo telefone. Essas proteções foram portadas para esta branch, junto com a lista centralizada de tabelas.
 - **assistente:** produção ainda usava o contador diário antigo; a branch contém consumo mensal atômico de cotas. Manter a implementação versionada, mas só publicar junto das migrations correspondentes.
 - **ler-comprovante:** produção tinha validação de tamanho real, MIME e bytes mágicos (5 MB), além de validação estrita do JSON da IA. Essas proteções foram portadas; o consumo mensal atômico da branch foi preservado.
-- **whatsapp-webhook:** produção contém resumo semanal, reserva idempotente de mensagens, validação de arquivos/áudio e consultas de saldo/fatura. A branch contém gravação atômica de lançamentos pendentes com cota mensal. A fusão dessas duas linhas de evolução ainda está pendente e é bloqueadora para deploy.
+- **whatsapp-webhook:** as proteções de produção (resumo semanal em lotes, reserva idempotente, validação de arquivos/áudio e consultas de saldo/fatura) foram integradas à branch. A gravação do botão de confirmação continua usando a RPC atômica da branch, que valida a cota, grava as transações e remove o pendente na mesma transação.
 - **pagamento-webhook:** a branch contém recuperação de reservas de webhook abandonadas por lease condicional; produção ainda usa a versão anterior. Preservar a implementação versionada e seus testes.
 - **whatsapp-vincular:** produção já grava a preferência do resumo semanal em `settings.whatsapp_resumo_semanal`, com fallback para a coluna antiga. Essa implementação foi portada.
 - **cotacoes:** produção já tinha cache persistente e fallback para último preço conhecido. Essa implementação foi portada, junto do helper `cache.ts`.
+- **valida-ia:** a produção tinha sanitização de entrada para prompts, aviso explícito contra prompt injection e validação estrita do schema JSON. O helper completo foi portado e ganhou testes.
 - **alertas-push:** a branch contém avisos de DARF que não estão na função implantada; a produção usa o helper `alvos.ts`. A implementação mais nova da branch foi preservada; não substituir pela versão implantada sem revisão.
 - **radar-precos** e **assinatura:** correspondência exata.
 
@@ -95,6 +96,19 @@ Foram observados jobs ativos:
 
 Os dois jobs do resumo semanal parecem formar o envio inicial e as tentativas em lotes posteriores. Não foram alterados; a lógica de reserva por usuário/semana precisa ser testada junto do fluxo de falhas antes de qualquer ajuste.
 
+## Lints de segurança e performance do Supabase
+
+A consulta dos advisors confirmou:
+
+- Dez tabelas têm RLS habilitada sem policies. A verificação de grants confirmou que `anon` e `authenticated` não têm SELECT/INSERT/UPDATE/DELETE nessas tabelas; `service_role` tem acesso. Isso é intencional para tabelas de backend (`erros_fn`, `pagamento_eventos`, `push_log`, `rl_uso`, tabelas WhatsApp e cache).
+- A extensão `pg_net` está no schema `public`. É um aviso de organização/segurança; não mover sem revisar dependências do pg_cron e executar em janela controlada.
+- A proteção do Supabase Auth contra senhas vazadas está desativada. Recomenda-se habilitar no painel Auth.
+- `backup.copias` não tem chave primária.
+- Três índices foram sinalizados como nunca utilizados: `wa_msg_criado`, `assinaturas_prov_idx` e `wa_vinculo_resumo`. Não remover automaticamente: `wa_msg_criado` está associado à rotina de limpeza e os outros precisam de análise de consultas/uso.
+- O advisor de saúde não retornou alertas.
+
+Nenhuma dessas configurações foi alterada durante esta auditoria.
+
 ## Próximas verificações obrigatórias
 
 1. Revisar diferenças das oito Edge Functions divergentes antes de qualquer deploy.
@@ -106,6 +120,9 @@ Os dois jobs do resumo semanal parecem formar o envio inicial e as tentativas em
 ## Alterações feitas nesta branch
 
 - Recuperação de cinco arquivos auxiliares ativos.
+- Reconciliação do fluxo WhatsApp: resumo semanal, idempotência, validação de mídia e gravação atômica de pendentes.
+- Recuperação de sanitização de prompts e validação estrita do JSON da IA, com testes.
+- Testes da lista de tabelas de exclusão/exportação da conta.
 - Reintrodução da confirmação de cancelamento do Mercado Pago e limpeza dos registros WhatsApp na exclusão de conta.
 - Restauração da validação de arquivos e dos fallbacks de cotação, mantendo o consumo mensal atômico de cotas.
 - Preferência de resumo semanal movida para `settings`, com fallback compatível.
