@@ -249,7 +249,7 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
 }
 
 async function responde(tel: string, uid: string, p: Pergunta, msgId: string) {
-  const responder = (mensagem: string) => responder(mensagem, "wa:" + msgId + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
   const h0 = hojeBR();
   // Fase 2: "qual meu saldo / quanto posso gastar" no mês atual = saldo livre do mês (igual ao termômetro do app) e
   //         "quanto está minha fatura" = fatura atual de cada cartão. Nenhuma das duas gasta cota.
@@ -331,7 +331,7 @@ async function baixaMidia(id: string): Promise<Midia | { erro: string } | null> 
 }
 
 async function botao(tel: string, uid: string, bid: string, msgId: string) {
-  const responder = (mensagem: string) => responder(mensagem, "wa:" + msgId + ":resposta");
+  const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta");
   const m = /^(ok|no):([a-z0-9]{6,20})$/.exec(bid);
   if (!m) return;
   // Primeiro lê sem consumir: falhas na consulta de plano/cota não podem apagar o lançamento pendente.
