@@ -17,7 +17,15 @@ function falso(linhas: { user_id: string; dia: string; k: string; n: number }[])
       };
       return q;
     },
-    async rpc(_n: string, a: any) { const r = linhas.find((x) => x.user_id === a.p_uid && x.dia === a.p_dia && x.k === a.p_k); if (r) r.n++; else linhas.push({ user_id: a.p_uid, dia: a.p_dia, k: a.p_k, n: 1 }); return { data: true, error: null }; },
+    async rpc(n: string, a: any) {
+      if (n !== "ia_consume_cota_mes") throw new Error("RPC inesperada: " + n);
+      const mes = a.p_dia.slice(0, 7);
+      const usados = linhas.filter((x) => x.user_id === a.p_uid && x.k === a.p_k && x.dia.slice(0, 7) === mes).reduce((s, x) => s + x.n, 0);
+      if (usados >= a.p_lim) return { data: false, error: null };
+      const r = linhas.find((x) => x.user_id === a.p_uid && x.dia === a.p_dia && x.k === a.p_k);
+      if (r) r.n++; else linhas.push({ user_id: a.p_uid, dia: a.p_dia, k: a.p_k, n: 1 });
+      return { data: true, error: null };
+    },
   };
 }
 const AG = Date.parse("2026-11-13T15:00:00Z");
@@ -26,15 +34,25 @@ Deno.test("frase: Grátis bloqueia no 15º, Pro nunca", async () => {
   const sb = falso([{ user_id: "u", dia: "2026-10-31", k: "frase", n: 50 }, { user_id: "u", dia: "2026-11-02", k: "frase", n: 10 }, { user_id: "u", dia: "2026-11-10", k: "frase", n: 4 }, { user_id: "u", dia: "2026-11-10", k: "comprovante", n: 9 }]);
   eq(await usoMes(sb, "u", "frase", AG), 14);
   eq(await confereCota(sb, "u", 0, "frase", AG), null, "14 usados ainda pode");
-  await registraUso(sb, "u", "frase", AG);
+  await registraUso(sb, "u", "frase", 0, AG);
   eq(await confereCota(sb, "u", 0, "frase", AG), { erro: "LIMITE_PLANO", recurso: "ia_frase", limite: 15, mensagem: MSG_LIMITE_LEGADO });
   eq(await confereCota(sb, "u", 2, "frase", AG), null, "Pro ilimitado");
 });
+
+Deno.test("cota mensal: requisições concorrentes não ultrapassam o limite", async () => {
+  const sb = falso([{ user_id: "u", dia: "2026-11-12", k: "frase", n: 14 }]);
+  const resultados = await Promise.all(Array.from({ length: 12 }, () => registraUso(sb, "u", "frase", 0, AG)));
+  eq(resultados.filter(Boolean).length, 1, "só uma chamada consome a última vaga");
+  eq(await usoMes(sb, "u", "frase", AG), 15);
+  eq(await registraUso(sb, "outro", "frase", 0, AG), true, "outro usuário tem cota independente");
+  eq(await registraUso(sb, "u", "comprovante", 0, AG), true, "outro recurso tem cota independente");
+});
+
 Deno.test("comprovante 3 e whatsapp 5", async () => {
   const sb = falso([{ user_id: "u", dia: "2026-11-05", k: "comprovante", n: 3 }, { user_id: "u", dia: "2026-11-05", k: "whatsapp", n: 4 }]);
   eq((await confereCota(sb, "u", 0, "comprovante", AG) as any)?.recurso, "ia_comprovante");
   eq(await confereCota(sb, "u", 0, "whatsapp", AG), null);
-  await registraUso(sb, "u", "whatsapp", AG);
+  await registraUso(sb, "u", "whatsapp", 0, AG);
   eq((await confereCota(sb, "u", 0, "whatsapp", AG) as any)?.limite, 5);
 });
 Deno.test("radar: Grátis confere só 1 alerta ativo (sem data: na ordem gravada)", () => {
@@ -62,7 +80,7 @@ Deno.test("v10.162 radar: ex-Pro com vários alertas recebe só o MAIS ANTIGO at
 Deno.test("v10.162 extrato: Grátis 1 por mês, separado do comprovante", async () => {
   const sb = falso([{ user_id: "u", dia: "2026-11-02", k: "comprovante", n: 2 }]);
   eq(await confereCota(sb, "u", 0, "extrato", AG), null, "1ª importação pode");
-  await registraUso(sb, "u", "extrato", AG);
+  await registraUso(sb, "u", "extrato", 0, AG);
   eq(sb.linhas.find((r) => r.k === "extrato")?.n, 1, "conta em k='extrato'");
   eq(await confereCota(sb, "u", 0, "extrato", AG), { erro: "LIMITE_PLANO", recurso: "ia_extrato", limite: 1, mensagem: MSG_LIMITE_LEGADO });
   eq(await confereCota(sb, "u", 0, "comprovante", AG), null, "extrato não gasta a cota de comprovante");

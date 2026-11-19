@@ -93,7 +93,14 @@ cartao: true se for fatura de cartão de crédito; false se for extrato de conta
       provavel_fixo: l?.provavel_fixo === true,
     })).filter((l: any) => l.data && l.valor !== 0)
       .map((l: any) => l.valor < 0 && (l.provavel_fixo || V.provavelFixo(l.desc)) ? { ...l, provavel_fixo: true } : { data: l.data, desc: l.desc, valor: l.valor });
-    if (linhas.length) await registraUso(sb, uid, tipoUso);
+    if (linhas.length) {
+      try {
+        if (!(await registraUso(sb, uid, tipoUso, ef.nivel))) {
+          const lim = await confereCota(sb, uid, ef.nivel, tipoUso);
+          return json(corpoLimite(lim || GVP.erroLimite(tipoUso === "extrato" ? "ia_extrato" : "ia_comprovante", ef.nivel), body), 402);
+        }
+      } catch { return json({ erro: "não foi possível registrar o uso agora" }, 503); }
+    }
     return json({ cartao: !!oe.cartao, linhas });
   }
 
@@ -148,6 +155,13 @@ Se não houver um lançamento (imagem que não é comprovante ou frase sem valor
     confianca: V.confiancaIA(o.confianca),
     cartao: cartoes.includes(o.cartao) ? o.cartao : "",
   };
-  if (out.valor > 0) await registraUso(sb, uid, tipoUso); // só conta quando a IA achou um lançamento
+  if (out.valor > 0) {
+    try {
+      if (!(await registraUso(sb, uid, tipoUso, ef.nivel))) {
+        const lim = await confereCota(sb, uid, ef.nivel, tipoUso);
+        return json(corpoLimite(lim || GVP.erroLimite(tipoUso === "frase" ? "ia_frase" : "ia_comprovante", ef.nivel), body), 402);
+      }
+    } catch { return json({ erro: "não foi possível registrar o uso agora" }, 503); }
+  }
   return json(out);
 });

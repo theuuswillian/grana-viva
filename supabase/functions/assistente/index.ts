@@ -125,6 +125,11 @@ PERGUNTA: """${pergunta.replace(/"""/g, "")}"""`;
   if (!resposta) return json({ erro: "não consegui responder" }, 422);
   const c = confere(resposta, fatos, pergunta);
   if (!c.ok) { console.log("assistente: número fora dos fatos", c.estranhos.join(",")); return json({ resposta: null, conferida: false, motivo: "numero_fora_dos_fatos" }); }
-  await registraUso(sb, uid, "frase");
+  try {
+    if (!(await registraUso(sb, uid, "frase", ef.nivel))) {
+      const lim = await confereCota(sb, uid, ef.nivel, "frase");
+      return json(corpoLimite(lim || GVP.erroLimite("ia_frase", ef.nivel), body), 402);
+    }
+  } catch { return json({ erro: "não foi possível registrar o uso agora" }, 503); }
   return json({ resposta, suficiente: o?.suficiente !== false, conferida: true });
 });
