@@ -28,7 +28,7 @@ import { semanaPassada, textoResumo, quemRecebeResumo, livreMes, faturaAtual, ja
 import { leMensagem, gastaCota, CATS_PADRAO, type Item, type Pergunta, type Midia } from "../_shared/ia-whatsapp.ts";
 // Fase 2: mídia conferida (até 5 MB, tipo pelos bytes mágicos) antes de ir para a IA
 import { confereBytes, ARQ_MAX, MSG_GRANDE, MSG_TIPO } from "../_shared/arquivo.ts";
-import { confereCota, registraUso, hojeSP } from "../_shared/cota.ts";
+import { confereCota, hojeSP } from "../_shared/cota.ts";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const GVP = (globalThis as any).GVP;
 const GRAPH = "https://graph.facebook.com/v21.0";
