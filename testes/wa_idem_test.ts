@@ -8,7 +8,7 @@ Deno.test("WhatsApp fila: reserva nova mensagem", async () => {
     return { data: "nova", error: null };
   } };
   const r = await reservaMensagem(sb, "wamid.1");
-  if (r !== "nova" || seen[0]?.p_id !== "wamid.1" || seen[0]?.p_lease_seconds !== 180) {
+  if (r.status !== "nova" || seen[0]?.p_id !== "wamid.1" || seen[0]?.p_lease_seconds !== 180 || seen[0]?.p_token !== r.token) {
     throw new Error("reserva nova ou lease padrão incorretos");
   }
 });
@@ -17,14 +17,14 @@ Deno.test("WhatsApp fila: reconhece retomada, duplicidade e lease ocupado", asyn
   for (const status of ["retomada", "repetida", "ocupada"] as const) {
     const sb = { rpc: async () => ({ data: status, error: null }) };
     const r = await reservaMensagem(sb, "wamid.2");
-    if (r !== status) throw new Error(`status ${status} não foi preservado`);
+    if (r.status !== status || !r.token) throw new Error(`status ${status} ou token não foi preservado`);
   }
 });
 
 Deno.test("WhatsApp fila: erro de RPC não vira duplicidade", async () => {
   const sb = { rpc: async () => ({ data: null, error: { code: "08006" } }) };
   const r = await reservaMensagem(sb, "wamid.3");
-  if (r !== "erro") throw new Error("erro transitório deve solicitar retry");
+  if (r.status !== "erro" || !r.token) throw new Error("erro transitório deve solicitar retry mantendo o token local");
 });
 
 Deno.test("WhatsApp fila: finalização envia estado e detalhe", async () => {
@@ -34,15 +34,15 @@ Deno.test("WhatsApp fila: finalização envia estado e detalhe", async () => {
     seen.push(args);
     return { data: true, error: null };
   } };
-  const ok = await finalizaMensagem(sb, "wamid.4", false, new Error("temporário"));
-  if (!ok || seen[0]?.p_sucesso !== false || seen[0]?.p_erro !== "temporário") {
+  const ok = await finalizaMensagem(sb, "wamid.4", "00000000-0000-4000-8000-000000000004", false, new Error("temporário"));
+  if (!ok || seen[0]?.p_token !== "00000000-0000-4000-8000-000000000004" || seen[0]?.p_sucesso !== false || seen[0]?.p_erro !== "temporário") {
     throw new Error("finalização não enviou estado/erro corretamente");
   }
 });
 
 Deno.test("WhatsApp fila: falha ao finalizar é detectada", async () => {
   const sb = { rpc: async () => ({ data: null, error: { code: "08006" } }) };
-  if (await finalizaMensagem(sb, "wamid.5", true)) throw new Error("falha de finalização não pode ser sucesso");
+  if (await finalizaMensagem(sb, "wamid.5", "00000000-0000-4000-8000-000000000005", true)) throw new Error("falha de finalização não pode ser sucesso");
 });
 
 Deno.test("WhatsApp envio: somente 429 e 5xx são recuperáveis", () => {
