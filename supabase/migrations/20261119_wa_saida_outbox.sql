@@ -105,7 +105,7 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
-  if coalesce(p_chave,'') = '' or p_status not in ('enviada','falhou_segura','falhou','incerta') then
+  if coalesce(p_chave,'') = '' or p_status is null or p_status not in ('enviada','falhou_segura','falhou','incerta') then
     raise exception 'Parâmetros inválidos para finalizar outbox WhatsApp';
   end if;
 
