@@ -18,10 +18,11 @@ A ordem abaixo consolida as dependências e os testes isolados atuais. Antes da 
 2. `20261115_webhooks_idempotencia.sql` e `20261115_wa_resumo_semanal.sql`, se ainda não estiverem no histórico remoto.
 3. `20261119_wa_fila_recuperavel.sql`
 4. `20261119_wa_lease_fencing.sql`
-5. `20261119_wa_leitura_ia_idempotente.sql`
-6. `20261119_wa_saida_outbox.sql`
-7. `20261119_wa_saida_lease_fencing.sql`
-8. `20261119_wa_vinculo_atomico.sql`
+5. `20261119_wa_z_fila_limite_tentativas.sql`
+6. `20261119_wa_leitura_ia_idempotente.sql`
+7. `20261119_wa_saida_outbox.sql`
+8. `20261119_wa_saida_lease_fencing.sql`
+9. `20261119_wa_vinculo_atomico.sql`
 
 ### Trilha de pendentes e cotas
 
