@@ -47,12 +47,11 @@ begin
       and table_name='settings' and column_name='whatsapp_resumo_semanal' and is_nullable='NO') then
     raise exception 'whatsapp_resumo_semanal deve ser NOT NULL';
   end if;
+  if (select data->>'preservar' from public.settings where user_id='00000000-0000-0000-0000-000000000001') <> 'dado-existente' then
+    raise exception 'a reconciliação alterou dados preexistentes de settings';
+  end if;
 end $$;
 
-insert into auth.users(id) values
- ('00000000-0000-0000-0000-000000000001'),
- ('00000000-0000-0000-0000-000000000002');
-insert into public.settings(user_id) values ('00000000-0000-0000-0000-000000000001');
 do $$ begin
   if (select whatsapp_resumo_semanal from public.settings where user_id='00000000-0000-0000-0000-000000000001') is distinct from true then
     raise exception 'preferência semanal não recebeu default true';
