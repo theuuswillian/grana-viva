@@ -3905,7 +3905,7 @@ html.claro .waCmdB .i{color:#15803d}
 </div>
 
 <div id="modal"></div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <button class="fab" id="fab" aria-label="adicionar rápido"></button>
 <div id="lock" role="dialog" aria-modal="true" aria-label="app bloqueado"></div>
 <script>try{var lk=JSON.parse(localStorage.getItem('gv-lock')||'null'),lks=+localStorage.getItem('gv-lock-saiu')||0;var lkd=Date.now()-lks;if(lk&&lk.hash&&!(lk.atraso&&lks&&lkd>=0&&lkd<lk.atraso*60000)){document.getElementById('lock').classList.add('on');document.documentElement.classList.add('travado');}}catch(e){}</script>
