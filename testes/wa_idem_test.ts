@@ -1,4 +1,4 @@
-import { finalizaMensagem, reservaMensagem } from "../supabase/functions/_shared/wa-idem.ts";
+import { erroEnvioRecuperavel, finalizaMensagem, reservaMensagem } from "../supabase/functions/_shared/wa-idem.ts";
 
 Deno.test("WhatsApp fila: reserva nova mensagem", async () => {
   const seen: Record<string, unknown>[] = [];
@@ -43,4 +43,13 @@ Deno.test("WhatsApp fila: finalização envia estado e detalhe", async () => {
 Deno.test("WhatsApp fila: falha ao finalizar é detectada", async () => {
   const sb = { rpc: async () => ({ data: null, error: { code: "08006" } }) };
   if (await finalizaMensagem(sb, "wamid.5", true)) throw new Error("falha de finalização não pode ser sucesso");
+});
+
+Deno.test("WhatsApp envio: somente 429 e 5xx são recuperáveis", () => {
+  for (const status of [429, 500, 502, 503]) {
+    if (!erroEnvioRecuperavel(status)) throw new Error(`HTTP ${status} deveria permitir retry`);
+  }
+  for (const status of [200, 400, 401, 403, 404]) {
+    if (erroEnvioRecuperavel(status)) throw new Error(`HTTP ${status} não deve entrar em retry automático`);
+  }
 });
