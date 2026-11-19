@@ -45,8 +45,10 @@ S.tx=[
  {id:'fat-vencida',faturaKey:'fat|c-fin|'+mesN(2).slice(0,7),data:mesN(2),tipo:'despesa',cartao:'c-fin',valor:300,pagoValor:0,pagamentos:[]},
  {id:'compra-ciclo',tipo:'despesa',data:hoje,valor:200,cartao:'c-fin',forma:'cartao'}
 ];
-ok(Math.abs(T.saldoTotal()-2000)<0.01,'saldo total mantém o saldo bancário após pagamento já refletido na conta');
-ok(Math.abs(T.saldoLivre()-900)<0.01,'saldo livre desconta duas faturas antigas e o ciclo atual, sem somar parcelas futuras');
+const stTeste=T.saldoTotal(),fatTeste=T.ccFaturasLista(S.cartoes[0]),slTeste=T.saldoLivre();
+console.log('DEBUG saldo',stTeste,slTeste,'faturas',fatTeste.map(f=>({fecha:f.fecha,estado:f.estado,valor:f.valor,rest:f.rest})));
+ok(Math.abs(stTeste-2000)<0.01,'saldo total mantém o saldo bancário após pagamento já refletido na conta');
+ok(Math.abs(slTeste-900)<0.01,'saldo livre desconta duas faturas antigas e o ciclo atual, sem somar parcelas futuras');
 S.tx=[];S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
