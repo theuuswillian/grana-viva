@@ -45,12 +45,10 @@ begin
     raise exception 'PKs existentes não correspondem às chaves naturais esperadas';
   end if;
 
-  if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_pkey')
-     or not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_ticker_check')
-     or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_pkey')
+  if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_ticker_check')
      or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_user_id_fkey')
      or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_chave_check') then
-    raise exception 'constraints/PK/FK esperadas ausentes';
+    raise exception 'constraints/check/FK esperadas ausentes';
   end if;
 
   select column_default into v_default from information_schema.columns
