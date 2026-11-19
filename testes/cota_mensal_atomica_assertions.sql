@@ -18,8 +18,8 @@ begin
     raise exception 'novo mês deveria iniciar uma cota nova';
   end if;
 
-  insert into public.wa_pendente(id,user_id,payload)
-  values ('pending-ok',uid,'{"text":"teste"}');
+  insert into public.wa_pendente(id,user_id,payload,origem_msg_id)
+  values ('pending-ok',uid,'{"text":"teste"}','wamid-pending-ok');
   r := public.wa_salva_pendente_com_cota(
     uid,'pending-ok',date '2026-11-18',2,
     '[{"id":"wa-1","data":{"descricao":"Compra A"},"updated_at":"2026-11-18T10:00:00Z"},{"id":"wa-2","data":{"descricao":"Compra B"},"updated_at":"2026-11-18T10:01:00Z"}]'::jsonb
@@ -34,6 +34,13 @@ begin
   if (select count(*) from public.tx where user_id=uid) <> 2 then
     raise exception 'retry do mesmo pendente não pode inserir lançamentos adicionais';
   end if;
+  begin
+    insert into public.wa_pendente(id,user_id,origem_msg_id)
+    values ('pending-duplicate-source',uid,'wamid-pending-ok');
+    raise exception 'wamid de origem duplicado deveria ser rejeitado';
+  exception when unique_violation then
+    null;
+  end;
   if (select n from public.ia_uso where user_id=uid and k='whatsapp' and dia=date '2026-11-18') <> 1 then
     raise exception 'cota WhatsApp não foi contabilizada exatamente uma vez';
   end if;
