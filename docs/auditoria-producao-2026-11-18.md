@@ -156,3 +156,18 @@ Nenhuma dessas configurações foi alterada durante esta auditoria.
 5. **Média — acessibilidade e UX:** complementar smoke test com navegação por teclado, foco, leitores de tela, telas pequenas e estados de erro/rede.
 
 Esses itens são achados e recomendações; nenhum cálculo financeiro do frontend foi alterado nesta etapa, para evitar mudar resultados de usuários sem uma matriz de comportamento esperada e testes de regressão.
+
+
+### Retirada de referências legadas da cópia local (19/11/2026)
+
+A revisão complementar encontrou um risco que não era coberto pela migration isoladamente: se o navegador mantivesse uma cópia antiga e o snapshot de sincronização estivesse ausente, a rotina de mesclagem podia tratar registros antigos como dados locais novos e enviá-los novamente à nuvem.
+
+Correções adicionadas nesta branch:
+
+- O saneamento da cópia local descarta lançamentos com o identificador legado da integração e posições de investimento marcadas como importadas por ela, antes de qualquer mesclagem/envio.
+- O saneamento remove referências antigas aninhadas em `tx.par`, remove a lista antiga de identificadores em `cfg` e preserva lançamentos manuais e importações locais.
+- O código de conciliação de extratos passa a usar os marcadores genéricos `importado`/`impId`, sem depender do identificador antigo.
+- A migration também limpa as chaves legadas dentro de `settings.data.cfg`, preservando as demais preferências.
+- O smoke test cobre a cópia local sem snapshot, registros manuais, posição manual e limpeza das referências aninhadas; os testes SQL verificam a limpeza de `settings.cfg` e a preservação de configurações não relacionadas.
+
+A migration continua preservando dados manuais, extratos CSV/OFX e cadastros de contas/cartões. A validação CI da alteração precisa concluir antes da revisão final.
