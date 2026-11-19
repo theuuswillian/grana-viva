@@ -50,6 +50,15 @@ begin
   if (select data->>'preservar' from public.settings where user_id='00000000-0000-0000-0000-000000000001') <> 'dado-existente' then
     raise exception 'a reconciliação alterou dados preexistentes de settings';
   end if;
+  if (select v->>'preco' from public.cotacao_cache where ticker='PETR4') <> '37.5'
+     or (select salvo_em from public.cotacao_cache where ticker='PETR4') is null then
+    raise exception 'a reconciliação não preservou/completou a cotação preexistente';
+  end if;
+  if (select count(*) from public.radar_disparos) <> 2
+     or not exists (select 1 from public.radar_disparos where user_id='00000000-0000-0000-0000-000000000001' and chave='alvo|A' and em is not null)
+     or not exists (select 1 from public.radar_disparos where user_id='00000000-0000-0000-0000-000000000002' and chave='alvo|B' and em is not null) then
+    raise exception 'a reconciliação não preservou/completou os disparos preexistentes';
+  end if;
 end $$;
 
 do $$ begin
@@ -57,10 +66,6 @@ do $$ begin
     raise exception 'preferência semanal não recebeu default true';
   end if;
 end $$;
-
-insert into public.radar_disparos(user_id,chave) values
- ('00000000-0000-0000-0000-000000000001','alvo|A'),
- ('00000000-0000-0000-0000-000000000002','alvo|B');
 
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
