@@ -3428,7 +3428,12 @@ function morphView(v,antHtml,html){
 }
 /* v10.165: saldo livre no cabeçalho: saldo nas contas menos as faturas abertas dos cartões (o que dá para gastar sem dever) */
 function saldoLivre(){
-  let fat=0;try{cartoesAtivos().forEach(c=>{try{const E=ccFatEstado(c);if(E&&E.tipo!=='fechada')fat+=cents(E.valor||0);}catch(e){}});}catch(e){}
+  let fat=0;
+  try{cartoesAtivos().forEach(c=>{try{
+    ccFaturasLista(c).forEach(f=>{
+      if(f.estado!=='futura'&&f.estado!=='paga'&&f.estado!=='excluida')fat+=cents(f.rest||0);
+    });
+  }catch(e){}});}catch(e){}
   return (cents(saldoTotal())-fat)/100;
 }
 function pintaSaldoHd(){
