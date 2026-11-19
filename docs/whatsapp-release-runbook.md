@@ -12,15 +12,24 @@ A implantação deve ser coordenada: aplicar todas as migrations compatíveis an
 
 A ordem abaixo consolida as dependências e os testes isolados atuais. Antes da produção, conferir o histórico real de migrations do projeto e a ausência de versões já aplicadas:
 
-1. `20261119_wa_fila_recuperavel.sql`
-2. `20261119_wa_pendente_idempotente.sql`
-3. `20261119_wa_lease_fencing.sql`
-4. `20261119_wa_leitura_ia_idempotente.sql`
-5. `20261119_wa_saida_outbox.sql`
-6. `20261119_wa_saida_lease_fencing.sql`
-7. `20261119_wa_vinculo_atomico.sql`
+### Trilha principal do webhook (na ordem usada pelo CI)
 
-Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versionamento e o histórico remoto. Os testes da cadeia de webhook aplicam fila, fencing de entrada, leitura IA, outbox, fencing de saída e vínculo em PostgreSQL isolado; a migration de pendentes/cotas também é validada no banco isolado de cotas.
+1. `20261106_whatsapp.sql` e migrations-base de webhook já aplicadas no projeto.
+2. `20261115_webhooks_idempotencia.sql` e `20261115_wa_resumo_semanal.sql`, se ainda não estiverem no histórico remoto.
+3. `20261119_wa_fila_recuperavel.sql`
+4. `20261119_wa_lease_fencing.sql`
+5. `20261119_wa_leitura_ia_idempotente.sql`
+6. `20261119_wa_saida_outbox.sql`
+7. `20261119_wa_saida_lease_fencing.sql`
+8. `20261119_wa_vinculo_atomico.sql`
+
+### Trilha de pendentes e cotas
+
+- `20261118_cota_mensal_atomica.sql` deve preceder `20261119_wa_pendente_idempotente.sql`.
+- A migration `20261119_wa_pendente_idempotente.sql` é validada em banco isolado separado no CI; confirmar dependências e histórico remoto antes de aplicá-la.
+- Não misturar as duas trilhas sem conferir o histórico de migrations já aplicado no Supabase.
+
+Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versionamento e o histórico remoto. Os testes da cadeia de webhook aplicam as migrations da trilha principal em PostgreSQL isolado; a trilha de pendentes/cotas é validada separadamente no banco isolado de cotas. A lista acima é uma referência de dependências, não uma instrução para reaplicar migrations já registradas no projeto.
 
 ## Pré-implantação
 
@@ -60,6 +69,6 @@ Não presumir que `supabase db push` é seguro sem conferir o mecanismo de versi
 ## Estado desta preparação
 
 - PR #20: fencing da outbox de saída, CI completo aprovado.
-- PR #21: vinculação atômica reaplicada sobre a ponta #20; aguardando CI integrado.
+- PR #21: vinculação atômica reaplicada sobre a ponta #20; CI integrado aprovado no SHA `aedab925aff3b07ce6bd84f8ac9c904a3d498ef8`.
 - PR #19: permanece draft e não deve ser integrada separadamente, pois sua base ficou desatualizada.
 - Nenhuma migration foi aplicada no Supabase de produção; nenhuma Edge Function foi publicada; nenhuma PR foi mesclada.
