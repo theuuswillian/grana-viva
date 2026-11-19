@@ -15,8 +15,6 @@ on:
       - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
       - auditoria/whatsapp-outbox-envio-seguro-2026-11-19
       - auditoria/whatsapp-lease-fencing-2026-11-19
-      - auditoria/whatsapp-outbox-envio-seguro-2026-11-19
-      - auditoria/whatsapp-lease-fencing-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
   pull_request:
     branches:
