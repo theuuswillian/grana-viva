@@ -13,6 +13,20 @@ Deno.test("WhatsApp fila: reserva nova mensagem", async () => {
   }
 });
 
+
+Deno.test("WhatsApp fila: cada tentativa recebe um token de posse diferente", async () => {
+  const tokens: string[] = [];
+  const sb = { rpc: async (_name: string, args: Record<string, unknown>) => {
+    tokens.push(String(args.p_token || ""));
+    return { data: tokens.length === 1 ? "nova" : "retomada", error: null };
+  } };
+  const a = await reservaMensagem(sb, "wamid.fence");
+  const b = await reservaMensagem(sb, "wamid.fence");
+  if (!a.token || !b.token || a.token === b.token || tokens[0] === tokens[1]) {
+    throw new Error("cada worker precisa de token de posse exclusivo");
+  }
+});
+
 Deno.test("WhatsApp fila: reconhece retomada, duplicidade e lease ocupado", async () => {
   for (const status of ["retomada", "repetida", "ocupada"] as const) {
     const sb = { rpc: async () => ({ data: status, error: null }) };
