@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -60,6 +60,24 @@ const fa=T.faturasAbertasHTML(false);ok(/logos\/nubank\.com\.br\.png/.test(fa),'
 // fixos do extrato
 const fx=T.fixosDoImport([{fixo:true,on:true,tipo:'despesa',valor:-55.9,desc:'NETFLIX.COM',data:'2026-11-03',cat:'Assinaturas'},{fixo:true,on:true,tipo:'despesa',valor:-55.9,desc:'NETFLIX.COM',data:'2026-10-03',cat:'Assinaturas'},{fixo:false,on:true,tipo:'despesa',valor:-10,desc:'PADARIA',data:'2026-11-03'}],'b1',true);
 ok(fx.length===1&&fx[0].meses.size===2&&fx[0].data==='2026-11-03','extrato: 1 assinatura sugerida com 2 meses');
+// regressão: importação CSV/OFX local continua funcionando sem o fluxo bancário Pluggy
+const nImport=T.S.tx.length;
+T.IMP={nome:'extrato-teste.csv',cartao:false,linhas:[{desc:'PADARIA TESTE',valor:-23.5,data:T.hojeSP()}],destino:'b:b1'};
+T.montaImport();
+const impHtml=doc.querySelector('#modal').innerHTML;
+ok(/Importar extrato/.test(impHtml)&&!/Lançamentos do banco|pular esta conta|não importar esta conta/.test(impHtml),'importação local sem controles da integração bancária');
+T.confirmaImport();
+ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.length-1].conta==='b1','CSV/OFX importa lançamento na conta selecionada');
+// regressão: recuperação de parcelas antigas usa apenas o histórico local e não chama código removido
+const txAntesParc=T.S.tx,cartoesAntesParc=T.S.cartoes;
+T.S.cartoes=[{id:'prc-card',fechamento:20,vencimento:27}];
+T.S.tx=[
+  {id:'hist-parc-1',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 1/3',data:'2026-09-20',dataCompra:'2026-09-20',cartao:'prc-card',pluggyId:'historico-1'},
+  {id:'hist-parc-2',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 2/3',data:'2026-10-20',dataCompra:'2026-09-20',cartao:'prc-card',pluggyId:'historico-2'}
+];
+const prcLocal=T.prcDetecta([]);
+ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0,'parcela faltante recuperada só pelo histórico local');
+T.S.tx=txAntesParc;T.S.cartoes=cartoesAntesParc;
 ok(/Resumo semanal toda segunda às 8h/.test(T.waResumoHTML(false))&&/wa-copia/.test(T.waCmdHTML()),'WhatsApp: toggle e chips');
 T.demoLimpa();ok(!T.S.tx.some(t=>t.demo),'Limpar exemplo apaga tudo de exemplo');
 // privacidade
