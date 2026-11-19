@@ -90,6 +90,18 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
+      - name: Test production schema reconciliation in isolated PostgreSQL
+        env:
+          PGPASSWORD: postgres
+          PGDATABASE: granaviva_schema_reconcile_test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          createdb -h 127.0.0.1 -U postgres granaviva_schema_reconcile_test
+          psql -h 127.0.0.1 -U postgres -d granaviva_schema_reconcile_test -v ON_ERROR_STOP=1 -f testes/schema_reconciliacao_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_schema_reconcile_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_z_reconciliar_schema_producao.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_schema_reconcile_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_z_reconciliar_schema_producao.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_schema_reconcile_test -v ON_ERROR_STOP=1 -f testes/schema_reconciliacao_assertions.sql
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
