@@ -32,3 +32,8 @@ export async function finalizaMensagem(
   });
   return !error && data === true;
 }
+
+/** HTTP 429 e 5xx são falhas transitórias; 4xx restantes exigem correção/configuração, não retry automático. */
+export function erroEnvioRecuperavel(status: number): boolean {
+  return status === 429 || status >= 500;
+}
