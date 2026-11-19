@@ -31,6 +31,20 @@ Todas as dez funções abaixo estavam ativas na consulta. O campo `verify_jwt` e
 
 As entradas de `radar-precos` e `assinatura` coincidiram byte a byte com a branch de referência consultada. As outras oito entradas divergiram do código versionado. Portanto, não se deve fazer deploy dessas funções a partir do GitHub até revisar as diferenças e identificar quais alterações são posteriores, anteriores ou específicas da produção.
 
+### Diferenças funcionais identificadas
+
+- **minha-conta:** a produção tinha confirmação do cancelamento no Mercado Pago antes da exclusão e remoção de envios simulados pelo telefone. Essas proteções foram portadas para esta branch, junto com a lista centralizada de tabelas.
+- **assistente:** produção ainda usava o contador diário antigo; a branch contém consumo mensal atômico de cotas. Manter a implementação versionada, mas só publicar junto das migrations correspondentes.
+- **ler-comprovante:** produção tinha validação de tamanho real, MIME e bytes mágicos (5 MB), além de validação estrita do JSON da IA. Essas proteções foram portadas; o consumo mensal atômico da branch foi preservado.
+- **whatsapp-webhook:** produção contém resumo semanal, reserva idempotente de mensagens, validação de arquivos/áudio e consultas de saldo/fatura. A branch contém gravação atômica de lançamentos pendentes com cota mensal. A fusão dessas duas linhas de evolução ainda está pendente e é bloqueadora para deploy.
+- **pagamento-webhook:** a branch contém recuperação de reservas de webhook abandonadas por lease condicional; produção ainda usa a versão anterior. Preservar a implementação versionada e seus testes.
+- **whatsapp-vincular:** produção já grava a preferência do resumo semanal em `settings.whatsapp_resumo_semanal`, com fallback para a coluna antiga. Essa implementação foi portada.
+- **cotacoes:** produção já tinha cache persistente e fallback para último preço conhecido. Essa implementação foi portada, junto do helper `cache.ts`.
+- **alertas-push:** a branch contém avisos de DARF que não estão na função implantada; a produção usa o helper `alvos.ts`. A implementação mais nova da branch foi preservada; não substituir pela versão implantada sem revisão.
+- **radar-precos** e **assinatura:** correspondência exata.
+
+Os módulos compartilhados `planos.js`, `erros.ts` e `seguro.ts` coincidiram byte a byte. `cota.ts` diverge porque a branch implementa consumo mensal atômico, enquanto produção ainda usa incremento diário legado. `mercadopago.ts` tinha na produção a função `cancelaConfirmando`, agora portada para a branch.
+
 ## Arquivos auxiliares recuperados
 
 Os seguintes arquivos estavam presentes nas fontes ativas e ausentes do repositório; foram adicionados a esta branch a partir das fontes lidas em produção:
@@ -72,7 +86,14 @@ A migration `20261118_z_reconciliar_schema_producao.sql` representa esses objeto
 
 ## Cron jobs observados
 
-Foram observados jobs ativos de alertas, limpeza de mensagens e resumo semanal. Há mais de um agendamento para o endpoint de resumo semanal; isso requer revisão operacional separada antes de alterar ou remover qualquer job. Esta branch não modifica cron.
+Foram observados jobs ativos:
+- `granaviva-alertas-push`: diariamente às 12:00 UTC.
+- `granaviva-alertas-precos`: dias úteis às 21:30 UTC.
+- `granaviva-wa-msg-limpeza`: diariamente às 03:40 UTC.
+- `granaviva-wa-resumo-semanal`: segunda às 11:00 UTC.
+- `granaviva-wa-resumo-semanal-lote`: segunda às 11:15, 11:30 e 11:45 UTC.
+
+Os dois jobs do resumo semanal parecem formar o envio inicial e as tentativas em lotes posteriores. Não foram alterados; a lógica de reserva por usuário/semana precisa ser testada junto do fluxo de falhas antes de qualquer ajuste.
 
 ## Próximas verificações obrigatórias
 
@@ -85,6 +106,9 @@ Foram observados jobs ativos de alertas, limpeza de mensagens e resumo semanal. 
 ## Alterações feitas nesta branch
 
 - Recuperação de cinco arquivos auxiliares ativos.
+- Reintrodução da confirmação de cancelamento do Mercado Pago e limpeza dos registros WhatsApp na exclusão de conta.
+- Restauração da validação de arquivos e dos fallbacks de cotação, mantendo o consumo mensal atômico de cotas.
+- Preferência de resumo semanal movida para `settings`, com fallback compatível.
 - Migration aditiva para as tabelas de cache/radar e preferência semanal.
 - Fixture e assertions para validar RLS, grants, constraints, default e isolamento por usuário.
 - Nenhuma alteração em produção.
