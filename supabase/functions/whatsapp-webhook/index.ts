@@ -177,15 +177,25 @@ async function baixaMidia(id: string): Promise<Midia | null> {
 async function botao(tel: string, uid: string, bid: string) {
   const m = /^(ok|no):([a-z0-9]{6,20})$/.exec(bid);
   if (!m) return;
-  // apaga e devolve numa operação só: dois toques seguidos em "Salvar" não gravam duas vezes
-  const { data: pd } = await sb.from("wa_pendente").delete().eq("id", m[2]).eq("user_id", uid).select("id,lanc");
-  const p = pd?.[0];
-  if (!p) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
-  if (m[1] === "no") { await texto(tel, "Cancelado. Nada foi salvo."); return; }
-  // v10.161: confere a cota de novo na hora de salvar (vários pendentes ao mesmo tempo não passam do limite do mês)
+  // Primeiro lê sem consumir: falhas na consulta de plano/cota não podem apagar o lançamento pendente.
+  const { data: previa, error: le } = await sb.from("wa_pendente").select("id,lanc").eq("id", m[2]).eq("user_id", uid).maybeSingle();
+  if (le) { await registraErro(sb, FN, "pendente-ler", le); await texto(tel, "Não consegui conferir esse lançamento agora. Tente novamente."); return; }
+  if (!previa) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
+  if (m[1] === "no") {
+    const { data: cancelado, error: ce } = await sb.from("wa_pendente").delete().eq("id", m[2]).eq("user_id", uid).select("id");
+    if (ce) { await registraErro(sb, FN, "pendente-cancelar", ce); await texto(tel, "Não consegui cancelar agora. Tente novamente."); return; }
+    await texto(tel, cancelado?.length ? "Cancelado. Nada foi salvo." : "Esse lançamento já foi salvo ou cancelado.");
+    return;
+  }
+  // Confere plano e cota antes de consumir o pendente. Se a validação falhar, o botão continua utilizável.
   let nv = 0;
   try { nv = await nivelDe(uid); } catch (e) { await registraErro(sb, FN, "plano", e); await texto(tel, "Não consegui conferir seu plano agora. Tente de novo em instantes."); return; }
   if (await cotaBloqueia(tel, uid, nv)) return;
+  // Consumo atômico após as validações: em dois toques simultâneos, só uma execução recebe a linha.
+  const { data: pd, error: pe } = await sb.from("wa_pendente").delete().eq("id", m[2]).eq("user_id", uid).select("id,lanc");
+  if (pe) { await registraErro(sb, FN, "pendente-reservar", pe); await texto(tel, "Não consegui preparar o salvamento agora. Tente novamente."); return; }
+  const p = pd?.[0];
+  if (!p) { await texto(tel, "Esse lançamento já foi salvo ou cancelado."); return; }
   const itens: any[] = Array.isArray(p.lanc?.itens) ? p.lanc.itens : [p.lanc];
   const agora = new Date().toISOString(), base = novoId();
   const linhas = itens.map((l: any, k: number) => {
