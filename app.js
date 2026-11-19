@@ -747,8 +747,22 @@ async function upTabela(tab,arr,uid,ok){
   }
 }
 const CONTA_TROCOU=new Error('conta trocada durante o envio');
+function limpaLegadoLocal(){
+  let mudou=false;
+  const tx=S.tx||[],fiis=S.fiis||[];
+  const txNovos=tx.filter(t=>!t.pluggyId);
+  if(txNovos.length!==tx.length){S.tx=txNovos;mudou=true;}
+  (S.tx||[]).forEach(t=>{if(t.par&&typeof t.par==='object'&&'pluggyId' in t.par){delete t.par.pluggyId;mudou=true;}});
+  const fiisNovos=fiis.filter(f=>!f.pluggyInv);
+  if(fiisNovos.length!==fiis.length){S.fiis=fiisNovos;mudou=true;}
+  (S.fiis||[]).forEach(f=>{if('pluggyInv' in f){delete f.pluggyInv;mudou=true;}});
+  if(S.cfg&&'pluggyIgn' in S.cfg){delete S.cfg.pluggyIgn;mudou=true;}
+  if(mudou){MUDANCAS++;gravaLocal();}
+  return mudou;
+}
 async function enviar(){
   if(!USER||!CR_OK)return;
+  limpaLegadoLocal();
   if(syncBusy){syncPend=true;return;}
   if(!navigator.onLine){setSync('offline, salvo no aparelho');return;}
   /* v10.155 (C1): o snapshot do localStorage só vale com a cópia deste aparelho aberta (COPIA_LIDA) ou depois de um
@@ -913,6 +927,7 @@ window.addEventListener('online',()=>{if(USER)enviar();});
 let ultimaPuxada=0;
 async function puxar(){
   if(!USER||syncBusy||!navigator.onLine||Date.now()-ultimaPuxada<20000)return;
+  limpaLegadoLocal();
   if(document.querySelector('#modal.on'))return;
   ultimaPuxada=Date.now();
   try{
