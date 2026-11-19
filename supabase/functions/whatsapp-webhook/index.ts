@@ -53,9 +53,12 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
   const dest = tel.startsWith("u:") ? { recipient: tel.slice(2) } : { to: tel };
   const msg = { messaging_product: "whatsapp", recipient_type: "individual", ...dest, ...corpo };
   let outbox = false;
+  let tokenOutbox = "";
   let finalizada = false;
   if (chave) {
-    const estado = await reservaSaida(sb, chave, tel, msg);
+    const reserva = await reservaSaida(sb, chave, tel, msg);
+    const estado = reserva.status;
+    tokenOutbox = reserva.token;
     if (estado === "enviada") return;
     if (estado === "ocupada") return; // outro worker já está enviando; nunca duplicar
     if (estado === "incerta" || estado === "falhou") {
@@ -67,7 +70,7 @@ async function envia(tel: string, corpo: Record<string, unknown>, chave?: string
   }
   const concluir = async (status: "enviada" | "falhou_segura" | "falhou" | "incerta", providerId?: string | null, erro?: unknown) => {
     if (!outbox) return;
-    const ok = await finalizaSaida(sb, chave!, status, providerId, erro);
+    const ok = await finalizaSaida(sb, chave!, tokenOutbox, status, providerId, erro);
     if (!ok) throw new Error("Não foi possível finalizar envio na outbox: " + chave);
     finalizada = true;
   };
