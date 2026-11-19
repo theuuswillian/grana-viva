@@ -216,11 +216,11 @@ async function responde(tel: string, uid: string, p: Pergunta) {
   //         "quanto está minha fatura" = fatura atual de cada cartão. Nenhuma das duas gasta cota.
   if (p.tipo === "fatura" || (p.tipo === "saldo" && p.de === h0.slice(0, 8) + "01" && p.ate === h0 && !p.categoria && !p.busca)) {
     const j = janelaResumo(h0, h0.slice(0, 8) + "01");
-    const [{ data: rs, error: er }, { data: st }, { data: kc }] = await Promise.all([
+    const [{ data: rs, error: er }, { data: st, error: es }, { data: kc, error: ec }] = await Promise.all([
       sb.from("tx").select("data").eq("user_id", uid).gte("data->>data", j.de).lte("data->>data", j.ate).limit(10000),
       sb.from("settings").select("data").eq("user_id", uid).maybeSingle(),
-      p.tipo === "fatura" ? sb.from("cartoes").select("data").eq("user_id", uid) : Promise.resolve({ data: [] as any[] })]);
-    if (er) throw er;
+      p.tipo === "fatura" ? sb.from("cartoes").select("data").eq("user_id", uid) : Promise.resolve({ data: [] as any[], error: null })]);
+    if (er || es || ec) throw er || es || ec;
     const txs = (rs || []).map((x: any) => x.data || {});
     if (p.tipo === "fatura") {
       let cs = (kc || []).map((x: any) => x.data || {});
