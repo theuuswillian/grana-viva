@@ -1,0 +1,49 @@
+name: Validate full stack
+on:
+  push:
+    branches:
+      - revisao-lancamento-v10.165
+      - correcoes/webhook-idempotencia-2026-11-18
+      - correcoes/whatsapp-preservar-pendente-2026-11-18
+      - correcoes/cota-mensal-atomica-2026-11-18
+      - remocao/pluggy-definitiva-2026-11-18
+  pull_request:
+    branches:
+      - revisao-lancamento-v10.165
+      - correcoes/webhook-idempotencia-2026-11-18
+      - correcoes/whatsapp-preservar-pendente-2026-11-18
+      - correcoes/cota-mensal-atomica-2026-11-18
+      - remocao/pluggy-definitiva-2026-11-18
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check app JavaScript
+        run: node --check app.js
+      - name: Check plan rules
+        run: node testes/planos.test.cjs
+      - name: Install browser test dependency
+        run: npm install --no-save --no-package-lock jsdom@24
+      - name: Run app smoke tests
+        run: node testes/smoke_jsdom.cjs
+      - name: Run Deno unit tests
+        run: |
+          deno test -A testes/*_test.ts
+          if [ -f supabase/functions/minha-conta/pluggy_test.ts ]; then
+            deno test -A supabase/functions/minha-conta/pluggy_test.ts
+          fi
+      - name: Type-check all Edge Functions
+        run: |
+          for file in supabase/functions/*/index.ts; do
+            echo "Checking $file"
+            deno check "$file"
+          done
