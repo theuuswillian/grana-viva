@@ -29,7 +29,6 @@ declare
   v_status text;
   v_lease timestamptz;
   v_telefone text;
-  v_corpo jsonb;
 begin
   if coalesce(p_chave,'') = '' or length(p_chave) > 200
      or p_token is null
@@ -45,8 +44,8 @@ begin
 
   if found then return 'nova'; end if;
 
-  select status, lease_until, telefone, corpo
-    into v_status, v_lease, v_telefone, v_corpo
+  select status, lease_until, telefone
+    into v_status, v_lease, v_telefone
     from public.wa_saida
    where chave = p_chave
    for update;
@@ -54,9 +53,6 @@ begin
   if not found then raise exception 'Registro de outbox desapareceu'; end if;
   if v_telefone <> p_telefone then
     raise exception 'Chave de outbox reutilizada para outro destinatário';
-  end if;
-  if v_corpo <> p_corpo then
-    raise exception 'Chave de outbox reutilizada com conteúdo diferente';
   end if;
 
   if v_status = 'enviada' then return 'enviada'; end if;
