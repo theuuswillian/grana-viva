@@ -3721,13 +3721,14 @@ const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses
 function metasInicioHTML(){
   const metas=(S.metas||[]).filter(m=>m&&m.id);
   if(!metas.length)return `<section class="hB-goals"><div class="hB-goalsHead"><span><b>Suas metas</b><small>Organize seus próximos objetivos</small></span><button type="button" data-act="hm-go" data-id="metas">Criar meta ${I('chevR')}</button></div><p class="hB-goalsEmpty">Defina um objetivo e acompanhe quanto já guardou, quanto falta e o ritmo necessário para chegar lá.</p></section>`;
-  const lista=metas.map(m=>{
+  const dados=metas.map(m=>{
     const alvo=Math.max(0,+alvoMeta(m)||0),guardado=Math.max(0,+saldoMeta(m)||0);
     const pct=alvo>0?Math.max(0,Math.min(100,guardado/alvo*100)):0;
     return {m,alvo,guardado,pct,falta:Math.max(0,alvo-guardado)};
-  }).sort((a,b)=>a.pct-b.pct).slice(0,2);
-  const total=metas.reduce((s,m)=>s+Math.max(0,+saldoMeta(m)||0),0);
-  const alvoTotal=metas.reduce((s,m)=>s+Math.max(0,+alvoMeta(m)||0),0);
+  });
+  const lista=dados.slice().sort((a,b)=>a.pct-b.pct).slice(0,2);
+  const total=dados.reduce((s,x)=>s+x.guardado,0);
+  const alvoTotal=dados.reduce((s,x)=>s+x.alvo,0);
   return `<section class="hB-goals">
     <div class="hB-goalsHead"><span><b>Suas metas</b><small>${brl(total)} guardados de ${brl(alvoTotal)}</small></span><button type="button" data-act="hm-go" data-id="metas">Ver todas ${I('chevR')}</button></div>
     <div class="hB-goalsList">${lista.map(({m,alvo,guardado,pct,falta})=>`<button type="button" class="hB-goal" data-act="meta-abre" data-id="${esc(m.id)}" aria-label="Abrir meta ${esc(m.nome)}: ${Math.round(pct)}% concluída">
