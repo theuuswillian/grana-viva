@@ -1,4 +1,5 @@
-/* GranaViva service worker: abre offline e busca a versão nova sempre que há internet.
+/* v10.172: atualiza a cópia offline do app após a reorganização do Início.
+   GranaViva service worker: abre offline e busca a versão nova sempre que há internet.
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
