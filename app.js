@@ -3483,7 +3483,7 @@ function pintaSaldoHd(){
   if(!MVP_MODE||!USER||!((S.bancos||[]).length)){el.hidden=true;return;}
   let v=0;try{v=saldoLivre();}catch(e){el.hidden=true;return;}
   el.hidden=false;el.innerHTML=`<small>saldo livre</small><b class="${v<0&&!OCULTO?'neg':''}">${OCULTO?'R$ •••••':brl(v)}</b>`;
-  el.setAttribute('aria-label','saldo livre: '+(OCULTO?'oculto':brl(v)));
+  el.setAttribute('aria-label','disponível para gastar: '+(OCULTO?'oculto':brl(v)));
 }
 function render(){
   try{pintaSaldoHd();}catch(e){}
