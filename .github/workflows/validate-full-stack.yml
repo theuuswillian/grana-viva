@@ -13,6 +13,7 @@ on:
   pull_request:
     branches:
       - correcoes/checkout-idempotencia-2026-11-19
+      - auditoria/whatsapp-vinculo-atomico-integrado-2026-11-19
       - revisao-lancamento-v10.165
       - correcoes/webhook-idempotencia-2026-11-18
       - correcoes/whatsapp-preservar-pendente-2026-11-18
