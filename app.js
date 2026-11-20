@@ -419,7 +419,7 @@ function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,impLote:/^[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(t.impLote||''))?String(t.impLote):'',impHash:/^\\d{1,10}:-?\\d{1,12}$/.test(String(t.impHash||''))?String(t.impHash):'',valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,impLote:/^[A-Za-z0-9_|:.-]{1,80}$/.test(String(t.impLote||''))?String(t.impLote):'',impHash:/^\d{1,10}:-?\d{1,12}$/.test(String(t.impHash||''))?String(t.impHash):'',valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).filter(f=>!f.pluggyInv).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   if(o.cfg)delete o.cfg.pluggyIgn;
   o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
@@ -475,10 +475,10 @@ function sanea(d){
   o.cfgTs={};Object.entries(obj(d&&d.cfgTs)).forEach(([k,v])=>{if(n0(v)>0&&k.length<=60)o.cfgTs[k]=n0(v);});
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
   o.cfg.impLotes=arr(o.cfg.impLotes).slice(-50).map(x=>({
-    id:/^[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(x.id||''))?String(x.id):'',
+    id:/^[A-Za-z0-9_|:.-]{1,80}$/.test(String(x.id||''))?String(x.id):'',
     data:isoTsOk(x.data)||'',
     arquivo:x.arquivo==='OFX'?'OFX':'CSV',
-    destino:/^(b|c):[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(x.destino||''))?String(x.destino):'',
+    destino:/^(b|c):[A-Za-z0-9_|:.-]{1,80}$/.test(String(x.destino||''))?String(x.destino):'',
     qtd:Math.max(0,Math.min(3000,parseInt(x.qtd,10)||0)),
     ligados:Math.max(0,Math.min(3000,parseInt(x.ligados,10)||0)),
     recebidas:Math.max(0,Math.min(3000,parseInt(x.recebidas,10)||0)),
@@ -5669,7 +5669,11 @@ function ccVira(id){
   document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.ccCard'))e.preventDefault();});
 })();
 function impLoteHash(t){
-  const x={};Object.keys(t||{}).filter(k=>k!=='impHash').sort().forEach(k=>{x[k]=t[k];});
+  const x={id:t.id||'',tipo:t.tipo||'',valor:c2(t.valor),categoria:t.categoria||'',descricao:t.descricao||'',data:t.data||'',
+    conta:t.conta||'',cartao:t.cartao||'',forma:t.forma||'',de:t.de||'',para:t.para||'',status:t.status||'',trab:t.trab||'',
+    dataCompra:t.dataCompra||'',faturaKey:t.faturaKey||'',emp:t.emp||'',empDir:t.empDir||'',obs:t.obs||'',
+    tags:Array.isArray(t.tags)?t.tags:[],anexos:Array.isArray(t.anexos)?t.anexos:[],split:Array.isArray(t.split)?t.split:null,
+    importado:!!t.importado,impLote:t.impLote||''};
   return hashObj(x);
 }
 function impLoteAnalisa(id){
@@ -6177,7 +6181,7 @@ function montaImport(){
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
     const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
     const fk=l.fitid?d+'|'+l.fitid:'',dupFitid=!!fk&&fitids.has(fk);if(fk)fitids.add(fk);
-    const descNorm=norm(l.desc||'').replace(/\\s+/g,' ').trim();
+    const descNorm=norm(l.desc||'').replace(/\s+/g,' ').trim();
     const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&impMesmoDestino(t,d)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&norm(t.bancoDesc||t.descricao||'').replace(/\\s+/g,' ').trim()===descNorm&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
