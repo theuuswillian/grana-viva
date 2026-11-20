@@ -68,8 +68,8 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_fixture.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_lease_fencing.sql
-          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_lease_fencing_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_estado_monotonico.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_lease_fencing_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_checkout_idempotencia.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_checkout_idempotencia_assertions.sql
       - name: Type-check all Edge Functions
