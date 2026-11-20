@@ -248,7 +248,7 @@ export async function ultimaAssinatura(uid: string, emails: string[], planos: st
  * GET seguido de PUT pode cancelar uma assinatura que acabou de ser autorizada.
  * Portanto esta rotina é somente leitura e nunca envia PUT.
  */
-export async function checkoutPendenteDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+export async function consultaCheckoutsDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
   if (!uid || !emailPagador || !token) throw new Error("reconciliacao_parametros_invalidos");
   const permitidos = new Set(planos);
   const candidatos = new Map<string, string>();
@@ -262,7 +262,7 @@ export async function checkoutPendenteDoUsuario(uid: string, emailPagador: strin
     for (const item of resultados) {
       const id = String(item?.id || "");
       const vinculo = lerRef(item?.external_reference);
-      if (!id || id === preservarId || item?.status !== "pending" || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
+      if (!id || id === preservarId || !["pending", "authorized"].includes(String(item?.status)) || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
       candidatos.set(id, vinculo.plano);
     }
     offset += resultados.length;
@@ -270,22 +270,28 @@ export async function checkoutPendenteDoUsuario(uid: string, emailPagador: strin
     if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
   } while (offset < total);
 
-  const confirmados: Array<{ id: string; url: string; criado: number }> = [];
+  const pendentes: Array<{ id: string; url: string; plano: string; criado: number }> = [];
+  const autorizadas: Array<{ id: string; plano: string; criado: number }> = [];
   for (const [id, plano] of candidatos) {
     const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
     if (atual.status !== 200) throw new Error("mp_confirma_reconciliacao " + atual.status);
     const p = atual.json;
     const vinculo = lerRef(p?.external_reference);
-    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano) continue;
-    if (p?.status !== "pending" || !confereValores(p, plano, PLANOS)) continue;
+    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano || !confereValores(p, plano, PLANOS)) continue;
     const confirmado = estadoDePreapproval(p, PLANOS);
-    if (confirmado.ignorar || confirmado.estado?.uid !== uid || confirmado.estado?.mp_status !== "pending") continue;
-    const url = String(p?.init_point || "");
-    if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
-    confirmados.push({ id, url, criado: Date.parse(p?.last_modified || p?.date_created || "") || 0 });
+    if (confirmado.ignorar || confirmado.estado?.uid !== uid) continue;
+    const criado = Date.parse(p?.last_modified || p?.date_created || "") || 0;
+    if (p?.status === "authorized" && confirmado.estado?.status === "ativo") {
+      autorizadas.push({ id, plano, criado });
+    } else if (p?.status === "pending" && confirmado.estado?.mp_status === "pending") {
+      const url = String(p?.init_point || "");
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
+      pendentes.push({ id, url, plano, criado });
+    }
   }
-  confirmados.sort((a, b) => b.criado - a.criado);
-  return confirmados[0] || null;
+  pendentes.sort((a, b) => b.criado - a.criado);
+  autorizadas.sort((a, b) => b.criado - a.criado);
+  return { pendentes, autorizadas };
 }
 
 export async function cancela(id: string, token: string, f: Fetch = fetch) {
