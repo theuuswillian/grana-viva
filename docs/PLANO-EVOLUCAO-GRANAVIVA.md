@@ -60,14 +60,18 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 
 ## Fase 2 — Qualidade de dados e importação
 
-- Fluxo CSV/OFX em etapas: seleção, mapeamento de colunas, prévia, validação, detecção de duplicidade, confirmação e relatório.
-- Chave de idempotência para cada transação importada e rastreio por lote.
-- Sugestão de categoria baseada em histórico com confirmação explícita do usuário.
-- Conciliação de saldo inicial/final e identificação de divergências.
-- Desfazer importação por lote sem apagar transações editadas posteriormente.
-- Testes para datas, moeda, sinais, estornos, transferências e arquivos grandes.
+- [x] Leitura local de CSV/OFX e prévia com seleção de conta/cartão, classificação e revisão antes da confirmação.
+- [x] Chave de idempotência por destino: usa FITID quando fornecido; no CSV sem identificador, usa data, valor e descrição normalizada.
+- [x] Deduplicação com escopo da conta/cartão e descrição; duas compras diferentes de mesmo valor e dia não são descartadas automaticamente.
+- [x] FITID repetido dentro do mesmo extrato é sinalizado e desmarcado para revisão.
+- [x] Histórico de até 50 lotes com formato, data, destino e contagem de importados/vinculados/ignorados.
+- [x] Desfazer lote remove somente registros novos que permanecem iguais ao snapshot pós-importação; registros editados depois são preservados.
+- [x] Testes de parser OFX SGML, CSV brasileiro, reimportação, duplicidade e proteção de registros editados.
+- [ ] Mapeamento manual de colunas CSV para formatos bancários fora dos cabeçalhos reconhecidos.
+- [ ] Conciliação de saldo inicial/final e identificação de divergências.
+- [ ] Cobertura ampliada de estornos, transferências, datas de competência e arquivos grandes.
 
-**Critério de aceite:** importar o mesmo arquivo duas vezes não duplica lançamentos; o usuário consegue revisar e desfazer o lote com segurança.
+**Critério de aceite parcial atingido:** reimportar o mesmo arquivo reconhece lançamentos já importados; o histórico permite desfazer com proteção a alterações posteriores. O fluxo ainda não oferece mapeamento livre de colunas nem conciliação de saldos.
 
 ## Fase 3 — Dashboard financeiro unificado
 
