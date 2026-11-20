@@ -162,7 +162,7 @@ async function vincula(tel: string, codigo: string, msgId: string, sandbox: bool
     await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
     return;
   }
-  if (resultado === "ja_vinculado") {
+  if (resultado === "limite_tentativas") {\n    await responder("Muitas tentativas de código. Por segurança, aguarde 15 minutos antes de tentar novamente.");\n    return;\n  }\n  if (resultado === "limite_tentativas_silencioso") return;\n  if (resultado === "ja_vinculado") {
     await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\n\n" + AJUDA);
     return;
   }
@@ -476,7 +476,7 @@ Deno.serve(async (req) => {
   const raw = await req.text();
   const sbt = Deno.env.get("WA_SB_TOKEN"), sbq = u.searchParams.get("sb") || "";
   let sbOk = false;
-  if (sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
+  if (Deno.env.get("WA_SB_ENABLED") === "true" && sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
   if (!sbOk && !(await assinaturaOk(raw, req.headers.get("x-hub-signature-256")))) return new Response("assinatura inválida", { status: 401 });
   let b: any; try { b = JSON.parse(raw); } catch { return new Response("ok"); }
   const msgs: any[] = [];
