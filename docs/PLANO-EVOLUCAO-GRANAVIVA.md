@@ -8,6 +8,21 @@
 
 Evoluir o GranaViva de um gestor financeiro pessoal para uma plataforma de inteligência financeira que conecte fluxo de caixa, orçamento, patrimônio, investimentos e construção de renda passiva, sem perder simplicidade, confiabilidade e transparência.
 
+## Base funcional já existente — preservar e evoluir
+
+O roadmap não parte de uma aplicação vazia. A auditoria do código identificou funcionalidades que já existem e devem ser reutilizadas, corrigidas e ampliadas:
+
+- **Início:** resumo de receitas/despesas, saldo do período, saldo das contas, saldo livre, faturas, vencimentos, patrimônio líquido, renda passiva e barra de lançamento inteligente.
+- **Gastos & Cartões:** extrato, categorias, orçamentos, faturas, parcelas, planejamento e importação de extratos.
+- **Patrimônio:** carteira de FIIs, ações, ETFs, BDRs, renda fixa e cripto; operações de compra/venda/provento; preço médio, histórico, radar e alertas de cotação.
+- **Patrimônio consolidado:** contas, investimentos, bens, passivos e dívidas.
+- **Metas:** objetivos, aportes, fontes de recursos e projeções.
+- **Importação:** CSV/OFX local, prévia, classificação, associação de conta/cartão e detecção de duplicidades.
+- **Assistente:** cálculo local dos fatos financeiros, respostas baseadas nos dados do usuário e fallback sem IA.
+- **Integrações:** WhatsApp, Mercado Pago, notificações, cotações e Edge Functions.
+
+As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**, não duplicar telas ou reescrever regras que já estão funcionando. Toda alteração deverá primeiro localizar a regra de negócio atual e adicionar testes de regressão compatíveis.
+
 ## Princípios que não podem ser negociados
 
 1. Integridade dos dados financeiros e preservação de lançamentos existentes.
