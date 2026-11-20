@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -73,6 +73,17 @@ const yieldTeste=T.yocCalc(hoje).lista[0];
 ok(Math.abs(yieldTeste.recebido-10)<0.01,'yield on cost exclui provento anterior à entrada na carteira');
 const legadoYield={cotas:10,ops:[{tipo:'provento',data:hoje,valor:10}]};
 ok(Math.abs(T.rpPorCota(legadoYield,legadoYield.ops[0])-1)<0.001,'yield mantém compatibilidade com posição manual sem histórico de operações');
+const metaOriginal=T.S.cfg.metaRendaPassiva;
+T.S.cfg.metaRendaPassiva=2000;
+const metaHtml=T.rpMetaHTML({media:1000,mesAtual:1000});
+ok(/50%/.test(metaHtml)&&/Faltam/.test(metaHtml),'meta de renda passiva calcula progresso e valor restante');
+delete T.S.cfg.metaRendaPassiva;
+ok(/Definir meta/.test(T.rpMetaHTML({media:null,mesAtual:0})),'meta de renda passiva oferece configuração no estado vazio');
+const metaSanea=T.sanea({cfg:{metaRendaPassiva:2500}});
+ok(metaSanea.cfg.metaRendaPassiva===2500,'meta de renda passiva persiste na configuração sincronizada');
+const metaInvalida=T.sanea({cfg:{metaRendaPassiva:-1}});
+ok(!Object.prototype.hasOwnProperty.call(metaInvalida.cfg,'metaRendaPassiva'),'meta inválida é descartada na sanitização');
+if(metaOriginal!=null)T.S.cfg.metaRendaPassiva=metaOriginal;else delete T.S.cfg.metaRendaPassiva;
 S.fiis=[];
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
