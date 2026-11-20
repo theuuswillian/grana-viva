@@ -47,4 +47,4 @@ O workflow executa também fixtures de upgrade, testes de concorrência e type-c
 
 ## Roadmap
 
-Consulte [Plano de evolução do GranaViva](docs/PLANO-EVOLUCAO-GRANAVIVA.md) e [Auditoria read-only do Supabase](docs/AUDITORIA-SUPABASE-2026-11-20.md).
+Consulte [Plano de evolução do GranaViva](docs/PLANO-EVOLUCAO-GRANAVIVA.md), [Auditoria read-only do Supabase](docs/AUDITORIA-SUPABASE-2026-11-20.md) e [Auditoria do webhook Mercado Pago](docs/AUDITORIA-WEBHOOK-MERCADOPAGO-2026-11-20.md).
