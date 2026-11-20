@@ -51,7 +51,8 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 - [x] Reconciliar os 12 arquivos não registrados individualmente contra o schema real: efeitos presentes, arquivos Pluggy obsoletos, snapshot histórico e limpeza já refletida. Nenhum replay ou reparo de histórico foi executado. Ver [auditoria Supabase](AUDITORIA-SUPABASE-2026-11-20.md).
 - [ ] Revisar proteção contra senhas comprometidas e parâmetros de autenticação; habilitar proteção contra senhas vazadas no painel Supabase e validar em homologação.
 - [ ] Avaliar a movimentação de `pg_net` para schema apropriado após verificar dependências e impacto.
-- [x] Auditar o webhook ativo e corrigir na branch o tratamento de tópicos não utilizados, preservando HMAC e idempotência; adicionar testes com vetor HMAC fixo. Ver [auditoria Mercado Pago](AUDITORIA-WEBHOOK-MERCADOPAGO-2026-11-20.md).
+- [x] Auditar o webhook ativo, ignorar tópicos não utilizados sem reservar eventos e exigir HMAC em todo webhook externo suportado; chamadas internas de sincronização usam HMAC próprio com escopo, timestamp e ID vinculados. Adicionar testes de assinatura válida/inválida, segredo ausente, sincronização interna e idempotência. Ver [auditoria Mercado Pago](AUDITORIA-WEBHOOK-MERCADOPAGO-2026-11-20.md).
+- [ ] Homologar Mercado Pago em sandbox: checkout, webhook de assinatura, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
 - [ ] Homologar Mercado Pago ponta a ponta em sandbox: checkout, webhook de assinatura, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
 - Adicionar observabilidade com correlação de request/evento, métricas de falha, fila e alertas sem registrar dados sensíveis.
 - Atualizar documentação de cron jobs, Edge Functions, secrets e procedimentos de recuperação.
