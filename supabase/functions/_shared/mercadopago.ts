@@ -237,15 +237,15 @@ export async function ultimaAssinatura(uid: string, planos: string[], token: str
  * Nunca cancela authorized/paused/canceled e sempre preserva a tentativa indicada.
  * A consulta individual é obrigatória antes do PUT: o resultado da busca é apenas candidato.
  */
-export async function cancelaPendentesDoUsuario(uid: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
-  if (!uid || !token) throw new Error("reconciliacao_parametros_invalidos");
+export async function cancelaPendentesDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+  if (!uid || !emailPagador || !token) throw new Error("reconciliacao_parametros_invalidos");
   const candidatos = new Map<string, string>();
   for (const plano of planos) {
     const ref = refExterna(uid, plano);
     let offset = 0;
     let total = 0;
     do {
-      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&external_reference=" + encodeURIComponent(ref), token, f);
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(emailPagador), token, f);
       if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
       const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
       total = Number(r.json?.paging?.total ?? resultados.length);
