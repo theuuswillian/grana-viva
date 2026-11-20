@@ -61,6 +61,8 @@ jobs:
           deno-version: v2.x
       - name: Check app JavaScript
         run: node --check app.js
+      - name: Validate complete Pluggy removal from frontend and deployment assets
+        run: node scripts/validate-remocao-pluggy.mjs
       - name: Check plan rules
         run: node testes/planos.test.cjs
       - name: Install browser test dependency
