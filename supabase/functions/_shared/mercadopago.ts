@@ -181,8 +181,9 @@ export async function buscaEstado(topico: string, dataId: string, token: string,
 }
 
 // ---------- checkout: cria a assinatura pendente e devolve o link de pagamento (Pix ou cartão, escolhido no MP) ----------
-export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string }, f: Fetch = fetch) {
+export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string; idempotencyKey: string }, f: Fetch = fetch) {
   const P = o.PLANOS[o.plano];
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(o.idempotencyKey)) throw new Error("checkout_intencao_invalida");
   // v10.161: só Pro mensal (R$ 24,90) e Pro anual (R$ 179,00) são vendidos; o Plus é legado
   if (!P || !P.preco || P.descontinuado) throw new Error("plano_nao_vendido " + o.plano);
   const body = {
@@ -196,7 +197,7 @@ export async function criaCheckout(o: { uid: string; email: string; plano: strin
   };
   const r = await f(API + "/preapproval", {
     method: "POST", signal: AbortSignal.timeout(10000),
-    headers: { Authorization: "Bearer " + o.token, "content-type": "application/json", "X-Idempotency-Key": crypto.randomUUID() },
+    headers: { Authorization: "Bearer " + o.token, "content-type": "application/json", "X-Idempotency-Key": o.idempotencyKey },
     body: JSON.stringify(body),
   });
   let j: any = null; try { j = await r.json(); } catch { /* */ }
