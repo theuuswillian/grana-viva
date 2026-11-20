@@ -419,7 +419,7 @@ function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,impLote:/^[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(t.impLote||''))?String(t.impLote):'',impHash:/^\\d{1,10}:-?\\d{1,12}$/.test(String(t.impHash||''))?String(t.impHash):'',valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).filter(f=>!f.pluggyInv).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   if(o.cfg)delete o.cfg.pluggyIgn;
   o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
@@ -474,6 +474,19 @@ function sanea(d){
   o.gerados=obj(o.gerados);
   o.cfgTs={};Object.entries(obj(d&&d.cfgTs)).forEach(([k,v])=>{if(n0(v)>0&&k.length<=60)o.cfgTs[k]=n0(v);});
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
+  o.cfg.impLotes=arr(o.cfg.impLotes).slice(-50).map(x=>({
+    id:/^[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(x.id||''))?String(x.id):'',
+    data:isoTsOk(x.data)||'',
+    arquivo:x.arquivo==='OFX'?'OFX':'CSV',
+    destino:/^(b|c):[A-Za-z0-9_|:.\\-]{1,80}$/.test(String(x.destino||''))?String(x.destino):'',
+    qtd:Math.max(0,Math.min(3000,parseInt(x.qtd,10)||0)),
+    ligados:Math.max(0,Math.min(3000,parseInt(x.ligados,10)||0)),
+    recebidas:Math.max(0,Math.min(3000,parseInt(x.recebidas,10)||0)),
+    ignorados:Math.max(0,Math.min(3000,parseInt(x.ignorados,10)||0)),
+    desfeitoEm:isoTsOk(x.desfeitoEm)||'',
+    removidos:Math.max(0,Math.min(3000,parseInt(x.removidos,10)||0)),
+    preservados:Math.max(0,Math.min(3000,parseInt(x.preservados,10)||0))
+  })).filter(x=>x.id&&x.data);
   if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
   /* v10.95: a "meta de cotas" saiu de Investimentos. o número antigo (metaFii, de backups e da nuvem antiga) não se perde:
      fica em cfg.metaCotas {n, fim:''|'criada'|'dispensada'} e a aba Metas oferece virar uma meta comum (só se for diferente de 100, o padrão) */
@@ -5655,6 +5668,37 @@ function ccVira(id){
   document.addEventListener('click',e=>{if(dis&&e.target.closest&&e.target.closest('.ccCard')){dis=false;e.stopPropagation();e.preventDefault();}},true);
   document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.ccCard'))e.preventDefault();});
 })();
+function impLoteHash(t){
+  const x={};Object.keys(t||{}).filter(k=>k!=='impHash').sort().forEach(k=>{x[k]=t[k];});
+  return hashObj(x);
+}
+function impLoteAnalisa(id){
+  const linhas=(S.tx||[]).filter(t=>t&&t.impLote===id);
+  const removiveis=linhas.filter(t=>t.impHash&&t.impHash===impLoteHash(t));
+  return {total:linhas.length,removiveis,preservados:linhas.filter(t=>!removiveis.includes(t))};
+}
+function impLoteHTML(){
+  const L=(S.cfg.impLotes||[]).slice(-8).reverse();if(!L.length)return '';
+  return `<div class="card impHist"><div class="row"><div class="txt"><h4>Importações recentes</h4><small>Desfaça um lote sem apagar lançamentos que você editou depois</small></div><span class="impHistIc">${I('history')}</span></div>
+    ${L.map(x=>{
+      const a=impLoteAnalisa(x.id),dest=x.destino.indexOf('b:')===0?S.bancos.find(b=>b.id===x.destino.slice(2)):S.cartoes.find(b=>b.id===x.destino.slice(2));
+      const tipo=x.destino.indexOf('c:')===0?'cartão':'conta',nome=dest?dest.nome:tipo;
+      const data=x.data.slice(0,10);
+      const resumo=x.desfeitoEm?'Desfeito: '+x.removidos+' removidos · '+x.preservados+' preservados':a.removiveis.length+' podem ser desfeitos'+(a.preservados.length?' · '+a.preservados.length+' protegidos':'');
+      return `<div class="impHistRow"><div class="txt"><b>${x.arquivo} · ${fmtData(data)}</b><small>${esc(nome)} · ${x.qtd} importados · ${x.ligados+x.recebidas} vinculados · ${x.ignorados} ignorados</small><small>${esc(resumo)}</small></div><button class="btn2 sm danger" data-act="imp-desfazer" data-id="${esc(x.id)}" ${x.desfeitoEm||!a.removiveis.length?'disabled':''}>Desfazer</button></div>`;
+    }).join('')}
+  </div>`;
+}
+function impLoteDesfazer(id){
+  const lote=(S.cfg.impLotes||[]).find(x=>x.id===id);if(!lote||lote.desfeitoEm)return;
+  const a=impLoteAnalisa(id);if(!a.removiveis.length){toast('Nenhum lançamento original sem alterações para desfazer.',true);return;}
+  confirma({titulo:'Desfazer importação?',texto:'Serão removidos '+a.removiveis.length+' lançamentos que continuam exatamente como foram importados. '+(a.preservados.length?a.preservados.length+' lançamento(s) editado(s) serão preservados.':'')+' O restante do extrato não será alterado.',ok:'Desfazer importação',perigo:true},()=>{
+    const ids=new Set(a.removiveis.map(t=>t.id));
+    S.tx=S.tx.filter(t=>!ids.has(t.id));
+    lote.desfeitoEm=new Date().toISOString();lote.removidos=a.removiveis.length;lote.preservados=a.preservados.length;
+    salvar();render();toast(lote.removidos+' removidos · '+lote.preservados+' preservados');
+  });
+}
 function viewBancos(){
   const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
   const pos=S.bancos.reduce((a,b)=>a+Math.max(0,saldoBanco(b)),0);
@@ -5680,7 +5724,8 @@ function viewBancos(){
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
-    :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}`;
+    :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}
+    ${impLoteHTML()}`;
 }
 /* v10.81: DM (emissora de cartões de loja) não é banco, mas aparece na escolha do cartão */
 const CC_EXTRA=[{c:'',n:'DM',d:'',t:'',sub:'cartão de loja · DMCard'}];
@@ -5967,7 +6012,12 @@ function catSugerida(desc,tipo){
   return S.cats.includes('Outros')?'Outros':S.cats[0];
 }
 const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgat|rdb|cdb|poupanca|caixinha|guardad|renda variavel|renda fixa|de investimentos|saldo de investimentos/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
-function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
+function idImport(destino,l){const k=destino+'|'+(l.fitid?'FITID:'+l.fitid:'FP:'+l.data+'|'+cents(l.valor)+'|'+norm(l.desc));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
+function impMesmoDestino(t,d){
+  const id=String(d||'').slice(2);if(!id)return false;
+  if(d.indexOf('c:')===0)return t.cartao===id;
+  const k='b:'+id;return t.conta===id||t.de===k||t.para===k;
+}
 let IMP=null;
 /* v10.17: dinheiro entre contas suas (seu nome, corretoras, câmbio) não é receita nem despesa */
 function nomeProprio(){const md=(USER&&USER.user_metadata)||{};const n=norm(String(md.full_name||md.name||S.cfg.nomeCompleto||''));return n.split(/\s+/).filter(Boolean).length>=2?n:'';}
@@ -6112,7 +6162,7 @@ function parcelaDataBanco(c,l,linhas){
 }
 function montaImport(){
   const d=IMP.destino,ehCartao=d.indexOf('c:')===0,ehConta=d.indexOf('b:')===0,usados=new Set();
-  const idOcc=new Map(); // v10.123: linhas iguais no mesmo arquivo ganham ids diferentes (antes viravam um lançamento só)
+  const idOcc=new Map(),fitids=new Set(); // mantém linhas distintas e detecta FITID repetido dentro do mesmo extrato
   IMP.linhas.forEach(l=>{
     l.tipo=l.valor<0?'despesa':'receita';
     l.transf=ehCartao&&l.valor<0&&/limite convertido|credito do limite|saldo .*limite/.test(norm(l.desc));
@@ -6126,7 +6176,9 @@ function montaImport(){
     l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
     const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l));
+    const fk=l.fitid?d+'|'+l.fitid:'',dupFitid=!!fk&&fitids.has(fk);if(fk)fitids.add(fk);
+    const descNorm=norm(l.desc||'').replace(/\\s+/g,' ').trim();
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&impMesmoDestino(t,d)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&norm(t.bancoDesc||t.descricao||'').replace(/\\s+/g,' ').trim()===descNorm&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
@@ -6147,8 +6199,9 @@ function montaImport(){
        (antes as faturas viravam despesas duplicadas e a transferência virava receita) */
     const trPlan=/transfer|emprest|devolu/.test(l.tipoPlan||'');
     const dupPlan=!dup&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
-    if(dup||dupT||dupPlan)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
-    if(dup||dupPlan)ign='já está no app';
+    if(dup||dupT||dupPlan||dupFitid)l.dup=true;
+    if(dupFitid)ign='FITID repetido neste arquivo';
+    else if(dup||dupPlan)ign='já está no app';
     else if(trPlan)ign='transferência ou empréstimo na planilha · confira antes de importar';
     else if(pv)ign='é a receita prevista '+(nomeTx(pv).n||pv.descricao||pv.categoria).slice(0,40)+' (recebe '+fmtDataCurta(pv.data)+') · fica marcada como recebida';
     else if(vmt)ign='já lançado como guardado na meta '+((S.metas.find(x=>x.id===vmt.meta)||{}).nome||'').slice(0,30)+' · fica ligado ao do banco';
@@ -6158,8 +6211,8 @@ function montaImport(){
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
-    if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
+    if(l._d!==d){l.on=!ign||dupLinha&&!dupFitid;l._d=d;}
+    l.ign=ign;l.dup=dup||dupT||dupPlan||dupFitid||!!vm||!!pv||!!vmt;if(vm||pv||vmt||dupFitid)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -6224,13 +6277,14 @@ function fixosImportAbre(L){
 }
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
-  let n=0,lig=0,rcb=0;
+  const loteId=uid(),arquivo=/\\.ofx$/i.test(IMP.nome||'')?'OFX':'CSV',totalLinhas=IMP.linhas.length;
+  let n=0,lig=0,rcb=0,ignorados=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
-    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(!l.on||S.tx.some(t=>t.id===l.id))return;
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}else ignorados++;return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}else ignorados++;return;}
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}else ignorados++;return;}
+    if(!l.on||S.tx.some(t=>t.id===l.id)){ignorados++;return;}
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
     if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
@@ -6241,11 +6295,17 @@ function confirmaImport(){
       t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:alvo};Object.assign(t,{tipo:'transf',emp:l.empSug,empDir:dir,categoria:'Empréstimo',de:dir==='out'?d:'',para:dir==='in'?d:'',conta:'',forma:'',cartao:''});delete t.rev;}
     else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     if(l.trab&&t.tipo==='receita'&&ISO_RE.test(l.trab))t.trab=l.trab; // v10.84: dia trabalhado vindo da planilha
+    t.impLote=loteId;t.impHash=impLoteHash(t);
     S.tx.push(t);n++;});
   const mudo=!!IMP.silent;
   /* v10.165: extrato lido pela IA com linhas marcadas como provável conta fixa (assinatura, streaming, academia...):
      depois de importar, oferece salvar como contas fixas mensais, com uma caixa de seleção por assinatura */
   const sugFixos=IMP.ia?fixosDoImport(IMP.linhas,alvo,!ehCartao):[];
+  if(n){
+    if(!S.cfg.impLotes)S.cfg.impLotes=[];
+    S.cfg.impLotes.push({id:loteId,data:new Date().toISOString(),arquivo,destino:d,qtd:n,ligados:lig,recebidas:rcb,ignorados:Math.max(0,totalLinhas-n-lig-rcb)});
+    S.cfg.impLotes=S.cfg.impLotes.slice(-50);
+  }
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
   if(sugFixos.length&&!mudo)setTimeout(()=>fixosImportAbre(sugFixos),400);
   if(!mudo)toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
@@ -9322,6 +9382,7 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
+  'imp-desfazer':id=>impLoteDesfazer(id),
   'wa-ligar':()=>waLigar(),
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
