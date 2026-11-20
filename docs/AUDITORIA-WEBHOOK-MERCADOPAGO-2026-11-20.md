@@ -34,7 +34,7 @@ O handler agora reconhece os tópicos efetivamente utilizados. Tópicos não sup
 - chamar a API do Mercado Pago;
 - alterar a assinatura de qualquer usuário.
 
-Para os tópicos suportados, a validação HMAC continua obrigatória quando `MP_WEBHOOK_SECRET` está configurado. Uma assinatura ausente ou inválida continua sendo recusada com HTTP 401. A confirmação do plano continua baseada na consulta autenticada à API do Mercado Pago, nunca no conteúdo não confiável do webhook.
+Para os tópicos suportados, a validação HMAC é obrigatória em todo webhook externo. Se `MP_WEBHOOK_SECRET` estiver ausente, a função agora falha fechada com HTTP 503 e não reserva o evento. Se o segredo estiver configurado, assinatura ausente ou inválida é recusada com HTTP 401. A única exceção é a sincronização iniciada pela Edge Function `assinatura`, autenticada por HMAC interno com a chave service-role, escopo `mp-sync`, timestamp limitado e `data.id` vinculado. A confirmação do plano continua baseada na consulta autenticada à API do Mercado Pago, nunca no conteúdo não confiável do webhook.
 
 ## Testes adicionados
 
@@ -49,11 +49,13 @@ A suíte Deno do CI concluiu com sucesso após a inclusão desses testes. O rest
 
 - O log não permite determinar se o segredo configurado divergia da chave esperada pelo Mercado Pago; nenhum valor secreto foi lido.
 - O evento observado era de plano, não prova falha de uma notificação de assinatura individual.
-- A correção está apenas na branch e na PR #27. A versão 22 em produção não foi substituída.
+- A documentação oficial atual do Mercado Pago para Assinaturas descreve o header `x-signature` e a validação HMAC; a implementação não deve aceitar webhook externo sem segredo configurado. A ausência do segredo é uma falha de configuração, não um modo degradado seguro.
+- A correção e os testes estão apenas na branch e na PR #27. A versão 22 em produção não foi substituída.
 - Antes de publicar, realizar um ciclo sandbox de criação de assinatura, autorização, renovação, cancelamento e reenvio do mesmo webhook. Confirmar no painel do Mercado Pago os tópicos e URLs realmente enviados.
 - Não remover nem relaxar a verificação HMAC dos tópicos suportados sem validar a configuração oficial do provedor.
 
 ## Referências do provedor
 
+- Webhooks de assinaturas (inclui exemplo de `x-signature` e HMAC): https://www.mercadopago.com.br/developers/pt/docs/subscriptions/additional-content/your-integrations/notifications/webhooks
 - Webhooks de assinaturas: https://www.mercadopago.com.br/developers/pt/docs/subscriptions/additional-content/your-integrations/notifications/webhooks
 - A documentação diferencia `subscription_preapproval`, `subscription_authorized_payment` e `subscription_preapproval_plan`, e aponta endpoints distintos para assinatura e plano.
