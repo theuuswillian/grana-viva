@@ -425,7 +425,7 @@ function sanea(d){
   o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
   o.fiis.forEach(f=>delete f.pluggyInv);
   if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
-  if(o.cfg){const mr=n0(o.cfg.metaRendaPassiva);if(mr>0&&isFinite(mr))o.cfg.metaRendaPassiva=c2(Math.min(1000000000,mr));else delete o.cfg.metaRendaPassiva;} // meta mensal de renda passiva
+  if(o.cfg){const mr=n0(o.cfg.metaRendaPassiva),mp=Math.round(n0(o.cfg.metaRendaPrazoAnos));if(mr>0&&isFinite(mr))o.cfg.metaRendaPassiva=c2(Math.min(1000000000,mr));else delete o.cfg.metaRendaPassiva;if(mp>=1&&mp<=50)o.cfg.metaRendaPrazoAnos=mp;else delete o.cfg.metaRendaPrazoAnos;} // meta mensal de renda passiva
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
   /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
@@ -4356,20 +4356,31 @@ function rpMetaHTML(R){
   const atual=R.media!=null?Math.max(0,+R.media||0):Math.max(0,+R.mesAtual||0);
   const pct=Math.max(0,Math.min(100,atual/meta*100)),falta=Math.max(0,meta-atual);
   const v=x=>OCULTO?'R$ •••••':brl(x);
+  const ativos=S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f))&&f.cotas>0);
+  const capital=ativos.reduce((a,f)=>a+cents(Math.max(0,+f.cotas||0)*Math.max(0,+f.preco||0)),0)/100;
+  const prazo=Math.max(1,Math.min(50,Math.round(+S.cfg.metaRendaPrazoAnos||10)));
+  const dy=R.mediaN>=12&&R.media>0&&capital>0?(R.media*12)/capital:0;
+  const capAlvo=dy>0?meta*12/dy:0;
+  const aporte=dy>0?Math.max(0,capAlvo-capital)/(prazo*12):null;
+  const proj=aporte==null
+    ?'<div class="rpMetaProj"><p>O aporte de referência aparecerá após 12 meses de histórico de proventos registrados.</p></div>'
+    :'<div class="rpMetaProj"><div><small>Capital estimado para a meta</small><b>'+v(capAlvo)+'</b></div><div><small>Aporte mensal em '+prazo+' anos</small><b>'+v(aporte)+'</b></div><p>Estimativa linear baseada no yield histórico dos últimos 12 meses. Não considera valorização, reinvestimento, impostos ou taxas e não representa garantia.</p></div>';
   return '<div class="rpMeta"><div class="rpMetaTop"><b>Meta mensal</b><button type="button" class="btn2 sm" data-act="rp-meta">Editar</button></div>'
     +'<div class="rpMetaNums"><b>'+v(atual)+' <small>de '+v(meta)+'</small></b><strong>'+(OCULTO?'•••%':Math.round(pct)+'%')+'</strong></div>'
     +'<div class="rpMetaBar" role="progressbar" aria-label="Progresso da meta de renda passiva" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div>'
     +'<p>'+(falta>0?'Faltam '+v(falta)+' por mês para atingir sua meta.':'Meta mensal atingida com base na renda registrada.')+'</p>'
-    +'<small>Base: '+(R.media!=null?'média dos proventos realizados':'proventos recebidos neste mês')+'; não inclui projeções.</small></div>';
+    +proj
+    +'<small>Base: '+(R.media!=null?'média dos proventos realizados':'proventos recebidos neste mês')+'; inclui FIIs, ações, ETFs e BDRs; não inclui projeções.</small></div>';
 }
 function rpMetaForm(){
   const atual=+S.cfg.metaRendaPassiva||0;
-  form('Meta de renda passiva',[{name:'valor',label:'Quanto deseja receber por mês (R$)',value:atual?num(atual):'',inputmode:'decimal',placeholder:'ex.: 2000'}],v=>{
+  form('Meta de renda passiva',[{name:'valor',label:'Quanto deseja receber por mês (R$)',value:atual?num(atual):'',inputmode:'decimal',placeholder:'ex.: 2000'},{name:'prazo',label:'Em quantos anos deseja alcançar (1 a 50)',value:S.cfg.metaRendaPrazoAnos||10,inputmode:'numeric'}],v=>{
     const raw=String(v.valor||'').trim();
-    if(!raw){delete S.cfg.metaRendaPassiva;salvar();render();toast('Meta removida');return;}
-    const n=parseBR(raw);
+    if(!raw){delete S.cfg.metaRendaPassiva;delete S.cfg.metaRendaPrazoAnos;salvar();render();toast('Meta removida');return;}
+    const n=parseBR(raw),anos=Math.round(n0(v.prazo)||10);
     if(!(n>0)||n>1000000000)return 'Informe uma meta mensal válida.';
-    S.cfg.metaRendaPassiva=c2(n);salvar();render();toast('Meta de renda passiva salva');
+    if(anos<1||anos>50)return 'Informe um prazo entre 1 e 50 anos.';
+    S.cfg.metaRendaPassiva=c2(n);S.cfg.metaRendaPrazoAnos=anos;salvar();render();toast('Meta de renda passiva salva');
   });
 }
 function rpCardHTML(R){
