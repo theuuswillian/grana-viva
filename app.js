@@ -3238,6 +3238,7 @@ function viewInicioMVP(){
   ${faturasAbertasHTML(true)}
   ${proxVencHTML()}
   ${patTotalHTML()}
+  ${rpMetaHTML(rpCalc())}
   ${dicaInstalarHTML(false)}`;
 }
 /* barra inteligente: frase (IA ou compra de ativo) + câmera do recibo no mesmo campo + lançamento manual */
@@ -3807,6 +3808,7 @@ function viewInicio(){
     <div class="legend"><span><i class="dot" style="background:${COR_REC()}"></i>receitas</span><span><i class="dot" style="background:${COR_DES()}"></i>despesas</span></div>
   </div>
   ${cartHTML}
+  ${rpMetaHTML(rpCalc())}
   ${dicaInstalarHTML(false)}`;
 }
 function proximosVenc(dias){const h=new Date();return vencEntre(hojeISO(),isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),true);}
