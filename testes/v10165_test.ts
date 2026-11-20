@@ -255,8 +255,8 @@ Deno.test("Mercado Pago: reconcilia somente preapproval pendente do próprio usu
     const method = init?.method || "GET";
     chamadas.push(method + " " + url);
     if (url.includes("/preapproval/search?")) {
-      const ref = new URL(url).searchParams.get("external_reference");
-      if (ref === "gv1:" + uid + ":pro") {
+      const email = new URL(url).searchParams.get("payer_email");
+      if (email === "teste@exemplo.com") {
         return new Response(JSON.stringify({ paging: { total: 2 }, results: [
           { id: "sub-pending", status: "pending", external_reference: ref },
           { id: "sub-active", status: "authorized", external_reference: ref },
@@ -277,7 +277,7 @@ Deno.test("Mercado Pago: reconcilia somente preapproval pendente do próprio usu
     }
     throw new Error("chamada inesperada " + method + " " + url);
   }) as typeof fetch;
-  const r = await MP.cancelaPendentesDoUsuario(uid, ["pro", "pro_anual"], "token", {
+  const r = await MP.cancelaPendentesDoUsuario(uid, "teste@exemplo.com", ["pro", "pro_anual"], "token", {
     pro: { preco: 24.9, periodo: "mes" },
     pro_anual: { preco: 179, periodo: "ano" },
   }, "sub-atual", f);
