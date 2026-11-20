@@ -382,5 +382,5 @@ Deno.test("Mercado Pago: falha fechada quando ID persistido ainda retorna 404", 
       plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-ainda-nao-visivel",
     }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
   } catch (e) { erro = String(e); }
-  ok(erro.includes("mp_checkout_registrado_ainda_nao_localizado"), "404 em ID persistido bloqueia nova cobrança");
+  eq(erro.includes("mp_checkout_registrado_ainda_nao_localizado"), true, "404 em ID persistido bloqueia nova cobrança");
 });
