@@ -47,15 +47,51 @@ Deno.serve(async (req) => {
     if (emIn && (emIn.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn))) return json({ erro: "confira o e-mail do Mercado Pago" }, 400);
     const emailPagador = emIn || user.email || "";
     if (!emailPagador) return json({ erro: "informe o e-mail da sua conta Mercado Pago" }, 400);
+    const intentId = String(body?.intentId || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)) {
+      return json({ erro: "inicie novamente a tentativa de pagamento" }, 400);
+    }
     const { data: okH } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "checkout", p_lim: 6, p_seg: 3600 });
     if (!okH) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
+
+    // A intenção é persistida ANTES de chamar o Mercado Pago. Retries do mesmo clique
+    // reutilizam o mesmo UUID como X-Idempotency-Key; novo checkout exige novo intentId.
+    const { error: ie } = await sb.from("pagamento_checkout_intencoes").insert({
+      id: intentId, user_id: user.id, plano, email_pagador: emailPagador, status: "pendente",
+    });
+    let intencao: any = null;
+    if (ie?.code === "23505") {
+      const { data, error } = await sb.from("pagamento_checkout_intencoes")
+        .select("user_id,plano,email_pagador,status,init_point")
+        .eq("id", intentId).maybeSingle();
+      if (error) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+      if (!data || data.user_id !== user.id || data.plano !== plano || data.email_pagador !== emailPagador) {
+        return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
+      }
+      intencao = data;
+    } else if (ie) {
+      console.log("checkout_intencao", String(ie.message || ie.code));
+      return json({ erro: "não consegui preparar o pagamento agora" }, 503);
+    }
+    if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
+
     const app = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
     try {
       const c = await MP.criaCheckout({
-        uid: user.id, email: emailPagador, plano, token, PLANOS: GVP.PLANOS,
+        uid: user.id, email: emailPagador, plano, token, PLANOS: GVP.PLANOS, idempotencyKey: intentId,
         notificationUrl: Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago",
         backUrl: app + "?assinatura=retorno",
       });
+      const { data: salvo, error: se } = await sb.from("pagamento_checkout_intencoes")
+        .update({ status: "criado", provedor_preapproval_id: c.id, init_point: c.url, atualizado_em: new Date().toISOString() })
+        .eq("id", intentId).eq("user_id", user.id).eq("status", "pendente").select("id").maybeSingle();
+      if (se) throw se;
+      if (!salvo) {
+        const { data: atual, error: ae } = await sb.from("pagamento_checkout_intencoes")
+          .select("status,init_point").eq("id", intentId).eq("user_id", user.id).maybeSingle();
+        if (ae || atual?.status !== "criado" || !atual.init_point) throw ae || new Error("checkout_intencao_nao_finalizada");
+        return json({ url: atual.init_point, reutilizado: true });
+      }
       return json({ url: c.url });
     } catch (e) { console.log("checkout", String(e)); await registraErro(sb, "assinatura", "checkout", e); return json({ erro: "não consegui abrir o pagamento agora" }, 502); }
   }
