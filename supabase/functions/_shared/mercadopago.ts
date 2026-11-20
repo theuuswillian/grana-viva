@@ -248,27 +248,29 @@ export async function ultimaAssinatura(uid: string, emails: string[], planos: st
  * GET seguido de PUT pode cancelar uma assinatura que acabou de ser autorizada.
  * Portanto esta rotina é somente leitura e nunca envia PUT.
  */
-export async function consultaCheckoutsDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
-  if (!uid || !emailPagador || !token) throw new Error("reconciliacao_parametros_invalidos");
+export async function consultaCheckoutsDoUsuario(uid: string, emails: string[], planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+  if (!uid || !emails?.some((x) => String(x || "").trim()) || !token) throw new Error("reconciliacao_parametros_invalidos");
   const permitidos = new Set(planos);
   const candidatos = new Map<string, string>();
-  let offset = 0;
-  let total = 0;
-  do {
-    const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(emailPagador), token, f);
-    if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
-    const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
-    total = Number(r.json?.paging?.total ?? resultados.length);
-    for (const item of resultados) {
-      const id = String(item?.id || "");
-      const vinculo = lerRef(item?.external_reference);
-      if (!id || id === preservarId || !["pending", "authorized"].includes(String(item?.status)) || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
-      candidatos.set(id, vinculo.plano);
-    }
-    offset += resultados.length;
-    if (resultados.length === 0) break;
-    if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
-  } while (offset < total);
+  for (const email of [...new Set(emails.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))]) {
+    let offset = 0;
+    let total = 0;
+    do {
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(email), token, f);
+      if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
+      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+      total = Number(r.json?.paging?.total ?? resultados.length);
+      for (const item of resultados) {
+        const id = String(item?.id || "");
+        const vinculo = lerRef(item?.external_reference);
+        if (!id || id === preservarId || !["pending", "authorized"].includes(String(item?.status)) || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
+        candidatos.set(id, vinculo.plano);
+      }
+      offset += resultados.length;
+      if (resultados.length === 0) break;
+      if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
+    } while (offset < total);
+  }
 
   const pendentes: Array<{ id: string; url: string; plano: string; criado: number }> = [];
   const autorizadas: Array<{ id: string; plano: string; criado: number }> = [];
