@@ -20,5 +20,6 @@ create index if not exists pagamento_checkout_user_criado
 
 alter table public.pagamento_checkout_intencoes enable row level security;
 revoke all on public.pagamento_checkout_intencoes from anon, authenticated, public;
+grant select, insert, update on public.pagamento_checkout_intencoes to service_role;
 
 commit;
