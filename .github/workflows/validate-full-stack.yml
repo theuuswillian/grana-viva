@@ -42,6 +42,9 @@ on:
       - auditoria/whatsapp-vinculo-atomico-integrado-2026-11-19
       - correcoes/pagamento-lease-fencing-2026-11-19
       - correcoes/checkout-idempotencia-2026-11-19
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
