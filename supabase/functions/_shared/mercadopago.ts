@@ -258,7 +258,9 @@ export async function consultaCheckoutsRegistrados(uid: string, registros: Array
     if (!id || vistos.has(id) || !PLANOS[plano] || !registro?.email_pagador) continue;
     vistos.add(id);
     const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
-    if (atual.status === 404) continue;
+    // Um ID já persistido não pode ser tratado como inexistente: o 404 pode ser transitório
+    // durante a propagação do provedor. Falha fechada para impedir um checkout duplicado.
+    if (atual.status === 404) throw new Error("mp_checkout_registrado_ainda_nao_localizado");
     if (atual.status !== 200) throw new Error("mp_confirma_checkout_registrado " + atual.status);
     const p = atual.json;
     const vinculo = lerRef(p?.external_reference);
