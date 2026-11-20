@@ -7,7 +7,7 @@ import { confereInterno } from "./seguro.ts";
 export type Linha = { plano: string; status: string; periodo_fim: string | null; provedor?: string | null; provedor_assinatura_id?: string | null; provedor_cliente_id?: string | null } | null;
 export type StatusReserva = "novo" | "retomado" | "pendente" | "concluido";
 export type Reserva = { status: StatusReserva; token: string };
-export type ResultadoAplicacao = "aplicado" | "fundador_mantido" | "outra_assinatura_ativa" | "perdido";
+export type ResultadoAplicacao = "aplicado" | "fundador_mantido" | "outra_assinatura_ativa" | "obsoleto" | "perdido";
 export type DB = {
   reservaEvento(id: string, meta: { provedor: string; topico: string; recurso_id: string }): Promise<Reserva>;
   concluiEvento(id: string, token: string, resultado: string, uid?: string | null): Promise<boolean>;
@@ -85,10 +85,11 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
     periodo_fim: e.periodo_fim,
     provedor_assinatura_id: e.provedor_assinatura_id,
     provedor_cliente_id: e.provedor_cliente_id,
+    provedor_versao: e.provedor_versao,
   };
   const aplicado = await d.db.aplicaAssinaturaEvento(chave, lease, e.uid, campos);
   if (aplicado === "perdido") return ocupado();
-  if (aplicado === "fundador_mantido" || aplicado === "outra_assinatura_ativa") {
+  if (aplicado === "fundador_mantido" || aplicado === "outra_assinatura_ativa" || aplicado === "obsoleto") {
     return resp({ ok: true, resultado: aplicado });
   }
   return resp({ ok: true, resultado: "aplicado", status: e.status, plano: e.plano });
