@@ -67,8 +67,8 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 - [x] Histórico de até 50 lotes com formato, data, destino e contagem de importados/vinculados/ignorados.
 - [x] Desfazer lote remove somente registros novos que permanecem iguais ao snapshot pós-importação; registros editados depois são preservados.
 - [x] Testes de parser OFX SGML, CSV brasileiro, reimportação, duplicidade e proteção de registros editados.
-- [ ] Mapeamento manual de colunas CSV para formatos bancários fora dos cabeçalhos reconhecidos.
-- [ ] Conciliação de saldo inicial/final e identificação de divergências.
+- [x] Mapeamento manual de colunas CSV para formatos bancários fora dos cabeçalhos reconhecidos; a prévia é mantida e nenhum lançamento é salvo durante o mapeamento.
+- [x] Conciliação opcional de saldo inicial/final; divergências são exibidas e exigem reconhecimento explícito antes da importação.
 - [ ] Cobertura ampliada de estornos, transferências, datas de competência e arquivos grandes.
 
 **Critério de aceite parcial atingido:** reimportar o mesmo arquivo reconhece lançamentos já importados; o histórico permite desfazer com proteção a alterações posteriores. O fluxo ainda não oferece mapeamento livre de colunas nem conciliação de saldos.
