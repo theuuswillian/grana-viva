@@ -14,14 +14,66 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
-T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
-const S=T.S;S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
-S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
 const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
+ok(T.checkoutUrlMercadoPago('https://www.mercadopago.com.br/checkout/teste'),'checkout aceita domínio oficial Mercado Pago');
+ok(T.checkoutUrlMercadoPago('https://mercadopago.com/checkout/teste'),'checkout aceita domínio oficial sem .br');
+ok(!T.checkoutUrlMercadoPago('https://mercadopago.com.evil.example/'),'checkout rejeita domínio com sufixo malicioso');
+ok(!T.checkoutUrlMercadoPago('https://evilmercadopago.com.br/'),'checkout rejeita domínio parecido');
+ok(!T.checkoutUrlMercadoPago('http://www.mercadopago.com.br/'),'checkout exige HTTPS');
+ok(!T.checkoutUrlMercadoPago('javascript:alert(1)'),'checkout rejeita protocolo não HTTPS');
+const limpo=T.sanea({tx:[{id:'legado',pluggyId:'old-1',data:'2026-11-18',tipo:'despesa',valor:10},{id:'manual',data:'2026-11-18',tipo:'despesa',valor:20,par:{id:'par',pluggyId:'old-2'}}],fiis:[{id:'legado-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:10},{id:'manual-fii',ticker:'MXRF11',cotas:1,preco:10}],cfg:{tema:'dark',pluggyIgn:['old-1']}});
+ok(limpo.tx.length===1&&limpo.tx[0].id==='manual'&&!limpo.tx[0].par.pluggyId,'cópia local descarta registros antigos e limpa referência aninhada');
+ok(limpo.fiis.length===1&&limpo.fiis[0].id==='manual-fii'&&!('pluggyInv' in limpo.fiis[0]),'cópia local descarta posição importada antiga');
+ok(!('pluggyIgn' in limpo.cfg),'cópia local limpa lista antiga de identificadores');
+T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
+const S=T.S;
+S.tx=[{id:'cache-legado',pluggyId:'old-3',data:'2026-11-18',tipo:'despesa',valor:5},{id:'cache-manual',data:'2026-11-18',tipo:'despesa',valor:8,par:{id:'p',pluggyId:'old-4'}}];
+S.fiis=[{id:'cache-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:5}];
+S.cfg.pluggyIgn=['old-3'];
+T.limpaLegadoLocal();
+ok(S.tx.length===1&&S.tx[0].id==='cache-manual'&&!S.tx[0].par.pluggyId,'limpeza do cache antes de sincronizar preserva lançamento manual');
+ok(S.fiis.length===0&&!('pluggyIgn' in S.cfg),'limpeza do cache antes de sincronizar remove posição e configuração antiga');
+S.tx=[];S.fiis=[];
+S.bancos=S.bancos&&S.bancos.length?S.bancos:[{id:'b1',nome:'Nubank',tipo:'Conta corrente',saldo:1000,principal:true}];
+S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
+// saldo livre: inclui faturas vencidas/fechadas, parciais e o ciclo atual; ignora parcelas futuras.
+const hoje=T.hojeISO();
+const mesN=(n)=>{const d=new Date(hoje+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()-n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-15';};
+const dataPg=mesN(1).slice(0,8)+'20';
+S.bancos=[{id:'b-fin',nome:'Conta teste',saldo:2000,saldoData:hoje,saldoFecha:true}];
+S.cartoes=[{id:'c-fin',nome:'Cartão teste',fechamento:15,vencimento:25,limite:5000}];
+delete S.cfg.pagDesde;T.resetMemo();
+S.tx=[
+ {id:'fat-parcial',faturaKey:'fat|c-fin|'+mesN(1).slice(0,7),data:mesN(1),tipo:'despesa',cartao:'c-fin',valor:1000,pagoValor:400,pagamentos:[{valor:400,data:dataPg,conta:'b-fin'}]},
+ {id:'fat-vencida',faturaKey:'fat|c-fin|'+mesN(2).slice(0,7),data:mesN(2),tipo:'despesa',cartao:'c-fin',valor:300,pagoValor:0,pagamentos:[]},
+ {id:'compra-ciclo',tipo:'despesa',data:hoje,valor:200,cartao:'c-fin',forma:'cartao'}
+];
+const stTeste=T.saldoTotal(),slTeste=T.saldoLivre();
+ok(Math.abs(stTeste-2000)<0.01,'saldo total mantém o saldo bancário após pagamento já refletido na conta');
+ok(Math.abs(slTeste-900)<0.01,'saldo livre desconta duas faturas antigas e o ciclo atual, sem somar parcelas futuras');
+S.tx=[];S.cartoes=[{id:'c1',nome:'Nubank',banco:'Nubank',limite:5000,fecha:20,vence:27,cor:'roxo'}];
+const ativoYield={id:'yield-test',tipo:'fii',ticker:'TST11',cotas:10,pago:100,preco:10,ops:[{tipo:'compra',data:mesN(1),qtd:10,preco:10},{tipo:'provento',data:mesN(2),valor:100},{tipo:'provento',data:hoje,valor:10}]};
+ok(T.rpPorCota(ativoYield,ativoYield.ops[1])===0,'yield não atribui provento anterior à compra');
+ok(Math.abs(T.rpPorCota(ativoYield,ativoYield.ops[2])-1)<0.001,'yield calcula provento com cotas efetivas na data');
+const ymOps=mesN(1).slice(0,7),foraOrdem={cotas:3,ops:[{tipo:'compra',data:ymOps+'-01',qtd:10},{tipo:'venda',data:ymOps+'-10',qtd:12},{tipo:'compra',data:ymOps+'-05',qtd:5}]};
+ok(Math.abs(T.rpPorCota(foraOrdem,{data:ymOps+'-12',valor:3})-1)<0.001,'yield reconstrói cotas em ordem cronológica mesmo com compra retroativa');
+const posicaoDatada={id:'initial-date-test',tipo:'fii',ticker:'INI11',cotas:10,ops:[{tipo:'venda',data:ymOps+'-01',qtd:5,preco:10},{tipo:'inicial',data:ymOps+'-05',qtd:10,custo:100}]};
+ok(T.calcOps(posicaoDatada.ops).qtd===10,'posição inicial datada não é afetada por venda anterior à data-base');
+ok(T.rpPorCota(posicaoDatada,{data:ymOps+'-01',valor:10})===0,'provento anterior à posição inicial datada não recebe cotas futuras');
+ok(Math.abs(T.rpPorCota(posicaoDatada,{data:ymOps+'-05',valor:10})-1)<0.001,'posição inicial passa a valer na própria data registrada');
+S.fiis=[posicaoDatada];
+ok(T.irVendas().length===0,'apuração de vendas ignora venda anterior à posição inicial datada');
+S.fiis=[];
+S.fiis=[ativoYield];
+const yieldTeste=T.yocCalc(hoje).lista[0];
+ok(Math.abs(yieldTeste.recebido-10)<0.01,'yield on cost exclui provento anterior à entrada na carteira');
+const legadoYield={cotas:10,ops:[{tipo:'provento',data:hoje,valor:10}]};
+ok(Math.abs(T.rpPorCota(legadoYield,legadoYield.ops[0])-1)<0.001,'yield mantém compatibilidade com posição manual sem histórico de operações');
+S.fiis=[];
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
 const view=()=>doc.querySelector('#view').innerHTML;
@@ -60,6 +112,24 @@ const fa=T.faturasAbertasHTML(false);ok(/logos\/nubank\.com\.br\.png/.test(fa),'
 // fixos do extrato
 const fx=T.fixosDoImport([{fixo:true,on:true,tipo:'despesa',valor:-55.9,desc:'NETFLIX.COM',data:'2026-11-03',cat:'Assinaturas'},{fixo:true,on:true,tipo:'despesa',valor:-55.9,desc:'NETFLIX.COM',data:'2026-10-03',cat:'Assinaturas'},{fixo:false,on:true,tipo:'despesa',valor:-10,desc:'PADARIA',data:'2026-11-03'}],'b1',true);
 ok(fx.length===1&&fx[0].meses.size===2&&fx[0].data==='2026-11-03','extrato: 1 assinatura sugerida com 2 meses');
+// regressão: importação CSV/OFX local continua funcionando sem o fluxo bancário Pluggy
+const nImport=T.S.tx.length;
+T.IMP={nome:'extrato-teste.csv',cartao:false,linhas:[{desc:'PADARIA TESTE',valor:-23.5,data:T.hojeSP()}],destino:'b:b1'};
+T.montaImport();
+const impHtml=doc.querySelector('#modal').innerHTML;
+ok(/Importar extrato/.test(impHtml)&&!/Lançamentos do banco|pular esta conta|não importar esta conta/.test(impHtml),'importação local sem controles da integração bancária');
+T.confirmaImport();
+ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.length-1].conta==='b1','CSV/OFX importa lançamento na conta selecionada');
+// regressão: recuperação de parcelas antigas usa apenas o histórico local e não chama código removido
+const txAntesParc=T.S.tx,cartoesAntesParc=T.S.cartoes;
+T.S.cartoes=[{id:'prc-card',fechamento:20,vencimento:27}];
+T.S.tx=[
+  {id:'hist-parc-1',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 1/3',data:'2026-09-20',dataCompra:'2026-09-20',cartao:'prc-card',importado:true,impId:'historico-1'},
+  {id:'hist-parc-2',tipo:'despesa',valor:20,categoria:'',descricao:'LOJA PARC 2/3',data:'2026-10-20',dataCompra:'2026-09-20',cartao:'prc-card',importado:true,impId:'historico-2'}
+];
+const prcLocal=T.prcDetecta([]);
+ok(prcLocal.add.length===1&&typeof prcLocal.add[0].categoria==='string'&&prcLocal.add[0].categoria.length>0,'parcela faltante recuperada só pelo histórico local');
+T.S.tx=txAntesParc;T.S.cartoes=cartoesAntesParc;
 ok(/Resumo semanal toda segunda às 8h/.test(T.waResumoHTML(false))&&/wa-copia/.test(T.waCmdHTML()),'WhatsApp: toggle e chips');
 T.demoLimpa();ok(!T.S.tx.some(t=>t.demo),'Limpar exemplo apaga tudo de exemplo');
 // privacidade

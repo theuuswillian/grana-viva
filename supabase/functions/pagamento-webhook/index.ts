@@ -1,37 +1,57 @@
-// pagamento-webhook (v10.82): recebe os avisos do provedor de pagamento (Mercado Pago) e é a ÚNICA coisa que ativa,
-// renova ou encerra um plano pago na tabela assinaturas. Nada que vem do navegador muda plano.
-// verify_jwt desligado (o Mercado Pago não manda login); a segurança é: assinatura conferida quando vem + consulta à API do MP
-// com o token do servidor + eventos já processados guardados em pagamento_eventos.
-// Secrets: MP_ACCESS_TOKEN (obrigatório para funcionar), MP_WEBHOOK_SECRET (v10.165: quando configurado, x-signature é obrigatória;
-//          a única exceção é a chamada interna da função assinatura {sincronizar}, assinada com x-gv-interno).
-// v10.93: mercadopago.ts, webhook-nucleo.ts e planos.js vêm de ../_shared (planos.js de lá é gerado de /planos.js por deploy-fn.py).
+// pagamento-webhook: única porta que ativa, renova ou encerra um plano pago.
+// A reserva, aplicação da assinatura e conclusão usam RPCs transacionais com fencing token.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import "../_shared/planos.js";
-import { processaWebhook, type DB } from "../_shared/webhook-nucleo.ts";
+import { processaWebhook, type DB, type ResultadoAplicacao, type Reserva } from "../_shared/webhook-nucleo.ts";
 import { registraErro } from "../_shared/erros.ts";
 const GVP = (globalThis as any).GVP;
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
 const db: DB = {
-  async reservaEvento(id, meta) {
-    const { error } = await sb.from("pagamento_eventos").insert({ id, provedor: meta.provedor, topico: meta.topico, recurso_id: meta.recurso_id });
-    if (!error) return "novo";
-    if (error.code !== "23505") throw error;
-    const { data } = await sb.from("pagamento_eventos").select("processado_em").eq("id", id).maybeSingle();
-    return data?.processado_em ? "concluido" : "pendente";
-  },
-  async concluiEvento(id, resultado, uid) {
-    const { error } = await sb.from("pagamento_eventos").update({ processado_em: new Date().toISOString(), resultado: resultado.slice(0, 200), user_id: uid ?? null }).eq("id", id);
+  async reservaEvento(id, meta): Promise<Reserva> {
+    const token = crypto.randomUUID();
+    const { data, error } = await sb.rpc("pagamento_evento_reserva", {
+      p_id: id,
+      p_token: token,
+      p_provedor: meta.provedor,
+      p_topico: meta.topico,
+      p_recurso_id: meta.recurso_id,
+      p_lease_seconds: 120,
+    });
     if (error) throw error;
+    if (data === "novo" || data === "retomado") return { status: data, token };
+    if (data === "pendente" || data === "concluido") return { status: data, token };
+    throw new Error("status inesperado ao reservar evento de pagamento");
+  },
+  async concluiEvento(id, token, resultado, uid) {
+    const { data, error } = await sb.rpc("pagamento_evento_finaliza", {
+      p_id: id, p_token: token, p_resultado: resultado.slice(0, 200), p_uid: uid ?? null,
+    });
+    if (error) throw error;
+    return data === true;
   },
   async leAssinatura(uid) {
-    const { data, error } = await sb.from("assinaturas").select("plano,status,periodo_fim,provedor,provedor_assinatura_id,provedor_cliente_id").eq("user_id", uid).maybeSingle();
+    const { data, error } = await sb.from("assinaturas")
+      .select("plano,status,periodo_fim,provedor,provedor_assinatura_id,provedor_cliente_id")
+      .eq("user_id", uid).maybeSingle();
     if (error) throw error;
     return data;
   },
-  async gravaAssinatura(uid, campos) {
-    const { error } = await sb.from("assinaturas").upsert({ user_id: uid, ...campos }, { onConflict: "user_id" });
+  async aplicaAssinaturaEvento(id, token, uid, campos): Promise<ResultadoAplicacao> {
+    const { data, error } = await sb.rpc("pagamento_evento_aplica_assinatura", {
+      p_id: id,
+      p_token: token,
+      p_uid: uid,
+      p_plano: String(campos.plano),
+      p_status: String(campos.status),
+      p_periodo_fim: campos.periodo_fim ?? null,
+      p_provedor_assinatura_id: String(campos.provedor_assinatura_id),
+      p_provedor_cliente_id: campos.provedor_cliente_id ?? null,
+      p_provedor_versao: Number(campos.provedor_versao),
+    });
     if (error) throw error;
+    if (data === "aplicado" || data === "fundador_mantido" || data === "outra_assinatura_ativa" || data === "obsoleto" || data === "perdido") return data;
+    throw new Error("resultado inesperado ao aplicar assinatura");
   },
 };
 
