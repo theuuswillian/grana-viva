@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     if (!intencao) {
       // Limpeza ocorre antes de persistir a nova intenção: se falhar, o retry poderá tentar novamente.
       try {
-        await MP.cancelaPendentesDoUsuario(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        await MP.cancelaPendentesDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
       } catch (e) {
         console.log("reconciliacao_checkout", String(e));
         await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
