@@ -68,6 +68,33 @@ Deno.serve(async (req) => {
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
     if (!intencao) {
+      // Consulta IDs já persistidos antes da busca por e-mail: ela pode ter atraso de consistência.
+      // Assim, uma assinatura recém-criada não fica invisível entre a criação e a indexação da busca.
+      try {
+        const { data: registrados, error: erroRegistrados } = await sb.from("pagamento_checkout_intencoes")
+          .select("plano,email_pagador,provedor_preapproval_id")
+          .eq("user_id", user.id).eq("status", "criado").not("provedor_preapproval_id", "is", null)
+          .order("criado_em", { ascending: false }).limit(100);
+        if (erroRegistrados) throw new Error("checkouts_registrados_indisponiveis");
+        const conhecidos = await MP.consultaCheckoutsRegistrados(user.id, registrados || [], token, GVP.PLANOS);
+        if (conhecidos.autorizadas.length) {
+          return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
+        }
+        if (conhecidos.pendentes.length > 1) {
+          return json({ erro: "Há mais de uma tentativa de pagamento pendente. Para evitar cobranças duplicadas, não vamos abrir outra. Entre em contato com o suporte para regularizar." }, 409);
+        }
+        if (conhecidos.pendentes.length === 1) {
+          const pendente = conhecidos.pendentes[0];
+          if (pendente.plano !== plano) {
+            return json({ erro: "Você já tem um pagamento pendente para outro plano. Conclua ou regularize essa tentativa antes de escolher outro plano." }, 409);
+          }
+          return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
+        }
+      } catch (e) {
+        console.log("reconciliacao_checkouts_registrados", String(e));
+        await registraErro(sb, "assinatura", "reconciliacao_checkouts_registrados", e);
+        return json({ erro: "não consegui verificar pagamentos anteriores. Tente novamente em instantes." }, 503);
+      }
       // Nunca cancela via GET+PUT: o status pode mudar entre as chamadas.
       // Assinatura já autorizada bloqueia nova compra; um único checkout pendente do mesmo plano é reutilizado.
       try {
