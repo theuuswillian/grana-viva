@@ -75,7 +75,7 @@ begin
   update public.assinaturas set plano='pro', status='fundador', provedor_assinatura_id=null where user_id=v_uid;
   v := public.pagamento_evento_reserva(v_id2, token_a, 'mercadopago', 'subscription_preapproval', 'sub-founder', 120);
   if v <> 'novo' then raise exception 'evento de conta fundadora deveria ser reservado: %', v; end if;
-  v := public.pagamento_evento_aplica_assinatura(v_id2, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-founder', 'payer');
+  v := public.pagamento_evento_aplica_assinatura(v_id2, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-founder', 'payer', 1);
   if v <> 'fundador_mantido' then raise exception 'conta fundadora precisa ser preservada: %', v; end if;
   if not exists(select 1 from public.assinaturas where user_id=v_uid and status='fundador' and provedor_assinatura_id is null) then
     raise exception 'notificação não pode alterar conta fundadora';
@@ -86,7 +86,7 @@ begin
     provedor_assinatura_id='mp-sub-current' where user_id=v_uid;
   v := public.pagamento_evento_reserva(v_id3, token_a, 'mercadopago', 'subscription_preapproval', 'sub-old', 120);
   if v <> 'novo' then raise exception 'evento de assinatura antiga deveria ser reservado: %', v; end if;
-  v := public.pagamento_evento_aplica_assinatura(v_id3, token_a, v_uid, 'pro', 'cancelado', now()+interval '30 days', 'mp-sub-old', 'payer');
+  v := public.pagamento_evento_aplica_assinatura(v_id3, token_a, v_uid, 'pro', 'cancelado', now()+interval '30 days', 'mp-sub-old', 'payer', 1);
   if v <> 'outra_assinatura_ativa' then raise exception 'assinatura ativa diferente precisa ser preservada: %', v; end if;
   if not exists(select 1 from public.assinaturas where user_id=v_uid and status='ativo' and provedor_assinatura_id='mp-sub-current') then
     raise exception 'aviso antigo não pode substituir assinatura ativa atual';
@@ -103,8 +103,8 @@ begin
     raise exception 'permissões da RPC de finalização incorretas';
   end if;
   if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,bigint)','EXECUTE')
-     or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
-     or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE') then
+     or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,bigint)','EXECUTE')
+     or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,bigint)','EXECUTE') then
     raise exception 'permissões da RPC de aplicação incorretas';
   end if;
 end $$;
