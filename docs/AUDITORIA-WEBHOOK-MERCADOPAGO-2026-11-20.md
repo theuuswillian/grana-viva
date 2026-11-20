@@ -36,12 +36,18 @@ O handler agora reconhece os tópicos efetivamente utilizados. Tópicos não sup
 
 Para os tópicos suportados, a validação HMAC é obrigatória em todo webhook externo. Se `MP_WEBHOOK_SECRET` estiver ausente, a função agora falha fechada com HTTP 503 e não reserva o evento. Se o segredo estiver configurado, assinatura ausente ou inválida é recusada com HTTP 401. A única exceção é a sincronização iniciada pela Edge Function `assinatura`, autenticada por HMAC interno com a chave service-role, escopo `mp-sync`, timestamp limitado e `data.id` vinculado. A confirmação do plano continua baseada na consulta autenticada à API do Mercado Pago, nunca no conteúdo não confiável do webhook.
 
+## Ajuste adicional: janela de retentativas
+
+A documentação de assinaturas do Mercado Pago descreve até quatro tentativas de cobrança em uma janela padrão de 10 dias para parcelas recusadas. O código anterior concedia apenas 3 dias de carência, podendo retirar o acesso enquanto o provedor ainda tentava cobrar. Na branch, a carência foi alinhada a 10 dias e foi adicionado teste com fatura `recycling`/pagamento `rejected`: o acesso permanece ativo durante a janela e só passa a inadimplente depois dela. Isso é uma regra conservadora de acesso do GranaViva; precisa ser confirmada com o comportamento observado na conta sandbox antes de produção.
+
 ## Testes adicionados
 
 - Vetor HMAC-SHA256 fixo e independente para assinatura válida.
 - Alteração de `x-request-id`, `data.id` ou segredo deve invalidar o HMAC.
 - Fluxo completo de webhook com assinatura válida chega à consulta do provedor.
 - `subscription_preapproval_plan` retorna 200 sem reservar evento nem alterar assinatura.
+- Segredo ausente recusa webhook externo antes de reservar evento; sincronização interna autenticada continua funcionando.
+- Fatura recorrente recusada preserva acesso durante 10 dias e só marca inadimplência após a janela.
 
 A suíte Deno do CI concluiu com sucesso após a inclusão desses testes. O restante da validação full-stack estava em execução no momento desta atualização.
 
@@ -57,5 +63,6 @@ A suíte Deno do CI concluiu com sucesso após a inclusão desses testes. O rest
 ## Referências do provedor
 
 - Webhooks de assinaturas (inclui exemplo de `x-signature` e HMAC): https://www.mercadopago.com.br/developers/pt/docs/subscriptions/additional-content/your-integrations/notifications/webhooks
-- Webhooks de assinaturas: https://www.mercadopago.com.br/developers/pt/docs/subscriptions/additional-content/your-integrations/notifications/webhooks
+- Faturas de assinaturas autorizadas e política de retentativas: https://www.mercadopago.com.br/developers/pt/docs/subscriptions/integration-configuration/subscription-no-associated-plan/authorized-payments
+- API de consulta de faturas: https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/get-authorized-payment/get
 - A documentação diferencia `subscription_preapproval`, `subscription_authorized_payment` e `subscription_preapproval_plan`, e aponta endpoints distintos para assinatura e plano.
