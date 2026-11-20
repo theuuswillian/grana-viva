@@ -139,7 +139,6 @@ input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var
 .sw{box-shadow:0 4px 14px rgba(0,0,0,.2)}
 .sw.on{border-color:#D8B4FE}
 #modal,.sheet{border-color:var(--line)}
-#modal .btn,#auth .btn{width:100%}
 #toast{border:1px solid var(--gv-violet-line);border-radius:14px;box-shadow:var(--shadow)}
 .fab{background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 10px 24px rgba(124,58,237,.32)}
 #auth{background:radial-gradient(100% 60% at 50% 0%,rgba(168,85,247,.13),transparent 70%),var(--bg)}
