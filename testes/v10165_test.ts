@@ -244,3 +244,45 @@ Deno.test("checkout MP: impede criar segunda recorrência enquanto a assinatura 
   eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "ativo", provedor: "mercadopago", provedor_assinatura_id: null }), false);
   eq(MP.checkoutBloqueadoPorAssinaturaAtiva(null), false);
 });
+
+
+Deno.test("Mercado Pago: reconcilia somente preapproval pendente do próprio usuário e confirma cancelamento", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  let status = "pending";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method || "GET";
+    chamadas.push(method + " " + url);
+    if (url.includes("/preapproval/search?")) {
+      const ref = new URL(url).searchParams.get("external_reference");
+      if (ref === "gv1:" + uid + ":pro") {
+        return new Response(JSON.stringify({ paging: { total: 2 }, results: [
+          { id: "sub-pending", status: "pending", external_reference: ref },
+          { id: "sub-active", status: "authorized", external_reference: ref },
+        ] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ paging: { total: 0 }, results: [] }), { status: 200 });
+    }
+    if (url.endsWith("/preapproval/sub-pending") && method === "GET") {
+      return new Response(JSON.stringify({
+        id: "sub-pending", version: 1, status,
+        external_reference: "gv1:" + uid + ":pro",
+        auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      }), { status: 200 });
+    }
+    if (url.endsWith("/preapproval/sub-pending") && method === "PUT") {
+      status = "canceled";
+      return new Response(JSON.stringify({ id: "sub-pending", status }), { status: 200 });
+    }
+    throw new Error("chamada inesperada " + method + " " + url);
+  }) as typeof fetch;
+  const r = await MP.cancelaPendentesDoUsuario(uid, ["pro", "pro_anual"], "token", {
+    pro: { preco: 24.9, periodo: "mes" },
+    pro_anual: { preco: 179, periodo: "ano" },
+  }, "sub-atual", f);
+  eq(r, { encontrados: 1, cancelados: ["sub-pending"] });
+  eq(status, "canceled");
+  eq(chamadas.filter((x) => x.includes("sub-active")).length, 0, "assinatura autorizada nunca é consultada para cancelamento");
+  eq(chamadas.filter((x) => x.startsWith("PUT ")).length, 1, "somente a pendente verificada recebe PUT");
+});
