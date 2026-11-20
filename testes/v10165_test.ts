@@ -41,12 +41,25 @@ Deno.test("valida-ia: hoje de Brasília e hoje do cliente", () => {
 
 // ---------- webhook do Mercado Pago ----------
 function dbFalso() {
-  const ev = new Map<string, any>(); let grav = 0;
+  const ev = new Map<string, any>(); let grav = 0; let serial = 0;
   const db: DB = {
-    async reservaEvento(id) { if (ev.has(id)) return ev.get(id).feito ? "concluido" : "pendente"; ev.set(id, { feito: false }); return "novo"; },
-    async concluiEvento(id) { ev.get(id).feito = true; },
+    async reservaEvento(id) {
+      if (ev.has(id)) return { status: ev.get(id).feito ? "concluido" : "pendente", token: "duplicado" };
+      const token = "lease-" + (++serial);
+      ev.set(id, { feito: false, token });
+      return { status: "novo", token };
+    },
+    async concluiEvento(id, token) {
+      const row = ev.get(id);
+      if (!row || row.feito || row.token !== token) return false;
+      row.feito = true; return true;
+    },
     async leAssinatura() { return null; },
-    async gravaAssinatura() { grav++; },
+    async aplicaAssinaturaEvento(id, token) {
+      const row = ev.get(id);
+      if (!row || row.feito || row.token !== token) return "perdido";
+      row.feito = true; grav++; return "aplicado";
+    },
   };
   return { db, ev, get grav() { return grav; } };
 }
@@ -97,7 +110,7 @@ Deno.test("resumo semanal: semana anterior e texto", () => {
 
 Deno.test("webhook MP: evento já reservado e ainda em processamento não roda em paralelo", async () => {
   const f = dbFalso();
-  const db: DB = { ...f.db, async reservaEvento() { return "pendente"; } };
+  const db: DB = { ...f.db, async reservaEvento() { return { status: "pendente", token: "lease-other" }; } };
   let consultou = false;
   const r = await processaWebhook(req(), {
     db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}),
@@ -106,4 +119,58 @@ Deno.test("webhook MP: evento já reservado e ainda em processamento não roda e
   eq(r.status, 503);
   eq(r.headers.get("retry-after"), "60");
   eq(consultou, false, "não consulta o provedor enquanto outro worker processa");
+});
+
+
+Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do lease", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  let tokenAtual = "worker-a";
+  let aplicou = false;
+  const db: DB = {
+    async reservaEvento() { return { status: "novo", token: "worker-a" }; },
+    async concluiEvento(_id, token) { return token === tokenAtual; },
+    async leAssinatura() { return null; },
+    async aplicaAssinaturaEvento(_id, token) {
+      if (token !== tokenAtual) return "perdido";
+      aplicou = true; return "aplicado";
+    },
+  };
+  const r = await processaWebhook(req(), {
+    db, env: { MP_ACCESS_TOKEN: "t" },
+    PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
+    efetivo: () => ({ nivel: 1 }),
+    fetch: (async () => {
+      tokenAtual = "worker-b"; // worker B retomou a reserva enquanto A aguardava o MP
+      return new Response(JSON.stringify({
+        id: "sub-1",
+        external_reference: "gv1:" + uid + ":pro",
+        auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+        status: "authorized",
+        next_payment_date: "2026-12-19T00:00:00.000Z",
+        payer_id: "payer-1",
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch,
+  });
+  eq(r.status, 503);
+  eq(aplicou, false, "worker A não pode aplicar a assinatura depois que B retomou o lease");
+});
+
+Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento", async () => {
+  const f = dbFalso();
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const r = await processaWebhook(req(), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t" },
+    PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
+    efetivo: () => ({ nivel: 1 }),
+    fetch: (async () => new Response(JSON.stringify({
+      id: "sub-1",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      status: "authorized",
+      next_payment_date: "2026-12-19T00:00:00.000Z",
+      payer_id: "payer-1",
+    }), { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+  });
+  eq(r.status, 200);
+  eq(f.grav, 1);
 });
