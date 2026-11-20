@@ -13,7 +13,7 @@
 // do objeto buscado no Mercado Pago com o token do servidor. Chamadas internas usam HMAC próprio.
 
 const API = "https://api.mercadopago.com";
-export const CARENCIA_DIAS = 3; // depois da data da próxima cobrança, mantém o acesso por 3 dias enquanto o MP tenta cobrar
+export const CARENCIA_DIAS = 10; // janela documentada de retentativas do MP para parcelas recusadas
 
 export type Estado = {
   uid: string;
