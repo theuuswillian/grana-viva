@@ -18,13 +18,13 @@ const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLoca
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
+const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
 ok(T.checkoutUrlMercadoPago('https://www.mercadopago.com.br/checkout/teste'),'checkout aceita domínio oficial Mercado Pago');
 ok(T.checkoutUrlMercadoPago('https://mercadopago.com/checkout/teste'),'checkout aceita domínio oficial sem .br');
 ok(!T.checkoutUrlMercadoPago('https://mercadopago.com.evil.example/'),'checkout rejeita domínio com sufixo malicioso');
 ok(!T.checkoutUrlMercadoPago('https://evilmercadopago.com.br/'),'checkout rejeita domínio parecido');
 ok(!T.checkoutUrlMercadoPago('http://www.mercadopago.com.br/'),'checkout exige HTTPS');
 ok(!T.checkoutUrlMercadoPago('javascript:alert(1)'),'checkout rejeita protocolo não HTTPS');
-const ok=(c,m)=>{if(!c){console.log('FALHOU:',m);process.exitCode=1;}else console.log('ok',m);};
 const limpo=T.sanea({tx:[{id:'legado',pluggyId:'old-1',data:'2026-11-18',tipo:'despesa',valor:10},{id:'manual',data:'2026-11-18',tipo:'despesa',valor:20,par:{id:'par',pluggyId:'old-2'}}],fiis:[{id:'legado-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:10},{id:'manual-fii',ticker:'MXRF11',cotas:1,preco:10}],cfg:{tema:'dark',pluggyIgn:['old-1']}});
 ok(limpo.tx.length===1&&limpo.tx[0].id==='manual'&&!limpo.tx[0].par.pluggyId,'cópia local descarta registros antigos e limpa referência aninhada');
 ok(limpo.fiis.length===1&&limpo.fiis[0].id==='manual-fii'&&!('pluggyInv' in limpo.fiis[0]),'cópia local descarta posição importada antiga');
