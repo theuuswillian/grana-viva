@@ -384,3 +384,38 @@ Deno.test("Mercado Pago: falha fechada quando ID persistido ainda retorna 404", 
   } catch (e) { erro = String(e); }
   eq(erro.includes("mp_checkout_registrado_ainda_nao_localizado"), true, "404 em ID persistido bloqueia nova cobrança");
 });
+
+Deno.test("Mercado Pago: falha fechada quando preapproval persistido não tem versão", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-sem-versao", status: "pending",
+    init_point: "https://www.mercadopago.com.br/checkout/sem-versao",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados(uid, [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-sem-versao",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_checkout_registrado_estado_nao_confirmado:versao_ausente_ou_invalida"), true, "versão ausente bloqueia nova cobrança");
+});
+
+Deno.test("Mercado Pago: falha fechada em status desconhecido de preapproval persistido", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-status-novo", version: 5, status: "processing",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados(uid, [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-status-novo",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_checkout_registrado_estado_nao_confirmado:status_desconhecido:processing"), true, "status desconhecido bloqueia nova cobrança");
+});
