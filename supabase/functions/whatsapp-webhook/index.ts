@@ -4,7 +4,7 @@
 // "Salvar" grava o lançamento na tabela tx da pessoa (o app recebe na próxima sincronização).
 // Secrets: WA_VERIFY_TOKEN (verificação do webhook), WA_APP_SECRET (assinatura X-Hub-Signature-256),
 //          WA_TOKEN e WA_PHONE_ID (envio). Sem WA_TOKEN, o que seria enviado vai para a tabela wa_saida_teste.
-// v10.153: modo sandbox da 360dialog (teste sem conta na Meta): WA_SB_TOKEN (vai na URL do webhook, ?sb=...) e
+// v10.153: modo sandbox da 360dialog (teste sem conta na Meta): WA_SB_ENABLED=true + WA_SB_TOKEN (URL ?sb=...); só habilitar em ambiente sem WA_APP_SECRET e nunca em produção.
 //          WA_D360_KEY (chave do sandbox, enviada no cabeçalho D360-API-KEY). O sandbox não assina as mensagens.
 //          Limite do sandbox: 25 envios no total; quem fala com ele é só o número dono da chave.
 // v10.165: idempotência por id da mensagem (wa_msg, chave primária, gravado ANTES de processar: reenvio da Meta = ignorado)
@@ -481,7 +481,7 @@ Deno.serve(async (req) => {
   const raw = await req.text();
   const sbt = Deno.env.get("WA_SB_TOKEN"), sbq = u.searchParams.get("sb") || "";
   let sbOk = false;
-  if (Deno.env.get("WA_SB_ENABLED") === "true" && sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
+  if (Deno.env.get("WA_SB_ENABLED") === "true" && !Deno.env.get("WA_APP_SECRET") && sbt && sbq.length === sbt.length) { let d = 0; for (let i = 0; i < sbt.length; i++) d |= sbt.charCodeAt(i) ^ sbq.charCodeAt(i); sbOk = d === 0; }
   if (!sbOk && !(await assinaturaOk(raw, req.headers.get("x-hub-signature-256")))) return new Response("assinatura inválida", { status: 401 });
   let b: any; try { b = JSON.parse(raw); } catch { return new Response("ok"); }
   const msgs: any[] = [];
