@@ -296,3 +296,22 @@ Deno.test("Mercado Pago: ignora candidato que foi autorizado antes da confirmaç
   eq(chamadas.filter((x) => x.startsWith("PUT ")).length, 0);
 });
 
+Deno.test("Mercado Pago: sincronização busca por e-mails conhecidos e valida external_reference localmente", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    const email = new URL(url).searchParams.get("payer_email");
+    const results = email === "antigo@exemplo.com" ? [
+      { id: "sub-outro", status: "authorized", external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro", last_modified: "2026-11-19T12:00:00Z" },
+      { id: "sub-certo", status: "authorized", external_reference: "gv1:" + uid + ":pro", last_modified: "2026-11-18T12:00:00Z" },
+    ] : [];
+    return new Response(JSON.stringify({ paging: { total: results.length }, results }), { status: 200 });
+  }) as typeof fetch;
+  const id = await MP.ultimaAssinatura(uid, ["novo@exemplo.com", "antigo@exemplo.com"], ["pro"], "token", f);
+  eq(id, "sub-certo");
+  eq(chamadas.length, 2);
+  if (chamadas.some((x) => x.includes("external_reference="))) throw new Error("não deve usar filtro não documentado");
+  if (!chamadas.some((x) => x.includes("payer_email=antigo%40exemplo.com"))) throw new Error("e-mail histórico não consultado");
+});
+
