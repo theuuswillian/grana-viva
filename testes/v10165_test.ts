@@ -373,3 +373,14 @@ Deno.test("Mercado Pago: reconciliação direta rejeita vínculo ou e-mail diver
   eq(r.pendentes.length, 0);
   eq(r.autorizadas.length, 0);
 });
+
+Deno.test("Mercado Pago: falha fechada quando ID persistido ainda retorna 404", async () => {
+  const f = (async () => new Response(JSON.stringify({ message: "not found" }), { status: 404 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados("00000000-0000-4000-8000-000000000001", [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-ainda-nao-visivel",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  ok(erro.includes("mp_checkout_registrado_ainda_nao_localizado"), "404 em ID persistido bloqueia nova cobrança");
+});
