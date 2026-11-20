@@ -46,6 +46,10 @@ begin
     return 'perdido';
   end if;
 
+  -- FOR UPDATE não bloqueia quando a conta ainda não tem linha em assinaturas.
+  -- O advisory lock serializa também a primeira gravação concorrente do mesmo usuário.
+  perform pg_advisory_xact_lock(hashtextextended('pagamento-assinatura:' || p_uid::text, 0));
+
   select * into v_atual
     from public.assinaturas
    where user_id = p_uid
