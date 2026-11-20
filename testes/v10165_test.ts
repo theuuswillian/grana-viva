@@ -429,3 +429,51 @@ Deno.test("checkout: recupera intenção pendente após perda da chave do navega
   eq(MP.idIntencaoPendenteCompativel({ ...row, user_id: "00000000-0000-4000-8000-000000000099" }, uid, "pro", "pagador@example.com"), null, "não mistura usuários");
   eq(MP.idIntencaoPendenteCompativel({ ...row, status: "criado" }, uid, "pro", "pagador@example.com"), null, "não reutiliza intenção já criada como pendente");
 });
+
+
+Deno.test("Mercado Pago: busca de assinaturas falha fechada ao atingir o teto de 200 resultados", async () => {
+  const chamadas: number[] = [];
+  const fetchFake = (async (input: RequestInfo | URL) => {
+    const offset = Number(new URL(String(input)).searchParams.get("offset") || 0);
+    chamadas.push(offset);
+    const results = Array.from({ length: 50 }, (_, i) => ({
+      id: "sub-alheia-" + (offset + i),
+      status: "pending",
+      external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro",
+    }));
+    return new Response(JSON.stringify({ paging: { total: 201 }, results }), { status: 200 });
+  }) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.ultimaAssinatura(
+      "00000000-0000-4000-8000-000000000001",
+      ["pagador@example.com"], ["pro"], "token", fetchFake,
+    );
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_busca_limite"), true, "não pode declarar ausência após ler só os primeiros 200");
+  eq(chamadas, [0, 50, 100, 150]);
+});
+
+Deno.test("Mercado Pago: reconciliação de checkout falha fechada ao atingir o teto de 200 resultados", async () => {
+  const chamadas: number[] = [];
+  const fetchFake = (async (input: RequestInfo | URL) => {
+    const offset = Number(new URL(String(input)).searchParams.get("offset") || 0);
+    chamadas.push(offset);
+    const results = Array.from({ length: 50 }, (_, i) => ({
+      id: "sub-alheia-" + (offset + i),
+      status: "pending",
+      external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro",
+    }));
+    return new Response(JSON.stringify({ paging: { total: 201 }, results }), { status: 200 });
+  }) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsDoUsuario(
+      "00000000-0000-4000-8000-000000000001",
+      ["pagador@example.com"], ["pro"], "token",
+      { pro: { preco: 24.9, periodo: "mes" } }, null, fetchFake,
+    );
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_busca_reconciliacao_limite"), true, "não pode concluir reconciliação com busca truncada");
+  eq(chamadas, [0, 50, 100, 150]);
+});
