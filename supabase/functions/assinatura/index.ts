@@ -129,7 +129,14 @@ Deno.serve(async (req) => {
     const { data: okS } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "sincronizar", p_lim: 20, p_seg: 3600 });
     if (!okS) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
     try {
-      const id = await MP.ultimaAssinatura(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token);
+      // A busca do MP aceita payer_email, não external_reference. Inclui e-mail da conta
+      // e os e-mails usados em checkouts anteriores para não perder assinaturas legadas.
+      const { data: historicos, error: erroEmails } = await sb.from("pagamento_checkout_intencoes")
+        .select("email_pagador").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(100);
+      if (erroEmails) throw new Error("emails_checkout_indisponiveis");
+      const emails = [...new Set([user.email || "", ...(historicos || []).map((x: any) => x.email_pagador || "")])]
+        .map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+      const id = await MP.ultimaAssinatura(user.id, emails, [...GVP.PAGOS, ...GVP.LEGADOS], token);
       if (!id) return json({ ok: true, resultado: "nenhuma" });
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval&data.id=" + encodeURIComponent(id), {
         method: "POST", signal: AbortSignal.timeout(12000),
