@@ -7,7 +7,7 @@ Plataforma de gestão financeira pessoal e investimentos, com foco em fluxo de c
 O GranaViva reúne:
 - receitas, despesas, contas, cartões e orçamento;
 - carteira de investimentos e acompanhamento de proventos;
-- importação local de extratos CSV/OFX;
+- importação local de extratos CSV/OFX, deduplicação por conta/FITID e histórico de lotes reversíveis;
 - assistente financeiro e automações;
 - integração de pagamentos e recursos Pro.
 
