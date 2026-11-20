@@ -165,7 +165,9 @@ async function vincula(tel: string, codigo: string, msgId: string, sandbox: bool
   if (resultado === "limite_tentativas") {
     await responder("Muitas tentativas de código. Por segurança, aguarde 15 minutos antes de tentar novamente.");
     return;
-  }\n  if (resultado === "limite_tentativas_silencioso") return;\n  if (resultado === "ja_vinculado") {
+  }
+  if (resultado === "limite_tentativas_silencioso") return;
+  if (resultado === "ja_vinculado") {
     await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\n\n" + AJUDA);
     return;
   }
