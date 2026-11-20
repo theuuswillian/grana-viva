@@ -3236,7 +3236,7 @@ function viewInicioMVP(){
   const tile=(cls,ic,lb,val,sub,act)=>`<div class="rsT ${cls} tap" data-act="${act}" role="button" tabindex="0" aria-label="${esc(lb)}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b><span class="rsD">${sub}</span></div>`;
   const nome=nomeUsuario();
   return `
-  <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
+  <div class="hmHead hmHeadCompact"><h2>Visão geral</h2><span>${esc(pl)}</span></div>
   ${omniHTML()}
   ${demoHTML()}
   ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
@@ -3795,7 +3795,7 @@ function viewInicio(){
   const TOPO=HV?homeTopo(HV,{saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}):null;
   const avisoMesAnt=mesAntHTML(per);
   return `
-  <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
+  <div class="hmHead hmHeadCompact"><h2>Visão geral</h2><span>${esc(pl)}</span></div>
   ${omniHTML()}
   ${TOPO!==null?TOPO+'<!--':''}<div class="hmHero ${saldo<0?'neg':''}">
     <div class="hmHeroTop"><span>saldo total</span><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
