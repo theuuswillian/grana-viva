@@ -1,4 +1,4 @@
-/* v10.173: atualiza a cópia offline após o resumo de metas e a reorganização do dashboard.
+/* v10.174: tela mobile em altura dinâmica, cabeçalho e controles simplificados. Atualiza a cópia offline após o resumo de metas e a reorganização do dashboard.
    GranaViva service worker: abre offline e busca a versão nova sempre que há internet.
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
