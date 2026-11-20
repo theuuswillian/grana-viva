@@ -419,3 +419,13 @@ Deno.test("Mercado Pago: falha fechada em status desconhecido de preapproval per
   } catch (e) { erro = String(e); }
   eq(erro.includes("mp_checkout_registrado_estado_nao_confirmado:status_desconhecido:processing"), true, "status desconhecido bloqueia nova cobrança");
 });
+
+Deno.test("checkout: recupera intenção pendente após perda da chave do navegador", () => {
+  const uid = "00000000-0000-4000-8000-000000000091";
+  const row = { id: "00000000-0000-4000-8000-000000000092", user_id: uid, plano: "pro", email_pagador: "pagador@example.com", status: "pendente" };
+  eq(MP.idIntencaoPendenteCompativel(row, uid, "pro", "pagador@example.com"), row.id);
+  eq(MP.idIntencaoPendenteCompativel(row, uid, "pro_anual", "pagador@example.com"), null, "não mistura planos");
+  eq(MP.idIntencaoPendenteCompativel(row, uid, "pro", "outro@example.com"), null, "não mistura pagadores");
+  eq(MP.idIntencaoPendenteCompativel({ ...row, user_id: "00000000-0000-4000-8000-000000000099" }, uid, "pro", "pagador@example.com"), null, "não mistura usuários");
+  eq(MP.idIntencaoPendenteCompativel({ ...row, status: "criado" }, uid, "pro", "pagador@example.com"), null, "não reutiliza intenção já criada como pendente");
+});
