@@ -12,7 +12,7 @@ export type DB = {
   reservaEvento(id: string, meta: { provedor: string; topico: string; recurso_id: string }): Promise<Reserva>;
   concluiEvento(id: string, token: string, resultado: string, uid?: string | null): Promise<boolean>;
   leAssinatura(uid: string): Promise<Linha>;
-  aplicaAssinaturaEvento(id: string, token: string, uid: string, campos: Record<string, unknown>, protegerOutra: boolean): Promise<ResultadoAplicacao>;
+  aplicaAssinaturaEvento(id: string, token: string, uid: string, campos: Record<string, unknown>): Promise<ResultadoAplicacao>;
 };
 export type Deps = { db: DB; env: { MP_ACCESS_TOKEN?: string; MP_WEBHOOK_SECRET?: string; INTERNO_KEY?: string }; PLANOS: any; efetivo: (a: any, agora?: number) => any; fetch?: typeof fetch; agora?: () => number; log?: (...a: unknown[]) => void; erro?: (etapa: string, e: unknown) => Promise<void> | void };
 
@@ -80,19 +80,13 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
     return falha || resp({ ok: true, resultado: "sem_mudanca" });
   }
 
-  const protegerOutra = !!(atual && atual.provedor_assinatura_id
-    && atual.provedor_assinatura_id !== e.provedor_assinatura_id
-    && e.status !== "ativo"
-    && atual.status === "ativo"
-    && d.efetivo(atual, agora).nivel > 0);
-
   const campos: Record<string, unknown> = {
     plano: e.plano, status: e.status,
     periodo_fim: e.periodo_fim,
     provedor_assinatura_id: e.provedor_assinatura_id,
     provedor_cliente_id: e.provedor_cliente_id,
   };
-  const aplicado = await d.db.aplicaAssinaturaEvento(chave, lease, e.uid, campos, protegerOutra);
+  const aplicado = await d.db.aplicaAssinaturaEvento(chave, lease, e.uid, campos);
   if (aplicado === "perdido") return ocupado();
   if (aplicado === "fundador_mantido" || aplicado === "outra_assinatura_ativa") {
     return resp({ ok: true, resultado: aplicado });
