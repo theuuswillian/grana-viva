@@ -8,6 +8,7 @@ on:
       - correcoes/cota-mensal-atomica-2026-11-18
       - remocao/pluggy-definitiva-2026-11-18
       - correcoes/pagamento-lease-fencing-2026-11-19
+      - correcoes/checkout-idempotencia-2026-11-19
   pull_request:
     branches:
       - revisao-lancamento-v10.165
@@ -15,6 +16,7 @@ on:
       - correcoes/whatsapp-preservar-pendente-2026-11-18
       - correcoes/cota-mensal-atomica-2026-11-18
       - remocao/pluggy-definitiva-2026-11-18
+      - correcoes/pagamento-lease-fencing-2026-11-19
 permissions:
   contents: read
 jobs:
@@ -66,6 +68,8 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_lease_fencing.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_lease_fencing_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_checkout_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_checkout_idempotencia_assertions.sql
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
