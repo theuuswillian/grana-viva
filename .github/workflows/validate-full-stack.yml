@@ -130,7 +130,10 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_lease_fencing.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_zz_wa_saida_payload_guard.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_vinculo_atomico.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_wa_vinculo_rate_limit.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_vinculo_rate_limit_assertions.sql
+          bash testes/wa_vinculo_rate_limit_concurrency.sh
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_outbox_fencing_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_fila_assertions.sql
       - name: Test payment fencing and checkout migrations in isolated PostgreSQL
