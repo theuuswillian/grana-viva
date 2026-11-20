@@ -101,6 +101,22 @@ ok(/Limpar exemplo/.test(view()),'faixa "Limpar exemplo" no Início');
 ok(/omniF/.test(view())&&/omniCam/.test(view()),'barra com frase + câmera');
 ok(/lmCard/.test(view()),'termômetro no Início');
 ok(/Definir meta/.test(view()),'meta de renda passiva acessível diretamente no Início');
+const metaOriginalForm=T.S.cfg.metaRendaPassiva,prazoOriginalForm=T.S.cfg.metaRendaPrazoAnos;
+doc.querySelector('[data-act="rp-meta"]').click();
+const metaForm=doc.querySelector('#mf');
+ok(!!metaForm&&/Em quantos anos deseja alcançar/.test(doc.querySelector('#modal').textContent),'ação da meta abre formulário com prazo');
+if(metaForm){
+  metaForm.querySelector('[name="valor"]').value='2000';
+  metaForm.querySelector('[name="prazo"]').value='0';
+  metaForm.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  ok(T.S.cfg.metaRendaPassiva===metaOriginalForm&&doc.querySelector('#modal').classList.contains('on'),'prazo zero é rejeitado sem salvar a meta');
+  metaForm.querySelector('[name="prazo"]').value='10';
+  metaForm.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  ok(T.S.cfg.metaRendaPassiva===2000&&T.S.cfg.metaRendaPrazoAnos===10,'formulário salva meta e prazo válidos');
+}
+if(metaOriginalForm!=null)T.S.cfg.metaRendaPassiva=metaOriginalForm;else delete T.S.cfg.metaRendaPassiva;
+if(prazoOriginalForm!=null)T.S.cfg.metaRendaPrazoAnos=prazoOriginalForm;else delete T.S.cfg.metaRendaPrazoAnos;
+T.render();
 const g=T.gsExtratoHTML();ok(/class="dayH"/.test(g)&&/Hoje/.test(g),'extrato agrupado por dia com "Hoje"');
 ok(/txOrg o-wa/.test(g)&&/txOrg o-rec/.test(g)&&/txOrg o-ia/.test(g),'selos de origem IA / WhatsApp / Recibo');
 console.log('  rótulos:',T.diaRotulo(T.hojeSP()),'|',(()=>{const d=new Date();d.setDate(d.getDate()-3);return T.diaRotulo(d.toISOString().slice(0,10));})());
