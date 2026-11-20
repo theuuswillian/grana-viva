@@ -1430,7 +1430,7 @@ function bar(ctx,x,y,w,h,color){
 }
 /* v10.100: no computador as barras são mais finas, em esmeralda e rosa suave, e o gráfico ocupa a altura do card ao lado */
 const DESK=()=>innerWidth>=900;
-const COR_REC=()=>DESK()?'#10b981':'#34d399',COR_DES=()=>DESK()?'#f08a98':'#a78bfa';
+const COR_REC=()=>DESK()?'#10b981':'#34d399',COR_DES=()=>DESK()?'#ef4444':'#f87171';
 function barAltura(c){
   if(innerWidth<1200||c.id!=='cBar')return 220;
   const cat=document.querySelector('#view .hmCat'),card=c.closest('.card');if(!cat||!card)return 220;
@@ -1784,7 +1784,7 @@ async function atualizaPushUI(){
   if(s){t.innerHTML='<span class="pushOn"><i></i>Ativadas neste aparelho</span><span class="pushSub">Todo dia às 9h. Escolha o que quer receber:</span>'+notifListaHTML();b.innerHTML='<button class="pushBtn teste" data-act="push-teste">'+I('bell')+'<span>enviar teste</span></button><button class="pushBtn off" data-act="push-off"><span>desativar</span></button>';}
   else{t.textContent='Receba um aviso no celular quando uma fatura ou conta fixa estiver perto de vencer ou atrasar, ou quando um orçamento estiver acabando.';b.innerHTML='<button class="btn sm" data-act="push-on">ativar notificações</button>';}
 }
-const NOTIF_T=[['fatVence','card','#a78bfa','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
+const NOTIF_T=[['fatVence','card','#94a3b8','Faturas a vencer','com antecedência, na véspera e no dia'],['fatAtras','alert','#f87171','Faturas atrasadas','1, 3 e 7 dias depois do vencimento'],['fixas','calendar','#22d3ee','Contas fixas','no vencimento de cada conta'],['previstos','receipt','#fb923c','Lançamentos previstos','contas agendadas a vencer ou atrasadas'],['orc','gauge','#a3e635','Orçamentos','ao chegar em 80% e ao estourar'],['resumo','calendar','#60a5fa','Resumo diário','toda manhã, o que vence hoje (padrão)'],['semanal','report','#34d399','Resumo da semana','domingo às 9h: entrou, saiu, o que vence e o que tem a receber'],['metas','piggy','#22c55e','Dia de guardar','no sino do app, no dia do aporte de cada meta'],['guardar','piggy','#16a34a','Dia de guardar no aparelho','notificação às 9h com o app fechado, uma vez por meta no mês'],['darf','receipt','#f59e0b','Imposto das vendas (DARF)','7 dias antes e no dia do vencimento, também com o app fechado'],['alvoPreco','up','#38bdf8','Alertas do Radar','quando um ativo que você segue passa do preço ou cai forte no dia: a cada 15 min no pregão, cripto de hora em hora']]; // v10.89: guardar = push do servidor (alertas-push), padrão ligado
 function notifOn(k){return !(S.cfg.notif&&S.cfg.notif[k]===false);}
 function notifListaHTML(){const disc=S.cfg.pushDiscreto!==false;return '<div class="ntList">'+NOTIF_T.filter(x=>!(MVP_MODE&&x[0]==='darf')).map(([k,ic,c,t,sub])=>{const on=notifOn(k);return `<button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="notif-tog" data-id="${k}"><span class="ntIc" style="--c:${c}">${I(ic)}</span><span class="ntTx"><b>${t}</b><small>${sub}</small></span><span class="ntSw${on?' on':''}"><i></i></span></button>`;}).join('')+`<button type="button" class="ntRow" role="switch" aria-checked="${disc}" data-act="notif-disc"><span class="ntIc" style="--c:#94a3b8">${I('lock')}</span><span class="ntTx"><b>Notificações discretas</b><small>sem valores nem nomes na tela bloqueada</small></span><span class="ntSw${disc?' on':''}"><i></i></span></button>`+'</div>';}
 async function ativarPush(){
@@ -2483,7 +2483,7 @@ function viewRel(){
   <div class="card relChart">
     <h4>Comparação por categoria de despesa</h4>
     <canvas id="cRel" class="cv"></canvas>
-    <div class="legend"><span><i class="dot" style="background:#a78bfa"></i>${mesCurto(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesCurto(b)}</span></div>
+    <div class="legend"><span><i class="dot" style="background:#64748b"></i>${mesCurto(a)}</span><span><i class="dot" style="background:#34d399"></i>${mesCurto(b)}</span></div>
   </div>
   ${relPorCat(a,b)}
   <div class="grid2 topCats">
@@ -2553,7 +2553,7 @@ function drawRel(c,p){
     const cx=i*gw+gw/2,bw=Math.min(16,gw*0.28);
     const clamp=v=>Math.max(0,Math.min(H,v));
     const ha=clamp(x.va/max*H*p),hb=clamp(x.vb/max*H*p);
-    bar(ctx,cx-bw-2,base-ha,bw,ha,'#a78bfa');
+    bar(ctx,cx-bw-2,base-ha,bw,ha,'#64748b');
     bar(ctx,cx+2,base-hb,bw,hb,'#34d399');
     /* v10.31: rótulo cabe na coluna; com colunas estreitas alterna em duas linhas */
     const dois=gw<74,maxW=(dois?gw*1.9:gw)-8;
@@ -3374,7 +3374,7 @@ function applyCfg(){
   document.documentElement.dataset.ac=ACCENTS[S.cfg.accent]?S.cfg.accent:'verde'; // v10.100: o esmeralda do computador só vale para o tema verde
   document.documentElement.classList.toggle('claro',S.cfg.tema==='claro');
   document.documentElement.classList.toggle('preto',S.cfg.tema==='preto');
-  {const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content',S.cfg.tema==='preto'?'#000000':S.cfg.tema==='claro'?'#f2f5fb':'#0b0f1a');}
+  {const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute('content',S.cfg.tema==='claro'?'#F4F5F6':'#07090A');}
   const [a,b]=ACCENTS[S.cfg.accent]||ACCENTS.verde;
   document.documentElement.style.setProperty('--a1',a);
   document.documentElement.style.setProperty('--a2',b);
@@ -3600,7 +3600,7 @@ function sparkPer(per){
   for(let i=0;i<800;i++){const k=isoDe(d);if(k>ate)break;acc+=mp[k]||0;out.push(acc/100);lab.push(fmtData(k));d.setDate(d.getDate()+1);}
   return {vals:out,lab};
 }
-const PIE_CORES=['#a3e635','#f472b6','#a78bfa'];
+const PIE_CORES=['#22c55e','#64748b','#94a3b8'];
 /* v10.99: gráfico de gastos acumulados desenhado em SVG pelo próprio app (antes biblioteca de 210 KB só para este gráfico).
    sai pronto no HTML da tela, então o redesenho por diferença (v10.91) só troca o gráfico quando os números mudam */
 function gastoSVG(per){
@@ -3714,7 +3714,7 @@ function sparkSVG(vals,w,h,id){
   return `<svg class="spk" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".35"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient><linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--sk1)"/><stop offset="1" stop-color="var(--sk2)"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h} Z" fill="url(#${id}f)"/><path d="${d}" fill="none" stroke="url(#${id}l)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${L[0]}" cy="${L[1]}" r="4" class="spkDot"/></svg>`;
 }
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
-const HM_AT=[['lanc','receipt','Despesas','#f472b6','Gastos'],['orc','gauge','Orçamentos','#fbbf24','Orçamento'],['cartoes','card','Cartões','#60a5fa','Cartões'],['rel','report','Relatório','#a78bfa','Relatório'],['plan','compass','Planejamento','#34d399','Planejar'],['pat','scale','Patrimônio','#22d3ee','Patrimônio']];
+const HM_AT=[['lanc','receipt','Despesas','#94a3b8','Gastos'],['orc','gauge','Orçamentos','#94a3b8','Orçamento'],['cartoes','card','Cartões','#94a3b8','Cartões'],['rel','report','Relatório','#94a3b8','Relatório'],['plan','compass','Planejamento','#94a3b8','Planejar'],['pat','scale','Patrimônio','#22c55e','Patrimônio']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
 
 /* v10.173: resumo compacto das metas na tela inicial, sem duplicar a lógica de cálculo da aba Metas. */
@@ -3836,7 +3836,7 @@ function viewInicio(){
     <div class="hmSaldo nw">${brl(saldo)}</div>
     <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
   </div>
-  <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#f472b6'],['ir-orc','gauge','Orçamentos','#fbbf24'],['ir-cartoes','card','Cartões','#60a5fa'],['ir-rel','report','Relatório','#a78bfa'],['ir-plan','compass','Planejamento','#34d399'],['ir-pat','scale','Patrimônio','#22d3ee']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
+  <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#94a3b8'],['ir-orc','gauge','Orçamentos','#94a3b8'],['ir-cartoes','card','Cartões','#94a3b8'],['ir-rel','report','Relatório','#94a3b8'],['ir-plan','compass','Planejamento','#94a3b8'],['ir-pat','scale','Patrimônio','#22c55e']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
   ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${avisoMesAnt}<div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
     ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
@@ -4249,7 +4249,7 @@ function viewOrc(){
   ${aviso}`;
 }
 
-const TCOR={fii:'#a3e635',acao:'#60a5fa',etf:'#f59e0b',bdr:'#f472b6',rf:'#34d399',cripto:'#fb923c'};
+const TCOR={fii:'#22c55e',acao:'#94a3b8',etf:'#64748b',bdr:'#9ca3af',rf:'#16a34a',cripto:'#71717a'};
 /* v10.91: próximos proventos. card com o selo do ativo, a data com dia da semana, o valor esperado
    (cotas × último provento por cota, quando conhecido), anel de progresso até a data e a lista dos próximos pagamentos. */
 function proxPags(dias){
@@ -5000,7 +5000,7 @@ function viewPat(){
   </div>
   ${(h=>h?`<div class="card rpaCard tap" data-act="nav-fii" role="button" tabindex="0" aria-label="abrir investimentos">${h}</div>`:'')(rendaPassivaHTML('rpaPt'))}
   <div class="ptGrid"><div class="card ptCard"><div class="ptHd"><span class="ptT">O que você tem</span><button class="ptAdd" data-act="novo-bem">+ bem</button></div>
-    ${itA('chart','#a3e635','Investimentos',P.inv)}${itA('wallet','#22d3ee',S.bancos.length?'Contas':'Saldo',Math.max(0,P.contas))}${itA('casa','#a78bfa','Bens',P.bens)}${P.rec>0?itA('handCoins','#fbbf24','A receber (empréstimos)',P.rec):''}</div>
+    ${itA('chart','#22c55e','Investimentos',P.inv)}${itA('wallet','#94a3b8',S.bancos.length?'Contas':'Saldo',Math.max(0,P.contas))}${itA('casa','#94a3b8','Bens',P.bens)}${P.rec>0?itA('handCoins','#fbbf24','A receber (empréstimos)',P.rec):''}</div>
   <div class="card ptCard"><div class="ptHd"><span class="ptT">O que você deve</span><button class="ptAdd" data-act="novo-pas">+ dívida</button></div>
     ${itP('card','#f87171','Cartões','faturas e parcelas a vencer',P.cartoes).replace(/<span class="ptIc" style="--c:#f87171">[\s\S]*?<\/span>/,m=>cartoesAtivos().length?'<span class="ptIc ptCc" aria-hidden="true">'+cartoesAtivos().slice(0,2).map(c=>cartaoMini(c)).join('')+'</span>':m)}${itP('receipt','#fb923c','Dívidas e empréstimos',parcelas?'parcelas: '+brl(parcelas)+'/mês':'',P.dividas)}${P.contas<0?itP('bank','#f43f5e','Contas no negativo','',-P.contas):''}</div>
   </div>
@@ -5063,7 +5063,7 @@ function ritmoMensal(base,sim){
 }
 /* meses até o prazo contando o mês atual: prazo neste mês = 1; vencido só quando o prazo é antes do mês atual (<= 0) */
 function mesesAte(ym){const h=new Date();return (+ym.slice(0,4)-h.getFullYear())*12+(+ym.slice(5,7)-1-h.getMonth())+1;}
-const META_COR=[['#22c55e','#0ea5e9'],['#8b5cf6','#ec4899'],['#f59e0b','#ef4444'],['#06b6d4','#6366f1'],['#10b981','#84cc16']];
+const META_COR=[['#22c55e','#15803d'],['#64748b','#475569'],['#94a3b8','#64748b'],['#16a34a','#166534'],['#71717a','#52525b']];
 function brlK(v){if(OCULTO)return 'R$ •••';v=+v||0;const a=Math.abs(v),sg=v<0?'-':'';if(a<1000)return brl(v);const f=(x,u)=>sg+'R$ '+String(x>=100?Math.round(x):Math.round(x*10)/10).replace('.',',')+' '+u;if(a<999500)return f(a/1e3,'mil');if(a<999500000)return f(a/1e6,'mi');return f(a/1e9,'bi');}
 function metaIcone(n){const x=norm(n||'');const L=[[/aposent|previd|velhice|futuro/,'aposentadoria'],[/carro|moto|veic|automo/,'carro'],[/casa|apart|imovel|terreno|entrada|reforma/,'casa'],[/viag|ferias|mala|intercambio/,'mala'],[/estud|faculd|curso|educa|pos/,'educacao'],[/reserva|emergenc|seguran/,'piggy'],[/casament|presente|aniver|natal/,'presente'],[/celular|iphone|notebook|computador|pc|laptop|tv/,'laptop'],[/saude|cirurg|dente|tratament/,'saude'],[/pet|cachorro|gato/,'pet'],[/divida|quitar|emprest/,'receipt'],[/invest|acoes|fii|cripto/,'chart']];const h=L.find(([re])=>re.test(x));return h?h[1]:'flag';}
 /* v10.160: card de notificações separado para o MVP colocá-lo logo depois do WhatsApp */
