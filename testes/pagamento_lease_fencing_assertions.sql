@@ -28,7 +28,7 @@ begin
   if ok then raise exception 'worker A não pode finalizar após B assumir'; end if;
 
   v := public.pagamento_evento_aplica_assinatura(
-    v_id, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence', false
+    v_id, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence'
   );
   if v <> 'perdido' then raise exception 'worker A não pode aplicar assinatura: %', v; end if;
   if exists(select 1 from public.assinaturas where user_id=v_uid) then
@@ -60,7 +60,7 @@ begin
      or not has_function_privilege('service_role','public.pagamento_evento_finaliza(text,uuid,text,uuid)','EXECUTE') then
     raise exception 'permissões da RPC de finalização incorretas';
   end if;
-  if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean)','EXECUTE')
+  if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
      or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean)','EXECUTE')
      or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean)','EXECUTE') then
     raise exception 'permissões da RPC de aplicação incorretas';
