@@ -54,6 +54,9 @@ begin
   v := public.pagamento_evento_reserva(v_id, token_c, 'mercadopago', 'subscription_preapproval', 'sub-test', 120);
   if v <> 'concluido' then raise exception 'evento concluído não pode ser retomado: %', v; end if;
 
+  -- Isola uma assinatura que já foi cancelada; as versões só são comparáveis dentro da mesma ID.
+  update public.assinaturas set status='cancelado', provedor_assinatura_id='mp-sub-versioned', provedor_versao=null where user_id=v_uid;
+
   -- Evento de versão nova chega primeiro; evento antigo da mesma assinatura não pode rebaixar.
   v := public.pagamento_evento_reserva(v_id4, token_a, 'mercadopago', 'subscription_preapproval', 'sub-versioned', 120);
   if v <> 'novo' then raise exception 'evento versão 10 deveria ser reservado: %', v; end if;
