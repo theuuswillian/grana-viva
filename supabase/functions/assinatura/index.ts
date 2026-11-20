@@ -68,28 +68,15 @@ Deno.serve(async (req) => {
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
     if (!intencao) {
-      // Consulta IDs já persistidos antes da busca por e-mail: ela pode ter atraso de consistência.
-      // Assim, uma assinatura recém-criada não fica invisível entre a criação e a indexação da busca.
+      // Consulta IDs persistidos diretamente: a busca por e-mail pode ter atraso de consistência.
+      let checkoutsRegistrados: { pendentes: Array<{ id: string; url: string; plano: string; criado: number }>; autorizadas: Array<{ id: string; plano: string; criado: number }> } = { pendentes: [], autorizadas: [] };
       try {
         const { data: registrados, error: erroRegistrados } = await sb.from("pagamento_checkout_intencoes")
           .select("plano,email_pagador,provedor_preapproval_id")
           .eq("user_id", user.id).eq("status", "criado").not("provedor_preapproval_id", "is", null)
-          .order("criado_em", { ascending: false }).limit(100);
+          .order("criado_em", { ascending: false }).limit(20);
         if (erroRegistrados) throw new Error("checkouts_registrados_indisponiveis");
-        const conhecidos = await MP.consultaCheckoutsRegistrados(user.id, registrados || [], token, GVP.PLANOS);
-        if (conhecidos.autorizadas.length) {
-          return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
-        }
-        if (conhecidos.pendentes.length > 1) {
-          return json({ erro: "Há mais de uma tentativa de pagamento pendente. Para evitar cobranças duplicadas, não vamos abrir outra. Entre em contato com o suporte para regularizar." }, 409);
-        }
-        if (conhecidos.pendentes.length === 1) {
-          const pendente = conhecidos.pendentes[0];
-          if (pendente.plano !== plano) {
-            return json({ erro: "Você já tem um pagamento pendente para outro plano. Conclua ou regularize essa tentativa antes de escolher outro plano." }, 409);
-          }
-          return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
-        }
+        checkoutsRegistrados = await MP.consultaCheckoutsRegistrados(user.id, registrados || [], token, GVP.PLANOS);
       } catch (e) {
         console.log("reconciliacao_checkouts_registrados", String(e));
         await registraErro(sb, "assinatura", "reconciliacao_checkouts_registrados", e);
@@ -103,15 +90,17 @@ Deno.serve(async (req) => {
         if (erroEmailsAnteriores) throw new Error("emails_checkout_indisponiveis");
         const emailsConhecidos = [...new Set([emailPagador, ...(emailsAnteriores || []).map((x: any) => x.email_pagador || "")])]
           .map((x) => String(x).trim().toLowerCase()).filter(Boolean);
-        const existentes = await MP.consultaCheckoutsDoUsuario(user.id, emailsConhecidos, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
-        if (existentes.autorizadas.length) {
+        const encontrados = await MP.consultaCheckoutsDoUsuario(user.id, emailsConhecidos, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        const autorizadas = [...new Map([...checkoutsRegistrados.autorizadas, ...encontrados.autorizadas].map((x) => [x.id, x])).values()];
+        const pendentes = [...new Map([...checkoutsRegistrados.pendentes, ...encontrados.pendentes].map((x) => [x.id, x])).values()];
+        if (autorizadas.length) {
           return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
         }
-        if (existentes.pendentes.length > 1) {
+        if (pendentes.length > 1) {
           return json({ erro: "Há mais de uma tentativa de pagamento pendente. Para evitar cobranças duplicadas, não vamos abrir outra. Entre em contato com o suporte para regularizar." }, 409);
         }
-        if (existentes.pendentes.length === 1) {
-          const pendente = existentes.pendentes[0];
+        if (pendentes.length === 1) {
+          const pendente = pendentes[0];
           if (pendente.plano !== plano) {
             return json({ erro: "Você já tem um pagamento pendente para outro plano. Conclua ou regularize essa tentativa antes de escolher outro plano." }, 409);
           }
