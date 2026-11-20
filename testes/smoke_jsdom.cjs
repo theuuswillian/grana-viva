@@ -153,7 +153,7 @@ if(e2.length)console.log('erros do jsdom:',e2.slice(0,8));
   const chave=T.localCopyKey,anterior='gve1:copia-anterior-preservada';
   w.localStorage.setItem(chave,anterior);
   await T.forceLocalSave();
-  const copiaSalva=w.localStorage.getItem(chave);ok(copiaSalva===anterior||(typeof copiaSalva==='string'&&copiaSalva.startsWith('gve1:')),'sem criptografia local, preserva a cópia anterior; com suporte, grava somente ciphertext');
+  const copiaSalva=w.localStorage.getItem(chave);console.log('DEBUG cache local',JSON.stringify({chave,anterior,copiaSalva,tipo:typeof copiaSalva}));ok(copiaSalva===anterior||(typeof copiaSalva==='string'&&copiaSalva.startsWith('gve1:')),'sem criptografia local, preserva a cópia anterior; com suporte, grava somente ciphertext');
   await T.forceCipherWrite();
   const copiaAux=w.localStorage.getItem('gv-crypto-fail-test');ok(copiaAux===null||(typeof copiaAux==='string'&&copiaAux.startsWith('gve1:')),'gravaCifrado não faz fallback para texto puro');
   T.cancelLocalSave();
