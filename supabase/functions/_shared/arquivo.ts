@@ -9,6 +9,43 @@
 // mesmo teto de 5 MB e bytes mágicos de OGG/MP3/MP4/AMR.
 
 export const ARQ_MAX = 5 * 1024 * 1024; // 5 MB
+
+/** Lê um stream com limite real de bytes, cancelando antes de alocar além do teto. */
+export async function leStreamLimitado(
+  body: ReadableStream<Uint8Array> | null,
+  max = ARQ_MAX,
+): Promise<Uint8Array | null> {
+  if (!body) return new Uint8Array(0);
+  if (!Number.isSafeInteger(max) || max < 0) throw new Error("Limite de stream inválido");
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > max) {
+        try { await reader.cancel("limite de bytes excedido"); } catch { /* stream já encerrado */ }
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch (e) {
+    try { await reader.cancel(e); } catch { /* preserva o erro original */ }
+    throw e;
+  } finally {
+    reader.releaseLock();
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
 export const MIMES_OK = ["image/jpeg", "image/png", "image/webp", "application/pdf", "text/csv"] as const;
 export type MimeOk = typeof MIMES_OK[number];
 export const MSG_GRANDE = "Arquivo grande demais. O limite é 5 MB: tire a foto de novo ou envie um PDF menor.";

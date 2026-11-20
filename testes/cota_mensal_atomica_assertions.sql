@@ -5,6 +5,13 @@ declare
   r text;
   uid uuid := '22222222-2222-4222-8222-222222222222';
 begin
+  if not exists (
+    select 1 from pg_proc
+     where oid='public.wa_salva_pendente_com_cota(uuid,text,date,integer,jsonb)'::regprocedure
+       and proconfig @> array['search_path=pg_catalog, public']
+  ) then
+    raise exception 'RPC de salvamento WhatsApp precisa de search_path seguro';
+  end if;
   if not public.ia_consume_cota_mes(uid, date '2026-11-10', 'assistente', 2) then
     raise exception 'primeiro consumo deveria ser permitido';
   end if;
