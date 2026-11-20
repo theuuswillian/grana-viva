@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (emIn && (emIn.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn))) return json({ erro: "confira o e-mail do Mercado Pago" }, 400);
     const emailPagador = emIn || user.email || "";
     if (!emailPagador) return json({ erro: "informe o e-mail da sua conta Mercado Pago" }, 400);
-    const intentId = String(body?.intentId || "").trim();
+    let intentId = String(body?.intentId || "").trim();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)) {
       return json({ erro: "inicie novamente a tentativa de pagamento" }, 400);
     }
@@ -66,6 +66,21 @@ Deno.serve(async (req) => {
       return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
     }
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
+
+    // Se a chave do navegador expirou ou foi perdida, recupera a reserva pendente da mesma conta.
+    // Isso permite repetir o POST idempotente original em vez de deixar a conta presa em HTTP 409.
+    if (!intencao) {
+      const { data: pendente, error: pe } = await sb.from("pagamento_checkout_intencoes")
+        .select("id,user_id,plano,email_pagador,status,init_point")
+        .eq("user_id", user.id).eq("status", "pendente").maybeSingle();
+      if (pe) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+      if (pendente) {
+        const idAnterior = MP.idIntencaoPendenteCompativel(pendente, user.id, plano, emailPagador);
+        if (!idAnterior) return json({ erro: "Já existe uma tentativa de pagamento pendente para outro plano ou e-mail. Conclua ou regularize essa tentativa antes de iniciar outra." }, 409);
+        intentId = idAnterior;
+        intencao = pendente;
+      }
+    }
 
     if (!intencao) {
       // Consulta IDs persistidos diretamente: a busca por e-mail pode ter atraso de consistência.
