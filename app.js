@@ -44,7 +44,7 @@ const KEY='grana-viva-v1';
 const CATS_NOVAS=['Mercado','Restaurantes','Delivery','Combustível','Uber e táxi','Transporte público','Manutenção do carro','Contas da casa','Internet e celular','Assinaturas','Compras','Roupas','Beleza','Farmácia','Academia','Pets','Viagem','Presentes','Doações','Impostos e taxas','Tarifas e juros','Filhos','Casa e reformas','Eletrônicos'];
 const CATS_PADRAO=['Moradia','Alimentação','Transporte','Lazer','Saúde','Educação'].concat(CATS_NOVAS,['Outros']);
 const CATS_RECEITA=['Salário','Horas extras','Freelance','Vendas','Reembolso','Aluguel recebido','Presentes recebidos','Aposentadoria','Dividendos','Bônus/Promoções','Rendimentos','Outros'];
-const ACCENTS={verde:['#22c55e','#8b5cf6'],violeta:['#a855f7','#6366f1'],azul:['#3b82f6','#06b6d4'],rosa:['#ec4899','#f97316']};
+const ACCENTS={verde:['#22c55e','#15803d'],violeta:['#a855f7','#6366f1'],azul:['#3b82f6','#06b6d4'],rosa:['#ec4899','#f97316']};
 const PAL=['#64748b','#94a3b8','#475569','#a1a1aa','#71717a','#52525b','#22c55e','#3f6212','#334155','#6b7280','#9ca3af','#166534'];
 function hashCat(s){let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))>>>0;return h;}
 // cor estável por nome: hash -> paleta, com sondagem para não repetir cor entre categorias
