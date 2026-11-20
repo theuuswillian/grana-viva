@@ -53,6 +53,7 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 - [ ] Avaliar a movimentação de `pg_net` para schema apropriado após verificar dependências e impacto.
 - [x] Auditar o webhook ativo, ignorar tópicos não utilizados sem reservar eventos e exigir HMAC em todo webhook externo suportado; chamadas internas de sincronização usam HMAC próprio com escopo, timestamp e ID vinculados. Adicionar testes de assinatura válida/inválida, segredo ausente, sincronização interna e idempotência. Ver [auditoria Mercado Pago](AUDITORIA-WEBHOOK-MERCADOPAGO-2026-11-20.md).
 - [ ] Homologar Mercado Pago em sandbox: checkout, webhook de assinatura, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
+- [x] Alinhar a carência para parcelas recusadas à janela documentada de retentativas do Mercado Pago (10 dias) e cobrir com teste unitário; validar comportamento final no sandbox antes de produção.
 - [ ] Homologar Mercado Pago ponta a ponta em sandbox: checkout, webhook de assinatura, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
 - Adicionar observabilidade com correlação de request/evento, métricas de falha, fila e alertas sem registrar dados sensíveis.
 - Atualizar documentação de cron jobs, Edge Functions, secrets e procedimentos de recuperação.
