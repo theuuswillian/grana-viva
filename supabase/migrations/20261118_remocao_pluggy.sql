@@ -7,6 +7,18 @@ begin;
 delete from public.tx
 where coalesce(data, '{}'::jsonb) ? 'pluggyId';
 
+-- Transferências manuais podem guardar somente o identificador antigo no vínculo aninhado.
+-- Preserva a transferência e remove apenas o metadado legado.
+update public.tx
+set data = jsonb_set(
+  coalesce(data, '{}'::jsonb),
+  '{par}',
+  (data->'par') - 'pluggyId',
+  true
+)
+where jsonb_typeof(data->'par') = 'object'
+  and data->'par' ? 'pluggyId';
+
 -- Posições de investimento criadas/vinculadas à sincronização Pluggy.
 delete from public.fiis
 where coalesce(data, '{}'::jsonb) ? 'pluggyInv';
@@ -44,6 +56,18 @@ set data = coalesce(data, '{}'::jsonb) - array[
 where coalesce(data, '{}'::jsonb) ?| array[
   'pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'
 ];
+
+-- A cópia sincronizada do app guarda parte das preferências dentro de data.cfg.
+-- Limpa também a lista antiga de identificadores nesse nível, preservando as demais configurações.
+update public.settings
+set data = jsonb_set(
+  coalesce(data, '{}'::jsonb),
+  '{cfg}',
+  (data->'cfg') - array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'],
+  true
+)
+where jsonb_typeof(data->'cfg') = 'object'
+  and data->'cfg' ?| array['pluggyOn','pluggyMap','pluggyIgn','pluggyDesde','pluggyVisto','pluggyInvDia'];
 
 drop table if exists public.pluggy_tx;
 drop table if exists public.pluggy_acc;

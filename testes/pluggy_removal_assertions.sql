@@ -10,6 +10,12 @@ begin
   if not exists (select 1 from public.tx where id='tx-manual') then
     raise exception 'registro manual foi apagado indevidamente';
   end if;
+  if (select data->'par' ? 'pluggyId' from public.tx where id='tx-manual') then
+    raise exception 'identificador antigo permaneceu no vínculo aninhado';
+  end if;
+  if (select data->'par'->>'id' from public.tx where id='tx-manual') <> 'par-1' then
+    raise exception 'vínculo manual foi perdido ao limpar metadado aninhado';
+  end if;
   if exists (select 1 from public.fiis where id='fii-pluggy') then
     raise exception 'posição explicitamente Pluggy não foi removida';
   end if;
@@ -21,6 +27,12 @@ begin
   end if;
   if (select data->>'tema' from public.settings limit 1) <> 'dark' then
     raise exception 'preferências não relacionadas foram perdidas';
+  end if;
+  if (select (data->'cfg') ? 'pluggyIgn' from public.settings limit 1) then
+    raise exception 'lista antiga de identificadores permaneceu dentro de settings.cfg';
+  end if;
+  if (select (data->'cfg'->>'metaCotas')::int from public.settings limit 1) <> 250 then
+    raise exception 'preferências não relacionadas dentro de cfg foram perdidas';
   end if;
   if (select data ?| array['saldo','saldoData','saldoFecha'] from public.bancos where id='bank-1') then
     raise exception 'saldo automático Pluggy não foi removido da conta mapeada';
