@@ -50,6 +50,12 @@ create table public.ia_uso (
   primary key (user_id, dia, k)
 );
 
+create table public.wa_codigo (
+  codigo text primary key,
+  user_id uuid not null,
+  expira timestamptz not null
+);
+
 -- Estrutura mínima para validar as RPCs de pagamento e a aplicação transacional.
 create schema auth;
 create table auth.users (id uuid primary key, email text);
