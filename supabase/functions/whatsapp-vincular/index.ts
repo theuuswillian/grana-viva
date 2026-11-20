@@ -80,11 +80,11 @@ Deno.serve(async (req) => {
     return json({ ok: true, resumoSemanal: ligar });
   }
   if (acao === "desvincular") {
-    const [v, p] = await Promise.all([
-      sb.from("wa_vinculo").delete().eq("user_id", uid),
-      sb.from("wa_pendente").delete().eq("user_id", uid),
-    ]);
-    if (v.error || p.error) return json({ erro: "não consegui concluir a desvinculação. Tente novamente." }, 503);
+    // Limpa primeiro os lançamentos pendentes; se isso falhar, mantém o vínculo intacto.
+    const { error: erroPendentes } = await sb.from("wa_pendente").delete().eq("user_id", uid);
+    if (erroPendentes) return json({ erro: "não consegui limpar os lançamentos pendentes. Tente novamente." }, 503);
+    const { error: erroVinculo } = await sb.from("wa_vinculo").delete().eq("user_id", uid);
+    if (erroVinculo) return json({ erro: "não consegui concluir a desvinculação. Tente novamente." }, 503);
     return json({ ok: true });
   }
   if (acao === "codigo") {
