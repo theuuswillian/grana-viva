@@ -66,7 +66,7 @@ $$;
 alter table public.cotacao_cache alter column ticker set not null, alter column v set not null;
 alter table public.radar_disparos alter column user_id set not null, alter column chave set not null;
 
-do $
+do $$
 declare
   v_pk_columns text[];
 begin
