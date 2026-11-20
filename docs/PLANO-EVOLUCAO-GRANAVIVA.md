@@ -71,7 +71,7 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 - [x] Conciliação opcional de saldo inicial/final; divergências são exibidas e exigem reconhecimento explícito antes da importação.
 - [ ] Cobertura ampliada de estornos, transferências, datas de competência e arquivos grandes.
 
-**Critério de aceite parcial atingido:** reimportar o mesmo arquivo reconhece lançamentos já importados; o histórico permite desfazer com proteção a alterações posteriores. O fluxo ainda não oferece mapeamento livre de colunas nem conciliação de saldos.
+**Critério de aceite parcial atingido:** reimportar o mesmo arquivo reconhece lançamentos já importados; o histórico permite desfazer com proteção a alterações posteriores. O fluxo agora oferece mapeamento manual de colunas e conciliação opcional de saldos; seguem pendentes os casos avançados listados acima.
 
 ## Fase 3 — Dashboard financeiro unificado
 
