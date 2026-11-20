@@ -495,7 +495,7 @@ const OWNER_KEY='gv-owner';
 function sessaoGuardadaId(){try{const r=JSON.parse(localStorage.getItem('sb-hydvhpfpvhopetqqjido-auth-token')||'null');return r&&r.user&&r.user.id||null;}catch(e){return null;}}
 /* ---------- v10.64: dados deste aparelho criptografados ----------
    AES-GCM 256. a chave é uma CryptoKey NÃO exportável guardada no IndexedDB: o app usa, mas ela não pode ser lida nem copiada.
-   quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. sem WebCrypto/IndexedDB, grava como antes. */
+   quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. se Web Crypto ou IndexedDB não estiver disponível, a cópia anterior é preservada e nenhum dado financeiro novo é gravado em texto puro. */
 const CR_PFX='gve1:';
 let CR_RAW=null,CR_OK=true,CR_KEY=null,CR_FALHOU=false,CR_TELA=false;const CR_G={};
 function crIdbOp(modo,fn){return new Promise((ok,er)=>{const r=indexedDB.open('gv-cripto',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onerror=()=>er(r.error);
@@ -509,13 +509,13 @@ async function crChave(criar){
 }
 function crB64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}
 function crBin(s){const b=atob(s),n=b.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=b.charCodeAt(i);return u;} // v10.73: ~10x mais rápido que Uint8Array.from com função
-async function crCifra(txt){const k=await crChave(true);if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));
+async function crCifra(txt){const k=await crChave(true);if(!k)throw new Error('criptografia local indisponível');const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(txt)));return CR_PFX+crB64(iv)+':'+crB64(ct);}
 async function crDecifra(raw){const k=await crChave(false);if(!k)throw new Error('sem chave');const [iv,ct]=raw.slice(CR_PFX.length).split(':');
   return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:crBin(iv)},k,crBin(ct)));}
 /* grava cifrado; gravações mais novas da mesma chave vencem as antigas que ainda estavam cifrando */
 function gravaCifrado(chave,txt){const g=CR_G[chave]=(CR_G[chave]||0)+1;
-  return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;localStorage.setItem(chave,c||txt);},()=>{if(CR_G[chave]!==g)return;try{localStorage.setItem(chave,txt);}catch(e){}});}
+  return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;if(typeof c!=='string'||c.indexOf(CR_PFX)!==0)throw new Error('criptografia local indisponível; cópia anterior preservada');localStorage.setItem(chave,c);}).catch(e=>{if(CR_G[chave]!==g)return;avisoArmazenamento(e);});}
 function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;if(chave===KEY){clearTimeout(GL_T);GL_T=null;GL_PEND=false;}}
 async function leTalvezCifrado(chave){const raw=localStorage.getItem(chave);if(!raw)return null;return JSON.parse(raw.indexOf(CR_PFX)===0?await crDecifra(raw):raw);}
 /* v10.99: gravação agrupada. Vários salvar() seguidos (importar extrato, gerar parcelas, sincronizar) viram uma só
@@ -533,7 +533,7 @@ function gravaLocalJa(){
   if(!GL_PEND||!CR_OK||LOC_BLOQ)return;GL_PEND=false;
   try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}
   const g=CR_G[KEY]=(CR_G[KEY]||0)+1,txt=JSON.stringify(S);
-  return crCifra(txt).catch(()=>null).then(c=>{if(CR_G[KEY]!==g)return;return guardaCopia(c||txt);}).then(()=>{LOC_AVISOU=false;},e=>avisoArmazenamento(e));
+  return crCifra(txt).then(c=>{if(CR_G[KEY]!==g)return;if(typeof c!=='string'||c.indexOf(CR_PFX)!==0)throw new Error('criptografia local indisponível; cópia anterior preservada');return guardaCopia(c);}).then(()=>{LOC_AVISOU=false;},e=>avisoArmazenamento(e));
 }
 /* v10.106: a cópia local fica no localStorage (rápido). quando ele enche (QuotaExceededError; no Safari ~5 MB),
    a cópia passa para o IndexedDB (gv-dados), que tem bem mais espaço. ordem: grava no IndexedDB, marca gv-loc=idb,
