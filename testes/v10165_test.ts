@@ -315,3 +315,61 @@ Deno.test("Mercado Pago: sincronização busca por e-mails conhecidos e valida e
   if (!chamadas.some((x) => x.includes("payer_email=antigo%40exemplo.com"))) throw new Error("e-mail histórico não consultado");
 });
 
+
+
+Deno.test("Mercado Pago: reconcilia diretamente preapproval persistido mesmo antes de aparecer na busca por e-mail", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    if (url.endsWith("/preapproval/sub-registrado")) return new Response(JSON.stringify({
+      id: "sub-registrado", version: 3, status: "pending",
+      init_point: "https://www.mercadopago.com.br/checkout/registrado",
+      payer_email: "pagador@exemplo.com",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      date_created: "2026-11-20T00:00:00Z",
+    }), { status: 200 });
+    throw new Error("consulta direta inesperada: " + url);
+  }) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados(uid, [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-registrado",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.pendentes.length, 1);
+  eq(r.pendentes[0].id, "sub-registrado");
+  eq(r.pendentes[0].url, "https://www.mercadopago.com.br/checkout/registrado");
+  eq(r.autorizadas.length, 0);
+  eq(chamadas.length, 1, "usa o ID persistido sem depender da busca por e-mail");
+});
+
+Deno.test("Mercado Pago: reconciliação direta bloqueia assinatura autorizada já persistida", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-autorizado", version: 4, status: "authorized",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    date_created: "2026-11-20T00:00:00Z",
+  }), { status: 200 })) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados(uid, [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-autorizado",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.autorizadas.length, 1);
+  eq(r.autorizadas[0].id, "sub-autorizado");
+  eq(r.pendentes.length, 0);
+});
+
+Deno.test("Mercado Pago: reconciliação direta rejeita vínculo ou e-mail divergente", async () => {
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-divergente", version: 1, status: "pending",
+    init_point: "https://www.mercadopago.com.br/checkout/divergente",
+    payer_email: "outro@exemplo.com",
+    external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados("00000000-0000-4000-8000-000000000001", [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-divergente",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.pendentes.length, 0);
+  eq(r.autorizadas.length, 0);
+});
