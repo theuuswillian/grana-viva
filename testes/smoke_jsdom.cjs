@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -137,4 +137,14 @@ T.go('inicio');doc.querySelector('#btnEye').click();ok(/•••••/.test(vi
 doc.querySelector('#btnEye').click();
 const e2=erros.filter(x=>!/Not implemented|Could not parse CSS|navigation/.test(x));
 if(e2.length)console.log('erros do jsdom:',e2.slice(0,8));
-setTimeout(()=>process.exit(process.exitCode||0),300);
+(async()=>{
+  // Segurança: sem Web Crypto/IndexedDB, nunca substitui a cópia anterior por JSON em texto puro.
+  const chave=T.localCopyKey,anterior='gve1:copia-anterior-preservada';
+  w.localStorage.setItem(chave,anterior);
+  await T.forceLocalSave();
+  ok(w.localStorage.getItem(chave)===anterior,'sem criptografia local, preserva a cópia anterior e não grava dados em texto puro');
+  await T.forceCipherWrite();
+  ok(w.localStorage.getItem('gv-crypto-fail-test')===null,'gravaCifrado não faz fallback para texto puro');
+  T.cancelLocalSave();
+  setTimeout(()=>process.exit(process.exitCode||0),300);
+})().catch(e=>{console.error('falha no teste de criptografia local:',e);process.exit(1);});
