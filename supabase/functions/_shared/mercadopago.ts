@@ -287,7 +287,7 @@ export async function cancela(id: string, token: string, f: Fetch = fetch) {
   const r = await f(API + "/preapproval/" + encodeURIComponent(id), {
     method: "PUT", signal: AbortSignal.timeout(10000),
     headers: { Authorization: "Bearer " + token, "content-type": "application/json" },
-    body: JSON.stringify({ status: "cancelled" }),
+    body: JSON.stringify({ status: "canceled" }),
   });
   if (!r.ok) throw new Error("mp_cancela " + r.status);
   return true;
