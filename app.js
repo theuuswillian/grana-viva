@@ -5683,7 +5683,7 @@ function impLoteAnalisa(id){
 }
 function impLoteHTML(){
   const L=(S.cfg.impLotes||[]).slice(-8).reverse();if(!L.length)return '';
-  return `<div class="card impHist"><div class="row"><div class="txt"><h4>Importações recentes</h4><small>Desfaça um lote sem apagar lançamentos que você editou depois</small></div><span class="impHistIc">${I('history')}</span></div>
+  return `<div class="card impHist"><div class="row"><div class="txt"><h4>Importações recentes</h4><small>Desfaça um lote sem apagar lançamentos que você editou depois</small></div><span class="impHistIc">${I('refresh')}</span></div>
     ${L.map(x=>{
       const a=impLoteAnalisa(x.id),dest=x.destino.indexOf('b:')===0?S.bancos.find(b=>b.id===x.destino.slice(2)):S.cartoes.find(b=>b.id===x.destino.slice(2));
       const tipo=x.destino.indexOf('c:')===0?'cartão':'conta',nome=dest?dest.nome:tipo;
