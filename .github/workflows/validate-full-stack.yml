@@ -73,6 +73,8 @@ jobs:
         run: node --check app.js
       - name: Validate inline script CSP hashes
         run: python3 csp.py index.html
+      - name: Validate PWA asset versions
+        run: node testes/pwa_version.test.cjs
       - name: Validate complete Pluggy removal from frontend and deployment assets
         run: node scripts/validate-remocao-pluggy.mjs
       - name: Check plan rules
