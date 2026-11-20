@@ -37,7 +37,7 @@ const db: DB = {
     if (error) throw error;
     return data;
   },
-  async aplicaAssinaturaEvento(id, token, uid, campos, protegerOutra): Promise<ResultadoAplicacao> {
+  async aplicaAssinaturaEvento(id, token, uid, campos): Promise<ResultadoAplicacao> {
     const { data, error } = await sb.rpc("pagamento_evento_aplica_assinatura", {
       p_id: id,
       p_token: token,
@@ -47,7 +47,6 @@ const db: DB = {
       p_periodo_fim: campos.periodo_fim ?? null,
       p_provedor_assinatura_id: String(campos.provedor_assinatura_id),
       p_provedor_cliente_id: campos.provedor_cliente_id ?? null,
-      p_proteger_outra: protegerOutra,
     });
     if (error) throw error;
     if (data === "aplicado" || data === "fundador_mantido" || data === "outra_assinatura_ativa" || data === "perdido") return data;
