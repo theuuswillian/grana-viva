@@ -127,3 +127,21 @@ A inspeção de `pg_class.relacl` confirmou, para as 13 tabelas, privilégios co
 ### Conclusão operacional
 
 Os findings foram classificados sem alterações em produção. Próximas ações são: habilitar proteção contra senhas vazadas em janela controlada; mapear dependências de `pg_net`; revisar `backup.copias` e índices com plano de execução e período de observação maior. Não foram aplicadas migrations, grants, policies, alterações de Auth ou publicação de funções.
+
+
+### Dependências concretas de `pg_net`
+
+A inspeção read-only confirmou `pg_net 0.20.4` instalado em `public` e sete jobs ativos em `cron.job` que chamam `net.http_post`:
+
+| Job | Agenda | Destino |
+|---|---|---|
+| `granaviva-alertas-push` | diariamente 12:00 UTC | `alertas-push` |
+| `granaviva-alertas-precos` | dias úteis 21:30 UTC | `alertas-push?so=precos` |
+| `granaviva-saude` | a cada 30 minutos | `alertas-push?so=saude` |
+| `granaviva-radar-b3` | dias úteis, a cada 15 min entre 13:00 e 20:59 UTC | `radar-precos?so=b3` |
+| `granaviva-radar-b3-fim` | dias úteis 21:00 e 21:15 UTC | `radar-precos?so=b3` |
+| `granaviva-radar-cripto` | a cada hora no minuto 7 | `radar-precos?so=cripto` |
+| `granaviva-wa-resumo-semanal` | segunda-feira 11:00 UTC | `whatsapp-webhook?acao=resumo-semanal` |
+| `granaviva-wa-resumo-semanal-lote` | segunda-feira 11:15, 11:30 e 11:45 UTC | `whatsapp-webhook?acao=resumo-semanal` |
+
+A consulta retornou oito jobs consumidores (incluindo o lote semanal); todos dependem de `net.http_post`. **Não mover a extensão nem renomear o schema** até planejar e testar a atualização coordenada de todos esses jobs. O segredo usado nos headers vem do Vault; seu valor não foi lido.
