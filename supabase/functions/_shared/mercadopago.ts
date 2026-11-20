@@ -191,6 +191,15 @@ export function checkoutBloqueadoPorAssinaturaAtiva(row: any): boolean {
   return row?.status === "ativo" && Boolean(row?.provedor_assinatura_id);
 }
 
+// Recupera uma intenção pendente antiga quando o navegador perdeu a chave local (ex.: sessão expirada).
+// Só reutiliza se usuário, plano e e-mail coincidirem exatamente; nunca mistura tentativas de contas diferentes.
+export function idIntencaoPendenteCompativel(registro: any, uid: string, plano: string, email: string): string | null {
+  const id = String(registro?.id || "");
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuid.test(id) || registro?.user_id !== uid || registro?.plano !== plano || registro?.email_pagador !== email || registro?.status !== "pendente") return null;
+  return id;
+}
+
 // ---------- checkout: cria a assinatura pendente e devolve o link de pagamento (Pix ou cartão, escolhido no MP) ----------
 export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string; idempotencyKey: string }, f: Fetch = fetch) {
   const P = o.PLANOS[o.plano];
