@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
   if (erroPlano) return json({ erro: "não consegui consultar sua assinatura agora" }, 503);
   const pode = GVP.pode(GVP.efetivo(s).nivel, "leitura_ia");
   if (acao === "status") {
-    let { data: v, error: ve } = await sb.from("wa_vinculo").select("telefone,criado_em,resumo_semanal").eq("user_id", uid).maybeSingle();
+    const inicial = await sb.from("wa_vinculo").select("telefone,criado_em,resumo_semanal").eq("user_id", uid).maybeSingle();
+    let v: any = inicial.data;
+    let ve: any = inicial.error;
     if (ve && colunaAusente(ve, "resumo_semanal")) {
       const antigo = await sb.from("wa_vinculo").select("telefone,criado_em").eq("user_id", uid).maybeSingle();
       v = antigo.data;
