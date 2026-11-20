@@ -31,7 +31,7 @@ create index if not exists wa_pendente_terminal_cleanup
 create or replace function public.wa_salva_pendente_com_cota(
   p_uid uuid, p_pendente_id text, p_dia date, p_lim int, p_linhas jsonb
 ) returns text
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = pg_catalog, public as $$
 declare
   v_usado bigint;
   v_ini date;
