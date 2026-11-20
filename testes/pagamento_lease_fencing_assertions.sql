@@ -38,7 +38,7 @@ begin
   end if;
 
   v := public.pagamento_evento_aplica_assinatura(
-    v_id, token_b, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence', false
+    v_id, token_b, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence'
   );
   if v <> 'aplicado' then raise exception 'worker B deveria aplicar assinatura: %', v; end if;
 
@@ -84,8 +84,8 @@ begin
     raise exception 'permissões da RPC de finalização incorretas';
   end if;
   if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
-     or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean)','EXECUTE')
-     or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean)','EXECUTE') then
+     or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
+     or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE') then
     raise exception 'permissões da RPC de aplicação incorretas';
   end if;
 end $$;
