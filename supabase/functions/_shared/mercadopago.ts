@@ -217,21 +217,31 @@ export async function criaCheckout(o: { uid: string; email: string; plano: strin
 }
 
 // v10.109: id da assinatura desta pessoa no MP (qualquer plano pago): a autorizada mais recente, senão a mais recente; "" se não houver
-export async function ultimaAssinatura(uid: string, planos: string[], token: string, f: Fetch = fetch): Promise<string> {
+export async function ultimaAssinatura(uid: string, emails: string[], planos: string[], token: string, f: Fetch = fetch): Promise<string> {
+  const permitidos = new Set(planos);
   let melhor: { id: string; t: number } | null = null;
-  for (const p of planos) {
-    const r = await mpGet("/preapproval/search?limit=20&external_reference=" + encodeURIComponent(refExterna(uid, p)), token, f);
-    if (r.status !== 200) throw new Error("mp_busca " + r.status);
-    for (const a of (r.json?.results || [])) {
-      if (lerRef(a?.external_reference)?.uid !== uid || !a?.id) continue;
-      // uma autorizada vale mais que uma pendente (checkout aberto e não pago); entre iguais, a mais recente
-      const t = (a.status === "authorized" ? 1e13 : 0) + (Date.parse(a.last_modified || a.date_created || "") || 0);
-      if (!melhor || t > melhor.t) melhor = { id: String(a.id), t };
-    }
+  for (const email of [...new Set(emails.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))]) {
+    let offset = 0;
+    let total = 0;
+    do {
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(email), token, f);
+      if (r.status !== 200) throw new Error("mp_busca " + r.status);
+      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+      total = Number(r.json?.paging?.total ?? resultados.length);
+      for (const a of resultados) {
+        const ref = lerRef(a?.external_reference);
+        if (!ref || ref.uid !== uid || !permitidos.has(ref.plano) || !a?.id) continue;
+        // Uma autorizada vale mais que uma pendente; entre estados iguais, prioriza a alteração mais recente.
+        const t = (a.status === "authorized" ? 1e13 : 0) + (Date.parse(a.last_modified || a.date_created || "") || 0);
+        if (!melhor || t > melhor.t) melhor = { id: String(a.id), t };
+      }
+      offset += resultados.length;
+      if (resultados.length === 0) break;
+      if (offset < total && offset >= 200) throw new Error("mp_busca_limite");
+    } while (offset < total);
   }
   return melhor ? melhor.id : "";
 }
-
 /**
  * Reutiliza um checkout pendente do próprio usuário em vez de cancelá-lo.
  * O Mercado Pago não oferece compare-and-set documentado para status/version:
