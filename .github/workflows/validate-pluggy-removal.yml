@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   validate:
+    name: Pluggy removal guard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
