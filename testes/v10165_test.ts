@@ -78,6 +78,32 @@ Deno.test("webhook MP: com MP_WEBHOOK_SECRET, x-signature inválida = 401", asyn
   eq(r.status, 401);
 });
 
+Deno.test("Mercado Pago: parcela recusada mantém acesso durante a janela documentada de retentativas", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const fetchFake = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    if (url.endsWith("/authorized_payments/invoice-1")) return new Response(JSON.stringify({
+      id: "invoice-1", preapproval_id: "sub-1", status: "scheduled", summarized: "recycling",
+      payment: { id: 1001, status: "rejected", status_detail: "cc_rejected_other_reason" },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+    if (url.endsWith("/preapproval/sub-1")) return new Response(JSON.stringify({
+      id: "sub-1", version: 7, external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      status: "authorized", next_payment_date: "2026-11-20T12:00:00.000Z",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+    throw new Error("endpoint inesperado " + url);
+  }) as typeof fetch;
+  const dentro = await MP.buscaEstado("subscription_authorized_payment", "invoice-1", "token",
+    { pro: { preco: 24.9, periodo: "mes" } }, fetchFake, Date.parse("2026-11-29T12:00:00.000Z"));
+  eq(dentro.estado?.status, "ativo", "não retirar acesso durante os 10 dias de retentativa");
+  eq(dentro.estado?.periodo_fim, "2026-11-30T12:00:00.000Z");
+  const depois = await MP.buscaEstado("subscription_authorized_payment", "invoice-1", "token",
+    { pro: { preco: 24.9, periodo: "mes" } }, fetchFake, Date.parse("2026-12-01T12:00:00.000Z"));
+  eq(depois.estado?.status, "inadimplente", "após a janela de retentativa, parcela recusada pode marcar inadimplência");
+  eq(chamadas.length, 4, "cada consulta busca a fatura e confirma a assinatura diretamente no MP");
+});
+
 Deno.test("Mercado Pago: HMAC válido usa data.id, x-request-id e ts no manifesto", async () => {
   // Vetor independente pré-calculado: HMAC-SHA256("test-secret", "id:123abc;request-id:req-42;ts:1700000000;").
   const xSignature = "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a";
