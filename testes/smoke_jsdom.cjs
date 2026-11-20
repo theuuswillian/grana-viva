@@ -154,10 +154,10 @@ ok(/Importar extrato/.test(impHtml)&&!/Lançamentos do banco|pular esta conta|n�
 T.confirmaImport();
 ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.length-1].conta==='b1','CSV/OFX importa lançamento na conta selecionada');
 
-const ofxTeste='OFXHEADER:100\\nDATA:OFXSGML\\nVERSION:102\\n<OFX><BANKMSGSRSV1><STMTRS><BANKTRANLIST><STMTTRN><TRNTYPE>DEBIT\\n<DTPOSTED>20261119000000\\n<TRNAMT>-12.50\\n<FITID>FIT-123\\n<NAME>PADARIA CENTRAL\\n</STMTTRN></BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>';
+const ofxTeste='OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\n<OFX><BANKMSGSRSV1><STMTRS><BANKTRANLIST><STMTTRN><TRNTYPE>DEBIT\n<DTPOSTED>20261119000000\n<TRNAMT>-12.50\n<FITID>FIT-123\n<NAME>PADARIA CENTRAL\n</STMTTRN></BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>';
 const ofxLido=T.lerOFX(ofxTeste);
 ok(ofxLido.linhas.length===1&&ofxLido.linhas[0].fitid==='FIT-123'&&ofxLido.linhas[0].data==='2026-11-19','OFX SGML lê data, valor e FITID');
-const csvLido=T.lerCSV('Data;Valor;Descrição;FITID\\n19/11/2026;-12,50;PADARIA CENTRAL;CSV-123');
+const csvLido=T.lerCSV('Data;Valor;Descrição;FITID\n19/11/2026;-12,50;PADARIA CENTRAL;CSV-123');
 ok(csvLido.linhas.length===1&&csvLido.linhas[0].fitid==='CSV-123'&&csvLido.linhas[0].valor===-12.5,'CSV brasileiro com ponto e vírgula e FITID');
 const linhasLote=[{desc:'PADARIA A',valor:-23.5,data:T.hojeSP()},{desc:'CAFETERIA B',valor:-23.5,data:T.hojeSP()}];
 T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
