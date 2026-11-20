@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - implementacao/plano-evolucao-2026-11-20
       - revisao-lancamento-v10.165
       - correcoes/webhook-idempotencia-2026-11-18
       - correcoes/whatsapp-preservar-pendente-2026-11-18
