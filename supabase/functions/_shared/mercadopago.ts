@@ -371,7 +371,7 @@ export async function cancelaConfirmando(id: string, token: string, f: Fetch = f
     if (r.status === 404) return "ja_cancelada";
     if (!r.ok) throw e;
     const j: any = await r.json().catch(() => ({}));
-    if (["cancelled", "finished", "expired"].includes(String(j?.status || ""))) return "ja_cancelada";
+    if (["canceled", "cancelled", "finished", "expired"].includes(String(j?.status || ""))) return "ja_cancelada";
     throw e;
   }
 }
