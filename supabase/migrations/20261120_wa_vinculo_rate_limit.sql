@@ -50,7 +50,7 @@ begin
    for update;
 
   if v_bloqueado is not null and v_bloqueado > now() then
-    return 'limite_tentativas';
+    return 'limite_tentativas_silencioso';
   end if;
 
   if v_janela <= now() - interval '15 minutes' then
@@ -118,5 +118,12 @@ $$;
 
 revoke all on function public.wa_vincula_codigo(text, text) from public, anon, authenticated;
 grant execute on function public.wa_vincula_codigo(text, text) to service_role;
+
+-- Remove contadores antigos para limitar a retenção de telefones que tentaram vincular.
+select cron.schedule(
+  'granaviva-wa-codigo-tentativas-limpeza',
+  '25 4 * * *',
+  $job$delete from public.wa_codigo_tentativa where atualizado_em < now() - interval '30 days'$job$
+);
 
 commit;
