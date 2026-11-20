@@ -38,20 +38,21 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 - [x] Criar branch isolada de implementação.
 - [x] Fazer o workflow full-stack executar em pushes da `main` e na branch de evolução.
 - [x] Fazer o workflow full-stack executar em PRs direcionadas à `main`.
-- [ ] Validar a execução completa do workflow na branch.
+- [x] Validar a execução completa do workflow na branch (full-stack e guard aprovados; conferir novamente no HEAD final da PR).
 - [ ] Configurar proteção da `main` com PR obrigatório, checks obrigatórios e bloqueio de force-push/exclusão (depende das configurações administrativas do GitHub).
-- [ ] Definir uma única fonte de verdade para versão do PWA e testar coerência HTML/service worker.
+- [x] Validar a coerência da versão do PWA entre HTML, `GV_BUILD`, assets e service worker com teste automatizado.
 - [ ] Criar baseline de testes de regressão das jornadas críticas.
-- [ ] Atualizar runbooks e documentação de produção.
+- [x] Criar README, roadmap e auditorias técnicas de Supabase e Mercado Pago; runbooks operacionais detalhados seguem como melhoria.
 
 ## Fase 1 — Segurança, banco e confiabilidade operacional
 
 - [x] Auditar RLS, policies e grants das tabelas públicas; confirmar policies por `auth.uid()` nas tabelas de usuário e ausência de grants `anon`/`authenticated` nas 13 tabelas internas sem policies. Ver [auditoria Supabase](AUDITORIA-SUPABASE-2026-11-20.md).
 - [x] Tornar a criptografia local fail-closed: não gravar dados financeiros novos em texto puro quando Web Crypto/IndexedDB falhar; coberto pelo smoke test.
-- [ ] Reconciliar migrations versionadas com schema e histórico reais do Supabase; 30 arquivos locais vs 18 registradas. Não marcar migrations manualmente nem aplicar arquivos antigos sem diff revisado.
+- [x] Reconciliar os 12 arquivos não registrados individualmente contra o schema real: efeitos presentes, arquivos Pluggy obsoletos, snapshot histórico e limpeza já refletida. Nenhum replay ou reparo de histórico foi executado. Ver [auditoria Supabase](AUDITORIA-SUPABASE-2026-11-20.md).
 - [ ] Revisar proteção contra senhas comprometidas e parâmetros de autenticação; habilitar proteção contra senhas vazadas no painel Supabase e validar em homologação.
 - [ ] Avaliar a movimentação de `pg_net` para schema apropriado após verificar dependências e impacto.
-- Homologar Mercado Pago ponta a ponta: checkout, webhook assinado, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
+- [x] Auditar o webhook ativo e corrigir na branch o tratamento de tópicos não utilizados, preservando HMAC e idempotência; adicionar testes com vetor HMAC fixo. Ver [auditoria Mercado Pago](AUDITORIA-WEBHOOK-MERCADOPAGO-2026-11-20.md).
+- [ ] Homologar Mercado Pago ponta a ponta em sandbox: checkout, webhook de assinatura, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
 - Adicionar observabilidade com correlação de request/evento, métricas de falha, fila e alertas sem registrar dados sensíveis.
 - Atualizar documentação de cron jobs, Edge Functions, secrets e procedimentos de recuperação.
 
