@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,readLocalCopy:async()=>await dadosIdb('readonly',st=>st.get(KEY)).catch(()=>null)||localStorage.getItem(KEY),go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,lerOFX,lerCSV,conciliarSaldoImportacao,abreImport,montaImport,confirmaImport,impLoteAnalisa,viewBancos,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,metasInicioHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,readLocalCopy:async()=>await dadosIdb('readonly',st=>st.get(KEY)).catch(()=>null)||localStorage.getItem(KEY),go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,lerOFX,lerCSV,conciliarSaldoImportacao,abreImport,montaImport,confirmaImport,impLoteAnalisa,viewBancos,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -31,6 +31,14 @@ ok(limpo.fiis.length===1&&limpo.fiis[0].id==='manual-fii'&&!('pluggyInv' in limp
 ok(!('pluggyIgn' in limpo.cfg),'cópia local limpa lista antiga de identificadores');
 T.setUser({id:'00000000-0000-0000-0000-000000000001',email:'t@t.com'});
 const S=T.S;
+
+S.metas=[];
+ok(/Criar meta/.test(T.metasInicioHTML()),'dashboard mostra estado vazio de metas com atalho');
+S.metas=[{id:'meta-smoke',nome:'Reserva',alvo:1000,atual:500}];
+const resumoMetas=T.metasInicioHTML();
+ok(/50%/.test(resumoMetas)&&/500,00/.test(resumoMetas)&&/meta-abre/.test(resumoMetas),'dashboard mostra progresso, valor guardado e acesso à meta');
+S.metas=[];
+
 S.tx=[{id:'cache-legado',pluggyId:'old-3',data:'2026-11-18',tipo:'despesa',valor:5},{id:'cache-manual',data:'2026-11-18',tipo:'despesa',valor:8,par:{id:'p',pluggyId:'old-4'}}];
 S.fiis=[{id:'cache-fii',ticker:'OLD11',pluggyInv:'old',cotas:1,preco:5}];
 S.cfg.pluggyIgn=['old-3'];
