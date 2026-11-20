@@ -36,8 +36,8 @@ for (const obsolete of ['IMP.banco', 'IMP_FILA', 'proxImportBanco', 'fimFilaBanc
 }
 assert.ok(app.includes("async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}"), 'installment recovery must use local history only');
 assert.ok(!html.includes('app.min.js?v='), 'HTML must load the maintained app source during this removal');
-assert.ok(html.includes("const GV_BUILD='10.167';"), 'HTML build version must be bumped');
-assert.ok(html.includes('app.js?v=10.167') && html.includes('planos.js?v=10.167'), 'HTML must load the versioned app and plans sources');
+assert.ok(html.includes("const GV_BUILD='10.168';"), 'HTML build version must be bumped');
+assert.ok(html.includes('app.js?v=10.168') && html.includes('planos.js?v=10.168'), 'HTML must load the versioned app and plans sources');
 assert.doesNotMatch(html, /maximum-scale\s*=\s*1|user-scalable\s*=\s*no/i, 'viewport must preserve browser zoom for low-vision users');
 assert.match(html, /:focus-visible\s*\{[^}]*outline:/, 'interactive controls must have a visible keyboard focus indicator');
 assert.match(html, /prefers-reduced-motion\s*:\s*reduce/, 'the app must respect reduced-motion preferences');
@@ -47,5 +47,5 @@ assert.ok(app.includes("sh.setAttribute('aria-modal','true')") && app.includes("
 assert.ok(app.includes('return `<label>${esc(c.label)}<input') && app.includes('return `<label>${esc(c.label)}<textarea'), 'generated form controls must have programmatic labels');
 assert.match(html, /<div id="toast" role="status" aria-live="polite" aria-atomic="true"><\/div>/, 'toast feedback must be announced to assistive technology');
 
-assert.ok(sw.includes("const V='gv-v10.167';") && sw.includes('app.js?v=10.167') && sw.includes('planos.js?v=10.167') && sw.includes('tour.min.js?v=10.167'), 'service worker cache and precache URLs must match the app version');
+assert.ok(sw.includes("const V='gv-v10.168';") && sw.includes('app.js?v=10.168') && sw.includes('planos.js?v=10.168') && sw.includes('tour.min.js?v=10.168'), 'service worker cache and precache URLs must match the app version');
 console.log('Pluggy removal static checks passed.');
