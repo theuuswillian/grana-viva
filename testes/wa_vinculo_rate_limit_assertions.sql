@@ -34,9 +34,10 @@ begin
   end if;
 
   -- Janela vencida libera uma nova janela e reinicia a contagem.
-  update public.wa_codigo_tentativa
-     set janela_inicio=now()-interval '16 minutes', bloqueado_ate=null
-   where wa_codigo_tentativa.telefone=v_telefone_reset;
+  insert into public.wa_codigo_tentativa(telefone,janela_inicio,tentativas,bloqueado_ate)
+  values (v_telefone_reset,now()-interval '16 minutes',10,now()-interval '1 minute')
+  on conflict (telefone) do update
+    set janela_inicio=excluded.janela_inicio,tentativas=excluded.tentativas,bloqueado_ate=excluded.bloqueado_ate;
   if public.wa_vincula_codigo(v_telefone_reset,'999998') <> 'codigo_expirado' then
     raise exception 'janela expirada deveria liberar nova tentativa';
   end if;
