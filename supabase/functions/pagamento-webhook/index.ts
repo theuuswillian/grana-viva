@@ -47,9 +47,10 @@ const db: DB = {
       p_periodo_fim: campos.periodo_fim ?? null,
       p_provedor_assinatura_id: String(campos.provedor_assinatura_id),
       p_provedor_cliente_id: campos.provedor_cliente_id ?? null,
+      p_provedor_versao: Number(campos.provedor_versao),
     });
     if (error) throw error;
-    if (data === "aplicado" || data === "fundador_mantido" || data === "outra_assinatura_ativa" || data === "perdido") return data;
+    if (data === "aplicado" || data === "fundador_mantido" || data === "outra_assinatura_ativa" || data === "obsoleto" || data === "perdido") return data;
     throw new Error("resultado inesperado ao aplicar assinatura");
   },
 };
