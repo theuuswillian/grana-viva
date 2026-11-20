@@ -233,36 +233,34 @@ export async function ultimaAssinatura(uid: string, planos: string[], token: str
 }
 
 /**
- * Limpa somente preapprovals comprovadamente pendentes do próprio usuário.
- * Nunca cancela authorized/paused/canceled e sempre preserva a tentativa indicada.
- * A consulta individual é obrigatória antes do PUT: o resultado da busca é apenas candidato.
+ * Reutiliza um checkout pendente do próprio usuário em vez de cancelá-lo.
+ * O Mercado Pago não oferece compare-and-set documentado para status/version:
+ * GET seguido de PUT pode cancelar uma assinatura que acabou de ser autorizada.
+ * Portanto esta rotina é somente leitura e nunca envia PUT.
  */
-export async function cancelaPendentesDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+export async function checkoutPendenteDoUsuario(uid: string, emailPagador: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
   if (!uid || !emailPagador || !token) throw new Error("reconciliacao_parametros_invalidos");
+  const permitidos = new Set(planos);
   const candidatos = new Map<string, string>();
-  for (const plano of planos) {
-    const ref = refExterna(uid, plano);
-    let offset = 0;
-    let total = 0;
-    do {
-      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(emailPagador), token, f);
-      if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
-      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
-      total = Number(r.json?.paging?.total ?? resultados.length);
-      for (const item of resultados) {
-        const id = String(item?.id || "");
-        if (!id || id === preservarId || item?.status !== "pending") continue;
-        const vinculo = lerRef(item?.external_reference);
-        if (vinculo?.uid !== uid || vinculo.plano !== plano) continue;
-        candidatos.set(id, plano);
-      }
-      offset += resultados.length;
-      if (resultados.length === 0) break;
-      if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
-    } while (offset < total);
-  }
+  let offset = 0;
+  let total = 0;
+  do {
+    const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(emailPagador), token, f);
+    if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
+    const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+    total = Number(r.json?.paging?.total ?? resultados.length);
+    for (const item of resultados) {
+      const id = String(item?.id || "");
+      const vinculo = lerRef(item?.external_reference);
+      if (!id || id === preservarId || item?.status !== "pending" || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
+      candidatos.set(id, vinculo.plano);
+    }
+    offset += resultados.length;
+    if (resultados.length === 0) break;
+    if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
+  } while (offset < total);
 
-  const cancelados: string[] = [];
+  const confirmados: Array<{ id: string; url: string; criado: number }> = [];
   for (const [id, plano] of candidatos) {
     const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
     if (atual.status !== 200) throw new Error("mp_confirma_reconciliacao " + atual.status);
@@ -272,15 +270,12 @@ export async function cancelaPendentesDoUsuario(uid: string, emailPagador: strin
     if (p?.status !== "pending" || !confereValores(p, plano, PLANOS)) continue;
     const confirmado = estadoDePreapproval(p, PLANOS);
     if (confirmado.ignorar || confirmado.estado?.uid !== uid || confirmado.estado?.mp_status !== "pending") continue;
-    await cancela(id, token, f);
-    const depois = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
-    if (depois.status !== 200) throw new Error("mp_verifica_cancelamento " + depois.status);
-    if (depois.json?.status !== "canceled" && depois.json?.status !== "cancelled") {
-      throw new Error("mp_cancelamento_nao_confirmado");
-    }
-    cancelados.push(id);
+    const url = String(p?.init_point || "");
+    if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
+    confirmados.push({ id, url, criado: Date.parse(p?.last_modified || p?.date_created || "") || 0 });
   }
-  return { encontrados: candidatos.size, cancelados };
+  confirmados.sort((a, b) => b.criado - a.criado);
+  return confirmados[0] || null;
 }
 
 export async function cancela(id: string, token: string, f: Fetch = fetch) {
