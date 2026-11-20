@@ -1,6 +1,6 @@
 /* GranaViva Design System v10.176
    Camada visual compartilhada: preserva HTML, dados e regras de negócio.
-   Identidade: carvão + violeta; cores semânticas continuam reservadas aos estados financeiros. */
+   Identidade: All Black; preto e grafite como base, verde como acento funcional. */
 :root{
   color-scheme:dark;
   --a1:#A855F7;
@@ -182,8 +182,8 @@ input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var
 /* GranaViva v10.176 — identidade All Black aprovada:
    preto/grafite como base, verde funcional nos destaques e componentes sem efeitos ilustrativos. */
 :root{
-  --a1:#22C55E;
-  --a2:#16A34A;
+  --a1:#22C55E !important;
+  --a2:#16A34A !important;
   --bg:#07090A;
   --card:#111416;
   --card2:#0B0E0F;
@@ -261,6 +261,14 @@ input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var
 .aTabs button.on{background:var(--gv-violet-soft);color:#86EFAC}
 #view .demoBar{border-color:var(--gv-violet-line)!important}
 #view .demoBar>.i{color:var(--a1)}
-/* Ícones e superfícies neutros: sem emojis decorativos, brilhos ou aparência de ilustração. */
+/* Ícones vetoriais discretos e superfícies neutras; verde reservado a ações e estados positivos. */
 .tx .ic,.ic{filter:none;box-shadow:none}
 .card,.acard,.sheet,.modalCard,.panel,.boxCard{box-shadow:var(--shadow)}
+
+/* Refinamento All Black: superfícies e ícones com contraste contido. */
+:root{--gv-radius:16px}
+html,body{background:var(--bg)}
+.i{stroke-width:1.75}
+.emo{display:none!important}
+.top .logo{letter-spacing:-.045em;font-weight:750}
+.card,.acard,.sheet,.modalCard,.panel,.boxCard{border-color:var(--line)}
