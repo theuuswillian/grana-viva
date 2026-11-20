@@ -101,3 +101,29 @@ A proteção contra senhas vazadas é uma configuração do Auth que não foi al
 ## Resultado
 
 O schema ativo contém os principais efeitos dos arquivos ausentes do histórico, com evolução posterior em tabelas de assinatura, IA e WhatsApp. O problema principal é rastreabilidade do histórico de migrations, não uma lista de 12 alterações comprovadamente pendentes. O risco maior seria reaplicar arquivos antigos sem critério: isso pode recriar integração removida, substituir policies atuais ou executar limpeza destrutiva sobre dados do usuário.
+
+
+## Rechecagem de advisors e grants — 20/11/2026, 16:40 UTC
+
+Consulta read-only aos advisors de segurança, performance e saúde, seguida de inspeção dos ACLs das tabelas sinalizadas. Nenhum DDL ou configuração foi alterado.
+
+### Segurança — RLS sem policies
+
+O advisor reportou 13 tabelas com RLS habilitado e nenhuma policy: `cotacao_cache`, `erros_fn`, `pagamento_checkout_intencoes`, `pagamento_eventos`, `push_log`, `rl_uso`, `wa_codigo`, `wa_codigo_tentativa`, `wa_msg`, `wa_pendente`, `wa_saida`, `wa_saida_teste` e `wa_vinculo`.
+
+A inspeção de `pg_class.relacl` confirmou, para as 13 tabelas, privilégios concedidos somente a `postgres` e `service_role`; não há grants explícitos para `anon` ou `authenticated`. Portanto, o finding INFO não indica exposição via Data API neste estado. Não criar policies artificiais apenas para remover o aviso.
+
+### Outros findings de segurança
+
+- `pg_net` permanece instalado em `public` (WARN). Não mover automaticamente: primeiro mapear chamadas, dependências e schema suportado para evitar quebrar jobs e triggers.
+- Leaked Password Protection do Supabase Auth está desativado (WARN). A ativação é uma configuração de Auth, não uma migration SQL; requer decisão operacional, teste de cadastro/alteração/recuperação e verificação de impacto nos usuários.
+- Saúde: nenhum finding reportado pelos advisors nesta consulta.
+
+### Performance
+
+- `backup.copias` não tem primary key e está no schema `backup`, fora do inventário de tabelas públicas. ACL consultado mostra somente `postgres`; RLS está desabilitado. Não é acessível por grants diretos a `anon`/ `authenticated` segundo o estado observado. Confirmar consumidores e retenção antes de adicionar chave.
+- Sete índices foram marcados como não utilizados. Manter por enquanto: a janela de estatísticas pode não capturar jobs semanais, rotinas de recuperação ou consultas raras.
+
+### Conclusão operacional
+
+Os findings foram classificados sem alterações em produção. Próximas ações são: habilitar proteção contra senhas vazadas em janela controlada; mapear dependências de `pg_net`; revisar `backup.copias` e índices com plano de execução e período de observação maior. Não foram aplicadas migrations, grants, policies, alterações de Auth ou publicação de funções.
