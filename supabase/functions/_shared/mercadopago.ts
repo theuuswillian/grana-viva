@@ -183,6 +183,13 @@ export async function buscaEstado(topico: string, dataId: string, token: string,
   return { ignorar: "topico_ignorado:" + topico };
 }
 
+
+// Não abre uma segunda recorrência enquanto a assinatura atual ainda está autorizada.
+// A troca de plano deve passar primeiro pelo cancelamento confirmado da assinatura anterior.
+export function checkoutBloqueadoPorAssinaturaAtiva(row: any): boolean {
+  return row?.status === "ativo" && Boolean(row?.provedor_assinatura_id);
+}
+
 // ---------- checkout: cria a assinatura pendente e devolve o link de pagamento (Pix ou cartão, escolhido no MP) ----------
 export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string; idempotencyKey: string }, f: Fetch = fetch) {
   const P = o.PLANOS[o.plano];
