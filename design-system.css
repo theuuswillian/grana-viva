@@ -182,8 +182,8 @@ input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var
 /* GranaViva v10.176 — identidade All Black aprovada:
    preto/grafite como base, verde funcional nos destaques e componentes sem efeitos ilustrativos. */
 :root{
-  --a1:#22C55E !important;
-  --a2:#16A34A !important;
+  --a1:#22C55E;
+  --a2:#16A34A;
   --bg:#07090A;
   --card:#111416;
   --card2:#0B0E0F;
