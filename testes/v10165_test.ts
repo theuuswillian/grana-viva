@@ -102,6 +102,20 @@ Deno.test("webhook MP: HMAC legítimo atravessa a validação e só então reser
   eq((await r.json()).resultado, "nao_encontrado");
   eq(f.ev.size, 1, "evento reservado somente depois de validar a assinatura");
 });
+
+Deno.test("webhook MP: evento de plano não associado é confirmado sem bloquear o webhook", async () => {
+  const f = dbFalso();
+  const r = await processaWebhook(new Request(
+    "https://x/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval_plan&data.id=plan-123",
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "subscription_preapproval_plan", data: { id: "plan-123" } }) },
+  ), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "segredo-configurado" },
+    PLANOS: {}, efetivo: () => ({}), fetch: fetch404,
+  });
+  eq(r.status, 200);
+  eq((await r.json()).resultado, "topico_ignorado");
+  eq(f.ev.size, 0, "evento sem efeito não reserva nem altera assinatura");
+});
 Deno.test("webhook MP: sem MP_WEBHOOK_SECRET segue pela API (não quebra) e é idempotente", async () => {
   const f = dbFalso(); const logs: string[] = [];
   const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join(" ")) };
