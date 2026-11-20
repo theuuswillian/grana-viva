@@ -5941,25 +5941,27 @@ function splitCSV(line,sep){
     else if(ch==='"')q=true;else if(ch===sep){r.push(cur);cur='';}else cur+=ch;}
   r.push(cur);return r.map(x=>x.trim());
 }
-function lerCSV(txt){
-  const ls=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+function lerCSV(txt,mapa){
+  const ls=String(txt||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
   if(ls.length<2)return {linhas:[],cartao:false,erro:'Arquivo sem linhas.'};
-  const sep=(ls[0].split(';').length>ls[0].split(',').length)?';':',';
-  const h=splitCSV(ls[0],sep).map(norm);
-  const idx=re=>h.findIndex(x=>re.test(x));
-  const iD=idx(/^(data|date|dt)/),iV=idx(/^(valor|amount|value|quantia)/),iDesc=idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento)/),iId=idx(/^(identificador|id|fitid)$/);
-  /* v10.84: a planilha do próprio app tem "Dia trabalhado" (dd/mm/aaaa ou ISO); sem a coluna, segue como antes */
-  const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/);
-  const iTipo=idx(/^tipo$/); // v10.88: planilha do próprio app traz o tipo (transferência, empréstimo...)
-  if(iD<0||iV<0)return {linhas:[],cartao:false,erro:'Não encontrei as colunas de data e valor no CSV.'};
-  // Nubank cartão (date,title,amount): compras vêm positivas
-  const cartao=h[iD]==='date'&&h[iV]==='amount'&&h[iDesc]==='title';
-  const out=[];
-  ls.slice(1).forEach(l=>{const c=splitCSV(l,sep);const data=dataExt(c[iD]);let valor=numExt(c[iV]);
-    if(!data||isNaN(valor))return;if(cartao)valor=-valor;
-    /* v10.52: fitid vem do arquivo: só caracteres seguros (senão vira id novo na importação) */
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
-  return {linhas:out,cartao};
+  const primeira=ls[0],sep=splitCSV(primeira,';').length>=splitCSV(primeira,',').length?';':',';
+  const cab=splitCSV(primeira,sep),h=cab.map(norm),idx=re=>h.findIndex(x=>re.test(x));
+  const auto={data:idx(/^(data|date|dt)/),valor:idx(/^(valor|amount|value|quantia|montante|total)/),desc:idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento|detalhe|nome)/),id:idx(/^(identificador|id|fitid|codigo|referencia|documento)$/)};
+  if(!mapa&&(auto.data<0||auto.valor<0))return {linhas:[],cartao:false,mapear:true,cabecalho:cab,separador:sep,sugestoes:auto};
+  const m=mapa||auto,iD=Number(m.data),iV=Number(m.valor),valido=i=>Number.isInteger(i)&&i>=0&&i<cab.length;
+  if(!valido(iD)||!valido(iV)||iD===iV)return {linhas:[],cartao:false,erro:'Selecione colunas diferentes e válidas para data e valor.'};
+  const iDesc=valido(Number(m.desc))?Number(m.desc):auto.desc,iId=valido(Number(m.id))?Number(m.id):auto.id;
+  const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/),iTipo=idx(/^tipo$/);
+  const cartao=h[iD]==='date'&&h[iV]==='amount'&&iDesc>=0&&h[iDesc]==='title';
+  const out=[];let invalidas=0;
+  ls.slice(1).forEach(l=>{const c=splitCSV(l,sep),data=dataExt(c[iD]);let valor=numExt(c[iV]);if(!data||isNaN(valor)){invalidas++;return;}if(cartao)valor=-valor;
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]||'').replace(/[^A-Za-z0-9_.\\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
+  return {linhas:out,cartao,invalidas,colunas:cab.length};
+}
+function conciliarSaldoImportacao(inicial,final,linhas){
+  const ini=numExt(inicial),fim=numExt(final);if(!isFinite(ini)||!isFinite(fim))return {disponivel:false,ok:true};
+  const movimento=(linhas||[]).reduce((s,l)=>s+cents(Number(l&&l.valor)||0),0),esperado=cents(ini)+movimento,diferenca=cents(fim)-esperado;
+  return {disponivel:true,ok:Math.abs(diferenca)<=1,inicial:cents(ini)/100,final:cents(fim)/100,movimento:movimento/100,esperado:esperado/100,diferenca:diferenca/100};
 }
 const REGRAS_CAT=[
   [/ifood|rappi|99 ?food|ze delivery|aiqfome|james delivery|delivery/,'Delivery'],
@@ -6141,13 +6143,42 @@ async function importarExtratoIA(f){
   finally{iaTrava('extrato',false);}
 }
 function abreImport(nome,txt){
-  const r=/<OFX>|OFXHEADER/i.test(txt)?lerOFX(txt):lerCSV(txt);
+  const ofx=/<OFX>|OFXHEADER/i.test(txt),r=ofx?lerOFX(txt):lerCSV(txt);
+  if(r.mapear){abreMapeamentoCSV(nome,txt,r);return;}
   if(r.erro){toast(r.erro,true);return;}
-  if(!r.linhas.length){toast('Não encontrei lançamentos nesse arquivo.',true);return;}
-  IMP={nome,cartao:r.cartao,linhas:r.linhas.slice(0,3000),destino:''};
-  if(r.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
-  else if(!r.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
+  abreImportParsed(nome,r);
+}
+function abreImportParsed(nome,r,conciliacao){
+  if(!r||!r.linhas||!r.linhas.length){toast('Não encontrei lançamentos válidos nesse arquivo.',true);return;}
+  IMP={nome,cartao:!!r.cartao,linhas:r.linhas.slice(0,3000),destino:'',conciliacao:conciliacao||null,conciliacaoAceita:false};
+  if(IMP.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
+  else if(!IMP.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
   montaImport();
+}
+function abreMapeamentoCSV(nome,txt,r){
+  const box=$('#modal'),cols=r.cabecalho||[],opts=cols.map((c,i)=>'<option value="'+i+'">'+(i+1)+'. '+esc(c||'(sem título)')+'</option>').join('');
+  const field=(id,label,required)=>'<label>'+label+(required?' *':'')+'<select id="'+id+'">'+(required?'':'<option value="">não importar</option>')+opts+'</select></label>';
+  box.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="Mapear colunas do CSV"><div class="sh-head"><h3>Configurar CSV</h3><button class="x" data-act="fechar" aria-label="fechar">'+I('close')+'</button></div>'+
+    '<p class="small">'+esc(nome)+' · '+cols.length+' colunas detectadas. Escolha onde estão os dados; nada será importado nesta etapa.</p>'+
+    '<div class="formGrid">'+field('csvColData','Data',true)+field('csvColValor','Valor',true)+field('csvColDesc','Descrição',false)+field('csvColId','Identificador (FITID)',false)+'</div>'+
+    '<p class="small"><b>Conciliação opcional</b> · saldo inicial + movimentações deve resultar no saldo final.</p>'+
+    '<div class="formGrid"><label>Saldo inicial (R$)<input id="csvSaldoInicial" inputmode="decimal" placeholder="ex.: 1.250,00"></label><label>Saldo final (R$)<input id="csvSaldoFinal" inputmode="decimal" placeholder="ex.: 980,00"></label></div>'+
+    '<p class="small" id="csvMapErro" role="status"></p><button class="btn full" id="csvMapContinuar">Conferir lançamentos</button></div>';
+  box.classList.add('on');
+  const set=(id,v)=>{const el=box.querySelector('#'+id);if(el&&Number.isInteger(v)&&v>=0)el.value=String(v);};
+  set('csvColData',r.sugestoes.data);set('csvColValor',r.sugestoes.valor);set('csvColDesc',r.sugestoes.desc);set('csvColId',r.sugestoes.id);
+  box.querySelector('#csvMapContinuar').onclick=()=>{
+    const data=box.querySelector('#csvColData').value,valor=box.querySelector('#csvColValor').value;
+    if(data===''||valor===''||data===valor){box.querySelector('#csvMapErro').textContent='Selecione colunas diferentes para data e valor.';return;}
+    const mapa={data:+data,valor:+valor,desc:box.querySelector('#csvColDesc').value===''?-1:+box.querySelector('#csvColDesc').value,id:box.querySelector('#csvColId').value===''?-1:+box.querySelector('#csvColId').value};
+    const parsed=lerCSV(txt,mapa);
+    if(parsed.erro||!parsed.linhas.length){box.querySelector('#csvMapErro').textContent=parsed.erro||'Nenhuma linha válida. Confira as colunas e o formato das datas/valores.';return;}
+    const si=box.querySelector('#csvSaldoInicial').value.trim(),sf=box.querySelector('#csvSaldoFinal').value.trim();
+    if(!!si!==!!sf){box.querySelector('#csvMapErro').textContent='Para conciliar, informe os dois saldos ou deixe ambos vazios.';return;}
+    const conc=si&&sf?conciliarSaldoImportacao(si,sf,parsed.linhas):null;
+    if(conc&&!conc.disponivel){box.querySelector('#csvMapErro').textContent='Não consegui interpretar os saldos. Use valores como 1.250,00.';return;}
+    abreImportParsed(nome,parsed,conc);
+  };
 }
 /* v10.95: número da parcela escrito na descrição do banco. só com a palavra parc/parcela (dd/mm solto é data, não parcela) */
 function parcelaDesc(desc){const m=String(desc||'').match(/parc(?:ela)?\.?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i);if(!m)return null;const k=+m[1],n=+m[2];return k>=1&&n>=2&&n<=48&&k<=n?{k,n}:null;}
@@ -6226,16 +6257,18 @@ function montaImport(){
   box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
+    ${IMP.conciliacao&&IMP.conciliacao.disponivel?( !IMP.conciliacao.ok ? '<div class="aviso warn">Atenção: saldo inicial + movimentações = '+brl(IMP.conciliacao.esperado)+', mas o extrato informa '+brl(IMP.conciliacao.final)+'. Diferença: '+brl(IMP.conciliacao.diferenca)+'. Confira antes de continuar.</div><label class="small"><input type="checkbox" id="impConciliacaoAceita" ${IMP.conciliacaoAceita?'checked':''}> Conferi a divergência e quero continuar mesmo assim.</label>' : '<p class="small">Saldo conciliado: '+brl(IMP.conciliacao.final)+' ✓</p>') : ''}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.trab&&l.valor>0?' · trabalhado '+fmtDataCurta(l.trab):''}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
-    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
+    <button class="btn full" id="impOk" ${opts&&sel.length&&(!IMP.conciliacao||IMP.conciliacao.ok||IMP.conciliacaoAceita)?'':'disabled'}>importar ${sel.length} lançamentos</button>
   </div>`;
   box.classList.add('on');
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
+  const conc=$('#impConciliacaoAceita');if(conc)conc.onchange=()=>{IMP.conciliacaoAceita=conc.checked;resumoImp();};
   box.querySelectorAll('input[data-i]').forEach(c=>c.onchange=()=>{IMP.linhas[+c.dataset.i].on=c.checked;c.closest('.impRow').classList.toggle('off',!c.checked);resumoImp();});
   box.querySelectorAll('select[data-c]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.c].cat=s.value;});
   box.querySelectorAll('input[data-emp]').forEach(c=>c.onchange=()=>{const l=IMP.linhas[+c.dataset.emp];l.empOk=c.checked;if(c.checked&&!l.on){l.on=true;const ck=box.querySelector('input[data-i="'+c.dataset.emp+'"]');if(ck){ck.checked=true;ck.closest('.impRow').classList.remove('off');}resumoImp();}});
@@ -6244,7 +6277,7 @@ function montaImport(){
     const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
-function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
+function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length||!!(IMP.conciliacao&&IMP.conciliacao.disponivel&&!IMP.conciliacao.ok&&!IMP.conciliacaoAceita);}
 /* v10.165: assinaturas sugeridas a partir do extrato da IA. uma por descrição (a data mais recente), só despesas importadas
    agora, que ainda não são conta fixa. conta=true: extrato de conta (sai via pix da conta); senão, fatura do cartão alvo */
 function fixosDoImport(linhas,alvo,conta){
