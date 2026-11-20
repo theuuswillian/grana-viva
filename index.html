@@ -3993,6 +3993,26 @@ html.claro .waCmdB .i{color:#15803d}
   .topBar .syncPill { flex-basis: 36px !important; width: 36px !important; min-width: 36px !important; height: 36px !important; }
   .topBar > .tr { gap: 6px !important; }
 }
+
+/* v10.172: cabeçalho compacto do Início — sem saudação, com período visível */
+.hmHead.hmHeadCompact{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:2px 2px 12px;margin:0;min-height:32px;
+}
+.hmHeadCompact h2{
+  margin:0;color:var(--txt);font-size:18px;font-weight:750;
+  line-height:1.2;letter-spacing:-.02em;
+}
+.hmHeadCompact>span{
+  display:inline-flex;align-items:center;max-width:58%;
+  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
+  color:var(--mut);background:var(--card);font-size:12px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+@media(max-width:420px){
+  .hmHead.hmHeadCompact{padding-bottom:10px}
+  .hmHeadCompact h2{font-size:17px}
+}
 </style>
 
 </head>
@@ -4065,7 +4085,7 @@ const GV_BUILD='10.171'; // versão publicada (./bump.sh troca aqui e no sw.js)
      app.js é servido diretamente e versionado pelo bump.sh. -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
 <script defer src="planos.js?v=10.171"></script>
-<script defer src="app.js?v=10.171"></script>
+<script defer src="app.js?v=10.172"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
