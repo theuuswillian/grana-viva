@@ -201,7 +201,7 @@ export async function criaCheckout(o: { uid: string; email: string; plano: strin
     body: JSON.stringify(body),
   });
   let j: any = null; try { j = await r.json(); } catch { /* */ }
-  if (!r.ok || !j?.init_point) throw new Error("mp_checkout " + r.status + " " + String(j?.message || "").slice(0, 120));
+  if (!r.ok || !j?.id || !j?.init_point) throw new Error("mp_checkout " + r.status + " " + String(j?.message || "").slice(0, 120));
   return { url: String(j.init_point), id: String(j.id || "") };
 }
 
