@@ -250,6 +250,7 @@ Deno.test("Mercado Pago: reconcilia somente preapproval pendente do próprio usu
   const uid = "00000000-0000-4000-8000-000000000001";
   let status = "pending";
   const chamadas: string[] = [];
+  const ref = "gv1:" + uid + ":pro";
   const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method || "GET";
