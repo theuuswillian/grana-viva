@@ -43,7 +43,7 @@ on:
       - correcoes/pagamento-lease-fencing-2026-11-19
       - correcoes/checkout-idempotencia-2026-11-19
 concurrency:
-  group: validate-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
+  group: validate-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 permissions:
   contents: read
