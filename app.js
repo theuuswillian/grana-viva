@@ -357,6 +357,10 @@ function assinar(plano){
   const bt=$('#mf button[type="submit"]');if(bt)bt.textContent='Continuar para o pagamento';
   const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
 }
+function checkoutUrlMercadoPago(url){
+  try{const u=new URL(url);return u.protocol==='https:'&&/(^|\\.)mercadopago\\.com(\\.br)?$/i.test(u.hostname);}
+  catch(e){return false;}
+}
 async function abreCheckout(plano,email){
   const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');
   if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
@@ -376,7 +380,8 @@ async function abreCheckout(plano,email){
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
     if(emBreve){try{sessionStorage.removeItem(intentKey);}catch(e){}PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
-    const u=new URL(o.url);if(!/(^|\\.)mercadopago\\.com(\\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
+    if(!checkoutUrlMercadoPago(o.url))throw new Error('endereço de pagamento inválido');
+    const u=new URL(o.url);
     location.href=u.href;
   }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
 }
