@@ -243,6 +243,46 @@ export async function ultimaAssinatura(uid: string, emails: string[], planos: st
   return melhor ? melhor.id : "";
 }
 /**
+ * Confirma diretamente os preapprovals persistidos nas intenções do próprio usuário.
+ * Esta consulta fecha a janela em que o checkout já foi criado no provedor, mas
+ * ainda não aparece em /preapproval/search por payer_email.
+ */
+export async function consultaCheckoutsRegistrados(uid: string, registros: Array<{ id?: string; plano?: string; email_pagador?: string; provedor_preapproval_id?: string }>, token: string, PLANOS: any, f: Fetch = fetch) {
+  if (!uid || !token) throw new Error("reconciliacao_registrados_parametros_invalidos");
+  const pendentes: Array<{ id: string; url: string; plano: string; criado: number }> = [];
+  const autorizadas: Array<{ id: string; plano: string; criado: number }> = [];
+  const vistos = new Set<string>();
+  for (const registro of registros || []) {
+    const id = String(registro?.provedor_preapproval_id || "");
+    const plano = String(registro?.plano || "");
+    if (!id || vistos.has(id) || !PLANOS[plano] || !registro?.email_pagador) continue;
+    vistos.add(id);
+    const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
+    if (atual.status === 404) continue;
+    if (atual.status !== 200) throw new Error("mp_confirma_checkout_registrado " + atual.status);
+    const p = atual.json;
+    const vinculo = lerRef(p?.external_reference);
+    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano || !confereValores(p, plano, PLANOS)) continue;
+    const emailProvedor = String(p?.payer_email || "").trim().toLowerCase();
+    const emailRegistrado = String(registro.email_pagador).trim().toLowerCase();
+    if (emailProvedor && emailProvedor !== emailRegistrado) continue;
+    const confirmado = estadoDePreapproval(p, PLANOS);
+    if (confirmado.ignorar || confirmado.estado?.uid !== uid) continue;
+    const criado = Date.parse(p?.last_modified || p?.date_created || "") || 0;
+    if (p?.status === "authorized" && confirmado.estado?.status === "ativo") {
+      autorizadas.push({ id, plano, criado });
+    } else if (p?.status === "pending" && confirmado.estado?.mp_status === "pending") {
+      const url = String(p?.init_point || "");
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
+      pendentes.push({ id, url, plano, criado });
+    }
+  }
+  pendentes.sort((a, b) => b.criado - a.criado);
+  autorizadas.sort((a, b) => b.criado - a.criado);
+  return { pendentes, autorizadas };
+}
+
+/**
  * Reutiliza um checkout pendente do próprio usuário em vez de cancelá-lo.
  * O Mercado Pago não oferece compare-and-set documentado para status/version:
  * GET seguido de PUT pode cancelar uma assinatura que acabou de ser autorizada.
