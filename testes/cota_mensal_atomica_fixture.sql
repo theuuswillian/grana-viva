@@ -33,3 +33,20 @@ create table public.tx (
   updated_at timestamptz not null,
   primary key (user_id, id)
 );
+
+-- Funções privilegiadas históricas: stubs para validar hardening do search_path.
+create table public.rl_uso (
+  user_id uuid not null,
+  k text not null,
+  janela bigint not null,
+  n integer not null default 0,
+  primary key (user_id,k,janela)
+);
+create function public.ia_conta(p_uid uuid,p_dia date,p_lim int) returns boolean
+language plpgsql security definer set search_path = public as $$ begin return true; end $$;
+create function public.rl_conta(p_uid uuid,p_k text,p_lim int,p_seg int) returns boolean
+language plpgsql security definer set search_path = public as $$ begin return true; end $$;
+create function public.assinatura_conta_nova() returns trigger
+language plpgsql security definer set search_path = public as $$ begin return new; end $$;
+create function public.ia_conta_k(p_uid uuid,p_dia date,p_k text,p_lim int) returns boolean
+language plpgsql security definer set search_path = public as $$ begin return true; end $$;
