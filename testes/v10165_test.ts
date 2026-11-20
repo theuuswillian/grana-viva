@@ -116,12 +116,23 @@ Deno.test("webhook MP: evento de plano não associado é confirmado sem bloquear
   eq((await r.json()).resultado, "topico_ignorado");
   eq(f.ev.size, 0, "evento sem efeito não reserva nem altera assinatura");
 });
-Deno.test("webhook MP: sem MP_WEBHOOK_SECRET segue pela API (não quebra) e é idempotente", async () => {
+Deno.test("webhook MP: sem MP_WEBHOOK_SECRET recusa evento externo antes de reservar", async () => {
   const f = dbFalso(); const logs: string[] = [];
-  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join(" ")) };
-  const r1 = await processaWebhook(req(), d); eq(r1.status, 200); eq((await r1.json()).resultado, "nao_encontrado");
-  const r2 = await processaWebhook(req(), d); eq((await r2.json()).repetido, true, "reenvio do mesmo aviso não processa de novo");
-  if (!logs.some((l) => /MP_WEBHOOK_SECRET não configurado/.test(l))) throw new Error("sem log do segredo ausente");
+  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join " ") };
+  const r = await processaWebhook(req(), d);
+  eq(r.status, 503);
+  eq(f.ev.size, 0, "configuração ausente não pode reservar evento");
+  if (!logs.some((l) => /MP_WEBHOOK_SECRET ausente/.test(l))) throw new Error("sem log da configuração ausente");
+});
+Deno.test("webhook MP: sincronização interna assinada funciona sem segredo externo e é idempotente", async () => {
+  const f = dbFalso(), k = "service-role-falsa";
+  const h = await assinaInterno(k, "mp-sync", "123abc");
+  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t", INTERNO_KEY: k }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404 };
+  const r1 = await processaWebhook(req({ "x-gv-interno": h }), d);
+  eq(r1.status, 200);
+  eq((await r1.json()).resultado, "nao_encontrado");
+  const r2 = await processaWebhook(req({ "x-gv-interno": h }), d);
+  eq((await r2.json()).repetido, true, "reenvio interno não processa duas vezes");
 });
 Deno.test("webhook MP: chamada interna assinada (assinatura {sincronizar}) passa com o segredo configurado", async () => {
   const f = dbFalso(), k = "service-role-falsa";
