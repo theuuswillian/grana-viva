@@ -71,7 +71,12 @@ Deno.serve(async (req) => {
       // Nunca cancela via GET+PUT: o status pode mudar entre as chamadas.
       // Assinatura já autorizada bloqueia nova compra; um único checkout pendente do mesmo plano é reutilizado.
       try {
-        const existentes = await MP.consultaCheckoutsDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        const { data: emailsAnteriores, error: erroEmailsAnteriores } = await sb.from("pagamento_checkout_intencoes")
+          .select("email_pagador").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(100);
+        if (erroEmailsAnteriores) throw new Error("emails_checkout_indisponiveis");
+        const emailsConhecidos = [...new Set([emailPagador, ...(emailsAnteriores || []).map((x: any) => x.email_pagador || "")])]
+          .map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+        const existentes = await MP.consultaCheckoutsDoUsuario(user.id, emailsConhecidos, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
         if (existentes.autorizadas.length) {
           return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
         }
