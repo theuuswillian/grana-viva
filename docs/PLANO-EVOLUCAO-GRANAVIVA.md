@@ -89,7 +89,8 @@ A carteira já possui ativos por classe, operações de compra/venda/provento, h
 - Estender a visão de renda realizada e projetada à renda fixa, sem misturar estimativas de CDI com pagamentos efetivamente recebidos.
 - Criar calendário de proventos e separar data-com, data de pagamento, valor anunciado e valor recebido quando a fonte fornecer esses campos.
 - [x] Adicionar meta mensal de renda passiva, progresso no Início e em Investimentos, valor restante e edição sincronizada; progresso usa proventos realizados, sem misturar projeções.
-- Evoluir a meta para aporte mensal necessário e cenários conservador/base/otimista, usando premissas editáveis e transparentes.
+- [x] Estimar capital-alvo e aporte mensal linear com base no yield realizado dos últimos 12 meses e no prazo escolhido; informar que não considera valorização, reinvestimento, impostos ou taxas.
+- [ ] Adicionar cenários conservador/base/otimista com premissas editáveis e transparência.
 - Exibir alocação, concentração, exposição por classe e risco de concentração; não classificar risco apenas pelo ticker.
 - Calcular retorno total com aportes, retiradas, proventos e eventos corporativos, informando a metodologia (TWR/MWR quando aplicável).
 - Comparar benchmarks apenas quando períodos, moedas e metodologias forem compatíveis.
