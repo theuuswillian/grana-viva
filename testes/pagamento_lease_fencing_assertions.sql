@@ -4,6 +4,8 @@ begin;
 do $$
 declare
   v_id text := 'mp-fencing-' || txid_current()::text;
+  v_id2 text := 'mp-founder-' || txid_current()::text;
+  v_id3 text := 'mp-old-sub-' || txid_current()::text;
   v_uid uuid := '00000000-0000-4000-8000-000000000001';
   token_a uuid := '00000000-0000-4000-8000-000000000011';
   token_b uuid := '00000000-0000-4000-8000-000000000022';
@@ -49,6 +51,27 @@ begin
 
   v := public.pagamento_evento_reserva(v_id, token_c, 'mercadopago', 'subscription_preapproval', 'sub-test', 120);
   if v <> 'concluido' then raise exception 'evento concluído não pode ser retomado: %', v; end if;
+
+  -- Conta fundadora nunca pode ser rebaixada por notificação de pagamento.
+  update public.assinaturas set plano='pro', status='fundador', provedor_assinatura_id=null where user_id=v_uid;
+  v := public.pagamento_evento_reserva(v_id2, token_a, 'mercadopago', 'subscription_preapproval', 'sub-founder', 120);
+  if v <> 'novo' then raise exception 'evento de conta fundadora deveria ser reservado: %', v; end if;
+  v := public.pagamento_evento_aplica_assinatura(v_id2, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-founder', 'payer');
+  if v <> 'fundador_mantido' then raise exception 'conta fundadora precisa ser preservada: %', v; end if;
+  if not exists(select 1 from public.assinaturas where user_id=v_uid and status='fundador' and provedor_assinatura_id is null) then
+    raise exception 'notificação não pode alterar conta fundadora';
+  end if;
+
+  -- Aviso de cancelamento de uma assinatura antiga não derruba outra assinatura ativa.
+  update public.assinaturas set plano='pro', status='ativo', provedor='mercadopago',
+    provedor_assinatura_id='mp-sub-current' where user_id=v_uid;
+  v := public.pagamento_evento_reserva(v_id3, token_a, 'mercadopago', 'subscription_preapproval', 'sub-old', 120);
+  if v <> 'novo' then raise exception 'evento de assinatura antiga deveria ser reservado: %', v; end if;
+  v := public.pagamento_evento_aplica_assinatura(v_id3, token_a, v_uid, 'pro', 'cancelado', now()+interval '30 days', 'mp-sub-old', 'payer');
+  if v <> 'outra_assinatura_ativa' then raise exception 'assinatura ativa diferente precisa ser preservada: %', v; end if;
+  if not exists(select 1 from public.assinaturas where user_id=v_uid and status='ativo' and provedor_assinatura_id='mp-sub-current') then
+    raise exception 'aviso antigo não pode substituir assinatura ativa atual';
+  end if;
 
   if has_function_privilege('anon','public.pagamento_evento_reserva(text,uuid,text,text,text,integer)','EXECUTE')
      or has_function_privilege('authenticated','public.pagamento_evento_reserva(text,uuid,text,text,text,integer)','EXECUTE')
