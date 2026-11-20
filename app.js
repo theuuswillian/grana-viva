@@ -357,22 +357,38 @@ function assinar(plano){
   const bt=$('#mf button[type="submit"]');if(bt)bt.textContent='Continuar para o pagamento';
   const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
 }
+function checkoutUrlMercadoPago(url){
+  try{const u=new URL(url);return u.protocol==='https:'&&/(^|\.)mercadopago\.com(\.br)?$/i.test(u.hostname);}
+  catch(e){return false;}
+}
 async function abreCheckout(plano,email){
-  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
+  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');
+  if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
   toast('Abrindo o pagamento…');
+  const intentKey='gv-checkout-intent:'+plano+':'+email;
+  let intentId='';
   try{
-    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email}});
+    const salvo=JSON.parse(sessionStorage.getItem(intentKey)||'null');
+    if(salvo&&typeof salvo.id==='string'&&Date.now()-Number(salvo.at)<30*60*1000)intentId=salvo.id;
+  }catch(e){}
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)){
+    intentId=window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,ch=>{const r=Math.random()*16|0;return(ch==='x'?r:(r&3|8)).toString(16);});
+    try{sessionStorage.setItem(intentKey,JSON.stringify({id:intentId,at:Date.now()}));}catch(e){}
+  }
+  try{
+    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email,intentId}});
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
-    if(emBreve){PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
+    if(emBreve){try{sessionStorage.removeItem(intentKey);}catch(e){}PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
-    const u=new URL(o.url);if(!/(^|\.)mercadopago\.com(\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
+    if(!checkoutUrlMercadoPago(o.url))throw new Error('endereço de pagamento inválido');
+    const u=new URL(o.url);
     location.href=u.href;
   }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
 }
 /* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o servidor confirmar no MP; relemos a tabela por 1 minuto.
    v10.109: além de esperar o aviso do MP, pedimos ao servidor que confira no MP (na 1ª, 4ª e 8ª volta), porque o aviso pode atrasar ou não vir */
 function retornoAssinatura(){
-  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;
+  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k&&k.indexOf('gv-checkout-intent:')===0)sessionStorage.removeItem(k);}}catch(e){}
   try{history.replaceState(null,'',location.pathname);}catch(e){}
   toast('Recebemos sua volta do pagamento. Confirmando…');
   const confere=()=>sb.functions.invoke('assinatura',{body:{acao:'sincronizar'}}).catch(()=>null);
@@ -2674,8 +2690,19 @@ function infoCot(f){
    op: inicial (posição que já existia: qtd + custo) · compra (qtd, preço, taxas) · venda (qtd, preço, taxas) · provento (valor)
    a quantidade, o custo (pago), o lucro realizado e os proventos do ativo passam a vir do histórico. */
 const Q8=x=>Math.round(x*1e8)/1e8;
+/* Operações históricas sempre seguem a data efetiva. Posição inicial sem data é a base anterior ao histórico;
+   com data, entra naquele dia (antes das demais operações do mesmo dia), nunca antes de operações mais antigas. */
+function ordenaOps(ops){
+  return (ops||[]).slice().sort((a,b)=>{
+    const da=String(a.data||''),db=String(b.data||'');
+    if(da!==db){if(!da)return -1;if(!db)return 1;return da.localeCompare(db);}
+    if(a.tipo==='inicial'&&b.tipo!=='inicial')return -1;
+    if(b.tipo==='inicial'&&a.tipo!=='inicial')return 1;
+    return 0;
+  });
+}
 function calcOps(ops){
-  const ord=ops.slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  const ord=ordenaOps(ops);
   let q=0,custo=0,real=0,prov=0,erro='';
   ord.forEach(o=>{
     if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -2698,7 +2725,7 @@ const IR_TIPOS={acao:'comum',etf:'comum',bdr:'comum',fii:'fii'};
 function irVendas(){
   const out=[];
   (S.fiis||[]).forEach(f=>{const cat=IR_TIPOS[tipoOf(f)];if(!cat)return;
-    const ord=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+    const ord=ordenaOps(f.ops||[]);
     let q=0,custo=0;const compraDia=new Set();
     ord.forEach(o=>{
       if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -4215,7 +4242,7 @@ const RP_TIPOS=['fii','acao','etf','bdr'];
 let RP_SEL='',RP_VER='mes',YOC_ORD='yoc';
 function rpCotasNaData(f,data){
   let q=0;
-  const ops=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  const ops=ordenaOps(f.ops||[]);
   ops.forEach(o=>{
     if(o.tipo==='inicial'){if(!o.data||o.data<=data)q=Q8(q+(+o.qtd||0));}
     else if(o.tipo==='compra'&&o.data&&o.data<=data)q=Q8(q+(+o.qtd||0));

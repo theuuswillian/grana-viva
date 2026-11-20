@@ -11,3 +11,8 @@ print('atuais',atual);print('calc  ',hs)
 if '--fix' in sys.argv:
     s=s[:m.start(1)]+' '+' '.join(hs)+s[m.end(1):]
     open(p,'w',encoding='utf-8').write(s);print('CSP atualizado')
+elif atual != hs:
+    print('ERRO: os hashes CSP não correspondem aos scripts inline.', file=sys.stderr)
+    sys.exit(1)
+else:
+    print('CSP hashes OK')

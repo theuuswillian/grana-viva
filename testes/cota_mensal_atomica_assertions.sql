@@ -5,6 +5,13 @@ declare
   r text;
   uid uuid := '22222222-2222-4222-8222-222222222222';
 begin
+  if not exists (
+    select 1 from pg_proc
+     where oid='public.wa_salva_pendente_com_cota(uuid,text,date,integer,jsonb)'::regprocedure
+       and proconfig @> array['search_path=pg_catalog, public']
+  ) then
+    raise exception 'RPC de salvamento WhatsApp precisa de search_path seguro';
+  end if;
   if not public.ia_consume_cota_mes(uid, date '2026-11-10', 'assistente', 2) then
     raise exception 'primeiro consumo deveria ser permitido';
   end if;
@@ -18,8 +25,8 @@ begin
     raise exception 'novo mês deveria iniciar uma cota nova';
   end if;
 
-  insert into public.wa_pendente(id,user_id,payload)
-  values ('pending-ok',uid,'{"text":"teste"}');
+  insert into public.wa_pendente(id,user_id,payload,origem_msg_id)
+  values ('pending-ok',uid,'{"text":"teste"}','wamid-pending-ok');
   r := public.wa_salva_pendente_com_cota(
     uid,'pending-ok',date '2026-11-18',2,
     '[{"id":"wa-1","data":{"descricao":"Compra A"},"updated_at":"2026-11-18T10:00:00Z"},{"id":"wa-2","data":{"descricao":"Compra B"},"updated_at":"2026-11-18T10:01:00Z"}]'::jsonb
@@ -28,9 +35,19 @@ begin
   if (select count(*) from public.tx where user_id=uid) <> 2 then
     raise exception 'as duas transações do WhatsApp não foram gravadas';
   end if;
-  if exists (select 1 from public.wa_pendente where id='pending-ok') then
-    raise exception 'pendente salvo não foi consumido';
+  if (select status from public.wa_pendente where id='pending-ok') <> 'salvo' then
+    raise exception 'pendente salvo não foi preservado em estado terminal';
   end if;
+  if (select count(*) from public.tx where user_id=uid) <> 2 then
+    raise exception 'retry do mesmo pendente não pode inserir lançamentos adicionais';
+  end if;
+  begin
+    insert into public.wa_pendente(id,user_id,origem_msg_id)
+    values ('pending-duplicate-source',uid,'wamid-pending-ok');
+    raise exception 'wamid de origem duplicado deveria ser rejeitado';
+  exception when unique_violation then
+    null;
+  end;
   if (select n from public.ia_uso where user_id=uid and k='whatsapp' and dia=date '2026-11-18') <> 1 then
     raise exception 'cota WhatsApp não foi contabilizada exatamente uma vez';
   end if;
@@ -42,8 +59,8 @@ begin
     '[{"id":"wa-limit","data":{"descricao":"Não salvar"},"updated_at":"2026-11-18T10:02:00Z"}]'::jsonb
   );
   if r <> 'limite' then raise exception 'deveria retornar limite, recebeu: %',r; end if;
-  if not exists (select 1 from public.wa_pendente where id='pending-limit') then
-    raise exception 'pendente foi apagado ao atingir o limite';
+  if not exists (select 1 from public.wa_pendente where id='pending-limit' and status='pendente') then
+    raise exception 'pendente deve permanecer pendente ao atingir o limite';
   end if;
   if exists (select 1 from public.tx where id='wa-limit') then
     raise exception 'transação foi gravada mesmo com limite excedido';
@@ -60,8 +77,8 @@ begin
   exception when unique_violation then
     null;
   end;
-  if not exists (select 1 from public.wa_pendente where id='pending-rollback') then
-    raise exception 'falha de INSERT apagou o pendente';
+  if not exists (select 1 from public.wa_pendente where id='pending-rollback' and status='pendente') then
+    raise exception 'falha de INSERT alterou o estado do pendente';
   end if;
   if (select n from public.ia_uso where user_id=uid and k='whatsapp' and dia=date '2026-11-18') <> 1 then
     raise exception 'falha de INSERT consumiu cota indevidamente';

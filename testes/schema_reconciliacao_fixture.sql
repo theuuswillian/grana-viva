@@ -16,3 +16,19 @@ create table public.settings (
   data jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+-- Simula tabelas de produção parcialmente provisionadas: dados e colunas essenciais
+-- existem, mas faltam colunas auxiliares, PKs e checks/FK.
+create table public.cotacao_cache (ticker text, v jsonb);
+create table public.radar_disparos (user_id uuid, chave text);
+
+insert into auth.users(id) values
+ ('00000000-0000-0000-0000-000000000001'),
+ ('00000000-0000-0000-0000-000000000002');
+insert into public.settings(user_id,data) values
+ ('00000000-0000-0000-0000-000000000001','{"preservar":"dado-existente"}'::jsonb);
+insert into public.cotacao_cache(ticker,v) values
+ ('PETR4','{"preco":37.5}'::jsonb);
+insert into public.radar_disparos(user_id,chave) values
+ ('00000000-0000-0000-0000-000000000001','alvo|A'),
+ ('00000000-0000-0000-0000-000000000002','alvo|B');

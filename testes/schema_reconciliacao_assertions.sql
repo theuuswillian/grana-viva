@@ -32,12 +32,23 @@ begin
     raise exception 'service_role sem permissões esperadas';
   end if;
 
-  if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_pkey')
-     or not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_ticker_check')
-     or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_pkey')
+  if (select array_agg(a.attname::text order by k.ord)
+        from pg_constraint c
+        cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+        join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+       where c.conrelid='public.cotacao_cache'::regclass and c.contype='p') <> array['ticker']::text[]
+     or (select array_agg(a.attname::text order by k.ord)
+        from pg_constraint c
+        cross join lateral unnest(c.conkey) with ordinality as k(attnum,ord)
+        join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum
+       where c.conrelid='public.radar_disparos'::regclass and c.contype='p') <> array['user_id','chave']::text[] then
+    raise exception 'PKs existentes não correspondem às chaves naturais esperadas';
+  end if;
+
+  if not exists (select 1 from pg_constraint where conrelid='public.cotacao_cache'::regclass and conname='cotacao_cache_ticker_check')
      or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_user_id_fkey')
      or not exists (select 1 from pg_constraint where conrelid='public.radar_disparos'::regclass and conname='radar_disparos_chave_check') then
-    raise exception 'constraints/PK/FK esperadas ausentes';
+    raise exception 'constraints/check/FK esperadas ausentes';
   end if;
 
   select column_default into v_default from information_schema.columns
@@ -47,21 +58,25 @@ begin
       and table_name='settings' and column_name='whatsapp_resumo_semanal' and is_nullable='NO') then
     raise exception 'whatsapp_resumo_semanal deve ser NOT NULL';
   end if;
+  if (select data->>'preservar' from public.settings where user_id='00000000-0000-0000-0000-000000000001') <> 'dado-existente' then
+    raise exception 'a reconciliação alterou dados preexistentes de settings';
+  end if;
+  if (select v->>'preco' from public.cotacao_cache where ticker='PETR4') <> '37.5'
+     or (select salvo_em from public.cotacao_cache where ticker='PETR4') is null then
+    raise exception 'a reconciliação não preservou/completou a cotação preexistente';
+  end if;
+  if (select count(*) from public.radar_disparos) <> 2
+     or not exists (select 1 from public.radar_disparos where user_id='00000000-0000-0000-0000-000000000001' and chave='alvo|A' and em is not null)
+     or not exists (select 1 from public.radar_disparos where user_id='00000000-0000-0000-0000-000000000002' and chave='alvo|B' and em is not null) then
+    raise exception 'a reconciliação não preservou/completou os disparos preexistentes';
+  end if;
 end $$;
 
-insert into auth.users(id) values
- ('00000000-0000-0000-0000-000000000001'),
- ('00000000-0000-0000-0000-000000000002');
-insert into public.settings(user_id) values ('00000000-0000-0000-0000-000000000001');
 do $$ begin
   if (select whatsapp_resumo_semanal from public.settings where user_id='00000000-0000-0000-0000-000000000001') is distinct from true then
     raise exception 'preferência semanal não recebeu default true';
   end if;
 end $$;
-
-insert into public.radar_disparos(user_id,chave) values
- ('00000000-0000-0000-0000-000000000001','alvo|A'),
- ('00000000-0000-0000-0000-000000000002','alvo|B');
 
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
