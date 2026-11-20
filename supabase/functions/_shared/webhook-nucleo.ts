@@ -37,6 +37,14 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   const n = MP.lerNotificacao(url, body, req.headers);
   if (!n.dataId || !ID_OK.test(n.dataId)) return resp({ erro: "sem id" }, 400);
 
+  // Este produto cria preapprovals sem plano associado. Eventos de plano (subscription_preapproval_plan)
+  // não alteram a assinatura da conta; confirme recebimento sem exigir segredo nem reservar evento.
+  const topicosSuportados = new Set(["subscription_preapproval", "subscription_authorized_payment", "payment"]);
+  if (!topicosSuportados.has(n.topico)) {
+    log("tópico não utilizado, ignorado", n.topico);
+    return resp({ ok: true, resultado: "topico_ignorado" });
+  }
+
   const xs = req.headers.get("x-signature");
   const interno = !xs && await confereInterno(req.headers.get("x-gv-interno"), d.env.INTERNO_KEY, "mp-sync", n.dataId, agora);
   if (d.env.MP_WEBHOOK_SECRET && !interno) {
