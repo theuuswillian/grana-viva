@@ -18,7 +18,7 @@ const limpa = (s: unknown, n: number) => V.textoIA(s, n, "*_~"); // v10.165: sem
 export const gastaCota = (L: Pick<Leitura, "intencao" | "itens">) => L.intencao === "lancamento" && Array.isArray(L.itens) && L.itens.length > 0;
 export const TIPOS_PERGUNTA = ["despesa", "receita", "saldo", "fatura"] as const;
 
-export async function leMensagem(texto: string, midia: Midia | null, cats: string[], nomesPag: string[], hoje: string): Promise<{ ok: true; r: Leitura } | { ok: false; erro: string }> {
+export async function leMensagem(texto: string, midia: Midia | null, cats: string[], nomesPag: string[], hoje: string): Promise<{ ok: true; r: Leitura } | { ok: false; erro: string; recuperavel?: boolean }> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return { ok: false, erro: "IA não configurada" };
   const cd = (cats.length ? cats : CATS_PADRAO).slice(0, 80);
@@ -67,12 +67,12 @@ ${V.AVISO_DADO}`;
         },
       }),
     });
-  } catch { return { ok: false, erro: "a IA demorou demais" }; }
-  if (!r.ok) { console.log("gemini", r.status, (await r.text()).slice(0, 300)); return { ok: false, erro: r.status === 429 ? "a IA está ocupada" : "a IA não respondeu" }; }
+  } catch { return { ok: false, erro: "a IA demorou demais", recuperavel: true }; }
+  if (!r.ok) { console.log("gemini", r.status, (await r.text()).slice(0, 300)); return { ok: false, erro: r.status === 429 ? "a IA está ocupada" : "a IA não respondeu", recuperavel: r.status === 429 || r.status >= 500 }; }
   let o: any;
-  try { const g = await r.json(); o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return { ok: false, erro: "não consegui ler" }; }
+  try { const g = await r.json(); o = JSON.parse(g?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}"); } catch { return { ok: false, erro: "não consegui ler", recuperavel: true }; }
   // Fase 2: fora do formato pedido (sem intencao em texto ou sem lista de itens) = descartada
-  if (!V.conformeSchema(o, { intencao: "s", itens: "a" })) return { ok: false, erro: "não consegui ler" };
+  if (!V.conformeSchema(o, { intencao: "s", itens: "a" })) return { ok: false, erro: "não consegui ler", recuperavel: true };
   const itens: Item[] = [];
   for (const x of (Array.isArray(o.itens) ? o.itens : []).slice(0, 10)) {
     if (!x || typeof x !== "object") continue;
