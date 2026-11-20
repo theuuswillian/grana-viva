@@ -68,9 +68,11 @@ Deno.serve(async (req) => {
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
     if (!intencao) {
-      // Limpeza ocorre antes de persistir a nova intenção: se falhar, o retry poderá tentar novamente.
+      // Se já existe um checkout pendente e comprovadamente vinculado a este usuário,
+      // reutilizamos o link. Não cancelamos via GET+PUT: o status pode mudar entre as chamadas.
       try {
-        await MP.cancelaPendentesDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        const pendente = await MP.checkoutPendenteDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        if (pendente) return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
       } catch (e) {
         console.log("reconciliacao_checkout", String(e));
         await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
