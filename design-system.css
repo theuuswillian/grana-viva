@@ -1,4 +1,4 @@
-/* GranaViva Design System v10.175
+/* GranaViva Design System v10.176
    Camada visual compartilhada: preserva HTML, dados e regras de negócio.
    Identidade: carvão + violeta; cores semânticas continuam reservadas aos estados financeiros. */
 :root{
@@ -177,3 +177,90 @@ input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* GranaViva v10.176 — identidade All Black aprovada:
+   preto/grafite como base, verde funcional nos destaques e componentes sem efeitos ilustrativos. */
+:root{
+  --a1:#22C55E;
+  --a2:#16A34A;
+  --bg:#07090A;
+  --card:#111416;
+  --card2:#0B0E0F;
+  --txt:#F3F4F6;
+  --mut:#9CA3AF;
+  --hd:#FFFFFF;
+  --line:rgba(255,255,255,.085);
+  --shadow:0 12px 30px rgba(0,0,0,.32);
+  --gv-violet-soft:rgba(34,197,94,.10);
+  --gv-violet-line:rgba(34,197,94,.22);
+}
+html.claro{
+  --bg:#F4F5F6;
+  --card:#FFFFFF;
+  --card2:#F0F2F3;
+  --txt:#171B1D;
+  --mut:#687176;
+  --hd:#171B1D;
+  --line:rgba(20,30,34,.10);
+  --shadow:0 10px 26px rgba(20,30,34,.07);
+  --gv-violet-soft:rgba(22,163,74,.07);
+  --gv-violet-line:rgba(22,163,74,.20);
+}
+body{accent-color:var(--a1)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline-color:var(--a1);
+}
+.card:focus-within{border-color:var(--gv-violet-line)}
+.hero{
+  background:radial-gradient(100% 120% at 100% 0%,rgba(34,197,94,.12),transparent 58%),linear-gradient(145deg,#171C1D 0%,#101415 58%,#0B0E0F 100%);
+  border-color:rgba(255,255,255,.10);
+  box-shadow:0 16px 36px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.045);
+}
+.btn,.seg button.on,.tabbar .tbItem.on,.sb-item.on{
+  background:var(--a1);
+  color:#061009;
+}
+.btn{box-shadow:0 5px 14px rgba(34,197,94,.13)}
+.btn:hover{filter:brightness(1.07)}
+.btn2:hover,.chip:hover,.chipEx:hover{border-color:var(--gv-violet-line);background:var(--gv-violet-soft)}
+.iaBtn,.iaMic{background:var(--gv-violet-soft);border-color:var(--gv-violet-line);color:#86EFAC}
+input:focus,select:focus,textarea:focus,.iaCampo textarea:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(34,197,94,.10)}
+.seg button.on{box-shadow:none}
+.bar i,.lmBar i{background:var(--a1)}
+.ring .rf{stroke:var(--a1)}
+.countdown{background:none;color:var(--a1);-webkit-text-fill-color:currentColor}
+.ic.fii{color:#A3A3A3}
+.top .logo,.sb-brand b{
+  background:none;color:var(--txt);-webkit-text-fill-color:currentColor;
+}
+.topBar{
+  background:color-mix(in srgb,var(--card) 94%,transparent);
+  box-shadow:0 8px 24px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.topBar .eyeBtn.on{color:#86EFAC;background:var(--gv-violet-soft);border-color:var(--gv-violet-line)}
+.side{background:rgba(10,13,14,.97)}
+.side::before{background:none}
+.sb-item.on{
+  background:rgba(34,197,94,.10);
+  border-color:var(--gv-violet-line);
+  color:var(--txt);
+}
+.sb-item.on::before{background:var(--a1);box-shadow:none}
+.sb-item.on .i{color:var(--a1);filter:none}
+.tabbar .tbItem.on{
+  background:rgba(34,197,94,.09);
+  color:#86EFAC;
+  box-shadow:inset 0 0 0 1px var(--gv-violet-line);
+}
+.tabbar .tbItem.on .i{color:var(--a1)}
+.sw.on{border-color:var(--a1)}
+#toast{border-color:var(--gv-violet-line)}
+.fab{background:var(--a1);color:#061009;box-shadow:0 8px 20px rgba(34,197,94,.18)}
+#auth{background:var(--bg)}
+.aTabs button.on{background:var(--gv-violet-soft);color:#86EFAC}
+#view .demoBar{border-color:var(--gv-violet-line)!important}
+#view .demoBar>.i{color:var(--a1)}
+/* Ícones e superfícies neutros: sem emojis decorativos, brilhos ou aparência de ilustração. */
+.tx .ic,.ic{filter:none;box-shadow:none}
+.card,.acard,.sheet,.modalCard,.panel,.boxCard{box-shadow:var(--shadow)}
