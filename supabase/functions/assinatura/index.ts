@@ -68,11 +68,23 @@ Deno.serve(async (req) => {
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
     if (!intencao) {
-      // Se já existe um checkout pendente e comprovadamente vinculado a este usuário,
-      // reutilizamos o link. Não cancelamos via GET+PUT: o status pode mudar entre as chamadas.
+      // Nunca cancela via GET+PUT: o status pode mudar entre as chamadas.
+      // Assinatura já autorizada bloqueia nova compra; um único checkout pendente do mesmo plano é reutilizado.
       try {
-        const pendente = await MP.checkoutPendenteDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
-        if (pendente) return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
+        const existentes = await MP.consultaCheckoutsDoUsuario(user.id, emailPagador, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        if (existentes.autorizadas.length) {
+          return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
+        }
+        if (existentes.pendentes.length > 1) {
+          return json({ erro: "Há mais de uma tentativa de pagamento pendente. Para evitar cobranças duplicadas, não vamos abrir outra. Entre em contato com o suporte para regularizar." }, 409);
+        }
+        if (existentes.pendentes.length === 1) {
+          const pendente = existentes.pendentes[0];
+          if (pendente.plano !== plano) {
+            return json({ erro: "Você já tem um pagamento pendente para outro plano. Conclua ou regularize essa tentativa antes de escolher outro plano." }, 409);
+          }
+          return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
+        }
       } catch (e) {
         console.log("reconciliacao_checkout", String(e));
         await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
