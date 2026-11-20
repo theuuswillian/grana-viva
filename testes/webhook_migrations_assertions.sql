@@ -101,7 +101,7 @@ begin
   if not public.wa_saida_finaliza('wa:test:sent',token_a,'enviada','wamid-provider-1',null) then
     raise exception 'finalização enviada deveria atualizar outbox';
   end if;
-  if public.wa_saida_reserva('wa:test:sent',token_b,'5561999999999','{"type":"text","text":"texto alterado após retry"}'::jsonb,90) <> 'enviada' then
+  if public.wa_saida_reserva('wa:test:sent',token_b,'5561999999999','{"type":"text","text":"oi"}'::jsonb,90) <> 'enviada' then
     raise exception 'envio concluído não pode ser repetido mesmo após reconstrução do payload';
   end if;
 
@@ -154,6 +154,43 @@ begin
      or has_table_privilege('authenticated','public.wa_saida','select') then
     raise exception 'outbox não pode ser acessível pelo cliente';
   end if;
+
+  -- Vinculação atômica: troca os vínculos conflitantes e consome os códigos juntos.
+  insert into public.wa_vinculo(user_id,telefone)
+  values ('00000000-0000-0000-0000-000000000101','5561000000001'),
+         ('00000000-0000-0000-0000-000000000102','5561000000002');
+  insert into public.wa_codigo(codigo,user_id,expira)
+  values ('123456','00000000-0000-0000-0000-000000000101',now()+interval '15 minutes');
+  if public.wa_vincula_codigo('5561000000002','123456') <> 'vinculado' then
+    raise exception 'código válido deveria vincular telefone';
+  end if;
+  if (select count(*) from public.wa_vinculo) <> 1
+     or not exists (select 1 from public.wa_vinculo
+                     where user_id='00000000-0000-0000-0000-000000000101'
+                       and telefone='5561000000002')
+     or exists (select 1 from public.wa_codigo where codigo='123456') then
+    raise exception 'vinculação não substituiu vínculos e consumiu código atomicamente';
+  end if;
+  if public.wa_vincula_codigo('5561000000002','123456') <> 'ja_vinculado' then
+    raise exception 'retry de vínculo já concluído deveria ser idempotente';
+  end if;
+  if public.wa_vincula_codigo('5561000000003','654321') <> 'codigo_expirado' then
+    raise exception 'código ausente deveria ser rejeitado';
+  end if;
+  insert into public.wa_codigo(codigo,user_id,expira)
+  values ('654321','00000000-0000-0000-0000-000000000103',now()-interval '1 minute');
+  if public.wa_vincula_codigo('5561000000003','654321') <> 'codigo_expirado' then
+    raise exception 'código vencido deveria ser rejeitado';
+  end if;
+  if exists (select 1 from public.wa_vinculo where telefone='5561000000003') then
+    raise exception 'código vencido não pode criar vínculo';
+  end if;
+  if has_function_privilege('anon','public.wa_vincula_codigo(text,text)','execute')
+     or has_function_privilege('authenticated','public.wa_vincula_codigo(text,text)','execute')
+     or not has_function_privilege('service_role','public.wa_vincula_codigo(text,text)','execute') then
+    raise exception 'permissões da RPC de vínculo estão incorretas';
+  end if;
+
 
   if exists (select 1 from pg_policies where schemaname='public' and tablename='wa_vinculo') then
     raise exception 'wa_vinculo não deve receber policies para acesso direto do cliente';

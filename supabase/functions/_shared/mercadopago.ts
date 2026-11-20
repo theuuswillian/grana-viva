@@ -23,6 +23,7 @@ export type Estado = {
   provedor_assinatura_id: string;
   provedor_cliente_id: string | null;
   mp_status: string;
+  provedor_versao: number;
 };
 export type Busca = { estado?: Estado; ignorar?: string; naoEncontrado?: boolean };
 type Fetch = typeof fetch;
@@ -127,8 +128,10 @@ export function estadoDePreapproval(p: any, PLANOS: any, agora = Date.now()): Bu
   const ref = lerRef(p?.external_reference);
   if (!ref) return { ignorar: "referencia_desconhecida" };
   if (!confereValores(p, ref.plano, PLANOS)) return { ignorar: "valor_nao_confere" };
+  const versao = Number(p?.version);
+  if (!Number.isSafeInteger(versao) || versao < 0) return { ignorar: "versao_ausente_ou_invalida" };
   const prox = p?.next_payment_date && !isNaN(Date.parse(p.next_payment_date)) ? new Date(p.next_payment_date).toISOString() : null;
-  const base = { uid: ref.uid, plano: ref.plano, provedor_assinatura_id: String(p.id), provedor_cliente_id: p?.payer_id != null ? String(p.payer_id) : null, mp_status: String(p?.status || "") };
+  const base = { uid: ref.uid, plano: ref.plano, provedor_assinatura_id: String(p.id), provedor_versao: versao, provedor_cliente_id: p?.payer_id != null ? String(p.payer_id) : null, mp_status: String(p?.status || "") };
   switch (p?.status) {
     case "authorized": {
       const meses = PLANOS[ref.plano].periodo === "ano" ? 12 : 1;
@@ -136,6 +139,7 @@ export function estadoDePreapproval(p: any, PLANOS: any, agora = Date.now()): Bu
       return { estado: { ...base, status: "ativo", periodo_fim: fim } };
     }
     case "paused":
+    case "canceled":
     case "cancelled":
       // acesso continua até o fim do período já pago (próxima cobrança, que não vai acontecer)
       return { estado: { ...base, status: "cancelado", periodo_fim: prox } };
@@ -180,9 +184,26 @@ export async function buscaEstado(topico: string, dataId: string, token: string,
   return { ignorar: "topico_ignorado:" + topico };
 }
 
+
+// Não abre uma segunda recorrência enquanto a assinatura atual ainda está autorizada.
+// A troca de plano deve passar primeiro pelo cancelamento confirmado da assinatura anterior.
+export function checkoutBloqueadoPorAssinaturaAtiva(row: any): boolean {
+  return row?.status === "ativo" && Boolean(row?.provedor_assinatura_id);
+}
+
+// Recupera uma intenção pendente antiga quando o navegador perdeu a chave local (ex.: sessão expirada).
+// Só reutiliza se usuário, plano e e-mail coincidirem exatamente; nunca mistura tentativas de contas diferentes.
+export function idIntencaoPendenteCompativel(registro: any, uid: string, plano: string, email: string): string | null {
+  const id = String(registro?.id || "");
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuid.test(id) || registro?.user_id !== uid || registro?.plano !== plano || registro?.email_pagador !== email || registro?.status !== "pendente") return null;
+  return id;
+}
+
 // ---------- checkout: cria a assinatura pendente e devolve o link de pagamento (Pix ou cartão, escolhido no MP) ----------
-export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string }, f: Fetch = fetch) {
+export async function criaCheckout(o: { uid: string; email: string; plano: string; token: string; PLANOS: any; notificationUrl: string; backUrl: string; idempotencyKey: string }, f: Fetch = fetch) {
   const P = o.PLANOS[o.plano];
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(o.idempotencyKey)) throw new Error("checkout_intencao_invalida");
   // v10.161: só Pro mensal (R$ 24,90) e Pro anual (R$ 179,00) são vendidos; o Plus é legado
   if (!P || !P.preco || P.descontinuado) throw new Error("plano_nao_vendido " + o.plano);
   const body = {
@@ -196,35 +217,142 @@ export async function criaCheckout(o: { uid: string; email: string; plano: strin
   };
   const r = await f(API + "/preapproval", {
     method: "POST", signal: AbortSignal.timeout(10000),
-    headers: { Authorization: "Bearer " + o.token, "content-type": "application/json", "X-Idempotency-Key": crypto.randomUUID() },
+    headers: { Authorization: "Bearer " + o.token, "content-type": "application/json", "X-Idempotency-Key": o.idempotencyKey },
     body: JSON.stringify(body),
   });
   let j: any = null; try { j = await r.json(); } catch { /* */ }
-  if (!r.ok || !j?.init_point) throw new Error("mp_checkout " + r.status + " " + String(j?.message || "").slice(0, 120));
+  if (!r.ok || !j?.id || !j?.init_point) throw new Error("mp_checkout " + r.status + " " + String(j?.message || "").slice(0, 120));
   return { url: String(j.init_point), id: String(j.id || "") };
 }
 
 // v10.109: id da assinatura desta pessoa no MP (qualquer plano pago): a autorizada mais recente, senão a mais recente; "" se não houver
-export async function ultimaAssinatura(uid: string, planos: string[], token: string, f: Fetch = fetch): Promise<string> {
+export async function ultimaAssinatura(uid: string, emails: string[], planos: string[], token: string, f: Fetch = fetch): Promise<string> {
+  const permitidos = new Set(planos);
   let melhor: { id: string; t: number } | null = null;
-  for (const p of planos) {
-    const r = await mpGet("/preapproval/search?limit=20&external_reference=" + encodeURIComponent(refExterna(uid, p)), token, f);
-    if (r.status !== 200) throw new Error("mp_busca " + r.status);
-    for (const a of (r.json?.results || [])) {
-      if (lerRef(a?.external_reference)?.uid !== uid || !a?.id) continue;
-      // uma autorizada vale mais que uma pendente (checkout aberto e não pago); entre iguais, a mais recente
-      const t = (a.status === "authorized" ? 1e13 : 0) + (Date.parse(a.last_modified || a.date_created || "") || 0);
-      if (!melhor || t > melhor.t) melhor = { id: String(a.id), t };
-    }
+  for (const email of [...new Set(emails.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))]) {
+    let offset = 0;
+    let total = 0;
+    do {
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(email), token, f);
+      if (r.status !== 200) throw new Error("mp_busca " + r.status);
+      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+      total = Number(r.json?.paging?.total ?? resultados.length);
+      for (const a of resultados) {
+        const ref = lerRef(a?.external_reference);
+        if (!ref || ref.uid !== uid || !permitidos.has(ref.plano) || !a?.id) continue;
+        // Uma autorizada vale mais que uma pendente; entre estados iguais, prioriza a alteração mais recente.
+        const t = (a.status === "authorized" ? 1e13 : 0) + (Date.parse(a.last_modified || a.date_created || "") || 0);
+        if (!melhor || t > melhor.t) melhor = { id: String(a.id), t };
+      }
+      offset += resultados.length;
+      if (resultados.length === 0) break;
+      if (offset < total && offset >= 200) throw new Error("mp_busca_limite");
+    } while (offset < total);
   }
   return melhor ? melhor.id : "";
+}
+/**
+ * Confirma diretamente os preapprovals persistidos nas intenções do próprio usuário.
+ * Esta consulta fecha a janela em que o checkout já foi criado no provedor, mas
+ * ainda não aparece em /preapproval/search por payer_email.
+ */
+export async function consultaCheckoutsRegistrados(uid: string, registros: Array<{ id?: string; plano?: string; email_pagador?: string; provedor_preapproval_id?: string }>, token: string, PLANOS: any, f: Fetch = fetch) {
+  if (!uid || !token) throw new Error("reconciliacao_registrados_parametros_invalidos");
+  const pendentes: Array<{ id: string; url: string; plano: string; criado: number }> = [];
+  const autorizadas: Array<{ id: string; plano: string; criado: number }> = [];
+  const vistos = new Set<string>();
+  for (const registro of registros || []) {
+    const id = String(registro?.provedor_preapproval_id || "");
+    const plano = String(registro?.plano || "");
+    if (!id || vistos.has(id) || !PLANOS[plano] || !registro?.email_pagador) continue;
+    vistos.add(id);
+    const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
+    // Um ID já persistido não pode ser tratado como inexistente: o 404 pode ser transitório
+    // durante a propagação do provedor. Falha fechada para impedir um checkout duplicado.
+    if (atual.status === 404) throw new Error("mp_checkout_registrado_ainda_nao_localizado");
+    if (atual.status !== 200) throw new Error("mp_confirma_checkout_registrado " + atual.status);
+    const p = atual.json;
+    const vinculo = lerRef(p?.external_reference);
+    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano || !confereValores(p, plano, PLANOS)) continue;
+    const emailProvedor = String(p?.payer_email || "").trim().toLowerCase();
+    const emailRegistrado = String(registro.email_pagador).trim().toLowerCase();
+    if (emailProvedor && emailProvedor !== emailRegistrado) continue;
+    const confirmado = estadoDePreapproval(p, PLANOS);
+    if (confirmado.ignorar) throw new Error("mp_checkout_registrado_estado_nao_confirmado:" + confirmado.ignorar);
+    if (confirmado.estado?.uid !== uid) continue;
+    const criado = Date.parse(p?.last_modified || p?.date_created || "") || 0;
+    if (p?.status === "authorized" && confirmado.estado?.status === "ativo") {
+      autorizadas.push({ id, plano, criado });
+    } else if (p?.status === "pending" && confirmado.estado?.mp_status === "pending") {
+      const url = String(p?.init_point || "");
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
+      pendentes.push({ id, url, plano, criado });
+    }
+  }
+  pendentes.sort((a, b) => b.criado - a.criado);
+  autorizadas.sort((a, b) => b.criado - a.criado);
+  return { pendentes, autorizadas };
+}
+
+/**
+ * Reutiliza um checkout pendente do próprio usuário em vez de cancelá-lo.
+ * O Mercado Pago não oferece compare-and-set documentado para status/version:
+ * GET seguido de PUT pode cancelar uma assinatura que acabou de ser autorizada.
+ * Portanto esta rotina é somente leitura e nunca envia PUT.
+ */
+export async function consultaCheckoutsDoUsuario(uid: string, emails: string[], planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+  if (!uid || !emails?.some((x) => String(x || "").trim()) || !token) throw new Error("reconciliacao_parametros_invalidos");
+  const permitidos = new Set(planos);
+  const candidatos = new Map<string, string>();
+  for (const email of [...new Set(emails.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))]) {
+    let offset = 0;
+    let total = 0;
+    do {
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&payer_email=" + encodeURIComponent(email), token, f);
+      if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
+      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+      total = Number(r.json?.paging?.total ?? resultados.length);
+      for (const item of resultados) {
+        const id = String(item?.id || "");
+        const vinculo = lerRef(item?.external_reference);
+        if (!id || id === preservarId || !["pending", "authorized"].includes(String(item?.status)) || vinculo?.uid !== uid || !permitidos.has(vinculo.plano)) continue;
+        candidatos.set(id, vinculo.plano);
+      }
+      offset += resultados.length;
+      if (resultados.length === 0) break;
+      if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
+    } while (offset < total);
+  }
+
+  const pendentes: Array<{ id: string; url: string; plano: string; criado: number }> = [];
+  const autorizadas: Array<{ id: string; plano: string; criado: number }> = [];
+  for (const [id, plano] of candidatos) {
+    const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
+    if (atual.status !== 200) throw new Error("mp_confirma_reconciliacao " + atual.status);
+    const p = atual.json;
+    const vinculo = lerRef(p?.external_reference);
+    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano || !confereValores(p, plano, PLANOS)) continue;
+    const confirmado = estadoDePreapproval(p, PLANOS);
+    if (confirmado.ignorar || confirmado.estado?.uid !== uid) continue;
+    const criado = Date.parse(p?.last_modified || p?.date_created || "") || 0;
+    if (p?.status === "authorized" && confirmado.estado?.status === "ativo") {
+      autorizadas.push({ id, plano, criado });
+    } else if (p?.status === "pending" && confirmado.estado?.mp_status === "pending") {
+      const url = String(p?.init_point || "");
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("mp_checkout_pendente_sem_link");
+      pendentes.push({ id, url, plano, criado });
+    }
+  }
+  pendentes.sort((a, b) => b.criado - a.criado);
+  autorizadas.sort((a, b) => b.criado - a.criado);
+  return { pendentes, autorizadas };
 }
 
 export async function cancela(id: string, token: string, f: Fetch = fetch) {
   const r = await f(API + "/preapproval/" + encodeURIComponent(id), {
     method: "PUT", signal: AbortSignal.timeout(10000),
     headers: { Authorization: "Bearer " + token, "content-type": "application/json" },
-    body: JSON.stringify({ status: "cancelled" }),
+    body: JSON.stringify({ status: "canceled" }),
   });
   if (!r.ok) throw new Error("mp_cancela " + r.status);
   return true;
