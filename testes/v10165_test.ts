@@ -77,6 +77,31 @@ Deno.test("webhook MP: com MP_WEBHOOK_SECRET, x-signature inválida = 401", asyn
   const r = await processaWebhook(req({ "x-signature": "ts=1,v1=00", "x-request-id": "r1" }), { db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "s" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404 });
   eq(r.status, 401);
 });
+
+Deno.test("Mercado Pago: HMAC válido usa data.id, x-request-id e ts no manifesto", async () => {
+  // Vetor independente pré-calculado: HMAC-SHA256("test-secret", "id:123abc;request-id:req-42;ts:1700000000;").
+  const xSignature = "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a";
+  const ok = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "123abc", secret: "test-secret" });
+  eq(ok.ok, true, "assinatura legítima");
+  const requestAlterado = await MP.validaAssinatura({ xSignature, xRequestId: "req-43", dataId: "123abc", secret: "test-secret" });
+  eq(requestAlterado.ok, false, "request-id alterado");
+  const idAlterado = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "999abc", secret: "test-secret" });
+  eq(idAlterado.ok, false, "data.id alterado");
+  const segredoErrado = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "123abc", secret: "outro-segredo" });
+  eq(segredoErrado.ok, false, "segredo diferente");
+});
+
+Deno.test("webhook MP: HMAC legítimo atravessa a validação e só então reserva o evento", async () => {
+  const f = dbFalso();
+  const xSignature = "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a";
+  const r = await processaWebhook(req({ "x-signature": xSignature, "x-request-id": "req-42" }), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
+    PLANOS: {}, efetivo: () => ({}), fetch: fetch404,
+  });
+  eq(r.status, 200);
+  eq((await r.json()).resultado, "nao_encontrado");
+  eq(f.ev.size, 1, "evento reservado somente depois de validar a assinatura");
+});
 Deno.test("webhook MP: sem MP_WEBHOOK_SECRET segue pela API (não quebra) e é idempotente", async () => {
   const f = dbFalso(); const logs: string[] = [];
   const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join(" ")) };
