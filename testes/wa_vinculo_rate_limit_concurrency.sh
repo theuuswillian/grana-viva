@@ -21,9 +21,9 @@ for pid in "${pids[@]}"; do
   wait "$pid"
 done
 
-permitidas="$(grep -hxc 'codigo_expirado' "$tmp"/* | awk '{s+=$1} END {print s+0}')"
-primeiro_bloqueio="$(grep -hxc 'limite_tentativas' "$tmp"/* | awk '{s+=$1} END {print s+0}')"
-silenciosas="$(grep -hxc 'limite_tentativas_silencioso' "$tmp"/* | awk '{s+=$1} END {print s+0}')"
+permitidas="$(awk '$0 == "codigo_expirado" {n++} END {print n+0}' "$tmp"/*)"
+primeiro_bloqueio="$(awk '$0 == "limite_tentativas" {n++} END {print n+0}' "$tmp"/*)"
+silenciosas="$(awk '$0 == "limite_tentativas_silencioso" {n++} END {print n+0}' "$tmp"/*)"
 
 if [[ "$permitidas" != "10" || "$primeiro_bloqueio" != "1" || "$silenciosas" != "9" ]]; then
   echo "Concorrência inesperada: permitidas=$permitidas primeiro_bloqueio=$primeiro_bloqueio silenciosas=$silenciosas"
