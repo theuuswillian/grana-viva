@@ -5955,7 +5955,7 @@ function lerCSV(txt,mapa){
   const cartao=h[iD]==='date'&&h[iV]==='amount'&&iDesc>=0&&h[iDesc]==='title';
   const out=[];let invalidas=0;
   ls.slice(1).forEach(l=>{const c=splitCSV(l,sep),data=dataExt(c[iD]);let valor=numExt(c[iV]);if(!data||isNaN(valor)){invalidas++;return;}if(cartao)valor=-valor;
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]||'').replace(/[^A-Za-z0-9_.\\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]||'').replace(/[^A-Za-z0-9_.:|-]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
   return {linhas:out,cartao,invalidas,colunas:cab.length};
 }
 function conciliarSaldoImportacao(inicial,final,linhas){
@@ -6257,7 +6257,7 @@ function montaImport(){
   box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
-    ${IMP.conciliacao&&IMP.conciliacao.disponivel?( !IMP.conciliacao.ok ? '<div class="aviso warn">Atenção: saldo inicial + movimentações = '+brl(IMP.conciliacao.esperado)+', mas o extrato informa '+brl(IMP.conciliacao.final)+'. Diferença: '+brl(IMP.conciliacao.diferenca)+'. Confira antes de continuar.</div><label class="small"><input type="checkbox" id="impConciliacaoAceita" ${IMP.conciliacaoAceita?'checked':''}> Conferi a divergência e quero continuar mesmo assim.</label>' : '<p class="small">Saldo conciliado: '+brl(IMP.conciliacao.final)+' ✓</p>') : ''}
+    ${IMP.conciliacao&&IMP.conciliacao.disponivel?( !IMP.conciliacao.ok ? '<div class="aviso warn">Atenção: saldo inicial + movimentações = '+brl(IMP.conciliacao.esperado)+', mas o extrato informa '+brl(IMP.conciliacao.final)+'. Diferença: '+brl(IMP.conciliacao.diferenca)+'. Confira antes de continuar.</div><label class="small"><input type="checkbox" id="impConciliacaoAceita" '+(IMP.conciliacaoAceita?'checked':'')+'> Conferi a divergência e quero continuar mesmo assim.</label>' : '<p class="small">Saldo conciliado: '+brl(IMP.conciliacao.final)+' ✓</p>') : ''}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
