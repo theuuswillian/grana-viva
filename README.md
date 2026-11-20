@@ -28,6 +28,7 @@ Comandos principais (dependências conforme o workflow):
 ```bash
 node --check app.js
 python3 csp.py index.html
+node testes/pwa_version.test.cjs
 node testes/planos.test.cjs
 npm install --no-save --no-package-lock jsdom@24
 node testes/smoke_jsdom.cjs
