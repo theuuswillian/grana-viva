@@ -131,7 +131,7 @@ Os findings foram classificados sem alterações em produção. Próximas açõe
 
 ### Dependências concretas de `pg_net`
 
-A inspeção read-only confirmou `pg_net 0.20.4` instalado em `public` e sete jobs ativos em `cron.job` que chamam `net.http_post`:
+A inspeção read-only confirmou `pg_net 0.20.4` instalado em `public` e oito jobs ativos em `cron.job` que chamam `net.http_post`:
 
 | Job | Agenda | Destino |
 |---|---|---|
