@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-kop4H1fPbfdO3M5gN0KH9/T8070tegJb0M77xqYa8xw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-bSveZ7sf0ZGI1HMlGyEaZVgabLnEE5MFCchw6GQdeYw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -3808,6 +3808,83 @@ html.claro #modal .pwSheet a,html.claro #modal .plSheet a{color:#15803d}
 /* verso do cartão: véu um pouco mais escuro para os números passarem de 4,5:1 em qualquer cor de cartão */
 .gvc-back{background:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.08),transparent 55%),linear-gradient(225deg,var(--g0) 0%,var(--g1) 50%,var(--g2) 100%)}
 .gvc-bkR>span{opacity:1}.gvc-bkG small{opacity:.92}
+
+/* ---------- v10.165: revisão de lançamento ---------- */
+/* cabeçalho de vidro fixo no topo (blur 12px), com o olho do modo privacidade e o saldo livre sempre à vista */
+html.mvp .top{position:sticky;top:max(env(safe-area-inset-top,0px),var(--sat-fb,0px));z-index:70}
+html.mvp .topBar{-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%)}
+.eyeBtn{width:44px;height:44px;border-radius:16px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--txt);background:color-mix(in srgb,var(--txt) 5%,transparent);border:1px solid color-mix(in srgb,var(--txt) 7%,transparent);cursor:pointer;transition:transform .15s,background .2s}
+.eyeBtn:active{transform:scale(.9)}.eyeBtn.on{color:var(--a1);background:color-mix(in srgb,var(--a1) 14%,transparent)}
+.eyeBtn .i{width:20px;height:20px}
+.hdSaldo{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;padding:0 4px}
+.hdSaldo small{font-size:10.5px;color:var(--mut);text-transform:lowercase}.hdSaldo b{font-size:14px}
+.hdSaldo b.neg{color:#f87171}
+@media(max-width:380px){.hdSaldo small{display:none}.hdSaldo b{font-size:13px}}
+@media(max-width:340px){.hdSaldo{display:none!important}}
+/* toque e foco suaves */
+html,button,a,[role="button"],label{-webkit-tap-highlight-color:transparent}
+.qcCard :focus-visible,.cqCard :focus-visible,.demoBar :focus-visible,.waCmd :focus-visible{outline:2px solid var(--a1);outline-offset:2px;border-radius:12px}
+/* esqueleto do primeiro carregamento (some no primeiro render, que troca o conteúdo de #view) */
+.skel{display:flex;flex-direction:column;gap:16px;padding:6px 0 24px}
+.skB{display:block;border-radius:20px;background:linear-gradient(90deg,color-mix(in srgb,var(--txt) 6%,transparent) 0%,color-mix(in srgb,var(--txt) 11%,transparent) 50%,color-mix(in srgb,var(--txt) 6%,transparent) 100%);background-size:200% 100%;animation:skMove 1.3s ease-in-out infinite}
+.skBar{height:56px;border-radius:18px}.skHero{height:150px}.skRow{height:64px}.sk60{width:60%}
+@keyframes skMove{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.skB{animation:none}}
+/* valores com algarismos de largura fixa */
+.qcCard,.cqCard,.dayH,.fxSug .val,.rmV{font-variant-numeric:tabular-nums}
+/* extrato agrupado por dia */
+.dayH{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:14px 2px 4px;font-size:12px;color:var(--mut);text-transform:none}
+.dayH:first-of-type{margin-top:6px}.dayH span{font-weight:600;letter-spacing:.01em}.dayH b{font-size:12.5px;font-weight:600;color:var(--mut)}.dayH b.pos{color:#4ade80}
+html.claro .dayH b.pos{color:#15803d}
+/* avatar de categoria em tom de 10% (o ícone fica na cor cheia) */
+.rmI{background:color-mix(in srgb,var(--cc,#60a5fa) 10%,transparent)}
+.rmI.rmLogo{overflow:hidden;background:transparent;padding:0}
+.fatFecha{display:inline-flex;align-items:center;gap:4px;color:#f59e0b;font-weight:600}.fatFecha .i{width:13px;height:13px}
+html.claro .fatFecha{color:#b45309}
+/* confirmação rápida (8 s) depois de lançar */
+.qcCard{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);transform:translate(-50%,24px);opacity:0;z-index:90;width:min(440px,calc(100vw - 24px));padding:12px 12px 14px;border-radius:22px;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid color-mix(in srgb,var(--txt) 10%,transparent);box-shadow:0 18px 50px -18px rgba(0,0,0,.55);transition:transform .22s ease,opacity .22s ease;overflow:hidden}
+.qcCard.on{transform:translate(-50%,0);opacity:1}
+@media(min-width:900px){.qcCard{bottom:24px}}
+.qcTop{display:flex;align-items:center;gap:10px}
+.qcIc{width:34px;height:34px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#4ade80;background:color-mix(in srgb,#4ade80 14%,transparent)}
+.qcTx{flex:1;min-width:0;text-align:left;background:none;border:0;padding:2px 0;color:var(--txt);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.qcTx b{font-size:15px}.qcTx small{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qcX{width:36px;height:36px;border-radius:12px;border:0;background:transparent;color:var(--mut);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.qcPills{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.qcPill{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--txt) 6%,transparent);border:1px solid color-mix(in srgb,var(--txt) 9%,transparent);color:var(--txt);font-size:13px;cursor:pointer;max-width:100%}
+.qcPill b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}.qcPill .qcL{color:var(--mut);font-size:11.5px}
+.qcPill .i{width:14px;height:14px;flex-shrink:0}
+.qcPill select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.qcPill:focus-within{outline:2px solid var(--a1);outline-offset:2px}
+.qcUndo{margin-left:auto;color:#f87171}.qcUndo b{color:inherit}
+html.claro .qcUndo{color:#b91c1c}
+.qcBar{position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--a1),var(--a2));transform-origin:left center;transform:scaleX(1)}
+@media(prefers-reduced-motion:reduce){.qcCard{transition:none}.qcBar{display:none}}
+/* conquistas de dividendos */
+.cqBar{height:10px;border-radius:999px;background:color-mix(in srgb,var(--txt) 8%,transparent);overflow:hidden;margin:10px 0 12px}
+.cqBar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--a1),var(--a2))}
+.cqL{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.cqL li{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;opacity:.55;min-width:0}
+.cqL li.on{opacity:1}.cqL li.prox{opacity:.9}
+.cqL b{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.cqL small{font-size:10.5px;color:var(--mut)}
+.cqIc{width:34px;height:34px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--txt) 7%,transparent);color:var(--mut)}
+.cqL li.on .cqIc{background:color-mix(in srgb,var(--a1) 16%,transparent);color:var(--a1)}
+.cqL li.prox .cqIc{outline:1.5px dashed color-mix(in srgb,var(--a1) 60%,transparent);outline-offset:2px}
+.cqIc .i{width:18px;height:18px}
+.cqTx{margin:12px 0 0;font-size:13px;color:var(--mut)}
+@media(max-width:360px){.cqL small{display:none}}
+/* dados de exemplo */
+.demoBar{display:flex;align-items:center;gap:12px;border:1px dashed color-mix(in srgb,var(--a1) 55%,transparent)!important}
+.demoBar>.i{color:var(--a1);flex-shrink:0}.demoBar span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.demoBar small{color:var(--mut);font-size:12px}
+.demoVazio .btn2{width:100%;justify-content:center}
+/* contas fixas sugeridas pelo extrato */
+.fxSugRow{display:flex;align-items:center;gap:10px;cursor:pointer}.fxSugRow input{width:20px;height:20px;flex-shrink:0}
+/* WhatsApp: resumo semanal e comandos copiáveis */
+.waRes{margin-top:12px}
+.waCmdL{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.waCmdB{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border-radius:999px;font-size:13px;color:var(--txt);background:color-mix(in srgb,#25d366 10%,transparent);border:1px solid color-mix(in srgb,#25d366 28%,transparent);cursor:pointer}
+.waCmdB .i{width:14px;height:14px;color:#25d366}
+html.claro .waCmdB .i{color:#15803d}
 </style></head>
 <body>
 <aside class="side" id="side">
@@ -3821,14 +3898,14 @@ html.claro #modal .pwSheet a,html.claro #modal .plSheet a{color:#15803d}
     <div class="topBar">
       <button class="ham" id="btnMenu" aria-label="abrir menu"></button>
       <div class="tl brand"><span class="brandMark" id="topMark" aria-hidden="true"></span><div class="brandTxt"><span class="logo" id="logoHome" role="link" tabindex="0"><span class="lgA">Grana</span><span class="lgB">Viva</span></span><small id="sub"></small></div></div>
-      <div class="tr"><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><button type="button" class="syncPill" id="syncTxt" hidden></button></div>
+      <div class="tr"><span class="hdSaldo" id="hdSaldo" hidden></span><button type="button" class="eyeBtn" id="btnEye" aria-label="ocultar valores" aria-pressed="false"></button><button class="bell" id="btnBell" aria-label="alertas"><span class="bdg" id="bellN" hidden></span></button><button type="button" class="syncPill" id="syncTxt" hidden></button></div>
     </div>
   </div>
-  <main id="view"></main>
+  <main id="view"><div class="skel" aria-busy="true" aria-label="carregando"><i class="skB skBar"></i><i class="skB skHero"></i><i class="skB skRow"></i><i class="skB skRow"></i><i class="skB skRow sk60"></i></div></main>
 </div>
 
 <div id="modal"></div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <button class="fab" id="fab" aria-label="adicionar rápido"></button>
 <div id="lock" role="dialog" aria-modal="true" aria-label="app bloqueado"></div>
 <script>try{var lk=JSON.parse(localStorage.getItem('gv-lock')||'null'),lks=+localStorage.getItem('gv-lock-saiu')||0;var lkd=Date.now()-lks;if(lk&&lk.hash&&!(lk.atraso&&lks&&lkd>=0&&lkd<lk.atraso*60000)){document.getElementById('lock').classList.add('on');document.documentElement.classList.add('travado');}}catch(e){}</script>
@@ -3851,7 +3928,7 @@ html.claro #modal .pwSheet a,html.claro #modal .plSheet a{color:#15803d}
 </div>
 
 <script>
-const GV_BUILD='10.164'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.168'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -3875,10 +3952,10 @@ const GV_BUILD='10.164'; // versão publicada (./bump.sh troca aqui e no sw.js)
 </script>
 <!-- v10.107: defer = baixa sem travar a página e roda na ordem (supabase, planos, app) depois do HTML lido.
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
-     app.min.js é gerado pelo bump.sh a partir do app.js (que é o arquivo editado). -->
+     app.js é servido diretamente e versionado pelo bump.sh. -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.164"></script>
-<script defer src="app.min.js?v=10.164"></script>
+<script defer src="planos.js?v=10.168"></script>
+<script defer src="app.js?v=10.168"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

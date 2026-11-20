@@ -1,0 +1,4 @@
+# v10.165: estado local do Supabase CLI (projeto ligado, versão do CLI) não vai para o repositório
+supabase/.temp/
+node_modules/
+.DS_Store

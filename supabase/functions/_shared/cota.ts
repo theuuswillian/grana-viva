@@ -10,7 +10,10 @@ const GVP = (globalThis as any).GVP;
 export type TipoUso = "frase" | "comprovante" | "extrato" | "whatsapp";
 export const RECURSO_DO_TIPO: Record<TipoUso, string> = { frase: "ia_frase", comprovante: "ia_comprovante", extrato: "ia_extrato", whatsapp: "whatsapp" };
 
-export const hojeSP = (agora = Date.now()) => new Date(agora - 3 * 3600e3).toISOString().slice(0, 10);
+// v10.165: dia de Brasília pelo Intl (fuso America/Sao_Paulo de verdade), não mais "UTC − 3 horas" fixo:
+// se o Brasil voltar a ter horário de verão, a virada do mês das cotas continua certa.
+const FMT_SP = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+export const hojeSP = (agora = Date.now()) => FMT_SP.format(new Date(agora));
 export const inicioMesSP = (agora = Date.now()) => hojeSP(agora).slice(0, 8) + "01";
 
 // soma do mês (todas as linhas do tipo k desde o dia 1 em Brasília)
@@ -20,10 +23,13 @@ export async function usoMes(sb: any, uid: string, k: TipoUso, agora = Date.now(
   return (data || []).reduce((a: number, r: any) => a + (Number(r?.n) || 0), 0);
 }
 
-// registra 1 uso no dia de hoje (Brasília). ia_conta_k com um teto alto só incrementa (atômico no banco).
-export async function registraUso(sb: any, uid: string, k: TipoUso, agora = Date.now()): Promise<void> {
-  const { error } = await sb.rpc("ia_conta_k", { p_uid: uid, p_dia: hojeSP(agora), p_k: k, p_lim: 1000000 });
-  if (error) console.log("registraUso", k, String(error?.message || error));
+// Consome a cota mensal em uma operação atômica no banco. false = outra requisição ocupou a última vaga.
+export async function registraUso(sb: any, uid: string, k: TipoUso, nivel = 0, agora = Date.now()): Promise<boolean> {
+  const rec = RECURSO_DO_TIPO[k];
+  const lim = GVP.limite(nivel, GVP.COTAS[rec].k);
+  const { data, error } = await sb.rpc("ia_consume_cota_mes", { p_uid: uid, p_dia: hojeSP(agora), p_k: k, p_lim: GVP.ilimitado(lim) ? 1000000 : lim });
+  if (error) throw error;
+  return data === true;
 }
 
 // null = pode seguir; senão o corpo do erro LIMITE_PLANO (o chamador responde 402 com ele)

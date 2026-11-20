@@ -1,9 +1,7 @@
 
 (function(){
 'use strict';
-/* v10.160: MVP enxuto. true = 4 abas (Início, Gastos & Cartões, Patrimônio, WhatsApp & Conta), barra inteligente com recibo,
-   alertas de preço na carteira, Pluggy (Open Finance) e imposto das vendas (IR/DARF) escondidos. false = app completo como na v10.159.
-   Nada do servidor é apagado: só a interface e as chamadas automáticas ao pluggy-sync mudam. */
+/* Importação de extratos é local (CSV/OFX); não há conexão bancária automática. */
 const MVP_MODE=true;
 /* v10.106: erros recentes (Ajustes → Erros recentes). guarda só o essencial, sem dados pessoais: mensagem limpa
    (sem e-mail, números longos, valores, ids, links externos), arquivo:linha, versão e aba. até 50 itens, só neste aparelho. */
@@ -359,22 +357,38 @@ function assinar(plano){
   const bt=$('#mf button[type="submit"]');if(bt)bt.textContent='Continuar para o pagamento';
   const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
 }
+function checkoutUrlMercadoPago(url){
+  try{const u=new URL(url);return u.protocol==='https:'&&/(^|\.)mercadopago\.com(\.br)?$/i.test(u.hostname);}
+  catch(e){return false;}
+}
 async function abreCheckout(plano,email){
-  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
+  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');
+  if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
   toast('Abrindo o pagamento…');
+  const intentKey='gv-checkout-intent:'+plano+':'+email;
+  let intentId='';
   try{
-    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email}});
+    const salvo=JSON.parse(sessionStorage.getItem(intentKey)||'null');
+    if(salvo&&typeof salvo.id==='string'&&Date.now()-Number(salvo.at)<30*60*1000)intentId=salvo.id;
+  }catch(e){}
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)){
+    intentId=window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,ch=>{const r=Math.random()*16|0;return(ch==='x'?r:(r&3|8)).toString(16);});
+    try{sessionStorage.setItem(intentKey,JSON.stringify({id:intentId,at:Date.now()}));}catch(e){}
+  }
+  try{
+    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email,intentId}});
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
-    if(emBreve){PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
+    if(emBreve){try{sessionStorage.removeItem(intentKey);}catch(e){}PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
-    const u=new URL(o.url);if(!/(^|\.)mercadopago\.com(\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
+    if(!checkoutUrlMercadoPago(o.url))throw new Error('endereço de pagamento inválido');
+    const u=new URL(o.url);
     location.href=u.href;
   }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
 }
 /* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o servidor confirmar no MP; relemos a tabela por 1 minuto.
    v10.109: além de esperar o aviso do MP, pedimos ao servidor que confira no MP (na 1ª, 4ª e 8ª volta), porque o aviso pode atrasar ou não vir */
 function retornoAssinatura(){
-  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;
+  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k&&k.indexOf('gv-checkout-intent:')===0)sessionStorage.removeItem(k);}}catch(e){}
   try{history.replaceState(null,'',location.pathname);}catch(e){}
   toast('Recebemos sua volta do pagamento. Confirmando…');
   const confere=()=>sb.functions.invoke('assinatura',{body:{acao:'sincronizar'}}).catch(()=>null);
@@ -405,8 +419,11 @@ function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
-  o.fiis=arr(o.fiis).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.fiis=arr(o.fiis).filter(f=>!f.pluggyInv).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
+  if(o.cfg)delete o.cfg.pluggyIgn;
+  o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
+  o.fiis.forEach(f=>delete f.pluggyInv);
   if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
@@ -721,7 +738,8 @@ async function upTabela(tab,arr,uid,ok){
   const snap=SNAP[tab]||(SNAP[tab]={});
   const agora=new Date().toISOString();
   const mudou=[],hashes={};
-  (arr||[]).forEach(x=>{const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:uid,id,data:x,updated_at:agora});});
+  (arr||[]).forEach(x=>{if(x&&x.demo)return; /* v10.165: dados de exemplo ficam só no aparelho, nunca vão para a nuvem */
+    const id=String(x.id),h=hashObj(x);hashes[id]=h;if(snap[id]!==h)mudou.push({user_id:uid,id,data:x,updated_at:agora});});
   let sair=Object.keys(snap).filter(id=>!(id in hashes));
   /* v10.65: trava de segurança. sumir mais da metade de uma tabela de uma vez só acontece de propósito por "Apagar tudo"
      ou "Importar backup". fora disso, seria um defeito: a exclusão na nuvem fica segurada e os dados continuam lá. */
@@ -745,8 +763,22 @@ async function upTabela(tab,arr,uid,ok){
   }
 }
 const CONTA_TROCOU=new Error('conta trocada durante o envio');
+function limpaLegadoLocal(){
+  let mudou=false;
+  const tx=S.tx||[],fiis=S.fiis||[];
+  const txNovos=tx.filter(t=>!t.pluggyId);
+  if(txNovos.length!==tx.length){S.tx=txNovos;mudou=true;}
+  (S.tx||[]).forEach(t=>{if(t.par&&typeof t.par==='object'&&'pluggyId' in t.par){delete t.par.pluggyId;mudou=true;}});
+  const fiisNovos=fiis.filter(f=>!f.pluggyInv);
+  if(fiisNovos.length!==fiis.length){S.fiis=fiisNovos;mudou=true;}
+  (S.fiis||[]).forEach(f=>{if('pluggyInv' in f){delete f.pluggyInv;mudou=true;}});
+  if(S.cfg&&'pluggyIgn' in S.cfg){delete S.cfg.pluggyIgn;mudou=true;}
+  if(mudou){MUDANCAS++;gravaLocal();}
+  return mudou;
+}
 async function enviar(){
   if(!USER||!CR_OK)return;
+  limpaLegadoLocal();
   if(syncBusy){syncPend=true;return;}
   if(!navigator.onLine){setSync('offline, salvo no aparelho');return;}
   /* v10.155 (C1): o snapshot do localStorage só vale com a cópia deste aparelho aberta (COPIA_LIDA) ou depois de um
@@ -792,7 +824,7 @@ async function enviar(){
 }
 function temPendencia(){
   if(!USER||!SNAP)return false;
-  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set(),seg=new Set(SEGURA[t]||[]);for(const x of S[t]||[]){const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)&&!seg.has(id)))return true;}
+  for(const t of TABELAS){const snap=SNAP[t]||{},ids=new Set(),seg=new Set(SEGURA[t]||[]);for(const x of S[t]||[]){if(x&&x.demo)continue; /* v10.165: exemplo local nunca fica pendente */const id=String(x.id);ids.add(id);if(snap[id]!==hashObj(x))return true;}if(Object.keys(snap).some(id=>!ids.has(id)&&!seg.has(id)))return true;}
   return SNAP.__cfg!==hashObj(cfgNuvem());
 }
 async function baixar(o){
@@ -817,7 +849,7 @@ async function baixar(o){
     SNAP={};gravaSnap();BASE_OK=true;
     const temLocal=TABELAS.some(t=>(S[t]||[]).length);
     if(temLocal&&localStorage.getItem(OWNER_KEY)===USER.id){await enviar();return;}
-    S=Object.assign(vazio(),{cfg:S.cfg});
+    {const dm=demoGuarda();S=Object.assign(vazio(),{cfg:S.cfg});demoRepoe(dm);} // v10.165: o exemplo (só local) sobrevive
     salvar();setSync('sincronizado');
     if(LEGADO&&TABELAS.some(t=>Array.isArray(LEGADO[t])&&LEGADO[t].length)){
       const leg=LEGADO;LEGADO=null;
@@ -829,7 +861,7 @@ async function baixar(o){
      não reprocessa, não regrava o cache e não redesenha a tela. abrir o app fica bem mais leve com milhares de lançamentos. */
   if(SNAP&&s.data&&SNAP.__cfgAt&&SNAP.__cfgAt===(s.data.updated_at||'')&&localStorage.getItem(OWNER_KEY)===USER.id&&!temPendencia()&&TABELAS.every(t=>{
       const o=SNAP[t];if(!o)return false;const rows=res[t].data.filter(r=>r.data),n=Object.keys(o).length;
-      if(rows.length!==n||(S[t]||[]).length!==n)return false;
+      if(rows.length!==n||(S[t]||[]).filter(x=>!(x&&x.demo)).length!==n)return false; // v10.165: exemplo local não conta
       return rows.every(r=>o[String(r.id)]===hashObj(r.data));})){
     LEGADO=null;BASE_OK=true;setSync('sincronizado');
     try{if(rfRecalc())salvar();atualizaCDI();}catch(err){}
@@ -837,10 +869,12 @@ async function baixar(o){
   }
   LEGADO=null;
   const cfgRem=(s.data&&s.data.data)||{};
+  const dmG=demoGuarda(); // v10.165: o exemplo é só deste aparelho; volta depois de trocar pela nuvem
   S=sanea(Object.assign({},nuvem,cfgRem,{cfg:Object.assign({tema:'escuro',accent:'verde'},cfgRem.cfg||{})}));zeraCfgH();
   SNAP={__cfg:s.data?hashObj(cfgNuvem()):''};
   if(s.data){SNAP.__cfgAt=s.data.updated_at||'';SNAP.__cfgK=cfgHashes(cfgNuvem());}
   TABELAS.forEach(t=>{SNAP[t]={};S[t].forEach(x=>{SNAP[t][String(x.id)]=hashObj(x);});});
+  demoRepoe(dmG);
   /* registros que o saneamento corrigiu ficam com hash diferente do que veio da nuvem e são reenviados */
   TABELAS.forEach(t=>{const orig={};res[t].data.forEach(r=>{if(r.data)orig[String(r.id)]=hashObj(r.data);});Object.keys(SNAP[t]).forEach(id=>{if(orig[id]!==SNAP[t][id])SNAP[t][id]='x';});});
   gravaSnap();BASE_OK=true;
@@ -909,6 +943,7 @@ window.addEventListener('online',()=>{if(USER)enviar();});
 let ultimaPuxada=0;
 async function puxar(){
   if(!USER||syncBusy||!navigator.onLine||Date.now()-ultimaPuxada<20000)return;
+  limpaLegadoLocal();
   if(document.querySelector('#modal.on'))return;
   ultimaPuxada=Date.now();
   try{
@@ -1003,6 +1038,10 @@ function parseBR(s){
 const pad=n=>String(n).padStart(2,'0');
 function isoDe(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 const hojeISO=()=>isoDe(new Date());
+/* v10.165: dia de hoje em America/Sao_Paulo (o termômetro de ritmo, as cotas mensais do servidor e o resumo de segunda usam
+   o mesmo calendário, mesmo com o aparelho noutro fuso). Sem Intl com fuso, cai no dia do aparelho. */
+const FMT_SP=(()=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});}catch(e){return null;}})();
+const hojeSP=()=>{try{const s=FMT_SP&&FMT_SP.format(new Date());if(s&&/^\d{4}-\d\d-\d\d$/.test(s))return s;}catch(e){}return hojeISO();};
 const mesAtual=()=>hojeISO().slice(0,7);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const fmtData=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y;};
@@ -1135,7 +1174,7 @@ function saldoBanco0(b){
   let s=cents(b.saldo);
   /* saldoFecha: o saldo informado pelo banco já inclui os lançamentos do próprio dia QUE VIERAM DO BANCO.
      v10.52: lançamento manual feito hoje (sem origem no banco) também entra no saldo do dia. */
-  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.pluggyId))));
+  const antes=(d,t)=>b.saldoData&&(d<b.saldoData||(b.saldoFecha&&d===b.saldoData&&(!t||(t.origem==='banco'||t.importado))));
   S.fiis.forEach(f=>(f.ops||[]).forEach(o=>{if(o.tipo==='compra'&&o.conta===b.id&&o.data&&!antes(o.data))s-=cents(o.qtd*o.preco)+cents(o.taxas);}));
   S.tx.forEach(t=>{
     if(t.faturaKey)pagsFatura(t).forEach(p=>{if(p.conta===b.id&&p.data&&!antes(p.data,p))s-=cents(p.valor);}); // cada pagamento na sua data e conta
@@ -2651,8 +2690,19 @@ function infoCot(f){
    op: inicial (posição que já existia: qtd + custo) · compra (qtd, preço, taxas) · venda (qtd, preço, taxas) · provento (valor)
    a quantidade, o custo (pago), o lucro realizado e os proventos do ativo passam a vir do histórico. */
 const Q8=x=>Math.round(x*1e8)/1e8;
+/* Operações históricas sempre seguem a data efetiva. Posição inicial sem data é a base anterior ao histórico;
+   com data, entra naquele dia (antes das demais operações do mesmo dia), nunca antes de operações mais antigas. */
+function ordenaOps(ops){
+  return (ops||[]).slice().sort((a,b)=>{
+    const da=String(a.data||''),db=String(b.data||'');
+    if(da!==db){if(!da)return -1;if(!db)return 1;return da.localeCompare(db);}
+    if(a.tipo==='inicial'&&b.tipo!=='inicial')return -1;
+    if(b.tipo==='inicial'&&a.tipo!=='inicial')return 1;
+    return 0;
+  });
+}
 function calcOps(ops){
-  const ord=ops.slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+  const ord=ordenaOps(ops);
   let q=0,custo=0,real=0,prov=0,erro='';
   ord.forEach(o=>{
     if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -2675,7 +2725,7 @@ const IR_TIPOS={acao:'comum',etf:'comum',bdr:'comum',fii:'fii'};
 function irVendas(){
   const out=[];
   (S.fiis||[]).forEach(f=>{const cat=IR_TIPOS[tipoOf(f)];if(!cat)return;
-    const ord=(f.ops||[]).slice().sort((a,b)=>(a.tipo==='inicial'?-1:0)-(b.tipo==='inicial'?-1:0)||String(a.data).localeCompare(String(b.data)));
+    const ord=ordenaOps(f.ops||[]);
     let q=0,custo=0;const compraDia=new Set();
     ord.forEach(o=>{
       if(o.tipo==='inicial'){q=Q8(q+o.qtd);custo+=cents(o.custo);}
@@ -2827,7 +2877,7 @@ function opForm(fid,tipo,deCard){
   /* v10.91: provento com cabeçalho do ativo e a conta do valor esperado */
   if(tipo==='provento'){const mf=$('#mf');if(!mf)return;mf.closest('.sheet').classList.add('pvSheet');
     const pp=proxPags(45).find(q=>q.f===f);
-    mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
+    mf.insertAdjacentHTML('afterbegin',`<div class="pvForm">${assetIco(f.ticker,tipoOf(f))}<div><b>${esc(f.ticker)}</b><small>${pp?'pagamento previsto '+esc(FMT_DIA_SEM.format(pp.date)):'registrar provento recebido'}</small></div>${esp?`<span class="pvFormV"><small>esperado</small><b>${brl(esp)}</b><em>${OCULTO?'•••••':num(f.cotas).replace(/,00$/,'')} cotas × ${brl(f.dpc)}</em></span>`:''}</div>`);
     const bt=mf.querySelector('button[type="submit"]');if(bt)bt.textContent='Registrar provento';
     const sc=mf.querySelector('[name="conta"]');if(sc&&sc.closest('label')&&sc.closest('label').firstChild)sc.closest('label').firstChild.textContent='Entrou na conta (vira receita)';
     if(rvPode(f))rvLiga(f);}
@@ -3016,14 +3066,14 @@ function mvpVoltaHTML(){
 /* ---------- origem do lançamento (selo discreto no extrato) ----------
    novos lançamentos guardam t.origem ('ia' | 'recibo' | 'manual') no próprio JSON do lançamento (tabela tx, coluna data):
    sem coluna nova nem migração. WhatsApp: o servidor (whatsapp-webhook) já grava a tag "whatsapp". Banco/extrato importado:
-   pluggyId, importado ou impId. Lançamento antigo sem nenhuma marca = Manual. */
+   importações locais usam as marcas importado/impId. Lançamento antigo sem marca = Manual. */
 const ORIGEM_L={ia:'IA',wa:'WhatsApp',rec:'Recibo',man:'Manual',imp:'Importado'};
 function origemTx(t){
   if(!t)return 'man';
   if(t.origem==='ia')return 'ia';
   if(t.origem==='recibo')return 'rec';
   if(t.origem==='whatsapp'||(Array.isArray(t.tags)&&t.tags.includes('whatsapp')))return 'wa';
-  if(t.origem==='banco'||t.pluggyId||t.importado||t.impId)return 'imp';
+  if(t.origem==='banco'||t.importado||t.impId)return 'imp';
   return 'man';
 }
 function origemBadge(t){
@@ -3090,6 +3140,12 @@ function limiteMesHTML(){
 }
 
 /* ---------- faturas abertas (Início e Gastos & Cartões) ---------- */
+/* v10.165: logo real do banco do cartão (pasta logos/, servida pelo app; sem logo local = ícone de cartão como antes) */
+function ccLogoHTML(c){
+  const n=norm(String(c&&(c.banco||c.nome)||''));if(!n)return '';
+  const b=(typeof BANCOS_BR!=='undefined'?BANCOS_BR:[]).find(x=>x.d&&LOGO_LOCAL.has(x.d)&&(norm(x.n)===n||n.includes(norm(x.n))||norm(x.n).includes(n)));
+  return b?bancoLogoHTML(bancoLogo(b.d),b.n,'rmI rmLogo'):'';
+}
 function faturasAbertasHTML(compacto){
   if(!pode('cartoes'))return compacto?'':`<button type="button" class="card gsTeaser" data-act="planos" data-id="cartoes">${I('card')}<span><b>Cartões e faturas</b><small>fatura aberta, parcelas e limite · ver planos</small></span>${I('chevR')}</button>`;
   const CA=cartoesAtivos();
@@ -3104,8 +3160,10 @@ function faturasAbertasHTML(compacto){
   const rows=L.slice(0,compacto?4:12).map(({c,E})=>{
     const n=E.vence?dias(E.vence):null,venc=E.st==='vencida'||(E.tipo==='fechada'&&n!=null&&n<0);
     const q=n==null?{t:'',c:''}:venc?{t:'vencida',c:'late'}:n===0?{t:'vence hoje',c:'now'}:n===1?{t:'vence amanhã',c:'now'}:{t:'vence '+dd(E.vence),c:n<=avisoDias()?'soon':''};
-    const sub=E.tipo==='fechada'?'fechada'+(E.st==='parcial'?' · paga em parte':''):'aberta · fecha '+dd(E.fecha);
-    return `<div class="rmRow tap" data-act="fat-abre" data-id="${esc(E.abre||'')}" role="button" tabindex="0" aria-label="abrir fatura do ${esc(c.nome)}"><span class="rmI" style="--cc:${esc(ccTom(c)||'#60a5fa')}">${I('card')}</span><div class="rmT"><b>${esc(c.nome)}</b><small>${sub}</small></div><div class="hvR"><span class="rmV nw">${brl(E.valor||0)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
+    const nf=E.tipo!=='fechada'&&E.fecha?dias(E.fecha):null; // v10.165: aviso de fechamento perto (compras depois entram na próxima fatura)
+    const sub=E.tipo==='fechada'?'fechada'+(E.st==='parcial'?' · paga em parte':''):nf!=null&&nf>=0&&nf<=3?`<span class="fatFecha">${I('alert')}${nf===0?'fecha hoje':nf===1?'fecha amanhã':'fecha em '+nf+' dias'} · compras depois vão para a próxima</span>`:'aberta · fecha '+dd(E.fecha);
+    const lg=ccLogoHTML(c);
+    return `<div class="rmRow tap" data-act="fat-abre" data-id="${esc(E.abre||'')}" role="button" tabindex="0" aria-label="abrir fatura do ${esc(c.nome)}">${lg||`<span class="rmI" style="--cc:${esc(ccTom(c)||'#60a5fa')}">${I('card')}</span>`}<div class="rmT"><b>${esc(c.nome)}</b><small>${sub}</small></div><div class="hvR"><span class="rmV nw">${brl(E.valor||0)}</span><span class="hvQ ${q.c}">${q.t}</span></div></div>`;}).join('');
   return `<div class="card gsCc${compacto?' gsCcHm':''}">
     <div class="hmH tap" ${compacto?'data-tab="gastos"':'data-act="nav-cartoes"'} role="button" tabindex="0" aria-label="${compacto?'abrir gastos e cartões':'abrir cartões'}"><h4>faturas abertas</h4><span class="hmSub">${brl(tot/100)}${I('chevR','tapCh')}</span></div>
     ${rows}
@@ -3128,6 +3186,35 @@ function patTotalHTML(){
   </div>`;
 }
 
+/* ---------- v10.165: dados de exemplo para explorar (conta nova, sem nenhum lançamento) ----------
+   lançamentos com demo:1, só neste aparelho (upTabela pula; o download da nuvem devolve o exemplo depois de trocar os dados),
+   com selo "exemplo" no extrato e uma faixa com "Limpar exemplo" (1 toque). Não entram no resumo do WhatsApp nem nos avisos. */
+function temDemo(){return (S.tx||[]).some(t=>t&&t.demo);}
+function demoGuarda(){return (S&&S.tx||[]).filter(t=>t&&t.demo);}
+function demoRepoe(L){if(!L||!L.length)return;if(!S.tx)S.tx=[];const ids=new Set(S.tx.map(t=>t.id));L.forEach(t=>{if(!ids.has(t.id))S.tx.push(t);});}
+function demoPreenche(){
+  if((S.tx||[]).some(t=>t&&!t.demo)){toast('O exemplo só aparece numa conta sem lançamentos.',true);return;}
+  const hj=hojeISO(),d=n=>{const x=new Date(hj+'T12:00');x.setDate(x.getDate()-n);const s=isoDe(x);return s.slice(0,7)===hj.slice(0,7)?s:hj.slice(0,8)+'01';};
+  const c=(k,lista)=>lista.includes(k)?k:lista[lista.length-1];
+  const base={sub:'',obs:'',status:'pago',multa:0,juros:0,desconto:0,cartao:'',pagoCom:'',demo:1};
+  const L=[
+    {tipo:'receita',valor:4200,categoria:c('Salário',CATS_RECEITA),descricao:'salário (exemplo)',data:d(9),forma:'pix',tags:[],origem:'manual'},
+    {tipo:'despesa',valor:386.4,categoria:c('Mercado',S.cats),descricao:'mercado do mês',data:d(8),forma:'pix',tags:[],origem:'recibo'},
+    {tipo:'despesa',valor:55.9,categoria:c('Assinaturas',S.cats),descricao:'streaming',data:d(7),forma:'pix',tags:[],origem:'ia'},
+    {tipo:'despesa',valor:32,categoria:c('Restaurantes',S.cats),descricao:'almoço',data:d(4),forma:'pix',tags:['whatsapp'],origem:'whatsapp'},
+    {tipo:'despesa',valor:18.5,categoria:c('Uber e táxi',S.cats),descricao:'uber pro trabalho',data:d(2),forma:'pix',tags:[],origem:'ia'},
+    {tipo:'despesa',valor:47.8,categoria:c('Farmácia',S.cats),descricao:'farmácia',data:d(1),forma:'dinheiro',tags:[],origem:'manual'},
+    {tipo:'despesa',valor:28.9,categoria:c('Delivery',S.cats),descricao:'delivery',data:d(0),forma:'pix',tags:['whatsapp'],origem:'whatsapp'}
+  ].map((t,i)=>Object.assign({id:'demo-'+i+'-'+uid()},base,t,{conta:t.forma==='pix'?bancoPadrao():''}));
+  if(!S.tx)S.tx=[];S.tx.push(...L);
+  geraRecorrentes();salvar();render();toast('Exemplo preenchido. Toque em "Limpar exemplo" quando quiser começar.');
+}
+function demoLimpa(){const n=(S.tx||[]).filter(t=>t&&t.demo).length;S.tx=(S.tx||[]).filter(t=>!(t&&t.demo));geraRecorrentes();salvar();render();toast(n?'Exemplo apagado. Agora é com você!':'Nada de exemplo para apagar');}
+function demoHTML(){
+  if(temDemo())return `<div class="card demoBar" role="note">${I('sparkle')}<span><b>Você está vendo dados de exemplo</b><small>só neste aparelho, não vão para a sua conta</small></span><button type="button" class="btn2 sm" data-act="demo-limpa">Limpar exemplo</button></div>`;
+  if(!USER||(S.tx||[]).length||(S.fiis||[]).length)return '';
+  return `<div class="card demoVazio"><div class="hmH"><h4>comece por aqui</h4></div><p class="small">Escreva na barra acima um gasto do jeito que você falaria ("almoço 32 no pix") ou tire foto do recibo. Quer ver o app funcionando antes?</p><button type="button" class="btn2" data-act="demo-preenche">${I('sparkle')}Preencher exemplo para explorar</button></div>`;
+}
 /* ---------- Aba 1: Início ---------- */
 function viewInicioMVP(){
   const per=periodo(),pl=per.label;
@@ -3137,6 +3224,7 @@ function viewInicioMVP(){
   return `
   <div class="hmHead"><h1>${saudHora()}${nome?', <span>'+esc(nome)+'</span>':''}</h1></div>
   ${omniHTML()}
+  ${demoHTML()}
   ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${limiteMesHTML()}
   <div class="hmH hmResH"><h4>resumo · ${esc(pl)}</h4><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
@@ -3172,14 +3260,25 @@ function gsExtratoHTML(){
     .sort((a,b)=>(b.data||'').localeCompare(a.data||'')||String(b.criadoEm||'').localeCompare(String(a.criadoEm||'')));
   const cont={};L.forEach(t=>{const k=origemTx(t);cont[k]=(cont[k]||0)+1;});
   const resumo=['ia','wa','rec','man','imp'].filter(k=>cont[k]).map(k=>`<span class="txOrg o-${k}">${ORIGEM_L[k]} ${cont[k]}</span>`).join('');
-  const rows=L.slice(0,12).map(t=>{const r=t.tipo==='receita',tr=t.tipo==='transf',cc=r?'#4ade80':tr?'#94a3b8':corCat(t.categoria);
-    return `<div class="rmRow tap" data-act="tx-menu" data-id="${esc(t.id)}" role="button" tabindex="0" aria-label="abrir lançamento"><span class="rmI" style="--cc:${cc}">${I(tr?'swap':catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${origemBadge(t)}${esc(tr?'transferência':t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status==='previsto'?' · previsto':''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':tr?'':'−'}${brl(t.valor)}</span></div>`;}).join('');
+  /* v10.165: agrupado por dia ("Hoje", "Ontem", "Qui, 12 nov") com o saldo do dia à direita; tocar na linha edita ou exclui */
+  const linha=t=>{const r=t.tipo==='receita',tr=t.tipo==='transf',cc=r?'#4ade80':tr?'#94a3b8':corCat(t.categoria);
+    return `<div class="rmRow tap" data-act="tx-menu" data-id="${esc(t.id)}" role="button" tabindex="0" aria-label="abrir lançamento ${esc(nomeTx(t).n||t.categoria||'')}, ${esc(brl(t.valor))}"><span class="rmI" style="--cc:${cc}">${I(tr?'swap':catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${origemBadge(t)}${esc(tr?'transferência':t.categoria||'')}${t.status==='previsto'?' · previsto':''}${t.demo?' · exemplo':''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':tr?'':'−'}${brl(t.valor)}</span></div>`;};
+  const vis=L.slice(0,12),grupos=[];vis.forEach(t=>{const g=grupos[grupos.length-1];if(g&&g.d===t.data)g.L.push(t);else grupos.push({d:t.data,L:[t]});});
+  const rows=grupos.map(g=>{const tot=L.filter(t=>t.data===g.d).reduce((a,t)=>a+(t.tipo==='receita'?cents(t.valor):t.tipo==='despesa'?-cents(t.valor):0),0)/100;
+    return `<div class="dayH"><span>${esc(diaRotulo(g.d))}</span><b class="nw ${tot>0?'pos':''}">${tot>0?'+':tot<0?'−':''}${brl(Math.abs(tot))}</b></div>${g.L.map(linha).join('')}`;}).join('');
   return `<div class="card gsExt">
     <div class="hmH tap" data-act="gs-extrato" role="button" tabindex="0" aria-label="ver extrato completo"><h4>extrato de ${esc(MESES_LONGO[+m.slice(5,7)-1])}</h4><span class="hmSub">${L.length} ${L.length===1?'lançamento':'lançamentos'}${I('chevR','tapCh')}</span></div>
     ${resumo?`<div class="gsOrgs" aria-label="lançamentos por origem">${resumo}</div>`:''}
     ${rows||'<p class="small" style="margin:6px 0 4px">Nada lançado neste mês ainda. Use a barra do Início, a foto do recibo ou o WhatsApp.</p>'}
     ${L.length>12?`<button type="button" class="hmLink hmMais" data-act="gs-extrato">ver os ${L.length} lançamentos do mês${I('chevR')}</button>`:''}
   </div>`;
+}
+/* v10.165: rótulo do dia no extrato: Hoje, Ontem ou "Qui, 12 nov" */
+function diaRotulo(d){
+  const hj=hojeISO();if(d===hj)return 'Hoje';
+  const on=isoDe(new Date(new Date(hj+'T12:00').getTime()-864e5));if(d===on)return 'Ontem';
+  const x=new Date(d+'T12:00');const ds=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][x.getDay()];
+  return ds+', '+x.getDate()+' '+MESES[x.getMonth()]+(d.slice(0,4)!==hj.slice(0,4)?' '+d.slice(0,4):'');
 }
 function gsPlanHTML(){
   if(!pode('planejamento'))return `<button type="button" class="card gsTeaser" data-act="planos" data-id="planejamento">${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses e simulações · ver planos</small></span>${I('chevR')}</button>`;
@@ -3192,6 +3291,7 @@ function viewGastos(){
   const links=[['gs-extrato','receipt','Extrato completo'],['nav-orc','gauge','Orçamentos'],['nav-cartoes','card','Cartões e parcelas'],['nav-rel','report','Relatório'],['nova-fixa','calendar','Conta fixa'],['importar','up','Importar extrato']];
   return `
   <div class="head gsHead"><h2>Gastos &amp; Cartões</h2><button class="btn" data-act="lanc-manual">+ lançar</button></div>
+  ${temDemo()?demoHTML():''}
   ${limiteMesHTML()}
   ${pode('orcamentos')?orcInicioHTML():''}
   ${faturasAbertasHTML(false)}
@@ -3237,6 +3337,7 @@ function waHeroHTML(){
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
     <div class="pushBtns" id="waBtns"></div>
     <div class="waEx" role="group" aria-label="exemplos de mensagem"><small>toque num exemplo para mandar pelo WhatsApp</small>${WA_EX.map(x=>`<button type="button" class="waExB" data-act="wa-ex" data-id="${esc(x)}">${I('chat')}<span>${esc(x)}</span></button>`).join('')}</div>
+    ${waCmdHTML()}
   </div>`;
 }
 /* exemplo: abre o WhatsApp do GranaViva com a frase escrita (número que o servidor informa); sem número, copia a frase */
@@ -3352,7 +3453,25 @@ function morphView(v,antHtml,html){
   for(let i=0;i<b.length;i++){if(ser(a[i])===ser(b[i]))continue;mataGraficos(cur[i]);cur[i].replaceWith(b[i]);}
   return true;
 }
+/* v10.165: saldo livre no cabeçalho: saldo nas contas menos as faturas abertas dos cartões (o que dá para gastar sem dever) */
+function saldoLivre(){
+  let fat=0;
+  try{cartoesAtivos().forEach(c=>{try{
+    ccFaturasLista(c).forEach(f=>{
+      if(f.estado!=='futura'&&f.estado!=='paga'&&f.estado!=='excluida')fat+=cents(f.rest||0);
+    });
+  }catch(e){}});}catch(e){}
+  return (cents(saldoTotal())-fat)/100;
+}
+function pintaSaldoHd(){
+  const el=$('#hdSaldo');if(!el)return;
+  if(!MVP_MODE||!USER||!((S.bancos||[]).length)){el.hidden=true;return;}
+  let v=0;try{v=saldoLivre();}catch(e){el.hidden=true;return;}
+  el.hidden=false;el.innerHTML=`<small>saldo livre</small><b class="${v<0&&!OCULTO?'neg':''}">${OCULTO?'R$ •••••':brl(v)}</b>`;
+  el.setAttribute('aria-label','saldo livre: '+(OCULTO?'oculto':brl(v)));
+}
 function render(){
+  try{pintaSaldoHd();}catch(e){}
   {const dh=DATA_HOJE(),ix=dh.indexOf(' · ');$('#sub').innerHTML=ix>0?'<b>'+esc(dh.slice(0,ix))+'</b><span aria-hidden="true"> · </span>'+esc(dh.slice(ix+3)):esc(dh);}
   try{atualizaSino();}catch(e){}
   {const mS=/[?&]semana=(\d{4}-\d{2}-\d{2})/.exec(location.search);if(!window.__semOk&&mS&&(USER||(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)&&/[?&]gvtest\b/.test(location.search)))){window.__semOk=1;try{history.replaceState(null,'',location.pathname+(/[?&]gvtest\b/.test(location.search)?'?gvtest':''));}catch(e){}setTimeout(()=>abreSemana(mS[1]),350);}}
@@ -3388,7 +3507,7 @@ function render(){
     RENDER_QUIETO=quieto;
     if(!bloq&&AFTER[TAB])AFTER[TAB]();
     RENDER_QUIETO=false;
-    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaBancoUI();atualizaWaUI();}
+    if(TAB==='cfg'){atualizaPushUI();atualizaLockUI();atualizaWaUI();}
     v.querySelectorAll('[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
     v.querySelectorAll('[data-off]').forEach(el=>el.style.strokeDashoffset=el.dataset.off);
     try{cabeNum(v);}catch(e){}
@@ -3772,6 +3891,24 @@ function rendaPassivaEst(){
     else if(t==='fii'&&f.preco>0){const v=cents(f.cotas*f.preco*DY_FII_PADRAO);tot+=v;est+=v;n++;}});
   return {v:tot/100,est:est/100,n};
 }
+/* ---------- v10.165: conquistas de dividendos ----------
+   barra de marcos da renda passiva mensal estimada (rendaPassivaEst): Café R$ 30 → Streaming R$ 60 → Internet R$ 120 →
+   Luz R$ 250 → Mercado R$ 600 → Aluguel R$ 1.500. Marco atingido fica aceso; mostra quanto falta para o próximo. */
+const CONQ_DIV=[{v:30,n:'Café',i:'lu_coffee'},{v:60,n:'Streaming',i:'lu_tv'},{v:120,n:'Internet',i:'lu_wifi'},{v:250,n:'Luz',i:'lu_lightbulb'},{v:600,n:'Mercado',i:'lu_shopping_cart'},{v:1500,n:'Aluguel',i:'lu_house'}];
+function conquistasDivHTML(){
+  if(!(S.fiis||[]).some(f=>f.cotas>0))return '';
+  const R=rendaPassivaEst(),v=R.v>0?R.v:0,M=CONQ_DIV,ult=M[M.length-1].v;
+  const feitos=M.filter(m=>v>=m.v).length,prox=M[feitos]||null;
+  /* barra em degraus iguais (cada marco ocupa a mesma largura), com o pedaço do degrau atual proporcional */
+  const ant=feitos?M[feitos-1].v:0,pc=prox?((feitos+(v-ant)/(prox.v-ant))/M.length*100):100;
+  const txt=prox?`faltam <b class="nw">${brl(prox.v-v)}</b>/mês para a conquista <b>${esc(prox.n)}</b>`:`todas as conquistas: seus dividendos já pagam um <b>aluguel</b> de ${brl(ult)}`;
+  return `<div class="card cqCard" role="group" aria-label="conquistas de dividendos: ${feitos} de ${M.length}">
+    <div class="hmH"><h4>conquistas de dividendos</h4><span class="hmSub nw">${brl(v)}/mês${R.est>0?' · estimativa':''}</span></div>
+    <div class="cqBar" role="progressbar" aria-valuemin="0" aria-valuemax="${M.length}" aria-valuenow="${feitos}" aria-valuetext="${feitos} de ${M.length} conquistas"><i style="width:${Math.max(0,Math.min(100,pc)).toFixed(1)}%"></i></div>
+    <ol class="cqL">${M.map((m,k)=>`<li class="${v>=m.v?'on':k===feitos?'prox':''}"><span class="cqIc" aria-hidden="true">${I(m.i)}</span><b>${esc(m.n)}</b><small class="nw">${brl(m.v)}</small></li>`).join('')}</ol>
+    <p class="cqTx">${txt}</p>
+  </div>`;
+}
 function fixasMensaisDespesa(){
   const hj=hojeISO();
   return (S.fixas||[]).filter(f=>f&&f.tipo==='despesa'&&(f.freq||'mensal')==='mensal'&&+f.valor>0&&(!f.fim||f.fim>=hj)&&(!f.inicio||f.inicio<=hj))
@@ -3835,8 +3972,9 @@ function proxVencHTML(){
    meses passados e futuros: sem marcador e com a regra antiga (âmbar a partir de 80%). */
 const RITMO_MARGEM=10;
 function ritmoMes(m){
-  if(m!==mesAtual())return null;
-  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),dia=+hojeISO().slice(8,10);
+  const hs=hojeSP(); // v10.165: dia do mês de Brasília
+  if(m!==hs.slice(0,7))return null; // outro mês (ou virada do mês com o aparelho noutro fuso): sem marcador
+  const dMes=new Date(+m.slice(0,4),+m.slice(5,7),0).getDate(),dia=+hs.slice(8,10);
   return {dia,dMes,pct:dia/dMes*100};
 }
 function ritmoCls(pct,r,over){if(over)return 'over';if(r)return pct>r.pct+RITMO_MARGEM?'warn':'';return pct>=80?'warn':'';}
@@ -3887,7 +4025,7 @@ function viewLanc(){
     </div>`;
   return `
   ${voltaHTML()}<div class="head lHead"><h2>${F.st==='aberto'?'A pagar e a receber':F.tipo==='receita'?'Receitas':F.tipo==='despesa'?'Despesas':F.tipo==='transf'?'Transferências':'Lançamentos'}</h2></div>
-  <div class="ltools">${PLUGGY_ON()?`<button class="ltool" data-act="banco-sync"><span>${I('refresh')}</span>Banco</button>`:''}<button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
+  <div class="ltools"><button class="ltool" data-act="importar"><span>${I('up')}</span>Importar</button><button class="ltool" data-act="nova-fixa"><span>${I('receipt')}</span>Conta fixa</button><button class="ltool" data-act="tx-planilha"><span>${I('down')}</span>Planilha</button></div>
   <div class="seg lseg">${[['despesa','Despesas'],['receita','Receitas'],['transf','Transf.'],['','Tudo']].map(([k,l])=>`<button class="${F.tipo===k?'on':''}" data-act="set-tipo" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="lfil">
     <label class="lsrch">${I('search')}<input type="search" data-filter="q" value="${esc(F.q)}" placeholder="Buscar lançamento" aria-label="buscar"></label>
@@ -4103,7 +4241,9 @@ function provCardHTML(p){
 const RP_TIPOS=['fii','acao','etf','bdr'];
 let RP_SEL='',RP_VER='mes',YOC_ORD='yoc';
 function rpCotasNaData(f,data){
-  let q=0;(f.ops||[]).forEach(o=>{
+  let q=0;
+  const ops=ordenaOps(f.ops||[]);
+  ops.forEach(o=>{
     if(o.tipo==='inicial'){if(!o.data||o.data<=data)q=Q8(q+(+o.qtd||0));}
     else if(o.tipo==='compra'&&o.data&&o.data<=data)q=Q8(q+(+o.qtd||0));
     else if(o.tipo==='venda'&&o.data&&o.data<=data)q=Q8(Math.max(0,q-(+o.qtd||0)));
@@ -4111,7 +4251,12 @@ function rpCotasNaData(f,data){
   return q;
 }
 /* valor por cota de um provento: valor recebido ÷ cotas na data (sem histórico de cotas, usa as cotas de hoje) */
-function rpPorCota(f,o){const q=rpCotasNaData(f,o.data)||(+f.cotas||0);return q>0?(+o.valor||0)/q:0;}
+function rpPorCota(f,o){
+  const q=rpCotasNaData(f,o.data);
+  if(q>0)return (+o.valor||0)/q;
+  const temHistorico=(f.ops||[]).some(x=>x.tipo==='inicial'||x.tipo==='compra'||x.tipo==='venda');
+  return !temHistorico&&(+f.cotas||0)>0?(+o.valor||0)/(+f.cotas):0;
+}
 /* desde quando o ativo está na carteira: 1ª compra ou posição inicial com data. posição inicial sem data
    (o ativo já existia antes do app) conta a partir do 1º provento registrado, que é quando o histórico começa. */
 function rpInicio(f){
@@ -4162,9 +4307,10 @@ function yocCalc(hj){
   hj=hj||hojeISO();const d=new Date(hj+'T12:00:00'),umAno=isoDe(new Date(d.getFullYear()-1,d.getMonth(),d.getDate()));
   const L=[];let rendaC=0,custoC=0,rendaM=0,mercC=0;
   S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f))&&f.cotas>0).forEach(f=>{
-    const pv=(f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&o.data>umAno&&o.data<=hj&&+o.valor>0);
+    const ini=rpInicio(f);
+    const pv=(f.ops||[]).filter(o=>o.tipo==='provento'&&o.data&&o.data>umAno&&o.data<=hj&&(!ini||o.data>=ini)&&+o.valor>0);
     const pcTTM=pv.reduce((a,o)=>a+rpPorCota(f,o),0),recebido=pv.reduce((a,o)=>a+cents(o.valor),0)/100;
-    const ini=rpInicio(f);let meses=12,anualiz=false;
+    let meses=12,anualiz=false;
     if(ini&&ini>umAno){meses=Math.max(1,Math.min(12,Math.round((d-new Date(ini+'T12:00:00'))/864e5/30.4375)));anualiz=meses<12;}
     const pcAno=anualiz?pcTTM*12/meses:pcTTM;
     const pm=f.pago>0?f.pago/f.cotas:0,renda=pcAno*f.cotas;
@@ -4295,11 +4441,11 @@ function viewFiiCarteira(modo){
     if(rf){
       const R=rfCardInfo(f,posi);meta=R.meta;info=R.info;chips=R.chips;tagT=R.tag;
     }else if(cri){
-      meta.push(['quantidade',Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8})+' '+esc(f.ticker)],['preço',brl(f.preco)]);
+      meta.push(['quantidade',(OCULTO?'•••••':Number(f.cotas||0).toLocaleString('pt-BR',{maximumFractionDigits:8}))+' '+esc(f.ticker)],['preço',brl(f.preco)]); // v10.165: o olho esconde também a quantidade
       if(f.pago>0)meta.push(['pago',brl(f.pago)]);
       info='cripto · '+esc(CG_ST.msg||'');
     }else{
-      meta.push(['cotas',num(f.cotas).replace(/,00$/,'')],['cota',brl(f.preco)]);
+      meta.push(['cotas',OCULTO?'•••••':num(f.cotas).replace(/,00$/,'')],['cota',brl(f.preco)]); // v10.165: quantidade oculta no modo privacidade
       if(f.pago>0&&f.cotas>0)meta.push(['preço médio',brl(f.pago/f.cotas)]);
       if(t==='fii')meta.push(['renda/mês',brl(dv)]);else if(f.dpc)meta.push(['provento/cota',brl(f.dpc)]);
       if(f.diaPag)meta.push(['paga dia',String(f.diaPag)]);
@@ -4313,7 +4459,7 @@ function viewFiiCarteira(modo){
       </div>
       ${meta.length?`<div class="astMeta${rf?' rfm':''}">${meta.map(([k,v])=>`<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>`:''}
       ${chips.length?`<div class="rfChips">${chips.map(([k,txt,cl])=>`<span class="rfChip ${cl||''}">${k==='dia'?'<i></i>':''}${esc(txt)}</span>`).join('')}</div>`:''}
-      ${rf&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
+      ${rf&&rfIdxOf(f)!=='fixo'?`<div class="rfMov"><button class="btn2 sm" data-act="rf-ap" data-id="${f.id}">${I('plus')} aportar</button><button class="btn2 sm" data-act="rf-res" data-id="${f.id}">${I('down')} resgatar</button></div>`:''}
       <div class="astFoot"><small>${info}</small><div class="acts">${MVP_MODE&&!rf?rdBellHTML(f):''}${rf?'':`<button data-act="hist-fii" data-id="${f.id}" title="histórico de operações" aria-label="histórico de operações de ${esc(f.ticker)}">${I('list')}</button>`}<button data-act="edit-fii" data-id="${f.id}" title="editar" aria-label="editar">${I('edit')}</button><button data-act="del-fii" data-id="${f.id}" title="excluir" aria-label="excluir">${I('trash')}</button></div></div>
     </div>`;
   }).join('');
@@ -4330,6 +4476,7 @@ function viewFiiCarteira(modo){
     ${aplic>0?`<div class="wPl">${plPill(plT,plTp)}<small>sobre ${brl(aplic)} aplicados${semCusto?` · ${semCusto} ${semCusto>1?'ativos sem':'ativo sem'} preço pago fora da conta`:''}</small></div>`:''}
     ${barra}
   </div>
+  ${MVP_MODE?conquistasDivHTML():''}
   ${temRV||S.fiis.length?`<div class="wKpi${temRV?'':' semRV'}">
     ${temRV?`<div class="card mini wRenda"><small>renda mensal</small><b class="pos">${brl(dm)}</b><small class="wHint">${temFii?'yield '+num(yld)+'% ao mês':'só FIIs entram aqui'}</small></div>`:''}
     <div class="card mini wDk"><small>total aplicado</small><b>${brl(aplic)}</b><small class="wHint">custo das compras</small></div>
@@ -4868,11 +5015,7 @@ function viewCfg(){
   </div>
   ${lockCardHTML()}
   ${MVP_MODE?'':notifCardHTML()}
-  ${MVP_MODE?'':`  <div class="card bcCard">
-    <div class="bcHd"><span class="bcIc">${I('bank')}</span><div><h4>Conexão bancária</h4><small>Open Finance · Meu Pluggy</small></div><span class="bcSt" id="bcSt"></span></div>
-    <div class="pushTxt" id="bcTxt">${USER?'verificando…':'entre na sua conta para conectar seus bancos.'}</div>
-    <div class="pushBtns" id="bcBtns"></div>
-  </div>
+  ${MVP_MODE?'':`
   <div class="card bcCard waCard">
     <div class="bcHd"><span class="bcIc">${I('chat')}</span><div><h4>WhatsApp</h4><small>lance por mensagem</small></div><span class="bcSt" id="waSt"></span></div>
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
@@ -4920,7 +5063,7 @@ const CARD_MARCA={'Nubank':['#9b2fe0','#5f0a9e','#fff'],'Banco Inter':['#ff8a00'
 const BANDEIRAS=[{v:'',t:'não sei'},{v:'mastercard',t:'Mastercard'},{v:'visa',t:'Visa'},{v:'elo',t:'Elo'},{v:'amex',t:'American Express'},{v:'hipercard',t:'Hipercard'}];
 function bancoDoCartao(c){
   const tx=String(c.banco||'')+' '+String(c.nome||'');
-  let b=BANCOS_BR.find(x=>x.c&&x.n===c.banco)||BANCOS_BR.find(x=>x.c&&x.n.length>3&&new RegExp('\\b'+x.n.split(' ')[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(tx)&&!/^banco$/i.test(x.n.split(' ')[0]));
+  let b=BANCOS_BR.find(x=>x.c&&x.n===c.banco)||BANCOS_BR.find(x=>x.c&&x.n.length>3&&new RegExp('\\b'+x.n.split(' ')[0].replace(/[.*+?^()|[\]\\]/g,'\\$&')+'\\b','i').test(tx)&&!/^banco$/i.test(x.n.split(' ')[0]));
   if(!b&&/\bnu\b|nubank|roxinho|ultravioleta/i.test(tx))b=BANCOS_BR.find(x=>x.n==='Nubank');
   if(!b&&c.bancoAuto)b=BANCOS_BR.find(x=>x.n===c.bancoAuto);
   return b||null;
@@ -5428,7 +5571,7 @@ function viewCartoes(){
       <p>${S.cartoes.length?'Desarquive um cartão abaixo ou adicione outro para ver a fatura, o limite e o melhor dia de compra.':'Adicione seu cartão de crédito para acompanhar a fatura, o limite, as parcelas e saber qual cartão usar em cada dia.'}</p>
       <button type="button" class="btn" data-act="novo-cartao">${I('plus')} adicionar cartão</button></div>`+arq;
   const at=ccAtual(CA);
-  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+(PLUGGY_ON()||S.tx.some(t=>t.cartao&&(t.pluggyId||t.parcGer))?prcBotaoHTML():'')+arq;
+  return head+ccRailHTML(CA)+ccDotsHTML(CA,at)+ccFatHTML(at)+ccMelhorHTML(CA)+ccAgendaHTML(CA,at)+ccMaisHTML(at)+(CA.length>1?ccResumoHTML(CA):'')+''+arq;
 }
 /* ---------- carrossel: escolha por rolagem, pontos, toque ---------- */
 let CC_ROL=0,CC_ROL_T=0,CC_DET_T=0;
@@ -5495,7 +5638,7 @@ function viewBancos(){
   }).join('');
   return `
   <div class="head"><h2>Bancos</h2><button class="btn" data-act="novo-banco">${I('plus')} conta</button></div>
-  <div class="bkActs">${PLUGGY_ON()?`<button class="bkAct" data-act="banco-sync"><span>${I('refresh')}</span>sincronizar</button>`:''}<button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
+  <div class="bkActs"><button class="bkAct" data-act="importar"><span>${I('arrowDown')}</span>importar</button><button class="bkAct" data-act="nova-transf"><span>${I('swap')}</span>transferir</button><button class="bkAct" data-act="emp-lista"><span>${I('handCoins')}</span>empréstimos</button></div>
   ${S.bancos.length?(()=>{const st=saldoTotal(),sc=(cents(st)-cents(total))/100;return `<div class="card bkHero${total<0?' bkNeg':''}"><small>total em bancos</small><div class="bkBig nw">${total<0?'−':''}${brl(Math.abs(total))}</div>${total<0?`<span class="hB-neg">${I('alert')}no vermelho</span>`:''}
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
@@ -5806,22 +5949,11 @@ function migraPropria(){if(!USER||S.cfg.migPropria>=2)return false;let k=0;
   S.tx.forEach(t=>{if(t.origem!=='banco'||!t.conta||t.tipo==='transf'||!ehPropria(t.descricao))return;
     const b='b:'+t.conta;Object.assign(t,{tipo:'transf',de:t.tipo==='despesa'?b:'',para:t.tipo==='receita'?b:'',categoria:'Transferência',conta:'',forma:'',cartao:''});k++;});
   S.cfg.migPropria=2;salvar();return k;}
-/* ---------- v10.15: conexão com o banco (Meu Pluggy, via Edge Function pluggy-sync) ---------- */
-/* v10.160: no MVP a conexão bancária some da tela e nenhuma chamada (automática ou não) vai ao pluggy-sync.
-   o que já entrou do banco continua no app como qualquer lançamento. */
-function PLUGGY_ON(){return !MVP_MODE&&!!(S.cfg&&S.cfg.pluggyOn);}
-async function pluggy(body){
-  if(MVP_MODE)throw new Error('conexão bancária indisponível nesta versão');
-  const {data,error}=await sb.functions.invoke('pluggy-sync',{body});
-  if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
-  if(data&&data.erro)throw new Error(data.erro);
-  return data;
-}
 /* v10.136: WhatsApp. O app só gera o código de ligação e mostra o estado; ler e salvar acontece no servidor (whatsapp-webhook).
    O lançamento salvo pelo WhatsApp chega aqui na próxima sincronização (tag "whatsapp"). */
 let WA_ST=null;
-async function waChama(acao){
-  const {data,error}=await sb.functions.invoke('whatsapp-vincular',{body:{acao}});
+async function waChama(acao,extra){
+  const {data,error}=await sb.functions.invoke('whatsapp-vincular',{body:Object.assign({acao},extra||{})});
   if(error){let m='não consegui falar com o servidor';try{const j=await error.context.json();if(j&&j.erro)m=j.erro;}catch(e){}throw new Error(m);}
   if(data&&data.erro)throw new Error(data.erro);
   return data;
@@ -5837,7 +5969,7 @@ async function atualizaWaUI(){
     if(!st.ativo){pinta(false,'em breve');t2.textContent='mande "gastei 32 no almoço" para o WhatsApp do GranaViva e o lançamento entra aqui, já com a categoria. está chegando.';b2.innerHTML='';return;}
     if(!st.pode){pinta(false,'Pro');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. faz parte do Pro.';b2.innerHTML=`<button class="btn" data-act="planos" data-id="leitura_ia">ver planos</button>`;return;}
     if(st.vinculado){pinta(true,'ligado');t2.textContent='ligado ao número '+st.telefone+'. mande o gasto do jeito que você falaria, como "uber 18,50 ontem", e toque em Salvar.';
-      b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`;return;}
+      b2.innerHTML=`<button class="btn" data-act="wa-abrir">${I('chat')}abrir</button><div class="bcSec"><button class="bcDel" data-act="wa-desligar">${I('logout')}desligar</button></div>`+waResumoHTML(!!st.resumoSemanal);return;}
     pinta(false,'desligado');t2.textContent='mande "gastei 32 no almoço" e o lançamento entra aqui, já com a categoria. você confere e toca em Salvar.';
     b2.innerHTML=`<button class="btn" data-act="wa-ligar">${I('link')}ligar meu WhatsApp</button>`;
   }catch(e){const t2=$('#waTxt'),b2=$('#waBtns');if(t2)t2.textContent='o WhatsApp ainda não está disponível no servidor.';if(b2)b2.innerHTML='';}
@@ -5852,175 +5984,31 @@ async function waLigar(){
   const url='https://wa.me/'+String(o.numero).replace(/\D/g,'')+'?text='+encodeURIComponent('GV '+o.codigo);
   confirma({titulo:'Código '+o.codigo,texto:'Toque em Abrir: o WhatsApp do GranaViva abre com a mensagem já escrita, é só enviar. O código vale '+(o.expiraMin||15)+' minutos.',ok:'Abrir',alt:'Copiar código',altCb:()=>{copiaTexto('GV '+o.codigo).then(()=>toast('Código copiado: GV '+o.codigo)).catch(()=>toast('Não consegui copiar.',true));}},()=>{location.href=url;});
 }
+/* v10.165: resumo semanal pelo WhatsApp (toda segunda às 8h de Brasília, grátis). O servidor guarda em wa_vinculo.resumo_semanal
+   (função whatsapp-vincular {acao:'resumo'}) e o pg_cron das 11:00 UTC de segunda manda (função whatsapp-webhook). */
+function waResumoHTML(on){
+  return `<div class="ntList waRes"><button type="button" class="ntRow" role="switch" aria-checked="${on}" data-act="wa-resumo"><span class="ntIc" style="--c:#25d366">${I('calendar')}</span><span class="ntTx"><b>Resumo semanal toda segunda às 8h</b><small>gastos e entradas da semana, onde mais foi e o ritmo do mês, no seu WhatsApp</small></span><span class="ntSw${on?' on':''}"><i></i></span></button></div>`;
+}
+async function waResumoTog(){
+  const b=document.querySelector('[data-act="wa-resumo"]');if(!b||b.getAttribute('aria-busy')==='true')return;
+  const on=b.getAttribute('aria-checked')!=='true';
+  b.setAttribute('aria-busy','true');
+  try{const o=await waChama('resumo',{ligar:on});const v=!!(o&&o.resumoSemanal);
+    if(WA_ST&&WA_ST.st)WA_ST.st=Object.assign({},WA_ST.st,{resumoSemanal:v});
+    const b2=document.querySelector('[data-act="wa-resumo"]');if(b2){b2.setAttribute('aria-checked',String(v));const sw=b2.querySelector('.ntSw');if(sw)sw.classList.toggle('on',v);}
+    toast(v?'Resumo semanal ligado: toda segunda às 8h':'Resumo semanal desligado');}
+  catch(e){toast(e.message,true);}
+  finally{const b2=document.querySelector('[data-act="wa-resumo"]');if(b2)b2.removeAttribute('aria-busy');}
+}
+/* v10.165: comandos do WhatsApp em chips copiáveis (consultas são grátis em todos os planos) */
+const WA_CMD=['saldo do mês','quanto posso gastar?','quanto está minha fatura?','como está meu orçamento?','quanto gastei com mercado esse mês?'];
+function waCmdHTML(){return `<div class="waEx waCmd" role="group" aria-label="comandos do WhatsApp"><small>comandos de consulta · toque para copiar</small><div class="waCmdL">${WA_CMD.map(x=>`<button type="button" class="chip waCmdB" data-act="wa-copia" data-id="${esc(x)}" aria-label="copiar comando: ${esc(x)}">${I('copy')}<span>${esc(x)}</span></button>`).join('')}</div></div>`;}
+function waCopia(txt){txt=String(txt||'').slice(0,200);if(!txt)return;copiaTexto(txt).then(()=>toast('Copiado: '+txt)).catch(()=>toast('Não consegui copiar.',true));}
 function waDesligar(){
   confirma({titulo:'Desligar o WhatsApp?',texto:'As mensagens desse número deixam de virar lançamentos. O que já foi salvo continua no app.',ok:'Desligar',perigo:true},async()=>{
     try{await waChama('desvincular');WA_ST=null;toast('WhatsApp desligado');atualizaWaUI();}catch(e){toast(e.message,true);}});
 }
-let BC_ST=null;
-async function atualizaBancoUI(){
-  if(MVP_MODE)return;
-  const tx=$('#bcTxt'),bt=$('#bcBtns');if(!tx||!bt)return;
-  if(!USER){bt.innerHTML='';return;}
-  try{
-    /* v10.54: status guardado por 5 min (antes: uma chamada ao servidor a cada vez que a tela desenhava) */
-    const st=(BC_ST&&BC_ST.uid===USER.id&&Date.now()-BC_ST.t<300000)?BC_ST.st:await pluggy({acao:'status'});
-    BC_ST={st,t:BC_ST&&BC_ST.st===st?BC_ST.t:Date.now(),uid:USER.id};
-    if(!!st.conectado!==!!S.cfg.pluggyOn){S.cfg.pluggyOn=!!st.conectado;salvar();}
-    if(st.conectado){
-      const ul=st.ultima?new Date(st.ultima):null,sc=$('#bcSt');if(sc){sc.className='bcSt on';sc.innerHTML='<i></i>conectado';}
-      const bks=[...new Set(S.bancos.map(b=>b.nome))].filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n));
-      tx.innerHTML=`<div class="bcGrid"><span><small>conexões</small><b>${st.itens}</b></span><span><small>última busca</small><b>${ul?ul.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' · '+ul.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—'}</b></span>${bks.length?`<span class="bcBks"><small>instituições</small><b>${bks.map(n=>{const x=BANCOS_BR.find(y=>y.n===n);return bancoLogoHTML(bancoLogo(x.d),n,'bcLg',bancoLogo2(x.d));}).join('')}${bks.length===1?esc(NOME_CURTO[bks[0]]||bks[0]):''}</b></span>`:''}</div><p class="bcNota">${I('refresh')}o banco atualiza os dados cerca de uma vez por dia.</p>`;
-      bt.innerHTML=`<button class="btn bcSync" data-act="banco-sync">${I('refresh')}buscar agora</button><div class="bcSec"><button class="btn2" data-act="banco-config">${I('sliders')}editar conexão</button><button class="bcDel" data-act="banco-remover">${I('logout')}desconectar</button></div><button class="btn2 bcParc" data-act="parc-verif">${I('card')}verificar parcelas</button>`;
-    }else{
-      {const sc=$('#bcSt');if(sc){sc.className='bcSt';sc.innerHTML='<i></i>desligado';}}
-      tx.classList.add('bcIntro');tx.innerHTML='traga os lançamentos das suas contas e cartões direto do banco, sem digitar. usa o Meu Pluggy, gratuito para uso pessoal. você revisa tudo antes de entrar no app.';
-      bt.innerHTML=`<button class="btn" data-act="banco-config">${I('link')}conectar banco</button>`;
-    }
-  }catch(e){tx.textContent='a conexão com o banco ainda não está disponível no servidor.';bt.innerHTML='';}
-}
-function bancoConfig(){
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  form('Conectar banco',[
-    {name:'clientId',label:'Client ID (dashboard.pluggy.ai → Aplicações)',value:'',required:true,placeholder:'xxxxxxxx-xxxx-…'},
-    {name:'clientSecret',label:'Client Secret',type:'password',value:'',required:true,placeholder:'aparece uma vez só, quando você gera'},
-    {name:'itemIds',label:'itemId (um por conexão, separe por vírgula)',type:'textarea',value:'',required:true,placeholder:'Demo → Itens conectados → copie o id'}
-  ],v=>{
-    if(!String(v.clientId).trim()||!String(v.clientSecret).trim()||!String(v.itemIds).trim())return 'Preencha os três campos.';
-    (async()=>{toast('Conferindo com o Pluggy…');
-    try{BC_ST=null;const r=await pluggy({acao:'salvar',clientId:v.clientId,clientSecret:v.clientSecret,itemIds:v.itemIds});
-      S.cfg.pluggyOn=true;salvar();render();toast('Banco conectado · '+r.contas+' '+(r.contas===1?'conta encontrada':'contas encontradas'));setTimeout(bancoSync,400);
-    }catch(e){toast(e.message,true);}
-    })();
-  });
-}
-const CAT_PLUGGY=[[/groceries|supermarket/i,'Mercado'],[/food delivery/i,'Delivery'],[/restaurant|eating out/i,'Restaurantes'],[/gas station|fuel/i,'Combustível'],[/taxi|ride/i,'Uber e táxi'],[/public transport/i,'Transporte público'],[/vehicle maintenance|car maintenance/i,'Manutenção do carro'],[/electricity|water|utilities/i,'Contas da casa'],[/telecom|internet|mobile/i,'Internet e celular'],[/streaming|digital services|subscription/i,'Assinaturas'],[/pharmac|drug/i,'Farmácia'],[/gym|fitness/i,'Academia'],[/pet/i,'Pets'],[/travel|airline|accommodation|hotel/i,'Viagem'],[/clothing/i,'Roupas'],[/electronics/i,'Eletrônicos'],[/online shopping|shopping/i,'Compras'],[/bank fees|interest charge|late payment/i,'Tarifas e juros'],[/taxes/i,'Impostos e taxas'],[/donation/i,'Doações'],[/food|restaurant|groceries|supermarket|eating/i,'Alimentação'],[/transport|taxi|ride|gas station|fuel|parking|toll|public transport/i,'Transporte'],[/health|pharmac|drug|hospital|dentist|gym|fitness/i,'Saúde'],[/entertainment|leisure|streaming|cinema|games|music|travel|tickets/i,'Lazer'],[/education|school|course|book/i,'Educação'],[/housing|rent|utilities|electricity|water|internet|telecom|mobile/i,'Moradia'],[/salary/i,'Salário'],[/investment income|interest|dividend/i,'Rendimentos']];
-function catDoBanco(l){
-  const sg=sugestaoCat(l.desc,l.valor<0?'despesa':'receita');if(sg&&sg.por!=='palavra')return sg.c;
-  const lista=l.valor<0?S.cats:CATS_RECEITA;
-  for(const [re,c] of CAT_PLUGGY)if(re.test(l.catBanco||'')&&lista.includes(c))return c;
-  return sg?sg.c:catSugerida(l.desc,l.valor<0?'despesa':'receita');
-}
-/* v10.54: lê o que o webhook do Pluggy já guardou no servidor (pluggy_tx / pluggy_acc). null = usar 'sincronizar' */
-let IMP_VISTO='';
-async function bancoDaTabela(){
-  try{
-    const visto=S.cfg.pluggyVisto||'';
-    const {data:accs,error:e1}=await sb.from('pluggy_acc').select('id,item_id,data,updated_at');
-    if(e1||!accs||!accs.length)return null;               // tabela vazia / sem webhook ainda → fallback
-    const desde=S.cfg.pluggyDesde
-      ?new Date(new Date(S.cfg.pluggyDesde).getTime()-5*864e5).toISOString().slice(0,10)
-      :new Date(Date.now()-60*864e5).toISOString().slice(0,10);
-    const rows=[];let maxUpd=visto;
-    for(let de=0;de<20000;de+=1000){                       // PostgREST devolve no máx. 1000 por página
-      let q=sb.from('pluggy_tx').select('id,account_id,data,removed,updated_at').order('updated_at',{ascending:true}).range(de,de+999);
-      q=visto?q.gt('updated_at',visto):q.gte('data->>data',desde);
-      const {data,error}=await q;if(error)return null;
-      rows.push(...data);if(data.length<1000)break;
-    }
-    rows.forEach(t=>{if(t.updated_at>maxUpd)maxUpd=t.updated_at;});
-    accs.forEach(a=>{if(a.updated_at>maxUpd)maxUpd=a.updated_at;});
-    IMP_VISTO=maxUpd;
-    const porConta={};
-    rows.forEach(t=>{if(t.removed)return;(porConta[t.account_id]||(porConta[t.account_id]=[])).push(t.data);});
-    const contas=accs.map(a=>({...a.data,tx:(porConta[a.id]||[]).sort((x,y)=>x.data<y.data?-1:x.data>y.data?1:0)}));
-    let investimentos=null;
-    /* investimentos não ficam na tabela: 1 busca ao vivo por dia só para eles */
-    if(S.cfg.pluggyInvDia!==hojeISO()){
-      try{const r2=await pluggy({acao:'sincronizar',dias:7});investimentos=r2.investimentos||[];S.cfg.pluggyInvDia=hojeISO();}catch(e){}
-    }
-    return {ok:true,desde:visto?visto.slice(0,10):desde,contas,investimentos,tabela:true};
-  }catch(e){return null;}
-}
-async function bancoSync(forcar=false){
-  if(MVP_MODE){toast('A conexão com o banco não está disponível nesta versão. Importe o extrato em Gastos & Cartões.',true);return;}
-  BC_ST=null;
-  if(!USER){toast('Entre na sua conta primeiro.',true);return;}
-  const mg=migraPropria();if(mg){render();toast(mg+' lançamentos entre contas suas viraram transferência');}
-  toast('Buscando lançamentos no banco…');
-  try{
-    IMP_VISTO='';
-    const r=(!forcar&&await bancoDaTabela())||await pluggy({acao:'sincronizar',dias:S.cfg.pluggyDesde?Math.min(365,Math.ceil((Date.now()-new Date(S.cfg.pluggyDesde))/864e5)+5):60});
-    if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-    r.contas.forEach(c=>{const m=mapa[c.id];if(c.tipo!=='CREDIT'&&typeof m==='string'&&m[0]==='b')saldoDoBanco(m.slice(2),c.saldo);});
-    let novos=0;r.contas.forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x'&&cartaoDoBanco(c))novos++;});
-    const ni=investDoBanco(r.investimentos||[]);if(ni)toast(ni+' investimento'+(ni>1?'s':'')+' atualizado'+(ni>1?'s':'')+' pelo banco');
-    geraRecorrentes();render();
-    if(novos)toast(novos===1?'Cartão do banco adicionado em Cartões':novos+' cartões do banco adicionados');
-    const fila=r.contas.filter(c=>mapa[c.id]!=='x').map(c=>{
-      const cartao=c.tipo==='CREDIT';
-      const linhas=c.tx.map(t=>({data:t.data,valor:t.valor,desc:t.desc,fitid:'plg-'+t.id,catBanco:t.cat}));
-      return {nome:c.nome,conta:c.id,cartao,linhas,saldo:c.saldo};
-    }).map(c=>{const ign=new Set(S.cfg.pluggyIgn||[]);c.linhas=c.linhas.filter(l=>!ign.has(l.fitid));return c;})
-      .filter(c=>c.linhas.some(l=>!(c.cartao&&l.valor>0)&&!S.tx.some(t=>t.pluggyId===l.fitid)));
-    /* v10.51: a data da última busca só avança quando a revisão termina (fechar no X não perde lançamentos) */
-    if(!fila.length){S.cfg.pluggyDesde=hojeISO();if(IMP_VISTO)S.cfg.pluggyVisto=IMP_VISTO;salvar();toast('Nada novo no banco por enquanto.');atualizaBancoUI();return;}
-    IMP_CURSOR=hojeISO();IMP_VISTO_CURSOR=IMP_VISTO;IMP_FILA=fila;proxImportBanco();
-  }catch(e){toast(e.message,true);}
-}
-let IMP_FILA=[],IMP_CURSOR='',IMP_VISTO_CURSOR='';
 function arqCartao(c){c.arq=true;c.arqEm=hojeISO();salvar();render();toast('Cartão arquivado');}
-/* v10.20: posições de investimento do banco (Pluggy /investments) entram em Investimentos */
-function tipoInvBanco(v){const t=v.tipo,st=v.subtipo;
-  if(t==='EQUITY'){if(st==='REAL_ESTATE_FUND')return 'fii';if(st==='BDR')return 'bdr';if(st==='ETF')return 'etf';return 'acao';}
-  if(t==='ETF')return 'etf';if(st==='REAL_ESTATE_FUND')return 'fii';return 'rf';}
-function investDoBanco(L0){let n=0;const hj=hojeISO();
-  /* renda fixa do mesmo emissor vira uma posição só (o Nubank manda cada aplicação de CDB separada) */
-  const G={},L=[];
-  L0.forEach(v=>{if(tipoInvBanco(v)!=='rf'){L.push(v);return;}
-    const nm=String(v.nome||'Renda fixa').replace(/\s*-\s*SOCIEDADE.*$/i,'').replace(/ S\.?A\.?.*$/i,'').trim();
-    const k='g:'+norm((v.subtipo||'')+'|'+nm);
-    const g=G[k]||(G[k]={id:k,nome:nm,codigo:(v.subtipo||'RF')+' '+nm.split(/[\s-]+/).filter(x=>x.length>1&&!/^(CDB|LCI|LCA|LC|RDB)$/i.test(x))[0],tipo:v.tipo,subtipo:v.subtipo,saldo:0,original:0,status:'TOTAL_WITHDRAWAL',vencimento:''});
-    if(v.status!=='TOTAL_WITHDRAWAL'&&+v.saldo>0){g.saldo+= +v.saldo;g.original+= +v.original||0;g.status='ACTIVE';if(v.vencimento&&(!g.vencimento||v.vencimento<g.vencimento))g.vencimento=v.vencimento;}});
-  Object.values(G).forEach(g=>{g.saldo=c2(g.saldo);g.original=c2(g.original);L.push(g);});
-  L.forEach(v=>{const tp=tipoInvBanco(v),saldo=+v.saldo,fim=v.status==='TOTAL_WITHDRAWAL'||!(saldo>0);
-    let f=S.fiis.find(x=>x.pluggyInv===v.id);
-    const tk=tp==='rf'?rfCodigo(v.codigo||v.nome||''):String(v.codigo||v.nome).toUpperCase().replace(/[^A-Z0-9.]/g,'').slice(0,12)||'INV'; // v10.98: rf sem cortar palavra
-    if(!f&&tp!=='rf')f=S.fiis.find(x=>!x.pluggyInv&&x.ticker===tk&&tipoOf(x)===tp);
-    if(fim){if(f&&f.pluggyInv){S.fiis=S.fiis.filter(x=>x!==f);n++;}return;}
-    if(!f){f={id:uid(),ticker:tk,nome:v.nome,tipo:tp,cotas:0,preco:0,dpc:0,pago:0,diaPag:0,realizado:0,proventos:0,ops:[]};S.fiis.push(f);}
-    f.pluggyInv=v.id;f.bancoData=hj;if(v.vencimento&&!f.semVenc)f.venc=v.vencimento;if(!f.nome)f.nome=v.nome;
-    if(f.manual||f.idx==='cdi'){f.bancoValor=c2(saldo);n++;return;} // você corrigiu o valor: o do banco fica só como referência
-    if(tp==='rf'){f.cotas=1;f.preco=c2(saldo);if(+v.original>0)f.pago=c2(+v.original);}
-    else{const q=+v.qtd,pr=+v.preco;if(q>0){f.cotas=q;f.preco=pr>0?pr:c2(saldo/q);}else{f.cotas=1;f.preco=c2(saldo);}if(+v.original>0&&!f.pago)f.pago=c2(+v.original);}
-    n++;});
-  if(n)salvar();return n;}
-/* v10.18: o cartão do banco aparece em Cartões com limite, usado, fechamento e vencimento informados pelo banco */
-function cartaoDoBanco(c){const k=c.credito;if(!k)return false;
-  if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};const mapa=S.cfg.pluggyMap;
-  let id=typeof mapa[c.id]==='string'&&mapa[c.id][0]==='c'?mapa[c.id].slice(2):'';
-  let cc=id&&S.cartoes.find(x=>x.id===id);
-  const errado=cc&&k.final&&cc.final&&cc.final!==k.final?cc:null; // estava ligado a outro cartão seu
-  if(errado)cc=null;
-  if(!cc&&k.final)cc=S.cartoes.find(x=>x.final===k.final);
-  let criou=false;
-  if(!cc){cc={id:uid(),nome:String(c.nome||'Cartão').replace(/\s*··\d+$/,'').slice(0,60)||'Cartão',banco:String(k.banco||c.nome||'').slice(0,60),final:k.final||'',limite:0,fechamento:1,vencimento:10,cor:S.cartoes.length%CARD_COR.length,rotativo:0,multaPct:2,moraPct:1};S.cartoes.push(cc);criou=true;}
-  mapa[c.id]='c:'+cc.id;
-  if(errado){const ids=new Set((c.tx||[]).map(t=>'plg-'+t.id));S.tx.forEach(t=>{if(t.cartao===errado.id&&t.pluggyId&&(ids.has(t.pluggyId)||t.origem==='banco'))t.cartao=cc.id;});}
-  const lim=+k.limite,disp=+k.disponivel;
-  if(isFinite(lim)&&lim>0)cc.limite=c2(lim);
-  if(isFinite(lim)&&lim>0&&isFinite(disp)){cc.bancoUsado=c2(Math.max(0,lim-disp));cc.bancoData=hojeISO();}
-  const dia=x=>{const d=String(x||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?parseInt(d.slice(8),10):0;};
-  if(dia(k.fecha))cc.fechamento=dia(k.fecha);if(dia(k.vence))cc.vencimento=dia(k.vence);
-  if(k.final&&!cc.final)cc.final=k.final;
-  if(k.bandeira&&!cc.bandeira){const bd=String(k.bandeira).toLowerCase();cc.bandeira=/master/.test(bd)?'mastercard':/visa/.test(bd)?'visa':/elo/.test(bd)?'elo':/amex|american/.test(bd)?'amex':/hiper/.test(bd)?'hipercard':'';}
-  if(!bancoDoCartao(cc)){const bs=[...new Set(S.bancos.map(b=>b.nome).filter(n=>BANCOS_BR.some(x=>x.c&&x.n===n)))];if(bs.length===1&&!cc.bancoAuto){cc.bancoAuto=bs[0];}}
-  salvar();return criou;}
-/* o saldo que o banco informa vira o saldo da conta no app, valendo a partir de hoje */
-function saldoDoBanco(id,v){const b=S.bancos.find(x=>x.id===id);if(!b||v==null||!isFinite(+v))return;b.saldo=c2(+v);b.saldoData=hojeISO();b.saldoFecha=true;salvar();}
-function fimFilaBanco(){if(IMP_FILA.length||!IMP_CURSOR)return;S.cfg.pluggyDesde=IMP_CURSOR;IMP_CURSOR='';if(IMP_VISTO_CURSOR){S.cfg.pluggyVisto=IMP_VISTO_CURSOR;IMP_VISTO_CURSOR='';}salvar();}
-function proxImportBanco(){
-  const c=IMP_FILA.shift();if(!c){fimFilaBanco();return;}
-  const mapa=S.cfg.pluggyMap||{};
-  IMP={nome:'Banco · '+c.nome,cartao:c.cartao,linhas:c.linhas.slice(0,3000),destino:'',pluggyConta:c.conta,banco:true,saldo:c.saldo};
-  const salvo=mapa[c.conta];
-  /* v10.123: destino salvo que foi arquivado não recebe importação */
-  if(salvo&&((salvo[0]==='c'&&cartoesAtivos().some(x=>x.id===salvo.slice(2)))||(salvo[0]==='b'&&bancosAtivos().some(x=>x.id===salvo.slice(2)))))IMP.destino=salvo;
-  else if(c.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
-  else if(!c.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
-  /* v10.56: conta que você já importou antes entra sozinha; os lançamentos ficam na caixa Revisar */
-  if(salvo&&IMP.destino===salvo&&S.cfg.autoImp!==false){IMP.silent=true;montaImport();confirmaImport();return;}
-  montaImport();
-}
 function importarExtrato(){
   if(IA_PEND.extrato){toast('Ainda lendo o extrato anterior…');return;} // v10.162
   const inp=document.createElement('input');inp.type='file';inp.accept='.ofx,.csv,.txt,text/csv,application/x-ofx,application/pdf,.pdf,image/*';
@@ -6051,7 +6039,7 @@ async function importarExtratoIA(f){
     if(trataLimitePlano(r.o,r.status,'ia_extrato',{manual:false}))return; // v10.162: cota de extrato -> aviso do Pro com "Importação de extratos ilimitada com IA"
     if(r.erro||!r.o||r.status!==200)throw new Error(r.erro||(r.rede?'sem conexão com a IA, tente de novo':'não consegui ler o extrato'));
     const hj=hojeISO();
-    const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100}))
+    const linhas=(Array.isArray(r.o.linhas)?r.o.linhas:[]).map(l=>({data:String(l&&l.data||''),desc:str(l&&l.desc,120).trim(),valor:Math.round(Number(l&&l.valor)*100)/100,fixo:!!(l&&l.provavel_fixo===true)})) // v10.165: provavel_fixo vem da IA
       .filter(l=>DATA_OK.test(l.data)&&l.data<=hj&&isFinite(l.valor)&&l.valor!==0);
     if(!linhas.length){toast('Não encontrei lançamentos nesse arquivo.',true);return;}
     IMP={nome:f.name,cartao:!!r.o.cartao,linhas:linhas.slice(0,3000),destino:'',ia:true};
@@ -6100,10 +6088,10 @@ function montaImport(){
     if(l.data0)l.data=l.data0;
     l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
-    if(IMP.banco)l.id=l.fitid;else{const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;}
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(IMP.banco&&t.pluggyId===l.fitid)||(t.par&&(t.par.id===l.id||(IMP.banco&&t.par.pluggyId===l.fitid))))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&(!IMP.banco||(ehCartao?t.cartao===d.slice(2):t.conta===d.slice(2)))&&parcelaIgual(t,l)); // v10.54 · v10.95: parcela diferente não é duplicata: mesmo dia, valor e tipo já no app = duplicata também no arquivo próprio
+    const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
-    const dupLinha=!IMP.banco&&(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
+    const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
     /* v10.79: empréstimo ou devolução lançado à mão que o banco trouxe agora: liga um ao outro em vez de duplicar */
     const vm=!dup&&ehConta&&!l.propria&&!l.transf?empManualIgual(l,d,usados):null;
@@ -6120,10 +6108,8 @@ function montaImport(){
     const dupT=!vm&&!ehCartao&&l.valor>0&&S.tx.some(t=>t.tipo==='transf'&&t.para===d&&cents(t.valor)===cents(l.valor)&&Math.abs(new Date(t.data)-new Date(l.data))<=2*864e5);
     /* v10.88: planilha do próprio app importada de volta: fatura e transferência/empréstimo que já estão no app não entram de novo
        (antes as faturas viravam despesas duplicadas e a transferência virava receita) */
-    const trPlan=!IMP.banco&&/transfer|emprest|devolu/.test(l.tipoPlan||'');
-    const dupPlan=!dup&&!IMP.banco&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
-    /* v10.96: parcela gerada por "verificar parcelas" que agora chegou do banco: fica com o id da Pluggy em vez de entrar de novo */
-    l.adota=dup&&IMP.banco&&ehCartao?((S.tx.find(t=>t.parcGer&&!t.pluggyId&&t.cartao===d.slice(2)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&parcelaIgual(t,l))||{}).id||''):'';
+    const trPlan=/transfer|emprest|devolu/.test(l.tipoPlan||'');
+    const dupPlan=!dup&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
     if(dup||dupT||dupPlan)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
     if(dup||dupPlan)ign='já está no app';
     else if(trPlan)ign='transferência ou empréstimo na planilha · confira antes de importar';
@@ -6134,7 +6120,7 @@ function montaImport(){
     else if(dupLinha)ign='igual a outra linha do arquivo (confira)';
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
-    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':IMP.banco?catDoBanco(l):catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
+    if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
     if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
     l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
   });
@@ -6143,8 +6129,8 @@ function montaImport(){
   const catOpts=(c,tp)=>(tp==='receita'?CATS_RECEITA.concat(S.cats.filter(x=>!CATS_RECEITA.includes(x))):S.cats).map(x=>`<option ${x===c?'selected':''}>${esc(x)}</option>`).join('');
   const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;
   const box=$('#modal');
-  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>${IMP.banco?'Lançamentos do banco':'Importar extrato'}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
-    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}${IMP.banco&&IMP_FILA.length?' · depois: '+IMP_FILA.length+(IMP_FILA.length>1?' contas':' conta'):''}</p>
+  box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
@@ -6152,7 +6138,7 @@ function montaImport(){
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.trab&&l.valor>0?' · trabalhado '+fmtDataCurta(l.trab):''}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
-    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>${IMP.banco?`<div class="row" style="gap:8px;margin-top:8px"><button class="btn2 sm" data-imp="pular">pular esta conta</button><button class="btn2 sm danger" data-imp="nunca">não importar esta conta</button></div>`:''}
+    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
   </div>`;
   box.classList.add('on');
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
@@ -6161,24 +6147,55 @@ function montaImport(){
   box.querySelectorAll('input[data-emp]').forEach(c=>c.onchange=()=>{const l=IMP.linhas[+c.dataset.emp];l.empOk=c.checked;if(c.checked&&!l.on){l.on=true;const ck=box.querySelector('input[data-i="'+c.dataset.emp+'"]');if(ck){ck.checked=true;ck.closest('.impRow').classList.remove('off');}resumoImp();}});
   box.querySelectorAll('select[data-p]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.p].para=s.value;});
   box.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.imp==='pular'||b.dataset.imp==='nunca'){if(b.dataset.imp==='nunca'){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]='x';salvar();}const eb=IMP.banco;IMP=null;closeModal();if(IMP_FILA.length)setTimeout(proxImportBanco,250);else if(eb)fimFilaBanco();return;}
     const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
 function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
+/* v10.165: assinaturas sugeridas a partir do extrato da IA. uma por descrição (a data mais recente), só despesas importadas
+   agora, que ainda não são conta fixa. conta=true: extrato de conta (sai via pix da conta); senão, fatura do cartão alvo */
+function fixosDoImport(linhas,alvo,conta){
+  const fx=(S.fixas||[]).map(f=>norm(f.nome||'')),porDesc=new Map();
+  (linhas||[]).forEach(l=>{
+    if(!l||!l.fixo||!l.on||l.tipo!=='despesa'||l.transf||l.propria||!(Math.abs(l.valor)>0))return;
+    const nome=String(l.desc||'').replace(/\s+/g,' ').trim().slice(0,60);const k=norm(nome);if(!k||fx.includes(k))return;
+    const a=porDesc.get(k);if(a){a.meses.add(l.data.slice(0,7));if(l.data>a.data){a.data=l.data;a.valor=Math.abs(c2(l.valor));}return;}
+    porDesc.set(k,{nome,valor:Math.abs(c2(l.valor)),data:l.data,categoria:l.cat||'Assinaturas',meses:new Set([l.data.slice(0,7)]),conta:conta?alvo:'',cartao:conta?'':alvo,forma:conta?'pix':'cartao'});
+  });
+  return [...porDesc.values()].slice(0,20);
+}
+function fixosImportAbre(L){
+  if(!L||!L.length)return;
+  const box=$('#modal');
+  box.innerHTML=`<div class="sheet fxSug" role="dialog" aria-modal="true" aria-label="Salvar assinaturas como contas fixas"><div class="sh-head"><h3>Parecem contas fixas</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
+    <p class="small">A IA achou cobranças que costumam se repetir todo mês. Marque as que quer salvar como conta fixa: elas entram sozinhas nos próximos meses (dá para mudar ou apagar depois em Contas fixas).</p>
+    <div class="lista fxSugL">${L.map((x,i)=>`<label class="tx fxSugRow"><input type="checkbox" data-fx="${i}" checked aria-label="salvar ${esc(x.nome)} como conta fixa"><div class="txt"><b>${esc(x.nome)}</b><small>todo dia ${parseInt(x.data.slice(8,10),10)} · ${esc(x.categoria)} · ${x.forma==='cartao'?'no cartão':'na conta'}</small></div><div class="val neg">${brl(x.valor)}</div></label>`).join('')}</div>
+    <button class="btn full" id="fxSugOk">salvar ${L.length} ${L.length===1?'conta fixa':'contas fixas'}</button>
+    <button class="btn2 full" data-act="fechar" style="margin-top:8px">agora não</button>
+  </div>`;
+  box.classList.add('on');
+  const ok=$('#fxSugOk'),conta=()=>box.querySelectorAll('input[data-fx]:checked').length;
+  box.querySelectorAll('input[data-fx]').forEach(c=>c.onchange=()=>{const n=conta();ok.textContent=n?'salvar '+n+' '+(n===1?'conta fixa':'contas fixas'):'nenhuma marcada';ok.disabled=!n;});
+  ok.onclick=()=>{
+    const sel=[...box.querySelectorAll('input[data-fx]:checked')].map(c=>L[+c.dataset.fx]).filter(Boolean);if(!sel.length)return;
+    if(!S.fixas)S.fixas=[];if(!S.gerados)S.gerados={};
+    sel.forEach(x=>{const id=uid(),dia=parseInt(x.data.slice(8,10),10)||1;
+      S.fixas.push({id,nome:x.nome,valor:x.valor,dia,tipo:'despesa',freq:'mensal',auto:true,categoria:x.categoria,inicio:x.data,criadoEm:x.data<hojeISO()?x.data:hojeISO(),forma:x.forma,conta:x.conta,cartao:x.cartao,pagoCom:''});
+      x.meses.forEach(m=>{S.gerados['fx|'+id+'|'+m]=1;}); // o mês que veio no extrato já foi importado: não gera de novo
+    });
+    geraRecorrentes();salvar();closeModal();render();toast(sel.length+(sel.length===1?' conta fixa salva':' contas fixas salvas'));
+  };
+}
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
   let n=0,lig=0,rcb=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.pluggyId&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
-    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.pluggyId&&!m.impId){if(IMP.banco){m.pluggyId=l.fitid;m.origem='banco';}else m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.adota&&IMP.banco){const m=S.tx.find(t=>t.id===l.adota);if(m&&!m.pluggyId&&!S.tx.some(t=>t.pluggyId===l.fitid)){m.pluggyId=l.fitid;m.origem='banco';}return;}
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
     if(!l.on||S.tx.some(t=>t.id===l.id))return;
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
-    if(IMP.banco){t.pluggyId=l.fitid;t.origem='banco';}
     if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
     if(l.propria){Object.assign(t,{tipo:'transf',de:l.de,para:l.para,categoria:'Transferência',cartao:'',conta:'',forma:''});}
     else if(l.transf){Object.assign(t,{de:d,para:l.para,cartao:alvo,conta:'',forma:''});}
@@ -6188,61 +6205,38 @@ function confirmaImport(){
     else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     if(l.trab&&t.tipo==='receita'&&ISO_RE.test(l.trab))t.trab=l.trab; // v10.84: dia trabalhado vindo da planilha
     S.tx.push(t);n++;});
-  if(IMP.banco){if(!S.cfg.pluggyMap)S.cfg.pluggyMap={};S.cfg.pluggyMap[IMP.pluggyConta]=d;
-    if(!ehCartao)saldoDoBanco(alvo,IMP.saldo);
-    /* o que ficou desmarcado não volta a aparecer nas próximas buscas */
-    const fora=IMP.linhas.filter(l=>!l.on&&!S.tx.some(t=>t.pluggyId===l.fitid)).map(l=>l.fitid);
-    S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(fora).slice(-3000);}
-  const eraBanco=IMP.banco,mudo=IMP.silent;
+  const mudo=!!IMP.silent;
+  /* v10.165: extrato lido pela IA com linhas marcadas como provável conta fixa (assinatura, streaming, academia...):
+     depois de importar, oferece salvar como contas fixas mensais, com uma caixa de seleção por assinatura */
+  const sugFixos=IMP.ia?fixosDoImport(IMP.linhas,alvo,!ehCartao):[];
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
-  if(mudo){REV_NOVOS+=n;if(!IMP_FILA.length&&REV_NOVOS){toast(REV_NOVOS+(REV_NOVOS>1?' lançamentos novos':' lançamento novo')+' do banco. Confira em Revisar.');REV_NOVOS=0;}}
-  else toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
-  if(eraBanco&&IMP_FILA.length)setTimeout(proxImportBanco,350);else if(eraBanco)fimFilaBanco();
+  if(sugFixos.length&&!mudo)setTimeout(()=>fixosImportAbre(sugFixos),400);
+  if(!mudo)toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
 }
 
 /* ---------- v10.96: verificar parcelas ----------
-   até a v10.94, quando o banco mandava a parcela 2+ com a data da COMPRA, ela caía num ciclo antigo ou era descartada
-   como duplicata da parcela 1 (e o id ia para pluggyIgn, então nunca mais voltava). a v10.95 corrigiu as importações novas;
-   isto recupera as antigas: roda sozinho uma vez na abertura (marca cfg.parcVerif) e pelo botão "verificar parcelas".
-   fontes: (1) o banco ao vivo pelo pluggy-sync com a janela máxima do servidor (365 dias), com os ids reais da Pluggy;
-   (2) a cópia que o webhook guarda no servidor (pluggy_tx, só leitura); (3) as parcelas que ficaram no app
-   (k/n, valor e descrição): as que faltam são geradas até a fatura aberta.
-   só mexe numa compra quando há prova de que o banco usou a data da compra: duas parcelas diferentes dela com a mesma data.
-   chave de cada parcela: cartão + descrição sem "parc k/n" + total de parcelas + valor + data da compra + número; e o id da Pluggy.
-   nunca vai antes da 1ª fatura com lançamentos do banco no cartão nem depois da fatura aberta. desfazer tira tudo. */
+   Recupera parcelas antigas usando somente registros que já existem no aparelho. Os campos impId identificam
+   transações importadas pela integração antiga; parcGer identifica parcelas reconstruídas localmente.
+   A rotina não consulta APIs, webhooks ou tabelas remotas. Com duas parcelas conhecidas da mesma compra,
+   calcula as parcelas que faltam até a fatura aberta e permite desfazer a recuperação. */
 let PRC_BUSY=false,PRC=null;
 function prcNum(t){const p=parcelaDesc(t.bancoDesc||t.descricao);if(p)return p;
   if(t.parcela>0&&t.parcelas>1)return {k:t.parcela,n:t.parcelas};
   const m=String(t.descricao||'').match(/\((\d{1,2})\/(\d{1,2})\)\s*$/);return m&&+m[2]>1&&+m[1]>=1&&+m[1]<=+m[2]?{k:+m[1],n:+m[2]}:null;}
 function prcChave(cid,desc,n,vc,dc){return cid+'|'+parcelaBase(desc)+'|'+n+'|'+vc+'|'+dc;}
 function prcDescK(desc,k){return String(desc||'').replace(/(parc(?:ela)?\.?\s*)(\d{1,2})(\s*(?:\/|de)\s*\d{1,2})/i,(m,a,b,c)=>a+String(k).padStart(b.length,'0')+c);}
-/* linhas do banco (fonte 1 e 2) por cartão do app. devolve {linhas:[{fitid,data,valor,desc,cat,cartao}],fontes:[],ok} */
-async function prcFontes(){
-  const out={linhas:[],fontes:[],ok:true};
-  if(!USER||!PLUGGY_ON()||!navigator.onLine)return out;
-  const mapa=S.cfg.pluggyMap||{},vistos=new Set();
-  const cartaoDe=acc=>{const m=mapa[acc];return typeof m==='string'&&m[0]==='c'&&S.cartoes.some(c=>c.id===m.slice(2))?m.slice(2):'';};
-  const add=(acc,t)=>{const cid=cartaoDe(acc);if(!cid||!t||!t.id||!ISO_RE.test(String(t.data).slice(0,10)))return;const fitid='plg-'+t.id;if(vistos.has(fitid))return;vistos.add(fitid);
-    out.linhas.push({fitid,data:String(t.data).slice(0,10),valor:+t.valor||0,desc:String(t.desc||'').slice(0,120),cat:t.cat||'',cartao:cid});};
-  let falhas=0;
-  try{const r=await pluggy({acao:'sincronizar',dias:365});(r.contas||[]).forEach(c=>{if(c.tipo==='CREDIT'&&mapa[c.id]!=='x')(c.tx||[]).forEach(t=>add(c.id,t));});out.fontes.push('banco');}catch(e){falhas++;}
-  try{
-    for(let de=0;de<20000;de+=1000){
-      const {data,error}=await sb.from('pluggy_tx').select('id,account_id,data,removed').order('id',{ascending:true}).range(de,de+999);
-      if(error)throw error;(data||[]).forEach(r=>{if(!r.removed)add(r.account_id,r.data);});if(!data||data.length<1000)break;}
-    out.fontes.push('servidor');
-  }catch(e){falhas++;}
-  out.ok=falhas<2;return out;
-}
+/* Fontes remotas bancárias foram removidas. A verificação local ainda pode recuperar parcelas
+   a partir dos lançamentos históricos já existentes no aparelho, sem chamadas externas. */
+async function prcFontes(){return {linhas:[],fontes:['histórico local'],ok:true};}
 /* o que falta (puro: só lê S e as linhas). {add:[tx], mov:[{id,de,para}], compras:[...], n, x, total} */
 function prcDetecta(linhas){
   linhas=linhas||[];const hj=hojeISO(),add=[],mov=[],compras={};
-  const pids=new Set();S.tx.forEach(t=>{if(t.pluggyId)pids.add(t.pluggyId);if(t.par&&t.par.pluggyId)pids.add(t.par.pluggyId);});
+  const pids=new Set();S.tx.forEach(t=>{if(t.impId)pids.add(t.impId);if(t.par&&t.par.impId)pids.add(t.par.impId);});
   S.cartoes.forEach(c=>{
     const doC=S.tx.filter(t=>t.cartao===c.id&&t.tipo==='despesa');
-    const banco=doC.filter(t=>t.pluggyId||t.parcGer);
+    const banco=doC.filter(t=>t.importado||t.impId||t.parcGer);
     if(!banco.length)return;
-    const semParc=banco.filter(t=>t.pluggyId&&!parcelaDesc(t.descricao)).map(t=>t.data).sort();
+    const semParc=banco.filter(t=>t.importado&&!parcelaDesc(t.descricao)).map(t=>t.data).sort();
     const ini=semParc[0]||banco.map(t=>t.data).sort()[0],iniF=fechamentoDe(c,ini).fecha,atuF=fechamentoDe(c,hj).fecha;
     /* compras: cada parcela conhecida (app + banco) agrupada pela data da compra */
     const G={},grupo=(desc,p,vc,dc)=>{const ch=prcChave(c.id,desc,p.n,vc,dc);return G[ch]||(G[ch]={ch,desc,n:p.n,vc,dc,ks:new Set(),tx:[],ln:[]});};
@@ -6263,15 +6257,15 @@ function prcDetecta(linhas){
       /* parcela que o banco tem e o app não (descartada como duplicata ou fora da janela) */
       g.ln.forEach(({l,k})=>{if(pids.has(l.fitid)||tem.has(k))return;const nd=k>=2?dataParcela(c,l.data,k-1):l.data;
         if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))return;
-        const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catDoBanco({desc:l.desc,valor:l.valor,catBanco:l.cat}),descricao:String(l.desc||'').slice(0,120),data:nd,
-          importado:true,forma:'cartao',cartao:c.id,pluggyId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
+        const t={id:sid(l.fitid),tipo:'despesa',valor:Math.abs(c2(l.valor)),categoria:cat||catSugerida(l.desc,'despesa'),descricao:String(l.desc||'').slice(0,120),data:nd,
+          importado:true,forma:'cartao',cartao:c.id,impId:l.fitid,origem:'banco',_k:k,_n:g.n,_ch:g.ch};
         if(nd!==l.data)t.dataCompra=l.data;
         tem.set(k,t);add.push(t);cp.novas.push({k,data:nd,valor:t.valor,fonte:'banco'});});
       /* fonte 3: gera pelos metadados as que nem o banco trouxe, até a fatura aberta */
       for(let k=1;k<=g.n;k++){if(tem.has(k))continue;const nd=dataParcela(c,g.dc,k-1);if(!naFaixa(nd)||jaTem(k,g.n,g.vc,nd))continue;
         const mod=(g.tx[0]&&g.tx[0].t.descricao)||(g.ln[0]&&g.ln[0].l.desc)||g.desc;
         const h=hashObj(g.ch).replace(/[^0-9]/g,'').slice(-9);
-        const t={id:'prc-'+h+'-'+k,tipo:'despesa',valor:g.vc/100,categoria:cat||catDoBanco({desc:mod,valor:-g.vc/100,catBanco:''}),descricao:prcDescK(mod,k).slice(0,120),data:nd,
+        const t={id:'prc-'+h+'-'+k,tipo:'despesa',valor:g.vc/100,categoria:cat||catSugerida(mod,'despesa'),descricao:prcDescK(mod,k).slice(0,120),data:nd,
           importado:true,forma:'cartao',cartao:c.id,parcGer:1,_k:k,_n:g.n,_ch:g.ch};
         if(nd!==g.dc)t.dataCompra=g.dc;
         if(S.tx.some(x=>x.id===t.id)||add.some(x=>x.id===t.id))continue;
@@ -6316,7 +6310,7 @@ function prcBtnTxt(r){return r.n?'Adicionar '+r.n+(r.n>1?' parcelas':' parcela')
 function prcAplica(R){
   const fora=R.fora||new Set(),ok=new Set(R.compras.filter(cp=>!fora.has(cp.ch)).map(cp=>cp.ch));
   const lote='pr'+Date.now().toString(36),ids=[],movs=[];
-  R.add.forEach(t=>{if(!ok.has(t._ch))return;if(S.tx.some(x=>x.id===t.id||(t.pluggyId&&x.pluggyId===t.pluggyId)))return;
+  R.add.forEach(t=>{if(!ok.has(t._ch))return;if(S.tx.some(x=>x.id===t.id||(t.impId&&x.impId===t.impId)))return;
     const n=Object.assign({},t,{parcRec:lote});delete n._k;delete n._n;delete n._ch;S.tx.push(n);ids.push(n.id);});
   R.mov.forEach(m=>{const t=S.tx.find(x=>x.id===m.id);if(!t||t.data!==m.de||t.dataCompra||!ok.has(m.ch))return;
     movs.push([t.id,t.data,0]);t.dataCompra=t.data;t.data=m.para;t.parcMov=lote;});
@@ -6369,7 +6363,6 @@ function prcBotaoHTML(){return `<button type="button" class="card prcBtn" data-a
 /* ---------- v10.56: caixa Revisar ----------
    lançamentos que vieram do banco sozinhos ficam marcados (t.rev). confirmar tira a marca; trocar a categoria
    ensina a regra (S.cfg.regras) e aplica aos parecidos que ainda estão na caixa. */
-let REV_NOVOS=0;
 function revPend(){return S.tx.filter(t=>t.rev&&t.status!=='cancelado').sort((a,b)=>a.data<b.data?1:a.data>b.data?-1:0);}
 function revisarHTML(){const n=revPend().length;if(!n)return '';
   return `<button type="button" class="card revCard" data-act="rev-abre"><span class="revIc">${I('inbox')}</span><span class="revTx"><b>Revisar ${n} lançamento${n>1?'s':''} do banco</b><small>confira as categorias em poucos toques</small></span>${I('chevR')}</button>`;}
@@ -6512,7 +6505,7 @@ function abreEmp(id){
   const jur=empJurosTot(id);
   const linha=x=>{if(x.empJuros)return `<div class="tx empH juros"><span class="ic receita">${I('plus')}</span><div class="txt"><b>juros/lucro</b><small>${fmtDataCurta(x.data)} · receita${x.conta?' · '+esc(nomeLado('b:'+x.conta)):''}</small></div><div class="val pos">+ ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;
     const d=x.empDir,ic=d==='in'?'arrowDown':d==='perdao'?'heartHand':'arrowUp',lb=d==='in'?'devolveu':d==='perdao'?(x.tipo==='despesa'?'perdoei · virou despesa':'perdoei'):'emprestei',ld=d==='in'?x.para:d==='out'?x.de:'';
-    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.pluggyId?' · do banco':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
+    return `<div class="tx empH ${d}"><span class="ic ${d==='in'?'receita':d==='perdao'?'despesa':'transf'}">${I(ic)}</span><div class="txt"><b>${lb}</b><small>${fmtDataCurta(x.data)}${x.empAnt?' · antes do app, não mexe no saldo':ld?' · '+esc(nomeLado(ld)):''}${x.importado?' · importado':''}</small></div><div class="val ${d==='in'?'pos':''}">${d==='in'?'+':'−'} ${brl(x.valor)}</div><button class="txMore" data-act="tx-menu" data-id="${x.id}" aria-label="ações">${I('more')}</button></div>`;};
   box.innerHTML=`<div class="sheet empSheet" role="dialog" aria-modal="true" aria-label="${esc(e.pessoa)}"><div class="sh-head"><h3>${esc(e.pessoa)}</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <div class="empHero">${empAvatar(e.pessoa)}<small>${t.aberto>0?'falta receber':t.perdoado>0?'encerrado':'quitado'}</small><b>${brl(t.aberto)}</b><span><span class="empModo">${EMP_MODO[empModo(e)]}</span> <span class="badge ${k}">${l}</span></span></div>
     <div class="empProg">${empBarHTML(t)}<p class="empProgT"><b>${esc(empResumo(t))}</b></p>
@@ -6803,11 +6796,11 @@ function empAntMarca(t){if(!t||!t.emp||t.empDir!=='out'||t.empAnt)return false;i
 function empAntDesfaz(t){if(!t||!t.empAnt)return false;const d=t.empAntDe&&S.bancos.some(b=>'b:'+b.id===t.empAntDe)?t.empAntDe:(bancoPadrao()?'b:'+bancoPadrao():'');
   if(t.empDir==='in')t.para=d;else t.de=d;delete t.empAnt;delete t.empAntDe;return true;}
 /* saídas que dá para corrigir: lançadas à mão (as que vieram do banco aconteceram de verdade na conta) */
-function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.pluggyId&&!t.importado&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
+function empSaidasCorrigiveis(id){return S.tx.filter(t=>t.emp===id&&t.empDir==='out'&&!t.importado&&!t.impId&&(t.empAnt||t.de)).sort((a,b)=>a.data<b.data?-1:1);}
 /* dica: a saída deixou a conta negativa, ou é anterior a tudo que foi lançado naquela conta */
 function empSuspeitos(){
   const out=[],ign=new Set(S.cfg.empAntIgn||[]);
-  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.pluggyId||t.importado||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
+  S.tx.forEach(t=>{if(!t.emp||t.empDir!=='out'||t.empAnt||t.importado||t.impId||!efetivo(t)||ign.has(t.id)||!/^b:/.test(t.de||''))return;
     const e=empPorId(t.emp),b=S.bancos.find(x=>'b:'+x.id===t.de);if(!e||!b)return;
     if(b.saldoData&&t.data<b.saldoData)return; // anterior ao saldo informado: já não desconta nada
     const sb=saldoBanco(b);
@@ -6845,7 +6838,7 @@ function empAntForm(id){
 function difDias(a,b){return Math.abs(Math.round((new Date(a+'T12:00')-new Date(b+'T12:00'))/864e5));}
 function txBancoIgual(contaSel,tipo,valor,data){
   const id=/^b:/.test(contaSel||'')?contaSel.slice(2):'';if(!id)return null;
-  const L=S.tx.filter(t=>t.pluggyId&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
+  const L=S.tx.filter(t=>(t.importado||t.impId)&&!t.emp&&t.tipo===tipo&&t.conta===id&&efetivo(t)&&cents(t.valor)===cents(valor)&&t.data&&difDias(t.data,data)<=3);
   return L.sort((a,b)=>difDias(a.data,data)-difDias(b.data,data))[0]||null;
 }
 function empTokens(n){return norm(n).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>=3&&!['das','dos','del'].includes(w));}
@@ -6862,13 +6855,13 @@ function empCasa(desc,valor,data,dir){
 /* v10.80: receita prevista (manual) que corresponde a uma entrada do extrato: mesmo valor, conta igual (ou sem conta), até 3 dias da data de recebimento */
 function prevReceitaIgual(l,d,usados){
   const id=d.slice(2),v=cents(l.valor);
-  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.pluggyId&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId&&!t.emp&&!usados.has(t.id)&&(t.conta===id||!t.conta)&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data)||(a.conta===id?-1:1))[0]||null;
 }
 /* lançamento manual de empréstimo que corresponde a uma linha do extrato (mesma conta, valor, até 3 dias) */
 function empManualIgual(l,d,usados){
   const sai=l.valor<0,v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.emp&&!t.pluggyId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.emp&&!t.importado&&!t.impId&&!t.empAnt&&!usados.has(t.id)&&efetivo(t)&&cents(t.valor)===v&&(sai?t.empDir==='out'&&t.de===d:t.empDir==='in'&&t.para===d)&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* ---------- v10.58: conciliação de transferências ----------
@@ -6902,8 +6895,7 @@ function concCache(){const k=S.tx.length+'|'+(S.cfg.concIgn||[]).length+'|'+S.tx
 function juntaPar(p){
   const o=S.tx.find(x=>x.id===p.o.id),i=S.tx.find(x=>x.id===p.i.id);if(!o||!i)return false;
   Object.assign(o,{tipo:'transf',de:'b:'+p.de,para:'b:'+p.para,categoria:'Transferência',conta:'',forma:'',cartao:''});
-  delete o.rev;o.par={id:i.id,pluggyId:i.pluggyId||'',desc:i.descricao||'',data:i.data};
-  if(i.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(i.pluggyId).slice(-3000);
+  delete o.rev;o.par={id:i.id,impId:i.impId||'',desc:i.descricao||'',data:i.data};
   if(i.anexos&&i.anexos.length)o.anexos=(o.anexos||[]).concat(i.anexos);
   S.tx=S.tx.filter(x=>x!==i);return true;
 }
@@ -7021,6 +7013,64 @@ function abreTxIA(o,arq,origem){
   if(o.tipo==='receita'&&forma!=='pix'&&forma!=='dinheiro')forma='pix';
   novoTx(null,o.tipo,{ia:o.confianca??0.5,tipo:o.tipo,valor:o.valor,data:o.data,descricao:o.descricao,categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],forma,cartao,conta:bancoPadrao(),status:'pago',parcSel:forma==='cartao'?o.parcelas:1,anexos:[],arq:arq||null,origem:origem==='recibo'?'recibo':'ia'});
 }
+/* ---------- v10.165: confirmação rápida (8 s) depois de lançar pela barra ou pela foto ----------
+   Com a IA confiante (≥ 0,6), à vista, data até hoje e forma de pagamento resolvida, o lançamento é salvo na hora e aparece um
+   cartão por 8 s com 3 pílulas de 1 toque: [Categoria ▾] [Pagamento ▾] [Desfazer]. Qualquer dúvida (parcelado, boleto, vários
+   cartões sem nome citado, confiança baixa) abre o formulário de conferência como antes. Tocar no texto do cartão abre a edição. */
+const QC_MS=8000;let QC=null;
+function iaPodeRapido(o){return !!(o&&o.valor>0&&(o.confianca==null?0.5:+o.confianca)>=0.6&&(parseInt(o.parcelas,10)||1)<=1&&DATA_OK.test(String(o.data||''))&&o.data<=hojeISO()&&o.forma!=='boleto');}
+function salvaRapidoIA(o,arq,origem){
+  if(!iaPodeRapido(o)){abreTxIA(o,arq,origem);return;}
+  const rec=o.tipo==='receita',lista=rec?CATS_RECEITA:S.cats;
+  let forma=['pix','dinheiro','cartao'].includes(o.forma)?o.forma:'pix',cartao='',conta='';
+  if(rec&&forma==='cartao')forma='pix';
+  if(forma==='cartao'){const CA=cartoesAtivos(),k=o.cartao&&CA.find(c=>c.nome===o.cartao);if(k)cartao=k.id;else if(CA.length===1)cartao=CA[0].id;else{abreTxIA(o,arq,origem);return;}}
+  if(forma==='pix')conta=bancoPadrao();
+  const t={id:uid(),tipo:rec?'receita':'despesa',valor:c2(o.valor),categoria:lista.includes(o.categoria)?o.categoria:lista[lista.length-1],descricao:str(o.descricao,80).trim(),sub:'',tags:[],obs:'',data:o.data,cartao,forma,conta,pagoCom:'',status:'pago',multa:0,juros:0,desconto:0,origem:origem==='recibo'?'recibo':'ia'};
+  if($('#modal')&&$('#modal').classList.contains('on'))closeModal();
+  S.tx.push(t);
+  if(!rec){if(!S.cfg)S.cfg={};S.cfg.ultLanc={forma,cartao,conta};}
+  geraRecorrentes();salvar();render();
+  if(arq)anexar(t.id,arq).then(e=>{if(e)toast(e,true);else render();}).catch(()=>{});
+  qcAbre(t.id);
+}
+function qcPagTxt(t){if(t.forma==='cartao'){const c=S.cartoes.find(x=>x.id===t.cartao);return c?c.nome:'cartão';}return t.forma==='dinheiro'?'Dinheiro':'Pix';}
+function qcHTML(t){
+  const rec=t.tipo==='receita',lista=rec?CATS_RECEITA:S.cats;
+  const cats=(lista.includes(t.categoria)?lista:[t.categoria].concat(lista)).map(c=>`<option value="${esc(c)}"${c===t.categoria?' selected':''}>${esc(c)}</option>`).join('');
+  const pv=t.forma==='cartao'?'c:'+t.cartao:t.forma;
+  const pags=[['pix','Pix'],['dinheiro','Dinheiro']].concat(rec?[]:cartoesAtivos().map(c=>['c:'+c.id,'Cartão '+c.nome])).map(([v,l])=>`<option value="${esc(v)}"${v===pv?' selected':''}>${esc(l)}</option>`).join('');
+  return `<div class="qcTop"><span class="qcIc" aria-hidden="true">${I('check')}</span><button type="button" class="qcTx" data-qc="edit" aria-label="editar o lançamento"><b class="nw">${rec?'Receita':'Gasto'} de ${brl(t.valor)} salvo</b><small>${esc(t.descricao||t.categoria)} · ${t.data===hojeISO()?'hoje':fmtDataCurta(t.data)}${t.origem==='recibo'?' · recibo':' · IA'}</small></button><button type="button" class="qcX" data-qc="fecha" aria-label="fechar">${I('close')}</button></div>
+  <div class="qcPills">
+    <label class="qcPill"><span class="qcL">Categoria</span><b>${esc(t.categoria)}</b>${I('chevD')}<select data-qc="cat" aria-label="trocar a categoria">${cats}</select></label>
+    <label class="qcPill"><span class="qcL">Pagamento</span><b>${esc(qcPagTxt(t))}</b>${I('chevD')}<select data-qc="pag" aria-label="trocar a forma de pagamento">${pags}</select></label>
+    <button type="button" class="qcPill qcUndo" data-qc="undo">${I('lu_undo_2')}<b>Desfazer</b></button>
+  </div><i class="qcBar" aria-hidden="true"></i>`;
+}
+function qcFecha(){if(!QC)return;clearTimeout(QC.tm);const el=QC.el;QC=null;if(el){el.classList.remove('on');setTimeout(()=>el.remove(),250);}}
+function qcTimer(ms){if(!QC)return;clearTimeout(QC.tm);QC.fim=Date.now()+ms;QC.tm=setTimeout(qcFecha,ms);const b=QC.el.querySelector('.qcBar');if(b){b.style.transition='none';b.style.transform='scaleX('+(ms/QC_MS)+')';void b.offsetWidth;b.style.transition='transform '+ms+'ms linear';b.style.transform='scaleX(0)';}}
+function qcPausa(){if(!QC||QC.pausa)return;QC.pausa=Math.max(1200,QC.fim-Date.now());clearTimeout(QC.tm);const b=QC.el.querySelector('.qcBar');if(b){const w=getComputedStyle(b).transform;b.style.transition='none';b.style.transform=w==='none'?'scaleX(1)':w;}}
+function qcSegue(){if(!QC||!QC.pausa)return;const ms=QC.pausa;QC.pausa=0;qcTimer(ms);}
+function qcPinta(){if(!QC)return;const t=S.tx.find(x=>x.id===QC.id);if(!t){qcFecha();return;}QC.el.innerHTML=qcHTML(t);}
+function qcAbre(id){
+  qcFecha();const t=S.tx.find(x=>x.id===id);if(!t)return;
+  const el=document.createElement('div');el.className='qcCard';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  document.body.appendChild(el);QC={id,el,tm:0,fim:0,pausa:0};qcPinta();
+  requestAnimationFrame(()=>el.classList.add('on'));qcTimer(QC_MS);
+  el.addEventListener('pointerenter',qcPausa);el.addEventListener('pointerleave',qcSegue);
+  el.addEventListener('focusin',qcPausa);el.addEventListener('focusout',e=>{if(!el.contains(e.relatedTarget))qcSegue();});
+  el.addEventListener('change',e=>{const s=e.target.closest('select[data-qc]');if(!s||!QC)return;const t=S.tx.find(x=>x.id===QC.id);if(!t)return qcFecha();
+    if(s.dataset.qc==='cat'){t.categoria=s.value;t.sub='';}
+    else{const v=s.value;if(v.indexOf('c:')===0&&S.cartoes.some(c=>c.id===v.slice(2))){t.forma='cartao';t.cartao=v.slice(2);t.conta='';}
+      else if(v==='dinheiro'){t.forma='dinheiro';t.cartao='';t.conta='';}else{t.forma='pix';t.cartao='';t.conta=bancoPadrao();}
+      if(t.tipo==='despesa'){S.cfg.ultLanc={forma:t.forma,cartao:t.cartao||'',conta:t.conta||''};}}
+    geraRecorrentes();salvar();render();qcPinta();QC.pausa=0;qcTimer(QC_MS);toast(s.dataset.qc==='cat'?'Categoria: '+t.categoria:'Pagamento: '+qcPagTxt(t));});
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-qc]');if(!b||b.tagName==='SELECT'||!QC)return;const k=b.dataset.qc,id=QC.id;
+    if(k==='fecha'){qcFecha();return;}
+    if(k==='edit'){qcFecha();novoTx(id);return;}
+    if(k==='undo'){const t=S.tx.find(x=>x.id===id);qcFecha();if(!t)return;removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x.id!==id);geraRecorrentes();salvar();render();toast('Lançamento desfeito');}});
+}
+document.addEventListener('keydown',e=>{if(QC&&e.key==='Escape'&&!($('#modal')&&$('#modal').classList.contains('on')))qcFecha();});
 /* v10.162: trava de envio da IA. Sem trava no banco: o botão fica disabled (com "carregando") enquanto o pedido está no ar,
    e a função ignora um segundo toque/Enter. Três travas independentes: omni (Smart Bar/Omnibox), recibo (foto do recibo)
    e extrato (importar extrato/fatura). Sempre soltas no finally (também no LIMITE_PLANO e nos erros).
@@ -7327,7 +7377,7 @@ async function omniEnvia(){
     const o=await chamaIA({texto},()=>toast(IA_OCUPADA));
     if(!(o.valor>0)){toast('Não achei um valor, diga quanto foi.',true);return;}
     OMNI_TXT='';const i2=$('#omniTxt');if(i2)i2.value='';
-    abreTxIA(o);
+    salvaRapidoIA(o); // v10.165: confiança alta = salva já e mostra a confirmação rápida de 8 s; senão abre o formulário
   }catch(e){toastErroIA(e,'não consegui entender');}
   finally{iaTrava('omni',false);}
 }
@@ -7369,7 +7419,7 @@ function lerComprovanteIA(){
       const o=await chamaIA({imagem,mime},()=>{if(btn&&btn.isConnected)btn.innerHTML=I('receipt')+'Tentando de novo…';toast(IA_OCUPADA);});
       if(!(o.valor>0)){toast('Não achei um valor nessa imagem.',true);return;}
       await contaLeitura(uso);
-      abreTxIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento quando ele for salvo
+      salvaRapidoIA(o,ANX_TIPOS.includes(f.type)||pdf?f:null,'recibo'); // a foto/PDF vira comprovante do lançamento (v10.165: confirmação rápida)
     }catch(e){toastErroIA(e,'não consegui ler o comprovante');}
     finally{solta();}
   };
@@ -7387,7 +7437,7 @@ function novoTx(id,tipoPre,base){
     {name:'pagoCom',label:'Boleto pago com',type:'select',value:P?(P.pagoCom||(P.cartao?'cartao':(P.conta&&P.forma==='boleto'?'conta':'dinheiro'))):'dinheiro',options:[{v:'dinheiro',t:'dinheiro físico'},{v:'cartao',t:'cartão'},{v:'conta',t:'conta bancária'}]},
     {name:'cartao',label:'Qual cartão',type:'select',value:P&&P.cartao?P.cartao:(!P&&cartoesAtivos().some(c=>c.id===(S.cfg&&S.cfg.ultLanc||{}).cartao)?(S.cfg&&S.cfg.ultLanc||{}).cartao:''),options:[{v:'',t:cartoesAtivos().length?'escolha o cartão':'nenhum cartão cadastrado'}].concat(cartoesAtivos(P&&P.cartao).map(c=>({v:c.id,t:c.nome+(c.banco?' · '+c.banco:'')})))},
     {name:'conta',label:'Conta bancária',type:'select',value:P&&P.conta?P.conta:(!P&&S.bancos.some(b=>b.id===(S.cfg&&S.cfg.ultLanc||{}).conta)?(S.cfg&&S.cfg.ultLanc||{}).conta:((S.bancos.find(b=>b.principal)||{}).id||'')),options:[{v:'',t:S.bancos.length?'escolha a conta':'nenhuma conta cadastrada'}].concat(bancosAtivos(P&&P.conta).map(b=>({v:b.id,t:b.nome+(b.tipo?' · '+b.tipo:'')})))},
-    {name:'parcelas',label:'Parcelas',type:'select',value:String(!t&&P&&P.parcSel||1),options:Array.from({length:24},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
+    {name:'parcelas',label:'Parcelas',type:'select',value:String(!t&&P&&P.parcSel||1),options:Array.from({length:48},(_,i)=>({v:i+1,t:i===0?'à vista':(i+1)+'x'}))},
     {name:'descricao',label:'Descrição',value:P?String(P.descricao||'').replace(/ \(\d+\/\d+\)$/,''):'',placeholder:'ex: mercado do mês'},
     {name:'sub',label:'Subcategoria (opcional)',value:P?(P.sub||''):'',placeholder:'ex: mercado, farmácia',list:subsDe(),maxlength:60},
     {name:'tags',label:'Tags (opcional, separe por vírgula)',value:P?(P.tags||[]).join(', '):'',placeholder:'ex: viagem, trabalho',list:todasTags(),maxlength:200},
@@ -7436,7 +7486,7 @@ function novoTx(id,tipoPre,base){
     if(usaCartao&&st==='previsto')st='pago';
     obj.status=st;obj.fxAuto=undefined;
     if(!t)obj.origem=base&&base.ia?(base.origem==='recibo'?'recibo':'ia'):'manual'; // v10.160: origem do lançamento (selo no extrato)
-    const np=Math.max(1,Math.min(24,parseInt(v.parcelas,10)||1));
+    const np=Math.max(1,Math.min(48,parseInt(v.parcelas,10)||1)); // v10.165: até 48x (igual à leitura da IA)
     if(spL&&v.fixa&&!t)return 'Conta fixa não pode ser dividida entre categorias. Desmarque "repete todo mês" ou não divida.';
     let novoId='';
     if(t){
@@ -7878,7 +7928,7 @@ function rfCresce(v,d0,idx,taxa,ate,c){
 /* posição de hoje: bruto, imposto, IOF, taxa B3 e líquido, somando aporte por aporte */
 function rfPosicao(f,c){
   c=c||cdiCache();const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),tx=rfTaxaOf(f),hj=hojeISO(),A=rfAportes(f);
-  if(idx==='fixo'||!A.length||f.pluggyInv&&!f.manual){
+  if(idx==='fixo'||!A.length){
     const posi=f.preco*f.cotas,ganho=Math.max(0,posi-(f.pago||0));
     if(!f.aplicEm||!f.pago)return {bruto:c2(posi),liq:null,ir:0,iof:0,cust:0,aliq:null,est:false,itens:[]};
     const dias=Math.max(1,diasEntre(f.aplicEm,hj)),iof=P.iof!==0&&dias<30?ganho*IOF_T[dias-1]/100:0,ir=P.ir?(ganho-iof)*IR_RF(dias)/100:0;
@@ -7919,7 +7969,7 @@ function rfRecalc(c){
     if(tipoOf(f)!=='rf')return;
     if(f.idx==='cdi'&&f.cdiBase&&!f.ap){f.ap=rfAportes(f);mud=true;}
     if(!f.prod){f.prod=rfProdOf(f);mud=true;}
-    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length||(f.pluggyInv&&!f.manual))return;
+    if(rfIdxOf(f)==='fixo'||!Array.isArray(f.ap)||!f.ap.length)return;
     const P=rfPosicao(f,c);
     if(f.cotas!==1){f.cotas=1;mud=true;}
     if(P.bruto!==f.preco){f.preco=P.bruto;mud=true;}
@@ -7943,7 +7993,7 @@ async function bcbSerie(cod,ini,fim){
 }
 async function atualizaCDI(forca){
   if(S.fiis&&S.fiis.length&&migraCaixinhas()){salvar();if(TAB==='fii')render();}
-  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&!(f.pluggyInv&&!f.manual)&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
+  const rfs=S.fiis.filter(f=>tipoOf(f)==='rf'&&rfIdxOf(f)!=='fixo'&&rfAportes(f).length),mCdi=(S.metas||[]).some(m=>m.cdi),mIpca=(S.metas||[]).some(m=>m.ipca&&m.alvoEm);
   if(!rfs.length&&!mCdi&&!mIpca)return;
   const usa=new Set(rfs.map(rfIdxOf));if(mCdi)usa.add('cdi');if(mIpca)usa.add('ipca');
   /* v10.87: a caixinha da meta rende desde a base e cada aporte; o alvo com IPCA corrige desde alvoEm */
@@ -8037,7 +8087,7 @@ function rfForm(f){
   ['prod','idx','liq'].forEach(n=>Q(n).addEventListener('change',sync));sync();
 }
 /* v10.105: aporte e resgate da renda fixa escolhem a conta. Vira transferência (não é gasto nem renda), como compra/venda de cotas.
-   Se o banco (Pluggy) já trouxe a mesma movimentação em até 3 dias, ela é reaproveitada em vez de duplicar. */
+   Movimentações importadas antigas são reaproveitadas quando coincidem em até 3 dias, evitando duplicidade. */
 function rfContaCampo(f,res){
   const ats=bancosAtivos();if(!ats.length)return {name:'conta',type:'hidden',value:''};
   const pr=f.rfConta!=null&&(f.rfConta===''||ats.some(b=>b.id===f.rfConta))?f.rfConta:((S.bancos.find(b=>b.principal)||ats[0]||{}).id||'');
@@ -8047,7 +8097,7 @@ function rfContaCampo(f,res){
 function rfLancaConta(f,n,d,conta,res){
   if(!S.cats.includes('Investimentos'))S.cats.push('Investimentos');
   const desc=(res?'Resgate ':'Aporte ')+(f.nome||'renda fixa');
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>(t.importado||t.impId)&&!t.meta&&!t.emp&&!t.faturaKey&&!t.invRf&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     (res?((t.tipo==='receita'&&t.conta===conta)||(t.tipo==='transf'&&t.para==='b:'+conta&&!t.de)):((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))))
     .sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){delete ig.rev;Object.assign(ig,res?{tipo:'transf',de:'',para:'b:'+conta}:{tipo:'transf',de:'b:'+conta,para:''},{categoria:'Investimentos',conta:'',forma:'',cartao:'',invRf:f.id});return ig.id;}
@@ -8082,7 +8132,7 @@ function rfCardInfo(f,posi){
   const P=RF_PROD[rfProdOf(f)]||RF_PROD.outro,idx=rfIdxOf(f),X=rfPosicao(f),meta=[];let info='';
   if(f.pago>0)meta.push(['aplicado',brl(f.pago)]);
   meta.push(['rende',rfRotulo(f)]);
-  if(idx!=='fixo'&&rfAportes(f).length&&!(f.pluggyInv&&!f.manual)){
+  if(idx!=='fixo'&&rfAportes(f).length){
     const an=rfAnual(f),mes=posi*(Math.pow(1+an/100,1/12)-1);
     if(mes>0)meta.push(['por mês','≈ '+brl(mes*(1-(P.ir?(X.aliq||15)/100:0)))+(P.ir?' líq.':'')]);
     if(X.liq!=null&&X.liq<posi-0.004)meta.push(['se resgatar hoje',brl(X.liq)]);
@@ -8098,7 +8148,6 @@ function rfCardInfo(f,posi){
   if(P.cust)chips.push(['b3',P.isen?'taxa B3 só acima de R$ 10 mil':'taxa B3 0,20% a.a.','']);
   chips.push(['g',P.g==='fgc'?'FGC até R$ 250 mil':P.g==='tn'?'garantia do Tesouro':'sem FGC',P.g?'':'warn']);
   if(idx==='fixo')info=(f.manual?'saldo atualizado por você':f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'valor digitado manualmente')+' · edite para o app calcular o rendimento';
-  else if(f.pluggyInv&&!f.manual)info=f.bancoData?'saldo do banco em '+fmtData(f.bancoData):'saldo do banco';
   else{const c=cdiCache(),k=Object.keys(idx==='selic'?(c.sel||{}):c.s||{}).sort().pop();
     info=(['cdi','cdimais'].includes(idx)&&CDI.taxa?'CDI '+num(cdiAnual(CDI.taxa))+'% a.a.':idx==='selic'&&k?'Selic '+num(cdiAnual(c.sel[k]))+'% a.a.':idx==='poup'?'poupança: '+num(poupTaxaMes(c,hojeISO())*100)+'% ao mês':idx==='ipca'?'inflação dos últimos 12 meses no cálculo':'taxa travada')+(X.est?' · últimos dias estimados até o Banco Central publicar':'')+(CDI.st==='erro'?' · sem conexão com o Banco Central':'')+(P.mm?' · valor na curva, o preço de mercado varia':'');}
   return {meta,info,chips,tag:P.c};
@@ -8259,7 +8308,7 @@ function mesesMeta(at,alvo,pm,r){if(at>=alvo)return 0;if(!r)return pm>0?Math.cei
    Saldo = caixinha (+ rendimento do CDI das partes com data) + Σ(valor de mercado × pct) + proventos reinvestidos.
    Alvo: valor fixo, fixo corrigido pelo IPCA (SGS 433) ou um veículo da tabela FIPE (m.fipe, guarda o último valor).
    Aporte ("guardei"): vira histórico (m.aportes) e, quando sai de uma conta, um lançamento tipo transf (t.meta) que
-   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Um Pix do banco igual (Pluggy) é ligado, não duplicado. */
+   tira o dinheiro do saldo livre sem virar despesa nem orçamento. Uma movimentação importada antiga igual é ligada, não duplicada. */
 const MT_VOL={BTC:.55,ETH:.7,SOL:.9,XRP:.85,BNB:.65,ADA:.85,DOGE:1,LINK:.9,USDT:.03,USDC:.03}; // volatilidade anual de referência (aprox. histórica)
 const MT_COR={caixa:'#22c55e',rf:'#0ea5e9',fii:'#a78bfa',acao:'#f59e0b',cripto:'#f97316',plano:'#94a3b8'};
 const MT_GL={caixa:'caixinha',rf:'renda fixa',fii:'FII',acao:'ações',cripto:'cripto',plano:'a comprar'};
@@ -8563,7 +8612,7 @@ function abreMeta(id){
   const fonteL=[];
   if(D.cx.pri>0||m.cdi||!(m.ativos||[]).length)fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR.caixa}">${I('piggy')}</span><div class="mtFt2"><b>Caixinha da meta</b><small>${m.cdi?String(m.pctCdi||100).replace('.',',')+'% do CDI'+(D.cx.rend>0?' · rendeu '+brl(D.cx.rend):''):'sem rendimento'}</small></div><b class="nw">${brl(D.caixa)}</b></div>`);
   mtAtivos(m).forEach(({a,f})=>{const g=mtGrupo(f),v=mtValorAtivo(f)*a.pct/100;
-    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${f.pluggyInv?' · do banco':''}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
+    fonteL.push(`<div class="mtFr"><span class="mtFi" style="--fc:${MT_COR[g]}">${I(g==='rf'?'bank':'chart')}</span><div class="mtFt2"><b>${esc(nomeAtivo(f))}</b><small>${String(c2(a.pct)).replace('.',',')}% de ${brl(mtValorAtivo(f))} · ${MT_GL[g]}${a.reinv&&(g==='fii'||g==='acao')?' · proventos reinvestem':''}</small></div><b class="nw">${brl(v)}</b></div>`);});
   (m.planos||[]).forEach(pl=>fonteL.push(`<div class="mtFr plano"><span class="mtFi" style="--fc:${MT_COR.plano}">${I('clock')}</span><div class="mtFt2"><b>${esc(mtPlanoNome(pl)||'ativo')}</b><small>a comprar · ${(MT_PK_T.find(k=>k[0]===pl.tipo)||['',MT_GL[mtGrupo(pl.tipo)]])[1]}${pl.valor>0?' · pretende '+brl(pl.valor):''}</small></div><b class="nw mut">—</b></div>`));
   const hist=(m.aportes||[]).slice().reverse().slice(0,24);
   const ap=hist.map(a=>{const f=a.fonte!=='manual'&&S.fiis.find(x=>x.id===a.fonte),b=a.conta&&S.bancos.find(x=>x.id===a.conta);
@@ -8714,7 +8763,7 @@ function metaFontes(id){
     return `<div class="mtSrc mtSrc2" data-fid="${esc(f.id)}" data-val="${val}" data-livre="${livre}">
       <div class="mtSrcTop">${ic}<div class="mtSrcT"><b class="mtSrcN">${esc(nm)}</b>
         <span class="mtSrcV"><b class="nw">${brl(val)}</b>${tx?`<em class="mtTx">${esc(tx)}</em>`:''}</span>
-        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${f.pluggyInv?' · do banco':''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
+        <small>${MT_GL[g]}${bk&&!norm(nm).includes(norm((NOME_CURTO[bk.n]||bk.n).split(' ')[0]))?' · '+esc(NOME_CURTO[bk.n]||bk.n):''}${out>0?' · '+pc(out)+'% em outras metas':''}</small></div></div>
       <div class="mtPctC" role="group" aria-label="quanto de ${esc(nm)} vai para esta meta">
         <div class="mtChips">${ch.length?ch.map(p=>`<button type="button" class="mtChip${v0===p?' on':''}" data-pq="${p}" aria-pressed="${v0===p}">${p===livre&&livre<100&&![25,50,75].includes(p)?'livre ':''}${pc(p)}%</button>`).join(''):'<span class="mtSemLivre">100% já está em outras metas</span>'}</div>
         <div class="mtStep"><button type="button" class="mtStB" data-ps="-5" aria-label="menos 5%">−</button><label class="mtPct"><input type="number" inputmode="decimal" min="0" max="${livre}" step="1" value="${a?v0:''}" placeholder="0" data-pct="${esc(f.id)}" aria-label="% de ${esc(nm)} para a meta (até ${pc(livre)}%)"><span>%</span></label><button type="button" class="mtStB" data-ps="5" aria-label="mais 5%">+</button></div>
@@ -8815,9 +8864,9 @@ function aporte(id){
     toast(fonte!=='manual'?'Aporte registrado. Lance a compra em Investimentos se ainda não lançou.':s2.n>sq.n&&s2.n>1?'Guardado. '+s2.n+' meses seguidos':'Aporte registrado');
   });
 }
-/* sai da conta como transferência para a meta. Se o banco (Pluggy) já trouxe a saída igual, ela vira o aporte (não duplica). */
+/* sai da conta como transferência para a meta. Se já existe movimentação importada igual no histórico, ela vira o aporte (não duplica). */
 function mtLancaAporte(m,n,d,conta){
-  const ig=S.tx.filter(t=>t.pluggyId&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
+  const ig=S.tx.filter(t=>(t.importado||t.impId)&&!t.meta&&!t.emp&&!t.faturaKey&&efetivo(t)&&cents(t.valor)===cents(n)&&t.data&&difDias(t.data,d)<=3&&
     ((t.tipo==='despesa'&&t.conta===conta)||(t.tipo==='transf'&&t.de==='b:'+conta&&!t.para))).sort((a,b)=>difDias(a.data,d)-difDias(b.data,d))[0];
   if(ig){ig.metaOrig={tipo:ig.tipo,categoria:ig.categoria,conta:ig.conta||'',forma:ig.forma||''};
     Object.assign(ig,{tipo:'transf',de:'b:'+conta,para:'',meta:m.id,categoria:'Meta',conta:'',forma:'',cartao:''});delete ig.rev;return ig.id;}
@@ -8828,16 +8877,16 @@ function mtLancaAporte(m,n,d,conta){
 function mtApDel(m,apId){
   const L=m.aportes||[],i=L.findIndex(a=>a.id===apId);if(i<0)return false;const a=L[i];
   if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));
-  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.pluggyId&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
+  if(a.tx){const t=S.tx.find(x=>x.id===a.tx);if(t){if(t.importado&&t.metaOrig){const o=t.metaOrig;Object.assign(t,{tipo:o.tipo,categoria:o.categoria,conta:o.conta,forma:o.forma});if(o.tipo!=='transf'){t.de='';t.para='';}delete t.meta;delete t.metaOrig;}else S.tx=S.tx.filter(x=>x.id!==t.id);}}
   L.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;return true;
 }
 /* lançamento de meta excluído em Lançamentos: o aporte sai do histórico e da caixinha */
 function mtTxSaiu(t){const m=(S.metas||[]).find(x=>x.id===t.meta);if(!m)return;const a=(m.aportes||[]).find(x=>x.tx===t.id);if(!a)return;
   const i=m.aportes.indexOf(a);if(a.fonte==='manual')m.atual=c2(Math.max(0,(+m.atual||0)-a.v));m.aportes.splice(i,1);if((m.baseN|0)>i)m.baseN=(m.baseN|0)-1;}
-/* extrato/Pluggy: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
+/* extrato importado: saída igual a um aporte lançado à mão (mesma conta, valor, até 3 dias) liga em vez de duplicar */
 function metaManualIgual(l,d,usados){
   if(!(l.valor<0))return null;const v=cents(Math.abs(l.valor));
-  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.pluggyId&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
+  const L=S.tx.filter(t=>t.meta&&t.tipo==='transf'&&!t.importado&&!t.impId&&!usados.has(t.id)&&efetivo(t)&&t.de===d&&cents(t.valor)===v&&t.data&&difDias(t.data,l.data)<=3);
   return L.sort((a,b)=>difDias(a.data,l.data)-difDias(b.data,l.data))[0]||null;
 }
 /* lembrete do dia de guardar (alerta no sino; notificação do aparelho se já autorizada) */
@@ -8991,7 +9040,7 @@ function txMenu(id){
   if(t.origem==='banco'&&t.conta&&(t.tipo==='despesa'||t.tipo==='receita'))ops.push(['tx-propria','swap','Foi pra outra conta minha']);
   if(t.tipo==='despesa'&&!t.emp&&!t.cartao&&!t.faturaKey&&!temSplit(t)&&efetivo(t))ops.push(['tx-emp','handCoins','Emprestei (vai voltar)']);
   if(t.tipo==='receita'&&efetivo(t))ops.push(['tx-empv','handCoins','Devolução de empréstimo']);
-  if(t.emp&&t.empDir==='out'&&!t.pluggyId&&!t.importado)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
+  if(t.emp&&t.empDir==='out'&&!t.importado&&!t.impId)ops.push(t.empAnt?['emp-desant-tx','undo','Descontar da conta de novo']:['emp-ant-tx','clock','Saiu antes do app (não mexer no saldo)']);
   if(t.emp&&t.empDir!=='perdao')ops.push(['tx-desemp','close','Não foi empréstimo']);
   ops.push(['del-tx','trash','Excluir',1]);
   const box=$('#modal');
@@ -9211,6 +9260,10 @@ const ACT={
   'nav-sub':id=>navega(rotaResolve(id)),
   'nav-grupo':()=>{const p=NAV_PILHA[NAV_PILHA.length-1];if(p&&p.tab!==TAB)navVolta();else go(grupoDe(TAB));},
   'wa-ex':txt=>waExemplo(txt),
+  'wa-copia':txt=>waCopia(txt), // v10.165
+  'demo-preenche':()=>demoPreenche(), // v10.165
+  'demo-limpa':()=>demoLimpa(), // v10.165
+  'wa-resumo':()=>waResumoTog(), // v10.165
   'sair-conta':()=>{const b=document.getElementById('btnOut');if(b)b.click();else{pintaUsuario();const c=document.getElementById('btnOut');if(c)c.click();}}, // v10.164: Sair também em WhatsApp & Conta
   'fechar':closeModal,
   'hm-sem':id=>{const W=semanasDados(8),i=+id,L=document.getElementById('hbSemL');if(!L)return;L.innerHTML=semLegenda(W,i);document.querySelectorAll('.hB-sem .sg').forEach((g,k)=>g.classList.toggle('sel',k===i));},
@@ -9232,13 +9285,10 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
-  'banco-sync':()=>bancoSync(),
   'wa-ligar':()=>waLigar(),
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
   'parc-verif':()=>prcVerifica(),
-  'banco-config':()=>bancoConfig(),
-  'banco-remover':()=>confirma({titulo:'Desconectar o banco?',texto:'As credenciais do Pluggy são apagadas do servidor. Os lançamentos que já entraram continuam no app.',ok:'Desconectar',perigo:true},async()=>{try{await (BC_ST=null,delete S.cfg.pluggyVisto,pluggy({acao:'remover'}));S.cfg.pluggyOn=false;salvar();render();toast('Banco desconectado');}catch(e){toast(e.message,true);}}),
   'anexos':id=>telaAnexos(id),
   'anx-ver':i=>{const t=S.tx.find(x=>x.id===$('#modal').dataset.tx),a=t&&(t.anexos||[])[+i];if(a)abreAnexo(a.p);},
   'anx-del':i=>{const id=$('#modal').dataset.tx,t=S.tx.find(x=>x.id===id),a=t&&(t.anexos||[])[+i];if(!a)return;
@@ -9425,7 +9475,7 @@ const ACT={
   'conc-todos':()=>{let n=0;concCache().slice(0,100).forEach(p=>{if(juntaPar(p))n++;});salvar();render();closeModal();toast(n+' transferência'+(n>1?'s':'')+' juntada'+(n>1?'s':''));},
   'rev-ok':id=>{const t=S.tx.find(x=>x.id===id);if(t){delete t.rev;salvar();render();}abreRevisar();},
   'rev-todos':()=>{revPend().slice(0,150).forEach(t=>delete t.rev);salvar();render();closeModal();toast('Revisão concluída');},
-  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;if(t.pluggyId)S.cfg.pluggyIgn=(S.cfg.pluggyIgn||[]).concat(t.pluggyId).slice(-3000);removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
+  'rev-del':id=>{const t=S.tx.find(x=>x.id===id);if(!t)return;removeArquivos(anexosDe([t]));S.tx=S.tx.filter(x=>x!==t);geraRecorrentes();salvar();render();abreRevisar();toast('Lançamento descartado');},
   'ir-cal':()=>{CAL_M=0;go('plan');},
   'plan-limpa':()=>{PLAN.renda=0;PLAN.extra=0;PLAN.corte=0;PLAN.dia=false;PLAN.itens=[];render();},
   'sim-add':id=>{if(!SIM_TIPOS[id])return;if(PLAN.itens.length>=8){toast('até 8 itens na simulação');return;}PLAN.itens.push({t:id,v:0,n:id==='parc'?10:0,k:id==='gun'||id==='run'||id==='parc'?0:1});render();setTimeout(()=>{const ins=document.querySelectorAll('[data-sim$="|v"]');const el=ins[ins.length-1];if(el)el.focus();},60);},
@@ -9590,7 +9640,7 @@ function tourFecha(f){if(TOUR_P)TOUR_P.fecha(f);}
 const GV_LOCAL=/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
 /* gancho de testes automatizados (só com ?gvtest na URL): expõe funções puras de cálculo */
 if(GV_LOCAL&&/[?&]gvtest\b/.test(location.search))window.__GV={sb,planoAplica,geraRecorrentes,getS:()=>S,lockDesconecta,numExt,temPendencia,csvCel,dataValida,aplicaOps,hojeISO,rpCalc,yocCalc,yocOrdena,rpCotasNaData,rpPorCota,rpInicio,rpCardHTML,yocCardHTML,limpaCache,apagaRastrosLocais,errLista,errRegistra,errTexto,errTextoCopia,abreErros,copiaTexto,locIdb,gravaLocal,gravaLocalJa,dadosIdb,guardaCopia,chamaIA,invokeIA,perguntaAssistente,lerComprovanteIA,
-  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,_impFila:f=>{IMP_FILA=f;proxImportBanco();},revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,bancoSync,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},set pluggy(f){pluggy=f;},get pluggyDesde(){return S.cfg.pluggyDesde;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
+  get LOC_BLOQ(){return LOC_BLOQ;},set IA_FN(f){IA_FN=f;},set IA_ESP(a){IA_ESP=a;},get AS_HIST(){return AS_HIST;},enviar,rfMovForm,tourAbre,tourFecha,get TOUR(){return TOUR_P&&TOUR_P.TOUR;},carregaParte,get SNAP(){return SNAP;},set SNAP(v){SNAP=v;},nomeAtivo,rfCodigo,ativoBanco,rfTaxaTxt,mtPkLista,prcDetecta,prcAplica,prcDesfaz,prcPrevia,prcVerifica,prcAuto,prcFontes,get PRC(){return PRC;},ccFaturasLista,ccFmHTML,get CC_FSEL(){return CC_FSEL;},rvCalc,rvDesfaz,rvPode,metaCotasDados,metaCotasCria,metaCotasHTML,parcelaDesc,parcelaDataBanco,assinGrupo,assinHTML,assinAvisos,assinRastreadas,delOp,historico,ccFatHTML,usoCartao,dataParcela,montaImport,confirmaImport,juntaCfgRemoto,setSync,syncDetalhe,ccTom,ccResumoDados,diasAte,fechaChip,lerCSV,abreImport,importarExtratoIA,ymOk,isoTsOk,ccVisual,ccAuto,cartaoHTML,cartaoMini,CC_DES,ccAtiva,ccVira,ccOpcoesVisual,notifListaHTML,ccMelhor,ccAgendaLista,ccPrazo,ccMelhorDia,ccFatEstado,ccEscolhe,get CC_AT(){return CC_AT;},set CC_AT(v){CC_AT=v;},get OCULTO(){return OCULTO;},pode,planoAgora,planoAplica,planoZera,carregaPlano,abrePlanos,verificaPagamento,TAB_RECURSO,ACT_RECURSO,partesTx,valorNaCat,temCat,rateiaSplit,confereSplit,maiorParte,fatosAssistente,respostaLocal,asPeriodo,asCategoria,csvLancTodos,txLinhasPlanilha,exportaJSON,somaMes,catsFatura,limOrc,navega,sugereReceb,compMes,receitasAtrasadas,abreTrabLote,prevReceitaIgual,txDatas,trabCat,relComp,proximosVenc,vencEntre,resumoSemana,abreSemana,domingoDe,orcVigia,orcNiveis,empSuspeitos,empAntForm,empAntMarca,empAntDesfaz,empCasa,txBancoIgual,revEmpHTML,cfgNuvem,novoEmp,recebiEmp,get S(){return S},set S(v){S=v},get PLAN(){return PLAN},simItemMes,folgaPlano,gastoDiaADia,temSimulacao,infoCot,b3Aberta,applyCfg,listaAlertas,limpar,memoOn:()=>{MEMO={};},memoOff:()=>{MEMO=null;},memoVivo:()=>MEMO!==null,despesasPorCat,projetaMeses,usadoCartaoTotal,detectaAssinaturas,avisaFalhaAuth,go,render,salvar,crDecifra,abreEmprestimos,abreEmp,cobrarEmp,aplicaEmp,empTot,saldoTotal,saldoBanco,empSugestoes,patLiquido,txMenu,compromissos,dadosResumo,abreResumo,pmtMeta,mesesMeta,taxaMesMeta,cdiAnoAtual,saldoMeta,mtSaldoD,mtCaixa,alvoMeta,mtProj,mtChega,mtRisco,mtStreak,mtAlocado,mtReservado,mtAvisos,mtLembra,mtApDel,metaManualIgual,fipeAtualiza,fipeLista,fipePreco,fipeVar,abreMeta,metaFontes,metaForm,aporte,saneaMetaExtra,IR_RF,rfCresce,cdiCache,mtNova,paresConc,juntaPar,revPend,revCat,abreRevisar,projecaoDiaria,brlK,nomeTx,filtrados,parseBR,encargosMes,custoAtraso,bancosAtivos,ocorrenciasFixa,mensalEq,descFreq,limpaAnexos,anexar,limpaTags,F,fotoPat,setLimOrc,copiaOrcAnterior,histOrc,periodo,sparkPer,get PER(){return PER;},set PER(v){PER=v;},somaC,cents,fechamentoDe,geraRecorrentes,efetivo,statusTx,previsaoMes,sanea,resumoMes,divMensal,patrimonio,ACT,closeModal,get IMP(){return IMP;},set IMP(v){IMP=v;},get USER(){return USER;},set USER(v){USER=v;},ritmoEconomia,ritmoMensal,mesAntAuto,get PER_ATUAL(){return PER_ATUAL;},set PER_ATUAL(v){PER_ATUAL=v;},alertasHTML,relMesA,notifOn,NOTIF_T,mtGraficoSVG,brl,empJurosTot,proxPags,empDivide,opForm,get REND(){return REND;},radarSaneia,radarMigra,radarAdd,rdBusca,rdQKey,rdChave,rdAdivinha,radarAlertasAbre,radarBuscaAbre,rdComprei,rdAvisos,viewRadar,get RD_D(){return RD_D;},set RD_D(v){RD_D=v;},get RD_Q(){return RD_Q;},set RD_Q(v){RD_Q=v;},get FMODO(){return FMODO;},rdModoSet,radarDisparos,radarCota,_puxar:()=>{ultimaPuxada=0;return puxar();}};
 let rsz,rszW=innerWidth;
 window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(Math.abs(innerWidth-rszW)<2)return;rszW=innerWidth;if(TAB==='inicio')AFTER.inicio();},200);});
 
@@ -9921,7 +9971,9 @@ if(!lockDentroDoPrazo())lockAbre();else{$('#lock').classList.remove('on');docume
   document.addEventListener('touchend',e=>{fim(e);fimSeguro();},{passive:true});
   document.addEventListener('touchcancel',e=>{fim(e);fimSeguro();},{passive:true});
 })();
-function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.classList.toggle('on',OCULTO);}
+function pintaOlho(){const b=$('#btnEye');if(!b)return;b.innerHTML=I(OCULTO?'eyeOff':'eye');b.setAttribute('aria-label',OCULTO?'mostrar valores':'ocultar valores');b.setAttribute('aria-pressed',String(OCULTO));b.classList.toggle('on',OCULTO);}
+/* v10.165: olho do modo privacidade no cabeçalho (mesmo estado e mesma chave gv-oculto do localStorage dos olhos das telas) */
+{const be=$('#btnEye');if(be)be.addEventListener('click',()=>{OCULTO=!OCULTO;try{localStorage.setItem('gv-oculto',OCULTO?'1':'0');}catch(e){}pintaOlho();render();});}
 pintaOlho();
 $('#aLogo').innerHTML=logoSVG();
 $('#topMark').innerHTML=logoSVG();
