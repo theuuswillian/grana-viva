@@ -425,6 +425,7 @@ function sanea(d){
   o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
   o.fiis.forEach(f=>delete f.pluggyInv);
   if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
+  if(o.cfg){const mr=n0(o.cfg.metaRendaPassiva);if(mr>0&&isFinite(mr))o.cfg.metaRendaPassiva=c2(Math.min(1000000000,mr));else delete o.cfg.metaRendaPassiva;} // meta mensal de renda passiva
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
   /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
@@ -4347,12 +4348,34 @@ function rpDetHTML(R,sel){
   ${m.ativos.length?m.ativos.map(a=>`<div class="rpRow" style="--tc:${TCOR[tipoOf(a.f)]||'var(--a1)'}">${assetIco(a.f.ticker,tipoOf(a.f))}<span class="rpRN"><b>${esc(a.f.ticker)}${a.f.cotas>0?'':' <em class="rpVend">vendido</em>'}</b><i class="rpRb"><i style="width:${(a.v/mx*100).toFixed(1)}%"></i></i></span><b class="nw">${brl(a.v)}</b></div>`).join(''):`<p class="rpVaz">Nenhum provento registrado em ${esc(nomeMesMin(m.ym))}.</p>`}`;
 }
 function rpSelPadrao(R){if(RP_SEL&&R.meses.some(m=>m.ym===RP_SEL))return RP_SEL;const c=R.meses.slice().reverse().find(m=>m.tot>0);return c?c.ym:R.atual;}
+function rpMetaHTML(R){
+  const meta=+S.cfg.metaRendaPassiva||0;
+  if(!(meta>0))return '<div class="rpMeta"><div class="rpMetaTop"><b>Meta de renda passiva</b><button type="button" class="btn2 sm" data-act="rp-meta">Definir meta</button></div><p>Defina quanto deseja receber por mês e acompanhe seu progresso com os proventos registrados.</p></div>';
+  const atual=R.media!=null?Math.max(0,+R.media||0):Math.max(0,+R.mesAtual||0);
+  const pct=Math.max(0,Math.min(100,atual/meta*100)),falta=Math.max(0,meta-atual);
+  const v=x=>OCULTO?'R$ •••••':brl(x);
+  return '<div class="rpMeta"><div class="rpMetaTop"><b>Meta mensal</b><button type="button" class="btn2 sm" data-act="rp-meta">Editar</button></div>'
+    +'<div class="rpMetaNums"><b>'+v(atual)+' <small>de '+v(meta)+'</small></b><strong>'+(OCULTO?'•••%':Math.round(pct)+'%')+'</strong></div>'
+    +'<div class="rpMetaBar" role="progressbar" aria-label="Progresso da meta de renda passiva" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div>'
+    +'<p>'+(falta>0?'Faltam '+v(falta)+' por mês para atingir sua meta.':'Meta mensal atingida com base na renda registrada.')+'</p>'
+    +'<small>Base: '+(R.media!=null?'média dos proventos realizados':'proventos recebidos neste mês')+'; não inclui projeções.</small></div>';
+}
+function rpMetaForm(){
+  const atual=+S.cfg.metaRendaPassiva||0;
+  form('Meta de renda passiva',[{name:'valor',label:'Quanto deseja receber por mês (R$)',value:atual?num(atual):'',inputmode:'decimal',placeholder:'ex.: 2000'}],v=>{
+    const raw=String(v.valor||'').trim();
+    if(!raw){delete S.cfg.metaRendaPassiva;salvar();render();toast('Meta removida');return;}
+    const n=parseBR(raw);
+    if(!(n>0)||n>1000000000)return 'Informe uma meta mensal válida.';
+    S.cfg.metaRendaPassiva=c2(n);salvar();render();toast('Meta de renda passiva salva');
+  });
+}
 function rpCardHTML(R){
   if(!R.temProv){
     const f=S.fiis.find(x=>RP_TIPOS.includes(tipoOf(x))&&x.cotas>0);
     return `<div class="card rpCard rpVazio"><div class="rpHead"><small>renda passiva</small></div>
       <div class="rpEmpty"><span class="rpEi">${I('chart')}</span><div><b>Sua renda passiva aparece aqui</b><p>${f?'Registre os proventos que caírem na conta: o app soma mês a mês, mostra quem pagou e estima o próximo mês.':'Adicione FIIs, ações, ETFs ou BDRs e registre os proventos para acompanhar quanto eles pagam por mês.'}</p>
-      ${f?`<button class="btn2 sm" data-act="prov-receber" data-id="${f.id}">${I('arrowDown')} registrar provento de ${esc(f.ticker)}</button>`:`<button class="btn2 sm" data-act="novo-fii">${I('plus')} adicionar ativo</button>`}</div></div></div>`;
+      ${f?`<button class="btn2 sm" data-act="prov-receber" data-id="${f.id}">${I('arrowDown')} registrar provento de ${esc(f.ticker)}</button>`:`<button class="btn2 sm" data-act="novo-fii">${I('plus')} adicionar ativo</button>`}</div>${rpMetaHTML(R)}</div></div>`;
   }
   const sel=rpSelPadrao(R),v=R.vari;
   const bt=x=>Math.abs(x)>=1e4?brlK(x):brl(x); // valores grandes encurtados para caber nos 3 blocos a 390 px
@@ -4361,6 +4384,7 @@ function rpCardHTML(R){
     <div class="rpHead"><small>renda passiva</small><span class="rpPill">${R.mediaN&&R.mediaN<12?'desde '+esc(nomeMesMin(R.primeiro)):'últimos 12 meses'}</span></div>
     <div class="rpTop"><div class="rpMain"><b class="nw">${R.media!=null?brl(R.media):brl(R.mesAtual)}</b><small>${R.media!=null?'por mês, em média'+(R.mediaN<12?' ('+R.mediaN+(R.mediaN===1?' mês':' meses')+')':''):'recebido este mês'} · <span class="nw">${brl(R.tot12)}</span> em 12 meses</small></div>
       ${v?`<span class="plPill ${v.pct>=0?'pos':'neg'}" title="12 meses contra os 12 anteriores">${v.pct>=0?'▲ +':'▼ '}${OCULTO?'•••%':num(v.pct)+'%'} <em>vs ano anterior</em></span>`:''}</div>
+    ${rpMetaHTML(R)}
     <div class="rpTiles">
       ${tile(esc(MESES_LONGO[+R.atual.slice(5,7)-1]),bt(R.mesAtual),'até hoje','rp-mes" data-id="'+R.atual,RP_VER==='mes'&&sel===R.atual)}
       ${tile('próximo mês',R.proj.tot>0?bt(R.proj.tot):'—','estimativa','rp-proj',RP_VER==='proj')}
@@ -9490,6 +9514,7 @@ const ACT={
   /* v10.108: renda passiva (toque na barra mostra quem pagou; "próximo mês" mostra a estimativa) e yield on cost */
   'rp-mes':id=>{RP_VER='mes';RP_SEL=id;rpAtualiza();},
   'rp-proj':()=>{RP_VER=RP_VER==='proj'?'mes':'proj';rpAtualiza();},
+  'rp-meta':()=>rpMetaForm(),
   'yoc-ord':id=>{YOC_ORD=id;const c=document.querySelector('#view .yocCard');if(!c){render();return;}const t=document.createElement('div');t.innerHTML=yocCardHTML(yocCalc());c.replaceWith(t.firstElementChild);},
   'yoc-info':()=>yocInfo(),
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
