@@ -23,6 +23,7 @@ export type Estado = {
   provedor_assinatura_id: string;
   provedor_cliente_id: string | null;
   mp_status: string;
+  provedor_versao: number;
 };
 export type Busca = { estado?: Estado; ignorar?: string; naoEncontrado?: boolean };
 type Fetch = typeof fetch;
@@ -127,8 +128,10 @@ export function estadoDePreapproval(p: any, PLANOS: any, agora = Date.now()): Bu
   const ref = lerRef(p?.external_reference);
   if (!ref) return { ignorar: "referencia_desconhecida" };
   if (!confereValores(p, ref.plano, PLANOS)) return { ignorar: "valor_nao_confere" };
+  const versao = Number(p?.version);
+  if (!Number.isSafeInteger(versao) || versao < 0) return { ignorar: "versao_ausente_ou_invalida" };
   const prox = p?.next_payment_date && !isNaN(Date.parse(p.next_payment_date)) ? new Date(p.next_payment_date).toISOString() : null;
-  const base = { uid: ref.uid, plano: ref.plano, provedor_assinatura_id: String(p.id), provedor_cliente_id: p?.payer_id != null ? String(p.payer_id) : null, mp_status: String(p?.status || "") };
+  const base = { uid: ref.uid, plano: ref.plano, provedor_assinatura_id: String(p.id), provedor_versao: versao, provedor_cliente_id: p?.payer_id != null ? String(p.payer_id) : null, mp_status: String(p?.status || "") };
   switch (p?.status) {
     case "authorized": {
       const meses = PLANOS[ref.plano].periodo === "ano" ? 12 : 1;
