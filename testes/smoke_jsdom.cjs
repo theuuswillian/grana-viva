@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,readLocalCopy:async()=>await dadosIdb('readonly',st=>st.get(KEY)).catch(()=>null)||localStorage.getItem(KEY),go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,lerOFX,lerCSV,montaImport,confirmaImport,impLoteAnalisa,viewBancos,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,readLocalCopy:async()=>await dadosIdb('readonly',st=>st.get(KEY)).catch(()=>null)||localStorage.getItem(KEY),go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,lerOFX,lerCSV,conciliarSaldoImportacao,abreImport,montaImport,confirmaImport,impLoteAnalisa,viewBancos,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -159,6 +159,24 @@ const ofxLido=T.lerOFX(ofxTeste);
 ok(ofxLido.linhas.length===1&&ofxLido.linhas[0].fitid==='FIT-123'&&ofxLido.linhas[0].data==='2026-11-19','OFX SGML lê data, valor e FITID');
 const csvLido=T.lerCSV('Data;Valor;Descrição;FITID\n19/11/2026;-12,50;PADARIA CENTRAL;CSV-123');
 ok(csvLido.linhas.length===1&&csvLido.linhas[0].fitid==='CSV-123'&&csvLido.linhas[0].valor===-12.5,'CSV brasileiro com ponto e vírgula e FITID');
+const csvSemCabecalhoPadrao='Quando;Histórico;Montante R$;Identificação\n19/11/2026;PADARIA CENTRAL;-12,50;MOV-9';
+const csvPedeMapa=T.lerCSV(csvSemCabecalhoPadrao);
+ok(csvPedeMapa.mapear&&csvPedeMapa.cabecalho.length===4,'CSV com cabeçalhos desconhecidos solicita mapeamento em vez de falhar');
+const csvMapeado=T.lerCSV(csvSemCabecalhoPadrao,{data:0,desc:1,valor:2,id:3});
+ok(csvMapeado.linhas.length===1&&csvMapeado.linhas[0].desc==='PADARIA CENTRAL'&&csvMapeado.linhas[0].fitid==='MOV-9'&&csvMapeado.linhas[0].valor===-12.5,'mapeamento manual converte data, descrição, valor e identificador');
+const saldoOk=T.conciliarSaldoImportacao('100,00','87,50',[{valor:-12.5}]);
+const saldoDivergente=T.conciliarSaldoImportacao('100,00','88,00',[{valor:-12.5}]);
+ok(saldoOk.ok&&saldoOk.esperado===87.5,'conciliação valida saldo inicial + movimentos = saldo final');
+ok(!saldoDivergente.ok&&Math.abs(saldoDivergente.diferenca-0.5)<0.001,'conciliação identifica divergência sem arredondamento indevido');
+T.abreImport('mapeamento.csv',csvSemCabecalhoPadrao);
+ok(/Configurar CSV/.test(doc.querySelector('#modal').innerHTML),'CSV desconhecido abre tela de mapeamento');
+doc.querySelector('#csvMapContinuar').click();
+ok(/Importar extrato/.test(doc.querySelector('#modal').innerHTML)&&T.IMP.linhas.length===1,'confirmar mapeamento leva à prévia, sem importar automaticamente');
+T.IMP={nome:'saldo-divergente.csv',cartao:false,linhas:[{desc:'COMPRA TESTE',valor:-12.5,data:T.hojeSP()}],destino:'b:b1',conciliacao:saldoDivergente,conciliacaoAceita:false};
+T.montaImport();
+ok(!!doc.querySelector('#impConciliacaoAceita')&&doc.querySelector('#impOk').disabled,'divergência exige reconhecimento explícito antes de importar');
+doc.querySelector('#impConciliacaoAceita').click();
+ok(!doc.querySelector('#impOk').disabled,'usuário pode continuar após reconhecer divergência');
 const linhasLote=[{desc:'PADARIA A',valor:-23.5,data:T.hojeSP()},{desc:'CAFETERIA B',valor:-23.5,data:T.hojeSP()}];
 T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
 T.montaImport();
