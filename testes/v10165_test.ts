@@ -236,3 +236,11 @@ Deno.test("Mercado Pago: exige versão numérica do preapproval para alterar ass
   eq(MP.estadoDePreapproval(base, PLANOS).ignorar, "versao_ausente_ou_invalida");
   eq(MP.estadoDePreapproval({ ...base, version: -1 }, PLANOS).ignorar, "versao_ausente_ou_invalida");
 });
+
+
+Deno.test("checkout MP: impede criar segunda recorrência enquanto a assinatura anterior está ativa", () => {
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "ativo", provedor: "mercadopago", provedor_assinatura_id: "sub-atual" }), true);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "cancelado", provedor: "mercadopago", provedor_assinatura_id: "sub-anterior" }), false);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "ativo", provedor: "mercadopago", provedor_assinatura_id: null }), false);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva(null), false);
+});
