@@ -11,7 +11,17 @@ on:
       - auditoria/robustez-webhook-build-schema-2026-11-19
       - auditoria/reconciliacao-schema-parcial-2026-11-19
       - auditoria/whatsapp-fila-recuperavel-2026-11-19
+      - auditoria/whatsapp-pendente-idempotente-2026-11-19
+      - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
+      - auditoria/whatsapp-outbox-envio-seguro-2026-11-19
+      - auditoria/whatsapp-lease-fencing-2026-11-19
+      - auditoria/whatsapp-outbox-lease-fencing-2026-11-19
+      - auditoria/whatsapp-vinculo-atomico-integrado-2026-11-19
       - correcoes/historico-cotas-cronologico-2026-11-19
+      - correcoes/pagamento-lease-fencing-2026-11-19
+      - correcoes/checkout-idempotencia-2026-11-19
+      - correcoes/pagamento-estado-monotonico-2026-11-19
+      - integracao/pagamentos-whatsapp-2026-11-20
   pull_request:
     branches:
       - revisao-lancamento-v10.165
@@ -21,6 +31,14 @@ on:
       - remocao/pluggy-definitiva-2026-11-18
       - auditoria/reconciliacao-producao-2026-11-18
       - auditoria/whatsapp-fila-recuperavel-2026-11-19
+      - auditoria/whatsapp-pendente-idempotente-2026-11-19
+      - auditoria/whatsapp-leitura-ia-idempotente-2026-11-19
+      - auditoria/whatsapp-lease-fencing-2026-11-19
+      - auditoria/whatsapp-outbox-envio-seguro-2026-11-19
+      - auditoria/whatsapp-outbox-lease-fencing-2026-11-19
+      - auditoria/whatsapp-vinculo-atomico-integrado-2026-11-19
+      - correcoes/pagamento-lease-fencing-2026-11-19
+      - correcoes/checkout-idempotencia-2026-11-19
 permissions:
   contents: read
 jobs:
@@ -50,6 +68,10 @@ jobs:
           deno-version: v2.x
       - name: Check app JavaScript
         run: node --check app.js
+      - name: Validate inline script CSP hashes
+        run: python3 csp.py index.html
+      - name: Validate complete Pluggy removal from frontend and deployment assets
+        run: node scripts/validate-remocao-pluggy.mjs
       - name: Check plan rules
         run: node testes/planos.test.cjs
       - name: Install browser test dependency
@@ -81,6 +103,9 @@ jobs:
           createdb -h 127.0.0.1 -U postgres granaviva_cota_test
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_fixture.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261118_cota_mensal_atomica.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_pendente_idempotente.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_zz_security_definer_search_path.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/security_definer_search_path_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_cota_test -v ON_ERROR_STOP=1 -f testes/cota_mensal_atomica_assertions.sql
           bash testes/cota_mensal_atomica_concurrency.sh
       - name: Test webhook idempotency and weekly summary migrations in PostgreSQL
@@ -98,8 +123,34 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_wa_resumo_semanal.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -c "insert into public.wa_msg(id) values ('wamid-legacy-before-queue')"
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_fila_recuperavel.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_lease_fencing.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_z_fila_limite_tentativas.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_leitura_ia_idempotente.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_outbox.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_saida_lease_fencing.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_zz_wa_saida_payload_guard.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_wa_vinculo_atomico.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_wa_vinculo_rate_limit.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_vinculo_rate_limit_assertions.sql
+          bash testes/wa_vinculo_rate_limit_concurrency.sh
+          psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_outbox_fencing_assertions.sql
           psql -h 127.0.0.1 -U postgres -d granaviva_webhooks_test -v ON_ERROR_STOP=1 -f testes/wa_fila_assertions.sql
+      - name: Test payment fencing and checkout migrations in isolated PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          createdb -h 127.0.0.1 -U postgres granaviva_payment_test
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_lease_fencing.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_estado_monotonico.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f testes/pagamento_lease_fencing_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_checkout_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_checkout_intencao_unica.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f testes/pagamento_checkout_idempotencia_assertions.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_payment_test -v ON_ERROR_STOP=1 -f testes/pagamento_checkout_intencao_unica_assertions.sql
+          bash testes/pagamento_concorrencia_monotonica.sh
       - name: Test production schema reconciliation in isolated PostgreSQL
         env:
           PGPASSWORD: postgres

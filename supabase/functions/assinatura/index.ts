@@ -41,21 +41,124 @@ Deno.serve(async (req) => {
     if (!GVP.PAGOS.includes(plano)) return json({ erro: GVP.LEGADOS.includes(plano) ? "O plano Plus não é mais vendido. Escolha o Pro." : "plano inválido" }, 400);
     if (!token) return json({ erro: "Pagamento em breve", emBreve: true }, 503);
     if (ef.fundador) return json({ erro: "Sua conta fundadora já tem acesso completo." }, 409);
+    if (MP.checkoutBloqueadoPorAssinaturaAtiva(row)) return json({ erro: "Você já tem uma assinatura ativa. Cancele a atual e aguarde a confirmação antes de contratar outro plano." }, 409);
     if (row?.status === "ativo" && ef.nivel > 0 && GVP.idBase(row.plano) === GVP.idBase(plano) && GVP.normaliza(row.plano) === plano) return json({ erro: "Você já assina este plano." }, 409);
     // v10.118: e-mail da conta do Mercado Pago de quem paga (o MP exige que seja o mesmo do login do pagador); padrão: e-mail da conta
     const emIn = String(body?.email || "").trim().toLowerCase();
     if (emIn && (emIn.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn))) return json({ erro: "confira o e-mail do Mercado Pago" }, 400);
     const emailPagador = emIn || user.email || "";
     if (!emailPagador) return json({ erro: "informe o e-mail da sua conta Mercado Pago" }, 400);
+    let intentId = String(body?.intentId || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)) {
+      return json({ erro: "inicie novamente a tentativa de pagamento" }, 400);
+    }
     const { data: okH } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "checkout", p_lim: 6, p_seg: 3600 });
     if (!okH) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
+
+    // Consulta primeiro a intenção: retries preservam o mesmo preapproval e não o cancelam.
+    const { data: existente, error: ce } = await sb.from("pagamento_checkout_intencoes")
+      .select("user_id,plano,email_pagador,status,init_point")
+      .eq("id", intentId).maybeSingle();
+    if (ce) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+    let intencao: any = existente;
+    const validaIntencao = (data: any) => data && data.user_id === user.id && data.plano === plano && data.email_pagador === emailPagador;
+    if (intencao && !validaIntencao(intencao)) {
+      return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
+    }
+    if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
+
+    // Se a chave do navegador expirou ou foi perdida, recupera a reserva pendente da mesma conta.
+    // Isso permite repetir o POST idempotente original em vez de deixar a conta presa em HTTP 409.
+    if (!intencao) {
+      const { data: pendente, error: pe } = await sb.from("pagamento_checkout_intencoes")
+        .select("id,user_id,plano,email_pagador,status,init_point")
+        .eq("user_id", user.id).eq("status", "pendente").maybeSingle();
+      if (pe) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+      if (pendente) {
+        const idAnterior = MP.idIntencaoPendenteCompativel(pendente, user.id, plano, emailPagador);
+        if (!idAnterior) return json({ erro: "Já existe uma tentativa de pagamento pendente para outro plano ou e-mail. Conclua ou regularize essa tentativa antes de iniciar outra." }, 409);
+        intentId = idAnterior;
+        intencao = pendente;
+      }
+    }
+
+    if (!intencao) {
+      // Consulta IDs persistidos diretamente: a busca por e-mail pode ter atraso de consistência.
+      let checkoutsRegistrados: { pendentes: Array<{ id: string; url: string; plano: string; criado: number }>; autorizadas: Array<{ id: string; plano: string; criado: number }> } = { pendentes: [], autorizadas: [] };
+      try {
+        const { data: registrados, error: erroRegistrados } = await sb.from("pagamento_checkout_intencoes")
+          .select("plano,email_pagador,provedor_preapproval_id")
+          .eq("user_id", user.id).eq("status", "criado").not("provedor_preapproval_id", "is", null)
+          .order("criado_em", { ascending: false }).limit(20);
+        if (erroRegistrados) throw new Error("checkouts_registrados_indisponiveis");
+        checkoutsRegistrados = await MP.consultaCheckoutsRegistrados(user.id, registrados || [], token, GVP.PLANOS);
+      } catch (e) {
+        console.log("reconciliacao_checkouts_registrados", String(e));
+        await registraErro(sb, "assinatura", "reconciliacao_checkouts_registrados", e);
+        return json({ erro: "não consegui verificar pagamentos anteriores. Tente novamente em instantes." }, 503);
+      }
+      // Nunca cancela via GET+PUT: o status pode mudar entre as chamadas.
+      // Assinatura já autorizada bloqueia nova compra; um único checkout pendente do mesmo plano é reutilizado.
+      try {
+        const { data: emailsAnteriores, error: erroEmailsAnteriores } = await sb.from("pagamento_checkout_intencoes")
+          .select("email_pagador").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(100);
+        if (erroEmailsAnteriores) throw new Error("emails_checkout_indisponiveis");
+        const emailsConhecidos = [...new Set([emailPagador, ...(emailsAnteriores || []).map((x: any) => x.email_pagador || "")])]
+          .map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+        const encontrados = await MP.consultaCheckoutsDoUsuario(user.id, emailsConhecidos, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+        const autorizadas = [...new Map([...checkoutsRegistrados.autorizadas, ...encontrados.autorizadas].map((x) => [x.id, x])).values()];
+        const pendentes = [...new Map([...checkoutsRegistrados.pendentes, ...encontrados.pendentes].map((x) => [x.id, x])).values()];
+        if (autorizadas.length) {
+          return json({ erro: "Encontramos uma assinatura aprovada que ainda está sendo sincronizada. Aguarde alguns instantes antes de tentar novamente." }, 409);
+        }
+        if (pendentes.length > 1) {
+          return json({ erro: "Há mais de uma tentativa de pagamento pendente. Para evitar cobranças duplicadas, não vamos abrir outra. Entre em contato com o suporte para regularizar." }, 409);
+        }
+        if (pendentes.length === 1) {
+          const pendente = pendentes[0];
+          if (pendente.plano !== plano) {
+            return json({ erro: "Você já tem um pagamento pendente para outro plano. Conclua ou regularize essa tentativa antes de escolher outro plano." }, 409);
+          }
+          return json({ url: pendente.url, reutilizado: true, checkoutPendente: true });
+        }
+      } catch (e) {
+        console.log("reconciliacao_checkout", String(e));
+        await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
+        return json({ erro: "não consegui verificar pagamentos anteriores. Tente novamente em instantes." }, 503);
+      }
+      const { error: ie } = await sb.from("pagamento_checkout_intencoes").insert({
+        id: intentId, user_id: user.id, plano, email_pagador: emailPagador, status: "pendente",
+      });
+      if (ie?.code === "23505") {
+        const { data, error } = await sb.from("pagamento_checkout_intencoes")
+          .select("user_id,plano,email_pagador,status,init_point")
+          .eq("id", intentId).maybeSingle();
+        if (error) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+        if (!data) return json({ erro: "Já existe outra tentativa de pagamento em andamento para sua conta. Aguarde alguns instantes e tente novamente." }, 409);
+        if (!validaIntencao(data)) return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
+        intencao = data;
+      } else if (ie) {
+        console.log("checkout_intencao", String(ie.message || ie.code));
+        return json({ erro: "não consegui preparar o pagamento agora" }, 503);
+      }
+    }
     const app = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
     try {
       const c = await MP.criaCheckout({
-        uid: user.id, email: emailPagador, plano, token, PLANOS: GVP.PLANOS,
+        uid: user.id, email: emailPagador, plano, token, PLANOS: GVP.PLANOS, idempotencyKey: intentId,
         notificationUrl: Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago",
         backUrl: app + "?assinatura=retorno",
       });
+      const { data: salvo, error: se } = await sb.from("pagamento_checkout_intencoes")
+        .update({ status: "criado", provedor_preapproval_id: c.id, init_point: c.url, atualizado_em: new Date().toISOString() })
+        .eq("id", intentId).eq("user_id", user.id).eq("status", "pendente").select("id").maybeSingle();
+      if (se) throw se;
+      if (!salvo) {
+        const { data: atual, error: ae } = await sb.from("pagamento_checkout_intencoes")
+          .select("status,init_point").eq("id", intentId).eq("user_id", user.id).maybeSingle();
+        if (ae || atual?.status !== "criado" || !atual.init_point) throw ae || new Error("checkout_intencao_nao_finalizada");
+        return json({ url: atual.init_point, reutilizado: true });
+      }
       return json({ url: c.url });
     } catch (e) { console.log("checkout", String(e)); await registraErro(sb, "assinatura", "checkout", e); return json({ erro: "não consegui abrir o pagamento agora" }, 502); }
   }
@@ -75,7 +178,14 @@ Deno.serve(async (req) => {
     const { data: okS } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "sincronizar", p_lim: 20, p_seg: 3600 });
     if (!okS) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
     try {
-      const id = await MP.ultimaAssinatura(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token);
+      // A busca do MP aceita payer_email, não external_reference. Inclui e-mail da conta
+      // e os e-mails usados em checkouts anteriores para não perder assinaturas legadas.
+      const { data: historicos, error: erroEmails } = await sb.from("pagamento_checkout_intencoes")
+        .select("email_pagador").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(100);
+      if (erroEmails) throw new Error("emails_checkout_indisponiveis");
+      const emails = [...new Set([user.email || "", ...(historicos || []).map((x: any) => x.email_pagador || "")])]
+        .map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+      const id = await MP.ultimaAssinatura(user.id, emails, [...GVP.PAGOS, ...GVP.LEGADOS], token);
       if (!id) return json({ ok: true, resultado: "nenhuma" });
       const r = await fetch(Deno.env.get("SUPABASE_URL") + "/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval&data.id=" + encodeURIComponent(id), {
         method: "POST", signal: AbortSignal.timeout(12000),
