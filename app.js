@@ -4377,7 +4377,7 @@ function rpMetaForm(){
   form('Meta de renda passiva',[{name:'valor',label:'Quanto deseja receber por mês (R$)',value:atual?num(atual):'',inputmode:'decimal',placeholder:'ex.: 2000'},{name:'prazo',label:'Em quantos anos deseja alcançar (1 a 50)',value:S.cfg.metaRendaPrazoAnos||10,inputmode:'numeric'}],v=>{
     const raw=String(v.valor||'').trim();
     if(!raw){delete S.cfg.metaRendaPassiva;delete S.cfg.metaRendaPrazoAnos;salvar();render();toast('Meta removida');return;}
-    const n=parseBR(raw),anos=Math.round(n0(v.prazo)||10);
+    const prazoRaw=String(v.prazo==null?'':v.prazo).trim(),n=parseBR(raw),anos=prazoRaw===''?10:Math.round(n0(prazoRaw));
     if(!(n>0)||n>1000000000)return 'Informe uma meta mensal válida.';
     if(anos<1||anos>50)return 'Informe um prazo entre 1 e 50 anos.';
     S.cfg.metaRendaPassiva=c2(n);S.cfg.metaRendaPrazoAnos=anos;salvar();render();toast('Meta de renda passiva salva');
