@@ -139,6 +139,7 @@ export function estadoDePreapproval(p: any, PLANOS: any, agora = Date.now()): Bu
       return { estado: { ...base, status: "ativo", periodo_fim: fim } };
     }
     case "paused":
+    case "canceled":
     case "cancelled":
       // acesso continua até o fim do período já pago (próxima cobrança, que não vai acontecer)
       return { estado: { ...base, status: "cancelado", periodo_fim: prox } };
@@ -229,6 +230,57 @@ export async function ultimaAssinatura(uid: string, planos: string[], token: str
     }
   }
   return melhor ? melhor.id : "";
+}
+
+/**
+ * Limpa somente preapprovals comprovadamente pendentes do próprio usuário.
+ * Nunca cancela authorized/paused/canceled e sempre preserva a tentativa indicada.
+ * A consulta individual é obrigatória antes do PUT: o resultado da busca é apenas candidato.
+ */
+export async function cancelaPendentesDoUsuario(uid: string, planos: string[], token: string, PLANOS: any, preservarId?: string | null, f: Fetch = fetch) {
+  if (!uid || !token) throw new Error("reconciliacao_parametros_invalidos");
+  const candidatos = new Map<string, string>();
+  for (const plano of planos) {
+    const ref = refExterna(uid, plano);
+    let offset = 0;
+    let total = 0;
+    do {
+      const r = await mpGet("/preapproval/search?limit=50&offset=" + offset + "&external_reference=" + encodeURIComponent(ref), token, f);
+      if (r.status !== 200) throw new Error("mp_busca_reconciliacao " + r.status);
+      const resultados = Array.isArray(r.json?.results) ? r.json.results : [];
+      total = Number(r.json?.paging?.total ?? resultados.length);
+      for (const item of resultados) {
+        const id = String(item?.id || "");
+        if (!id || id === preservarId || item?.status !== "pending") continue;
+        const vinculo = lerRef(item?.external_reference);
+        if (vinculo?.uid !== uid || vinculo.plano !== plano) continue;
+        candidatos.set(id, plano);
+      }
+      offset += resultados.length;
+      if (resultados.length === 0) break;
+      if (offset < total && offset >= 200) throw new Error("mp_busca_reconciliacao_limite");
+    } while (offset < total);
+  }
+
+  const cancelados: string[] = [];
+  for (const [id, plano] of candidatos) {
+    const atual = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
+    if (atual.status !== 200) throw new Error("mp_confirma_reconciliacao " + atual.status);
+    const p = atual.json;
+    const vinculo = lerRef(p?.external_reference);
+    if (String(p?.id || "") !== id || vinculo?.uid !== uid || vinculo.plano !== plano) continue;
+    if (p?.status !== "pending" || !confereValores(p, plano, PLANOS)) continue;
+    const confirmado = estadoDePreapproval(p, PLANOS);
+    if (confirmado.ignorar || confirmado.estado?.uid !== uid || confirmado.estado?.mp_status !== "pending") continue;
+    await cancela(id, token, f);
+    const depois = await mpGet("/preapproval/" + encodeURIComponent(id), token, f);
+    if (depois.status !== 200) throw new Error("mp_verifica_cancelamento " + depois.status);
+    if (depois.json?.status !== "canceled" && depois.json?.status !== "cancelled") {
+      throw new Error("mp_cancelamento_nao_confirmado");
+    }
+    cancelados.push(id);
+  }
+  return { encontrados: candidatos.size, cancelados };
 }
 
 export async function cancela(id: string, token: string, f: Fetch = fetch) {
