@@ -269,7 +269,8 @@ export async function consultaCheckoutsRegistrados(uid: string, registros: Array
     const emailRegistrado = String(registro.email_pagador).trim().toLowerCase();
     if (emailProvedor && emailProvedor !== emailRegistrado) continue;
     const confirmado = estadoDePreapproval(p, PLANOS);
-    if (confirmado.ignorar || confirmado.estado?.uid !== uid) continue;
+    if (confirmado.ignorar) throw new Error("mp_checkout_registrado_estado_nao_confirmado:" + confirmado.ignorar);
+    if (confirmado.estado?.uid !== uid) continue;
     const criado = Date.parse(p?.last_modified || p?.date_created || "") || 0;
     if (p?.status === "authorized" && confirmado.estado?.status === "ativo") {
       autorizadas.push({ id, plano, criado });
