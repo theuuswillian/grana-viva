@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -55,6 +55,13 @@ ok(T.rpPorCota(ativoYield,ativoYield.ops[1])===0,'yield não atribui provento an
 ok(Math.abs(T.rpPorCota(ativoYield,ativoYield.ops[2])-1)<0.001,'yield calcula provento com cotas efetivas na data');
 const ymOps=mesN(1).slice(0,7),foraOrdem={cotas:3,ops:[{tipo:'compra',data:ymOps+'-01',qtd:10},{tipo:'venda',data:ymOps+'-10',qtd:12},{tipo:'compra',data:ymOps+'-05',qtd:5}]};
 ok(Math.abs(T.rpPorCota(foraOrdem,{data:ymOps+'-12',valor:3})-1)<0.001,'yield reconstrói cotas em ordem cronológica mesmo com compra retroativa');
+const posicaoDatada={id:'initial-date-test',tipo:'fii',ticker:'INI11',cotas:10,ops:[{tipo:'venda',data:ymOps+'-01',qtd:5,preco:10},{tipo:'inicial',data:ymOps+'-05',qtd:10,custo:100}]};
+ok(T.calcOps(posicaoDatada.ops).qtd===10,'posição inicial datada não é afetada por venda anterior à data-base');
+ok(T.rpPorCota(posicaoDatada,{data:ymOps+'-01',valor:10})===0,'provento anterior à posição inicial datada não recebe cotas futuras');
+ok(Math.abs(T.rpPorCota(posicaoDatada,{data:ymOps+'-05',valor:10})-1)<0.001,'posição inicial passa a valer na própria data registrada');
+S.fiis=[posicaoDatada];
+ok(T.irVendas().length===0,'apuração de vendas ignora venda anterior à posição inicial datada');
+S.fiis=[];
 S.fiis=[ativoYield];
 const yieldTeste=T.yocCalc(hoje).lista[0];
 ok(Math.abs(yieldTeste.recebido-10)<0.01,'yield on cost exclui provento anterior à entrada na carteira');
