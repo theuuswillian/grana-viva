@@ -2,6 +2,7 @@
 // validação estrita do JSON da IA, assinatura obrigatória do Mercado Pago (com MP_WEBHOOK_SECRET), chamada interna assinada,
 // idempotência do webhook e texto/semana do resumo semanal do WhatsApp.
 import * as V from "../supabase/functions/_shared/valida-ia.ts";
+import * as MP from "../supabase/functions/_shared/mercadopago.ts";
 import { processaWebhook, type DB } from "../supabase/functions/_shared/webhook-nucleo.ts";
 import { assinaInterno } from "../supabase/functions/_shared/seguro.ts";
 import { semanaPassada, textoResumo } from "../supabase/functions/_shared/resumo-semanal.ts";
@@ -173,4 +174,48 @@ Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento
   });
   eq(r.status, 200);
   eq(f.grav, 1);
+});
+
+
+Deno.test("checkout MP: retries da mesma intenção reutilizam a chave idempotente", async () => {
+  const keys: string[] = [];
+  const intentId = "00000000-0000-4000-8000-000000000044";
+  const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const h = new Headers(init?.headers);
+    keys.push(h.get("X-Idempotency-Key") || "");
+    return new Response(JSON.stringify({
+      id: "preapproval-1",
+      init_point: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=preapproval-1",
+    }), { status: 201, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  const args = {
+    uid: "00000000-0000-4000-8000-000000000001",
+    email: "pagador@example.com",
+    plano: "pro",
+    token: "mp-token",
+    PLANOS: { pro: { nome: "Pro", preco: 24.9, periodo: "mes" } },
+    notificationUrl: "https://example.supabase.co/functions/v1/pagamento-webhook",
+    backUrl: "https://example.com/?assinatura=retorno",
+    idempotencyKey: intentId,
+  };
+  const a = await MP.criaCheckout(args, f);
+  const b = await MP.criaCheckout(args, f);
+  eq(a.id, "preapproval-1");
+  eq(b.id, "preapproval-1");
+  eq(keys, [intentId, intentId], "retry da mesma intenção deve reutilizar X-Idempotency-Key");
+});
+
+Deno.test("checkout MP: rejeita intenção sem UUID antes de chamar o provedor", async () => {
+  let chamou = false;
+  const f = (async () => { chamou = true; return new Response("{}", { status: 500 }); }) as typeof fetch;
+  let falhou = false;
+  try {
+    await MP.criaCheckout({
+      uid: "00000000-0000-4000-8000-000000000001", email: "pagador@example.com",
+      plano: "pro", token: "mp-token", PLANOS: { pro: { nome: "Pro", preco: 24.9, periodo: "mes" } },
+      notificationUrl: "https://example.com/hook", backUrl: "https://example.com/retorno", idempotencyKey: "invalida",
+    }, f);
+  } catch { falhou = true; }
+  eq(falhou, true);
+  eq(chamou, false, "não deve chamar o MP sem chave de idempotência válida");
 });
