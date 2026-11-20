@@ -40,7 +40,7 @@ begin
   end if;
 
   v := public.pagamento_evento_aplica_assinatura(
-    v_id, token_b, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence'
+    v_id, token_b, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence', 1
   );
   if v <> 'aplicado' then raise exception 'worker B deveria aplicar assinatura: %', v; end if;
 
