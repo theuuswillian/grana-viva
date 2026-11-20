@@ -69,34 +69,39 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 
 ## Fase 3 — Dashboard financeiro unificado
 
-- Visão consolidada de saldo, receitas, despesas, cartões, contas e patrimônio.
-- Fluxo de caixa mensal e tendência de 3/6/12 meses.
-- Compromissos futuros e previsão de saldo, distinguindo previsto de realizado.
-- Orçamento por categoria com ritmo de consumo e alertas configuráveis.
-- Indicadores explicáveis: cada número deve permitir abrir a composição que o originou.
-- Estados vazios úteis, acessibilidade, responsividade e performance mobile.
+A tela Início já mostra receitas, despesas, saldo do período, saldo livre, faturas, vencimentos, alertas, patrimônio e renda passiva. A evolução deve conectar esses blocos e tornar a leitura mais acionável:
 
-**Critério de aceite:** valores do dashboard reconciliam com lançamentos e contas; filtros de período não misturam competência e caixa.
+- Unificar fluxo de caixa realizado e previsto, sem somar compras no cartão e pagamento da fatura duas vezes.
+- Exibir tendências comparáveis em 3/6/12 meses e explicar variações relevantes.
+- Conectar orçamento, contas fixas, parcelas futuras e projeção de saldo.
+- Relacionar decisões de gastos às metas e à evolução do patrimônio.
+- Permitir abrir a composição de cada indicador e chegar aos lançamentos de origem.
+- Refinar estados vazios, acessibilidade, responsividade e performance mobile.
+
+**Critério de aceite:** valores do dashboard reconciliam com lançamentos e contas; filtros de período não misturam competência e caixa; previsto e realizado ficam visualmente distintos.
 
 ## Fase 4 — Central de investimentos e renda passiva
 
-- Histórico de operações, posição e preço médio por ativo.
-- Proventos realizados, calendário e projeção claramente identificada.
-- Renda mensal, anualizada e por ativo/classe.
-- Meta de renda passiva, aporte necessário e cenários conservador/base/otimista.
-- Alocação por classe, setor, ativo e concentração.
-- Rentabilidade com metodologia explícita, incluindo aportes, retiradas e proventos.
-- Comparação com benchmarks somente quando houver dados e metodologia consistentes.
-- Importação de notas/operações e conciliação com posições existentes.
+A carteira já possui ativos por classe, operações de compra/venda/provento, histórico cronológico, preço médio, radar de preços, proventos mensais, projeção de curto prazo e Yield on Cost para FIIs, ações, ETFs e BDRs. O trabalho é ampliar a precisão e a cobertura:
 
-**Critério de aceite:** preço médio e posição são reproduzíveis a partir do livro de operações; projeções nunca são apresentadas como rendimento garantido.
+- Revisar o livro de operações como fonte única para posição, custo e preço médio; testar eventos fora de ordem, bonificações, desdobramentos, amortizações e vendas parciais.
+- Estender a visão de renda realizada e projetada à renda fixa, sem misturar estimativas de CDI com pagamentos efetivamente recebidos.
+- Criar calendário de proventos e separar data-com, data de pagamento, valor anunciado e valor recebido quando a fonte fornecer esses campos.
+- Evoluir meta de renda passiva com aporte mensal necessário e cenários conservador/base/otimista, usando premissas editáveis e transparentes.
+- Exibir alocação, concentração, exposição por classe e risco de concentração; não classificar risco apenas pelo ticker.
+- Calcular retorno total com aportes, retiradas, proventos e eventos corporativos, informando a metodologia (TWR/MWR quando aplicável).
+- Comparar benchmarks apenas quando períodos, moedas e metodologias forem compatíveis.
+- Importar operações e conciliar com posições já existentes sem duplicar ativos.
+
+**Critério de aceite:** posição e custo são reproduzíveis a partir do livro de operações; retorno total reconcilia com os fluxos; projeções nunca são apresentadas como rendimento garantido.
 
 ## Fase 5 — Assistente financeiro contextual
 
-- Responder sobre dados do próprio usuário apenas após autorização e com escopo mínimo.
+O assistente já calcula fatos localmente, envia à IA somente os totais necessários e possui fallback determinístico. A evolução deve preservar esse modelo e ampliar a utilidade:
+
 - Explicar gastos e variações com links para lançamentos de origem.
-- Detectar anomalias, assinaturas recorrentes e risco de orçamento.
-- Simular decisões e impacto sobre objetivos.
+- Detectar anomalias, recorrências e risco de orçamento sem afirmar causalidade sem evidência.
+- Simular decisões e impacto sobre objetivos e renda passiva.
 - Criar rascunhos de lançamentos para confirmação; não executar ações financeiras irreversíveis sem confirmação.
 - Mostrar fontes, período analisado, premissas e grau de incerteza.
 - Guardrails contra instruções maliciosas em descrições/importações e contra vazamento entre usuários.
