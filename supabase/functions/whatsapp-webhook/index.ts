@@ -136,7 +136,14 @@ const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(
 const APP = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
 export const LINK_PRO = APP + "?planos=pro";
 export function msgCotaWhatsApp(limite: number) {
-  return `Seus ${limite} lançamentos grátis pelo WhatsApp deste mês acabaram. 🙂\n\nConsultas continuam liberadas: saldo, quanto posso gastar, fatura e orçamento.\n\nNo Pro, lançar pelo WhatsApp (e com IA no app) é ilimitado:\n${LINK_PRO}\n\nOu lance pelo app: o lançamento manual é sempre grátis.`;
+  return `Seus ${limite} lançamentos grátis pelo WhatsApp deste mês acabaram. 🙂
+
+Consultas continuam liberadas: saldo, quanto posso gastar, fatura e orçamento.
+
+No Pro, lançar pelo WhatsApp (e com IA no app) é ilimitado:
+${LINK_PRO}
+
+Ou lance pelo app: o lançamento manual é sempre grátis.`;
 }
 async function cotaBloqueia(tel: string, uid: string, nivel: number, chave?: string, sandbox = false): Promise<boolean> {
   const lim = await confereCota(sb, uid, nivel, "whatsapp");
@@ -149,7 +156,10 @@ async function nivelDe(uid: string): Promise<number> {
   if (error) throw error;
   return GVP.efetivo(data).nivel;
 }
-const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:\n• gastei 32 no almoço\n• uber 18,50 ontem\n• recebi 2500 de salário";
+const AJUDA = "Mande o gasto do jeito que você falaria, por exemplo:
+• gastei 32 no almoço
+• uber 18,50 ontem
+• recebi 2500 de salário";
 
 async function vincula(tel: string, codigo: string, msgId: string, sandbox: boolean) {
   const responder = (mensagem: string) => texto(tel, mensagem, "wa:" + msgId + ":resposta", sandbox);
@@ -159,11 +169,20 @@ async function vincula(tel: string, codigo: string, msgId: string, sandbox: bool
   });
   if (error) throw error;
   if (resultado === "vinculado") {
-    await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅\n\n" + AJUDA);
+    await responder("Pronto! Seu WhatsApp está ligado ao GranaViva. ✅
+
+" + AJUDA);
     return;
   }
-  if (resultado === "limite_tentativas") {\n    await responder("Muitas tentativas de código. Por segurança, aguarde 15 minutos antes de tentar novamente.");\n    return;\n  }\n  if (resultado === "limite_tentativas_silencioso") return;\n  if (resultado === "ja_vinculado") {
-    await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂\n\n" + AJUDA);
+  if (resultado === "limite_tentativas") {
+    await responder("Muitas tentativas de código. Por segurança, aguarde 15 minutos antes de tentar novamente.");
+    return;
+  }
+  if (resultado === "limite_tentativas_silencioso") return;
+  if (resultado === "ja_vinculado") {
+    await responder("Este WhatsApp já está vinculado ao GranaViva. 🙂
+
+" + AJUDA);
     return;
   }
   if (resultado === "codigo_expirado") {
@@ -204,7 +223,13 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   if (L.intencao === "pergunta" && L.pergunta) { await responde(tel, uid, L.pergunta, e.msgId, e.sandbox); return; }
   // Fase 2: só lançamento gasta cota (gastaCota); consulta e conversa nunca chegam aqui
   if (gastaCota(L) && await cotaBloqueia(tel, uid, ef.nivel, "wa:" + e.msgId + ":resposta", e.sandbox)) return;
-  if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await responder((e.midia ? "Não consegui achar um valor nisso. 🤔\n\n" : "Não entendi. 🤔\n\n") + AJUDA + "\n\nOu pergunte: quanto gastei com mercado esse mês?"); return; }
+  if (L.intencao !== "lancamento" || !L.itens.length || L.confianca < 0.3) { await responder((e.midia ? "Não consegui achar um valor nisso. 🤔
+
+" : "Não entendi. 🤔
+
+") + AJUDA + "
+
+Ou pergunte: quanto gastei com mercado esse mês?"); return; }
   // A mesma mensagem de origem sempre reutiliza o mesmo pendente.
   const { data: existente, error: ee } = await sb.from("wa_pendente")
     .select("id,lanc,status").eq("origem_msg_id", e.msgId).eq("user_id", uid).maybeSingle();
@@ -245,10 +270,16 @@ async function leMsg(tel: string, uid: string, e: Entrada) {
   const FM: Record<string, string> = { pix: "Pix", cartao: "cartão", dinheiro: "dinheiro", boleto: "boleto" };
   const linha = (l: Item) => {
     const pag = [l.forma ? FM[l.forma] : (l.pagoCom ? "" : "Pix"), l.pagoCom].filter(Boolean).join(" ");
-    return `${l.tipo === "receita" ? "➕" : "➖"} *${brl(l.valor)}* · ${l.categoria}${l.descricao ? " · " + l.descricao : ""}\n   ${dataBR(l.data, hoje)}${pag ? " · " + pag : ""}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "\n   🔁 conta fixa, todo dia " + parseInt(l.data.slice(8, 10), 10) : ""}`;
+    return `${l.tipo === "receita" ? "➕" : "➖"} *${brl(l.valor)}* · ${l.categoria}${l.descricao ? " · " + l.descricao : ""}
+   ${dataBR(l.data, hoje)}${pag ? " · " + pag : ""}${l.parcelas > 1 ? " · " + l.parcelas + "x (salvo como o total)" : ""}${l.recorrente && !(l.parcelas > 1) ? "
+   🔁 conta fixa, todo dia " + parseInt(l.data.slice(8, 10), 10) : ""}`;
   };
   const n = itensLanc.length, tot = itensLanc.reduce((a, l) => a + (l.tipo === "receita" ? 0 : l.valor), 0);
-  const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}\n\n` : "") + itensLanc.map(linha).join("\n\n");
+  const corpo = (n > 1 ? `${n} lançamentos${tot > 0 ? " · gastos somam " + brl(tot) : ""}
+
+` : "") + itensLanc.map(linha).join("
+
+");
   await envia(tel, { type: "interactive", interactive: { type: "button", body: { text: corpo.slice(0, 1000) }, action: { buttons: [
     { type: "reply", reply: { id: "ok:" + pid, title: n > 1 ? "Salvar todos" : "Salvar" } },
     { type: "reply", reply: { id: "no:" + pid, title: "Cancelar" } }] } } }, "wa:" + e.msgId + ":resposta", e.sandbox);
@@ -272,13 +303,19 @@ async function responde(tel: string, uid: string, p: Pergunta, msgId: string, sa
       if (p.busca) { const f = cs.filter((c: any) => String(c.nome || "").toLowerCase().includes(p.busca)); if (f.length) cs = f; }
       const F = faturaAtual(cs, txs, h0);
       await responder(!F.cartoes.length ? "Você ainda não tem cartão com dia de fechamento e vencimento no app. Cadastre em Gastos & Cartões."
-        : F.cartoes.map((c) => `💳 ${c.nome}: fatura atual *${brl(c.valor)}* · fecha ${dataBR(c.fecha, h0)} · vence ${dataBR(c.vence, h0)}`).join("\n") + (F.cartoes.length > 1 ? `\n\nTotal: *${brl(F.total)}*` : ""));
+        : F.cartoes.map((c) => `💳 ${c.nome}: fatura atual *${brl(c.valor)}* · fecha ${dataBR(c.fecha, h0)} · vence ${dataBR(c.vence, h0)}`).join("
+") + (F.cartoes.length > 1 ? `
+
+Total: *${brl(F.total)}*` : ""));
       return;
     }
     const L = livreMes(txs, h0, st?.data || {});
     const msg = L.base === "saldo"
-      ? `Saldo livre no mês (entrou menos saiu): ${L.livre < 0 ? "−" : ""}*${brl(Math.abs(L.livre))}*${L.livre > 0 ? ` · dá ${brl(L.porDia)}/dia até o fim do mês` : ""}.\n\nDefina uma meta de gastos no app para eu acompanhar o ritmo do mês.`
-      : L.livre >= 0 ? `Saldo livre no mês: *${brl(L.livre)}* · dá para gastar ${brl(L.porDia)}/dia até o fim do mês.\n(${L.base === "meta" ? "meta" : "orçamentos"} ${brl(L.lim)}, já gasto ${brl(L.gasto)})`
+      ? `Saldo livre no mês (entrou menos saiu): ${L.livre < 0 ? "−" : ""}*${brl(Math.abs(L.livre))}*${L.livre > 0 ? ` · dá ${brl(L.porDia)}/dia até o fim do mês` : ""}.
+
+Defina uma meta de gastos no app para eu acompanhar o ritmo do mês.`
+      : L.livre >= 0 ? `Saldo livre no mês: *${brl(L.livre)}* · dá para gastar ${brl(L.porDia)}/dia até o fim do mês.
+(${L.base === "meta" ? "meta" : "orçamentos"} ${brl(L.lim)}, já gasto ${brl(L.gasto)})`
       : `Você está *${brl(-L.livre)}* acima da ${L.base === "meta" ? "meta" : "soma dos orçamentos"} do mês (${brl(L.lim)}; já gasto ${brl(L.gasto)}).`;
     await responder(msg);
     return;
@@ -301,7 +338,11 @@ async function responde(tel: string, uid: string, p: Pergunta, msgId: string, sa
     if (!filtro && p.tipo === "despesa" && v > 0) {
       const pc: Record<string, number> = {};
       for (const t of txs) if (t.tipo === "despesa") pc[t.categoria || "Outros"] = (pc[t.categoria || "Outros"] || 0) + (Number(t.valor) || 0);
-      msg += "\n\nOnde mais foi:\n" + Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, x]) => `• ${c}: ${brl(x)}`).join("\n");
+      msg += "
+
+Onde mais foi:
+" + Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, x]) => `• ${c}: ${brl(x)}`).join("
+");
     }
   }
   await responder(msg);
@@ -400,12 +441,19 @@ async function trata(m: any, sandbox: boolean) {
     const md = m.image || m.audio || m.document;
     if (sandbox) { await responder("Foto e áudio funcionam quando o número oficial do GranaViva estiver ligado. Por enquanto, mande por texto. 🙂"); return; }
     const midia = await baixaMidia(String(md?.id || ""), sandbox);
-    if (!midia) { await responder("Não consegui abrir esse arquivo. Tente de novo ou mande por texto.\n\n" + AJUDA); return; }
+    if (!midia) { await responder("Não consegui abrir esse arquivo. Tente de novo ou mande por texto.
+
+" + AJUDA); return; }
     if ("erro" in midia) { await responder(midia.erro); return; }
     await leMsg(tel, v.user_id, { texto: String(md?.caption || "").slice(0, 300), midia, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp), sandbox }); return;
   }
-  if (m.type !== "text") { await responder("Eu leio texto, foto de comprovante e áudio.\n\n" + AJUDA); return; }
-  if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await responder(AJUDA + "\n\nVárias coisas de uma vez também: almoço 30 e uber 15\nE perguntas: quanto gastei com mercado esse mês?"); return; }
+  if (m.type !== "text") { await responder("Eu leio texto, foto de comprovante e áudio.
+
+" + AJUDA); return; }
+  if (!t || /^(oi|ol[aá]|bom dia|boa tarde|boa noite|ajuda|menu|obrigad[oa]|valeu|\?)\W*$/i.test(t)) { await responder(AJUDA + "
+
+Várias coisas de uma vez também: almoço 30 e uber 15
+E perguntas: quanto gastei com mercado esse mês?"); return; }
   await leMsg(tel, v.user_id, { texto: t, midia: null, msgId: String(m.id), diaCota: diaMensagemSP(m.timestamp), sandbox });
 }
 
@@ -414,7 +462,10 @@ async function enviaResumo(tel: string, linhas: string[]) {
   const tpl = Deno.env.get("WA_TPL_RESUMO");
   // parâmetro de template não aceita quebra de linha: vai numa linha só, separado por " · "
   if (tpl) return envia(tel, { type: "template", template: { name: tpl, language: { code: Deno.env.get("WA_TPL_LANG") || "pt_BR" }, components: [{ type: "body", parameters: [{ type: "text", text: linhas.join(" · ").replace(/\s+/g, " ").slice(0, 1000) }] }] } });
-  return texto(tel, linhas.join("\n") + "\n\nPara parar: GranaViva > WhatsApp & Conta > Resumo semanal.");
+  return texto(tel, linhas.join("
+") + "
+
+Para parar: GranaViva > WhatsApp & Conta > Resumo semanal.");
 }
 /* quem tem o WhatsApp ligado e não desligou o resumo (settings.whatsapp_resumo_semanal). null = falha ao ler */
 async function listaResumo(): Promise<{ user_id: string; telefone: string; resumo_enviado: string | null }[] | null> {
