@@ -358,7 +358,7 @@ function assinar(plano){
   const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
 }
 function checkoutUrlMercadoPago(url){
-  try{const u=new URL(url);return u.protocol==='https:'&&/(^|\\.)mercadopago\\.com(\\.br)?$/i.test(u.hostname);}
+  try{const u=new URL(url);return u.protocol==='https:'&&/(^|\.)mercadopago\.com(\.br)?$/i.test(u.hostname);}
   catch(e){return false;}
 }
 async function abreCheckout(plano,email){
