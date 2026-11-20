@@ -255,6 +255,20 @@ Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento
 });
 
 
+Deno.test("Mercado Pago: confirmação de cancelamento aceita status canônico canceled", async () => {
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    chamadas.push((init?.method || "GET") + " " + String(input));
+    if ((init?.method || "GET") === "PUT") return new Response("falha transitória", { status: 500 });
+    return new Response(JSON.stringify({ id: "sub-cancelada", status: "canceled" }), {
+      status: 200, headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  eq(await MP.cancelaConfirmando("sub-cancelada", "token", f), "ja_cancelada");
+  eq(chamadas.length, 2, "PUT falha e GET confirma o estado encerrado");
+  eq(chamadas[1].startsWith("GET "), true);
+});
+
 Deno.test("checkout MP: retries da mesma intenção reutilizam a chave idempotente", async () => {
   const keys: string[] = [];
   const intentId = "00000000-0000-4000-8000-000000000044";
