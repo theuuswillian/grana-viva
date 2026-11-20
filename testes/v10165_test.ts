@@ -163,8 +163,8 @@ Deno.test("webhook MP: evento já reservado e ainda em processamento não roda e
   const f = dbFalso();
   const db: DB = { ...f.db, async reservaEvento() { return { status: "pendente", token: "lease-other" }; } };
   let consultou = false;
-  const r = await processaWebhook(req(), {
-    db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}),
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" }, PLANOS: {}, efetivo: () => ({}),
     fetch: (async () => { consultou = true; return new Response("{}", { status: 404 }); }) as unknown as typeof fetch,
   });
   eq(r.status, 503);
@@ -186,8 +186,8 @@ Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do le
       aplicou = true; return "aplicado";
     },
   };
-  const r = await processaWebhook(req(), {
-    db, env: { MP_ACCESS_TOKEN: "t" },
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
     PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
     efetivo: () => ({ nivel: 1 }),
     fetch: (async () => {
@@ -210,8 +210,8 @@ Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do le
 Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento", async () => {
   const f = dbFalso();
   const uid = "00000000-0000-4000-8000-000000000001";
-  const r = await processaWebhook(req(), {
-    db: f.db, env: { MP_ACCESS_TOKEN: "t" },
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
     PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
     efetivo: () => ({ nivel: 1 }),
     fetch: (async () => new Response(JSON.stringify({
