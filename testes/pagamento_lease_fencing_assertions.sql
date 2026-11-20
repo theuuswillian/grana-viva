@@ -6,6 +6,8 @@ declare
   v_id text := 'mp-fencing-' || txid_current()::text;
   v_id2 text := 'mp-founder-' || txid_current()::text;
   v_id3 text := 'mp-old-sub-' || txid_current()::text;
+  v_id4 text := 'mp-new-version-' || txid_current()::text;
+  v_id5 text := 'mp-old-version-' || txid_current()::text;
   v_uid uuid := '00000000-0000-4000-8000-000000000001';
   token_a uuid := '00000000-0000-4000-8000-000000000011';
   token_b uuid := '00000000-0000-4000-8000-000000000022';
@@ -52,6 +54,20 @@ begin
   v := public.pagamento_evento_reserva(v_id, token_c, 'mercadopago', 'subscription_preapproval', 'sub-test', 120);
   if v <> 'concluido' then raise exception 'evento concluído não pode ser retomado: %', v; end if;
 
+  -- Evento de versão nova chega primeiro; evento antigo da mesma assinatura não pode rebaixar.
+  v := public.pagamento_evento_reserva(v_id4, token_a, 'mercadopago', 'subscription_preapproval', 'sub-versioned', 120);
+  if v <> 'novo' then raise exception 'evento versão 10 deveria ser reservado: %', v; end if;
+  v := public.pagamento_evento_aplica_assinatura(v_id4, token_a, v_uid, 'pro', 'ativo', now()+interval '60 days', 'mp-sub-versioned', 'payer', 10);
+  if v <> 'aplicado' then raise exception 'versão 10 deveria aplicar: %', v; end if;
+
+  v := public.pagamento_evento_reserva(v_id5, token_b, 'mercadopago', 'subscription_preapproval', 'sub-versioned', 120);
+  if v <> 'novo' then raise exception 'evento versão 9 deveria ser reservado: %', v; end if;
+  v := public.pagamento_evento_aplica_assinatura(v_id5, token_b, v_uid, 'pro', 'cancelado', now()+interval '60 days', 'mp-sub-versioned', 'payer', 9);
+  if v <> 'obsoleto' then raise exception 'versão antiga deve ser descartada: %', v; end if;
+  if not exists(select 1 from public.assinaturas where user_id=v_uid and status='ativo' and provedor_versao=10 and provedor_assinatura_id='mp-sub-versioned') then
+    raise exception 'evento antigo não pode reverter status nem versão';
+  end if;
+
   -- Conta fundadora nunca pode ser rebaixada por notificação de pagamento.
   update public.assinaturas set plano='pro', status='fundador', provedor_assinatura_id=null where user_id=v_uid;
   v := public.pagamento_evento_reserva(v_id2, token_a, 'mercadopago', 'subscription_preapproval', 'sub-founder', 120);
@@ -83,7 +99,7 @@ begin
      or not has_function_privilege('service_role','public.pagamento_evento_finaliza(text,uuid,text,uuid)','EXECUTE') then
     raise exception 'permissões da RPC de finalização incorretas';
   end if;
-  if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
+  if has_function_privilege('anon','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,bigint)','EXECUTE')
      or has_function_privilege('authenticated','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE')
      or not has_function_privilege('service_role','public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text)','EXECUTE') then
     raise exception 'permissões da RPC de aplicação incorretas';
