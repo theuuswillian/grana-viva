@@ -46,10 +46,11 @@ As fases abaixo significam **fechar lacunas e melhorar as jornadas existentes**,
 
 ## Fase 1 — Segurança, banco e confiabilidade operacional
 
-- Reconciliar migrations versionadas com schema e histórico reais do Supabase; não marcar migrations manualmente nem aplicar migrations antigas sem diff revisado.
-- Auditar todas as tabelas expostas, grants, RLS, policies, views e funções SECURITY DEFINER.
-- Revisar proteção contra senhas comprometidas e parâmetros de autenticação.
-- Tornar a criptografia local fail-closed: não gravar dados financeiros em texto puro quando Web Crypto/IndexedDB falhar.
+- [x] Auditar RLS, policies e grants das tabelas públicas; confirmar policies por `auth.uid()` nas tabelas de usuário e ausência de grants `anon`/`authenticated` nas 13 tabelas internas sem policies. Ver [auditoria Supabase](AUDITORIA-SUPABASE-2026-11-20.md).
+- [x] Tornar a criptografia local fail-closed: não gravar dados financeiros novos em texto puro quando Web Crypto/IndexedDB falhar; coberto pelo smoke test.
+- [ ] Reconciliar migrations versionadas com schema e histórico reais do Supabase; 30 arquivos locais vs 18 registradas. Não marcar migrations manualmente nem aplicar arquivos antigos sem diff revisado.
+- [ ] Revisar proteção contra senhas comprometidas e parâmetros de autenticação; habilitar proteção contra senhas vazadas no painel Supabase e validar em homologação.
+- [ ] Avaliar a movimentação de `pg_net` para schema apropriado após verificar dependências e impacto.
 - Homologar Mercado Pago ponta a ponta: checkout, webhook assinado, idempotência, renovação, cancelamento, inadimplência, reembolso e estados monotônicos.
 - Adicionar observabilidade com correlação de request/evento, métricas de falha, fila e alertas sem registrar dados sensíveis.
 - Atualizar documentação de cron jobs, Edge Functions, secrets e procedimentos de recuperação.
@@ -87,7 +88,8 @@ A carteira já possui ativos por classe, operações de compra/venda/provento, h
 - Revisar o livro de operações como fonte única para posição, custo e preço médio; testar eventos fora de ordem, bonificações, desdobramentos, amortizações e vendas parciais.
 - Estender a visão de renda realizada e projetada à renda fixa, sem misturar estimativas de CDI com pagamentos efetivamente recebidos.
 - Criar calendário de proventos e separar data-com, data de pagamento, valor anunciado e valor recebido quando a fonte fornecer esses campos.
-- Evoluir meta de renda passiva com aporte mensal necessário e cenários conservador/base/otimista, usando premissas editáveis e transparentes.
+- [x] Adicionar meta mensal de renda passiva, progresso no Início e em Investimentos, valor restante e edição sincronizada; progresso usa proventos realizados, sem misturar projeções.
+- Evoluir a meta para aporte mensal necessário e cenários conservador/base/otimista, usando premissas editáveis e transparentes.
 - Exibir alocação, concentração, exposição por classe e risco de concentração; não classificar risco apenas pelo ticker.
 - Calcular retorno total com aportes, retiradas, proventos e eventos corporativos, informando a metodologia (TWR/MWR quando aplicável).
 - Comparar benchmarks apenas quando períodos, moedas e metodologias forem compatíveis.
