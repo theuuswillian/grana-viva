@@ -2,6 +2,7 @@
 do $$
 declare
   v text;
+  v_error text;
   ok boolean;
   token_a uuid := '00000000-0000-4000-8000-000000000001';
   token_b uuid := '00000000-0000-4000-8000-000000000002';
@@ -44,6 +45,22 @@ begin
 
   v := public.wa_reserva_mensagem('wamid-queue-test', token_d, 180);
   if v <> 'repetida' then raise exception 'mensagem concluída deveria ser ignorada: %', v; end if;
+
+  -- Após oito tentativas, a mensagem permanece preservada e não entra em retry infinito.
+  insert into public.wa_msg(id,status,attempts,last_error)
+  values ('wamid-max-attempts-test','falhou',8,'falhas transitórias repetidas');
+  v := public.wa_reserva_mensagem('wamid-max-attempts-test', token_d, 180);
+  if v <> 'esgotada' then raise exception 'mensagem com oito tentativas deveria ser esgotada: %', v; end if;
+  if exists (select 1 from public.wa_msg where id='wamid-max-attempts-test'
+             and (status <> 'falhou' or lease_until is not null or lease_token is not null or attempts <> 8)) then
+    raise exception 'mensagem esgotada deve permanecer sem lease e preservada para análise';
+  end if;
+  select last_error into v_error from public.wa_msg where id='wamid-max-attempts-test';
+  v := public.wa_reserva_mensagem('wamid-max-attempts-test', token_d, 180);
+  if v <> 'esgotada' then raise exception 'mensagem esgotada deve continuar terminal: %', v; end if;
+  if (select last_error from public.wa_msg where id='wamid-max-attempts-test') <> v_error then
+    raise exception 'reentrega de mensagem esgotada não deve alterar repetidamente o diagnóstico';
+  end if;
 
   if has_function_privilege('anon','public.wa_reserva_mensagem(text,uuid,integer)','EXECUTE')
      or has_function_privilege('authenticated','public.wa_reserva_mensagem(text,uuid,integer)','EXECUTE')

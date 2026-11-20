@@ -2,7 +2,7 @@
 // A RPC serializa concorrência no Postgres; leases expirados e falhas podem ser retomados.
 type SupabaseRpc = { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> };
 
-export type ReservaMensagem = "nova" | "retomada" | "repetida" | "ocupada" | "erro";
+export type ReservaMensagem = "nova" | "retomada" | "repetida" | "ocupada" | "esgotada" | "erro";
 export type ResultadoReservaMensagem = { status: ReservaMensagem; token: string };
 
 export async function reservaMensagem(
@@ -17,7 +17,7 @@ export async function reservaMensagem(
     p_lease_seconds: leaseSeconds,
   });
   if (error) return { status: "erro", token };
-  if (data === "nova" || data === "retomada" || data === "repetida" || data === "ocupada") return { status: data, token };
+  if (data === "nova" || data === "retomada" || data === "repetida" || data === "ocupada" || data === "esgotada") return { status: data, token };
   return { status: "erro", token };
 }
 
