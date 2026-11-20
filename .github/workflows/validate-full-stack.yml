@@ -7,6 +7,7 @@ on:
       - correcoes/whatsapp-preservar-pendente-2026-11-18
       - correcoes/cota-mensal-atomica-2026-11-18
       - remocao/pluggy-definitiva-2026-11-18
+      - correcoes/pagamento-lease-fencing-2026-11-19
   pull_request:
     branches:
       - revisao-lancamento-v10.165
@@ -41,6 +42,30 @@ jobs:
           if [ -f supabase/functions/minha-conta/pluggy_test.ts ]; then
             deno test -A supabase/functions/minha-conta/pluggy_test.ts
           fi
+      - name: Test payment webhook fencing migration and atomic application
+        services:
+          postgres:
+            image: postgres:17
+            env:
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: postgres
+              POSTGRES_DB: granaviva_test
+            ports:
+              - 5432:5432
+            options: >-
+              --health-cmd "pg_isready -U postgres -d granaviva_test"
+              --health-interval 10s
+              --health-timeout 5s
+              --health-retries 5
+        env:
+          PGPASSWORD: postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/webhook_migrations_fixture.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115_webhooks_idempotencia.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261119_pagamento_lease_fencing.sql
+          psql -h 127.0.0.1 -U postgres -d granaviva_test -v ON_ERROR_STOP=1 -f testes/pagamento_lease_fencing_assertions.sql
       - name: Type-check all Edge Functions
         run: |
           for file in supabase/functions/*/index.ts; do
