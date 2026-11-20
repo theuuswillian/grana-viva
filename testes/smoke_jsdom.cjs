@@ -153,6 +153,35 @@ const impHtml=doc.querySelector('#modal').innerHTML;
 ok(/Importar extrato/.test(impHtml)&&!/Lançamentos do banco|pular esta conta|não importar esta conta/.test(impHtml),'importação local sem controles da integração bancária');
 T.confirmaImport();
 ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.length-1].conta==='b1','CSV/OFX importa lançamento na conta selecionada');
+
+const ofxTeste='OFXHEADER:100\\nDATA:OFXSGML\\nVERSION:102\\n<OFX><BANKMSGSRSV1><STMTRS><BANKTRANLIST><STMTTRN><TRNTYPE>DEBIT\\n<DTPOSTED>20261119000000\\n<TRNAMT>-12.50\\n<FITID>FIT-123\\n<NAME>PADARIA CENTRAL\\n</STMTTRN></BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>';
+const ofxLido=T.lerOFX(ofxTeste);
+ok(ofxLido.linhas.length===1&&ofxLido.linhas[0].fitid==='FIT-123'&&ofxLido.linhas[0].data==='2026-11-19','OFX SGML lê data, valor e FITID');
+const csvLido=T.lerCSV('Data;Valor;Descrição;FITID\\n19/11/2026;-12,50;PADARIA CENTRAL;CSV-123');
+ok(csvLido.linhas.length===1&&csvLido.linhas[0].fitid==='CSV-123'&&csvLido.linhas[0].valor===-12.5,'CSV brasileiro com ponto e vírgula e FITID');
+const linhasLote=[{desc:'PADARIA A',valor:-23.5,data:T.hojeSP()},{desc:'CAFETERIA B',valor:-23.5,data:T.hojeSP()}];
+T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas.every(x=>x.on&&!x.dup),'compras diferentes com mesmo dia e valor não são duplicatas');
+T.confirmaImport();
+const loteTeste=T.S.cfg.impLotes[T.S.cfg.impLotes.length-1],txLote=T.S.tx.filter(x=>x.impLote===loteTeste.id);
+ok(!!loteTeste&&loteTeste.qtd===2&&txLote.length===2,'lote guarda metadados e associa os dois lançamentos');
+const estadoAntesSan=T.S;T.S=T.sanea(T.S);
+const analiseSan=T.impLoteAnalisa(loteTeste.id);T.S=estadoAntesSan;
+ok(analiseSan.removiveis.length===2,'hash de desfazer sobrevive ao saneamento e à sincronização');
+txLote[0].descricao='PADARIA A - corrigida pelo usuário';
+const analiseEdit=T.impLoteAnalisa(loteTeste.id);
+ok(analiseEdit.removiveis.length===1&&analiseEdit.preservados.length===1,'desfazer protege lançamento editado depois da importação');
+ok(/Importações recentes/.test(T.viewBancos()),'histórico de importações aparece em Bancos');
+T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas.every(x=>x.dup&&!x.on),'reimportar o mesmo CSV identifica os registros já importados');
+T.IMP={nome:'fitid-repetido.ofx',cartao:false,linhas:[
+  {desc:'COMPRA 1',valor:-10,data:'2026-11-18',fitid:'FIT-DUP'},
+  {desc:'COMPRA 2',valor:-11,data:'2026-11-19',fitid:'FIT-DUP'}
+],destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas[0].on&&T.IMP.linhas[1].dup&&!T.IMP.linhas[1].on,'FITID repetido no mesmo extrato é sinalizado e desmarcado');
 // regressão: recuperação de parcelas antigas usa apenas o histórico local e não chama código removido
 const txAntesParc=T.S.tx,cartoesAntesParc=T.S.cartoes;
 T.S.cartoes=[{id:'prc-card',fechamento:20,vencimento:27}];
