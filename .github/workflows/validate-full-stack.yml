@@ -9,6 +9,7 @@ on:
       - remocao/pluggy-definitiva-2026-11-18
       - correcoes/pagamento-lease-fencing-2026-11-19
       - correcoes/checkout-idempotencia-2026-11-19
+      - correcoes/pagamento-estado-monotonico-2026-11-19
   pull_request:
     branches:
       - revisao-lancamento-v10.165
