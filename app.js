@@ -3716,6 +3716,29 @@ function sparkSVG(vals,w,h,id){
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
 const HM_AT=[['lanc','receipt','Despesas','#f472b6','Gastos'],['orc','gauge','Orçamentos','#fbbf24','Orçamento'],['cartoes','card','Cartões','#60a5fa','Cartões'],['rel','report','Relatório','#a78bfa','Relatório'],['plan','compass','Planejamento','#34d399','Planejar'],['pat','scale','Patrimônio','#22d3ee','Patrimônio']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
+
+/* v10.173: resumo compacto das metas na tela inicial, sem duplicar a lógica de cálculo da aba Metas. */
+function metasInicioHTML(){
+  const metas=(S.metas||[]).filter(m=>m&&m.id);
+  if(!metas.length)return `<section class="hB-goals"><div class="hB-goalsHead"><span><b>Suas metas</b><small>Organize seus próximos objetivos</small></span><button type="button" data-act="hm-go" data-id="metas">Criar meta ${I('chevR')}</button></div><p class="hB-goalsEmpty">Defina um objetivo e acompanhe quanto já guardou, quanto falta e o ritmo necessário para chegar lá.</p></section>`;
+  const lista=metas.map(m=>{
+    const alvo=Math.max(0,+alvoMeta(m)||0),guardado=Math.max(0,+saldoMeta(m)||0);
+    const pct=alvo>0?Math.max(0,Math.min(100,guardado/alvo*100)):0;
+    return {m,alvo,guardado,pct,falta:Math.max(0,alvo-guardado)};
+  }).sort((a,b)=>a.pct-b.pct).slice(0,2);
+  const total=metas.reduce((s,m)=>s+Math.max(0,+saldoMeta(m)||0),0);
+  const alvoTotal=metas.reduce((s,m)=>s+Math.max(0,+alvoMeta(m)||0),0);
+  return `<section class="hB-goals">
+    <div class="hB-goalsHead"><span><b>Suas metas</b><small>${brl(total)} guardados de ${brl(alvoTotal)}</small></span><button type="button" data-act="hm-go" data-id="metas">Ver todas ${I('chevR')}</button></div>
+    <div class="hB-goalsList">${lista.map(({m,alvo,guardado,pct,falta})=>`<button type="button" class="hB-goal" data-act="meta-abre" data-id="${esc(m.id)}" aria-label="Abrir meta ${esc(m.nome)}: ${Math.round(pct)}% concluída">
+      <span class="hB-goalLine"><b>${esc(m.nome)}</b><strong>${Math.round(pct)}%</strong></span>
+      <span class="hB-goalBar"><i style="width:${pct.toFixed(1)}%"></i></span>
+      <span class="hB-goalFoot"><span>${brl(guardado)} de ${brl(alvo)}</span><small>${falta>0?'faltam '+brl(falta):'meta atingida'}</small></span>
+    </button>`).join('')}</div>
+    ${metas.length>2?'<small class="hB-goalsMore">Mostrando 2 de '+metas.length+' metas</small>':''}
+  </section>`;
+}
+
 function homeTopo(v,o){
   const {saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}=o;
   const ser=serieSaldo(30),var30=ser.length>1?ser[ser.length-1]-ser[0]:0;
@@ -3747,14 +3770,24 @@ function homeTopo(v,o){
   <button class="hB-ask" data-act="assist">${I('chat','hB-askI')}<span><b>Pergunte sobre seu dinheiro</b><small>quanto gastei, maior categoria, parcelas, metas</small></span>${I('chevR','hB-ch')}</button>
   ${primeirosPassosHTML()}${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
   ${chips}${mesAntHTML(per)}
-  <div class="hB-res">
-    <div class="hB-rh"><h4>Resumo · ${pl}</h4></div>
-    <div class="hB-row tap" data-act="nav-rel" role="button" tabindex="0" aria-label="ver relatório do mês"><div class="hB-rl"><span class="hB-ri g">${I('piggy')}</span><div><b>Você guardou</b><small>${pou===null?'sem receitas no período':(sal<0?'gastou mais do que entrou':'da renda do período')}</small></div></div><b class="hB-rv ${sal<0?'neg':'pos'}">${pou===null?'—':(OCULTO?'••%':pou+'%')}</b></div>
-    <div class="hB-bar"><i class="g" style="width:${pc}%"></i><span style="left:20%"></span></div>
-    <p class="hB-tip">${pou===null?'':pou>=20?'acima da meta de 20% recomendada':'meta recomendada: guardar 20% da renda'}</p>
-    <div class="hB-row tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hB-rl"><span class="hB-ri r">${I('arrowDown')}</span><div><b>Gastos vs ${MESES_LONGO[MESES.indexOf(mesAnt)]||mesAnt}</b><small>${per&&per.auto?'mês inteiro':'até o dia '+dia} · ${brlK(desAnt)} → ${brlK(des)}</small></div></div><b class="hB-rv ${dDes>0?'neg':'pos'}">${dDes===null?'—':(dDes>0?'+':dDes<0?'−':'')+Math.abs(dDes)+'%'}</b></div>
-    <div class="hB-bar two"><i class="m" style="width:${Math.round(desAnt/Math.max(des,desAnt,1)*100)}%"></i><i class="r" style="width:${Math.round(des/Math.max(des,desAnt,1)*100)}%"></i></div>
-  </div>`;
+  <section class="hB-res">
+    <div class="hB-rh"><h4>Desempenho do período</h4><small>${esc(pl)}</small></div>
+    <div class="hB-metrics">
+      <button type="button" class="hB-metric tap" data-act="nav-rel" aria-label="Abrir relatório de economia">
+        <span class="hB-metricTop"><span class="hB-ri g">${I('piggy')}</span><span><b>Você guardou</b><small>${pou===null?'sem receitas no período':(sal<0?'despesas acima das receitas':'da renda do período')}</small></span></span>
+        <strong class="hB-rv ${sal<0?'neg':'pos'}">${pou===null?'—':(OCULTO?'••%':pou+'%')}</strong>
+        <span class="hB-bar"><i class="g" style="width:${pc}%"></i><i class="hB-goalMark"></i></span>
+        <small class="hB-metricNote">${pou===null?'Adicione receitas para calcular':pou>=20?'Acima da referência de 20%':'Referência: guardar 20% da renda'}</small>
+      </button>
+      <button type="button" class="hB-metric tap" data-act="nav-des" aria-label="Abrir comparação de despesas">
+        <span class="hB-metricTop"><span class="hB-ri r">${I('arrowDown')}</span><span><b>Gastos no período</b><small>${per&&per.auto?'mês completo':'até o dia '+dia} · vs ${MESES_LONGO[MESES.indexOf(mesAnt)]||mesAnt}</small></span></span>
+        <strong class="hB-rv ${dDes>0?'neg':'pos'}">${dDes===null?'—':(dDes>0?'+':'')+Math.abs(dDes)+'%'}</strong>
+        <span class="hB-bar two"><i class="m" style="width:${Math.round(desAnt/Math.max(des,desAnt,1)*100)}%"></i><i class="r" style="width:${Math.round(des/Math.max(des,desAnt,1)*100)}%"></i></span>
+        <small class="hB-metricNote">${dDes===null?'Sem histórico comparável':dDes>0?'Despesas aumentaram':'Despesas diminuíram ou ficaram estáveis'}</small>
+      </button>
+    </div>
+  </section>
+  ${metasInicioHTML()}`;
 }
 function mesAntHTML(per){
   if(!per||!per.auto)return '';const h=new Date(),at=MESES_LONGO[h.getMonth()],an=MESES_LONGO[new Date(h.getFullYear(),h.getMonth()-1,1).getMonth()];
