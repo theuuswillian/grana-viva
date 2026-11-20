@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     if (!GVP.PAGOS.includes(plano)) return json({ erro: GVP.LEGADOS.includes(plano) ? "O plano Plus não é mais vendido. Escolha o Pro." : "plano inválido" }, 400);
     if (!token) return json({ erro: "Pagamento em breve", emBreve: true }, 503);
     if (ef.fundador) return json({ erro: "Sua conta fundadora já tem acesso completo." }, 409);
+    if (MP.checkoutBloqueadoPorAssinaturaAtiva(row)) return json({ erro: "Você já tem uma assinatura ativa. Cancele a atual e aguarde a confirmação antes de contratar outro plano." }, 409);
     if (row?.status === "ativo" && ef.nivel > 0 && GVP.idBase(row.plano) === GVP.idBase(plano) && GVP.normaliza(row.plano) === plano) return json({ erro: "Você já assina este plano." }, 409);
     // v10.118: e-mail da conta do Mercado Pago de quem paga (o MP exige que seja o mesmo do login do pagador); padrão: e-mail da conta
     const emIn = String(body?.email || "").trim().toLowerCase();
