@@ -15,6 +15,7 @@ update public.pagamento_eventos
 drop function if exists public.pagamento_evento_reserva(text,text,text,text,integer);
 drop function if exists public.pagamento_evento_finaliza(text,text,uuid);
 drop function if exists public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean);
+drop function if exists public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text);
 
 create function public.pagamento_evento_reserva(
   p_id text,
@@ -109,8 +110,7 @@ create function public.pagamento_evento_aplica_assinatura(
   p_status text,
   p_periodo_fim timestamptz,
   p_provedor_assinatura_id text,
-  p_provedor_cliente_id text,
-  p_proteger_outra boolean default false
+  p_provedor_cliente_id text
 ) returns text
 language plpgsql
 security definer
@@ -151,8 +151,7 @@ begin
     return 'fundador_mantido';
   end if;
 
-  if p_proteger_outra
-     and found
+  if found
      and v_atual.status = 'ativo'
      and v_atual.provedor_assinatura_id is not null
      and v_atual.provedor_assinatura_id <> p_provedor_assinatura_id
@@ -197,9 +196,9 @@ $$;
 
 revoke all on function public.pagamento_evento_reserva(text,uuid,text,text,text,integer) from public, anon, authenticated;
 revoke all on function public.pagamento_evento_finaliza(text,uuid,text,uuid) from public, anon, authenticated;
-revoke all on function public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean) from public, anon, authenticated;
+revoke all on function public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text) from public, anon, authenticated;
 grant execute on function public.pagamento_evento_reserva(text,uuid,text,text,text,integer) to service_role;
 grant execute on function public.pagamento_evento_finaliza(text,uuid,text,uuid) to service_role;
-grant execute on function public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text,boolean) to service_role;
+grant execute on function public.pagamento_evento_aplica_assinatura(text,uuid,uuid,text,text,timestamptz,text,text) to service_role;
 
 commit;
