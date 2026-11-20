@@ -118,7 +118,7 @@ Deno.test("webhook MP: evento de plano não associado é confirmado sem bloquear
 });
 Deno.test("webhook MP: sem MP_WEBHOOK_SECRET recusa evento externo antes de reservar", async () => {
   const f = dbFalso(); const logs: string[] = [];
-  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join " ") };
+  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join(" ")) };
   const r = await processaWebhook(req(), d);
   eq(r.status, 503);
   eq(f.ev.size, 0, "configuração ausente não pode reservar evento");
