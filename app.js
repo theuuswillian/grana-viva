@@ -358,21 +358,32 @@ function assinar(plano){
   const inp=$('#mf input[name="e"]');if(inp){inp.setAttribute('autocomplete','email');inp.setAttribute('inputmode','email');inp.setAttribute('autocapitalize','off');}
 }
 async function abreCheckout(plano,email){
-  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
+  const b=document.querySelector('[data-act="assinar"][data-id="'+plano+'"]');
+  if(b){b.disabled=true;b.textContent='Abrindo o pagamento…';}
   toast('Abrindo o pagamento…');
+  const intentKey='gv-checkout-intent:'+plano+':'+email;
+  let intentId='';
   try{
-    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email}});
+    const salvo=JSON.parse(sessionStorage.getItem(intentKey)||'null');
+    if(salvo&&typeof salvo.id==='string'&&Date.now()-Number(salvo.at)<30*60*1000)intentId=salvo.id;
+  }catch(e){}
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(intentId)){
+    intentId=window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,ch=>{const r=Math.random()*16|0;return(ch==='x'?r:(r&3|8)).toString(16);});
+    try{sessionStorage.setItem(intentKey,JSON.stringify({id:intentId,at:Date.now()}));}catch(e){}
+  }
+  try{
+    const {data:o,error}=await sb.functions.invoke('assinatura',{body:{acao:'checkout',plano,email,intentId}});
     let m=o&&o.erro,emBreve=o&&o.emBreve;try{if(error&&error.context){const j=await error.context.json();m=m||j.erro;emBreve=emBreve||j.emBreve;}}catch(e){}
-    if(emBreve){PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
+    if(emBreve){try{sessionStorage.removeItem(intentKey);}catch(e){}PLANO_PAG=false;pagGuarda();abrePlanos();toast('Pagamento em breve');return;}
     if(error||!o||!o.url)throw new Error(m||'não consegui abrir o pagamento');
-    const u=new URL(o.url);if(!/(^|\.)mercadopago\.com(\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
+    const u=new URL(o.url);if(!/(^|\\.)mercadopago\\.com(\\.br)?$/.test(u.hostname))throw new Error('endereço de pagamento inválido');
     location.href=u.href;
   }catch(e){toast(e.message||'não consegui abrir o pagamento',true);if(b){b.disabled=false;b.textContent='Tentar de novo';}}
 }
 /* volta do Mercado Pago (?assinatura=retorno): o plano só muda quando o servidor confirmar no MP; relemos a tabela por 1 minuto.
    v10.109: além de esperar o aviso do MP, pedimos ao servidor que confira no MP (na 1ª, 4ª e 8ª volta), porque o aviso pode atrasar ou não vir */
 function retornoAssinatura(){
-  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;
+  if(!/[?&]assinatura=retorno\b/.test(location.search)||window.__assOk)return;window.__assOk=1;try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k&&k.indexOf('gv-checkout-intent:')===0)sessionStorage.removeItem(k);}}catch(e){}
   try{history.replaceState(null,'',location.pathname);}catch(e){}
   toast('Recebemos sua volta do pagamento. Confirmando…');
   const confere=()=>sb.functions.invoke('assinatura',{body:{acao:'sincronizar'}}).catch(()=>null);

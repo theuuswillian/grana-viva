@@ -2,6 +2,7 @@
 // validação estrita do JSON da IA, assinatura obrigatória do Mercado Pago (com MP_WEBHOOK_SECRET), chamada interna assinada,
 // idempotência do webhook e texto/semana do resumo semanal do WhatsApp.
 import * as V from "../supabase/functions/_shared/valida-ia.ts";
+import * as MP from "../supabase/functions/_shared/mercadopago.ts";
 import { processaWebhook, type DB } from "../supabase/functions/_shared/webhook-nucleo.ts";
 import { assinaInterno } from "../supabase/functions/_shared/seguro.ts";
 import { semanaPassada, textoResumo } from "../supabase/functions/_shared/resumo-semanal.ts";
@@ -41,12 +42,25 @@ Deno.test("valida-ia: hoje de Brasília e hoje do cliente", () => {
 
 // ---------- webhook do Mercado Pago ----------
 function dbFalso() {
-  const ev = new Map<string, any>(); let grav = 0;
+  const ev = new Map<string, any>(); let grav = 0; let serial = 0;
   const db: DB = {
-    async reservaEvento(id) { if (ev.has(id)) return ev.get(id).feito ? "concluido" : "pendente"; ev.set(id, { feito: false }); return "novo"; },
-    async concluiEvento(id) { ev.get(id).feito = true; },
+    async reservaEvento(id) {
+      if (ev.has(id)) return { status: ev.get(id).feito ? "concluido" : "pendente", token: "duplicado" };
+      const token = "lease-" + (++serial);
+      ev.set(id, { feito: false, token });
+      return { status: "novo", token };
+    },
+    async concluiEvento(id, token) {
+      const row = ev.get(id);
+      if (!row || row.feito || row.token !== token) return false;
+      row.feito = true; return true;
+    },
     async leAssinatura() { return null; },
-    async gravaAssinatura() { grav++; },
+    async aplicaAssinaturaEvento(id, token) {
+      const row = ev.get(id);
+      if (!row || row.feito || row.token !== token) return "perdido";
+      row.feito = true; grav++; return "aplicado";
+    },
   };
   return { db, ev, get grav() { return grav; } };
 }
@@ -97,7 +111,7 @@ Deno.test("resumo semanal: semana anterior e texto", () => {
 
 Deno.test("webhook MP: evento já reservado e ainda em processamento não roda em paralelo", async () => {
   const f = dbFalso();
-  const db: DB = { ...f.db, async reservaEvento() { return "pendente"; } };
+  const db: DB = { ...f.db, async reservaEvento() { return { status: "pendente", token: "lease-other" }; } };
   let consultou = false;
   const r = await processaWebhook(req(), {
     db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}),
@@ -106,4 +120,302 @@ Deno.test("webhook MP: evento já reservado e ainda em processamento não roda e
   eq(r.status, 503);
   eq(r.headers.get("retry-after"), "60");
   eq(consultou, false, "não consulta o provedor enquanto outro worker processa");
+});
+
+
+Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do lease", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  let tokenAtual = "worker-a";
+  let aplicou = false;
+  const db: DB = {
+    async reservaEvento() { return { status: "novo", token: "worker-a" }; },
+    async concluiEvento(_id, token) { return token === tokenAtual; },
+    async leAssinatura() { return null; },
+    async aplicaAssinaturaEvento(_id, token) {
+      if (token !== tokenAtual) return "perdido";
+      aplicou = true; return "aplicado";
+    },
+  };
+  const r = await processaWebhook(req(), {
+    db, env: { MP_ACCESS_TOKEN: "t" },
+    PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
+    efetivo: () => ({ nivel: 1 }),
+    fetch: (async () => {
+      tokenAtual = "worker-b"; // worker B retomou a reserva enquanto A aguardava o MP
+      return new Response(JSON.stringify({
+        id: "sub-1",
+        external_reference: "gv1:" + uid + ":pro",
+        auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+        status: "authorized",
+        version: 1,
+        next_payment_date: "2026-12-19T00:00:00.000Z",
+        payer_id: "payer-1",
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch,
+  });
+  eq(r.status, 503);
+  eq(aplicou, false, "worker A não pode aplicar a assinatura depois que B retomou o lease");
+});
+
+Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento", async () => {
+  const f = dbFalso();
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const r = await processaWebhook(req(), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t" },
+    PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
+    efetivo: () => ({ nivel: 1 }),
+    fetch: (async () => new Response(JSON.stringify({
+      id: "sub-1",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      status: "authorized",
+      version: 1,
+      next_payment_date: "2026-12-19T00:00:00.000Z",
+      payer_id: "payer-1",
+    }), { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+  });
+  eq(r.status, 200);
+  eq(f.grav, 1);
+});
+
+
+Deno.test("checkout MP: retries da mesma intenção reutilizam a chave idempotente", async () => {
+  const keys: string[] = [];
+  const intentId = "00000000-0000-4000-8000-000000000044";
+  const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const h = new Headers(init?.headers);
+    keys.push(h.get("X-Idempotency-Key") || "");
+    return new Response(JSON.stringify({
+      id: "preapproval-1",
+      init_point: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=preapproval-1",
+    }), { status: 201, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  const args = {
+    uid: "00000000-0000-4000-8000-000000000001",
+    email: "pagador@example.com",
+    plano: "pro",
+    token: "mp-token",
+    PLANOS: { pro: { nome: "Pro", preco: 24.9, periodo: "mes" } },
+    notificationUrl: "https://example.supabase.co/functions/v1/pagamento-webhook",
+    backUrl: "https://example.com/?assinatura=retorno",
+    idempotencyKey: intentId,
+  };
+  const a = await MP.criaCheckout(args, f);
+  const b = await MP.criaCheckout(args, f);
+  eq(a.id, "preapproval-1");
+  eq(b.id, "preapproval-1");
+  eq(keys, [intentId, intentId], "retry da mesma intenção deve reutilizar X-Idempotency-Key");
+});
+
+Deno.test("checkout MP: rejeita intenção sem UUID antes de chamar o provedor", async () => {
+  let chamou = false;
+  const f = (async () => { chamou = true; return new Response("{}", { status: 500 }); }) as typeof fetch;
+  let falhou = false;
+  try {
+    await MP.criaCheckout({
+      uid: "00000000-0000-4000-8000-000000000001", email: "pagador@example.com",
+      plano: "pro", token: "mp-token", PLANOS: { pro: { nome: "Pro", preco: 24.9, periodo: "mes" } },
+      notificationUrl: "https://example.com/hook", backUrl: "https://example.com/retorno", idempotencyKey: "invalida",
+    }, f);
+  } catch { falhou = true; }
+  eq(falhou, true);
+  eq(chamou, false, "não deve chamar o MP sem chave de idempotência válida");
+});
+
+
+Deno.test("Mercado Pago: exige versão numérica do preapproval para alterar assinatura", () => {
+  const PLANOS = { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } };
+  const base = {
+    id: "sub-versioned",
+    external_reference: "gv1:00000000-0000-4000-8000-000000000001:pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    status: "authorized",
+    next_payment_date: "2026-12-19T00:00:00.000Z",
+  };
+  eq(MP.estadoDePreapproval({ ...base, version: 12 }, PLANOS).estado?.provedor_versao, 12);
+  eq(MP.estadoDePreapproval(base, PLANOS).ignorar, "versao_ausente_ou_invalida");
+  eq(MP.estadoDePreapproval({ ...base, version: -1 }, PLANOS).ignorar, "versao_ausente_ou_invalida");
+});
+
+
+Deno.test("checkout MP: impede criar segunda recorrência enquanto a assinatura anterior está ativa", () => {
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "ativo", provedor: "mercadopago", provedor_assinatura_id: "sub-atual" }), true);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "cancelado", provedor: "mercadopago", provedor_assinatura_id: "sub-anterior" }), false);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva({ status: "ativo", provedor: "mercadopago", provedor_assinatura_id: null }), false);
+  eq(MP.checkoutBloqueadoPorAssinaturaAtiva(null), false);
+});
+
+
+Deno.test("Mercado Pago: reutiliza checkout pendente do usuário sem enviar cancelamento", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method || "GET";
+    chamadas.push(method + " " + url);
+    if (url.includes("/preapproval/search?")) {
+      const email = new URL(url).searchParams.get("payer_email");
+      return new Response(JSON.stringify({ paging: { total: 2 }, results: email === "teste@exemplo.com" ? [
+        { id: "sub-pending", status: "pending", external_reference: "gv1:" + uid + ":pro" },
+        { id: "sub-other", status: "pending", external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro" },
+      ] : [] }), { status: 200 });
+    }
+    if (url.endsWith("/preapproval/sub-pending")) return new Response(JSON.stringify({
+      id: "sub-pending", version: 1, status: "pending", init_point: "https://www.mercadopago.com.br/checkout/pending",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    }), { status: 200 });
+    throw new Error("chamada inesperada " + method + " " + url);
+  }) as typeof fetch;
+  const r = await MP.consultaCheckoutsDoUsuario(uid, ["teste@exemplo.com"], ["pro", "pro_anual"], "token", {
+    pro: { preco: 24.9, periodo: "mes" }, pro_anual: { preco: 179, periodo: "ano" },
+  }, null, f);
+  eq(r, { pendentes: [{ id: "sub-pending", url: "https://www.mercadopago.com.br/checkout/pending", plano: "pro", criado: 0 }], autorizadas: [] });
+  eq(chamadas.filter((x) => x.startsWith("PUT ")).length, 0, "reutilização nunca envia PUT de cancelamento");
+});
+
+Deno.test("Mercado Pago: ignora candidato que foi autorizado antes da confirmação individual", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input); const method = init?.method || "GET"; chamadas.push(method + " " + url);
+    if (url.includes("/preapproval/search?")) return new Response(JSON.stringify({
+      paging: { total: 1 }, results: [{ id: "sub-race", status: "pending", external_reference: "gv1:" + uid + ":pro" }],
+    }), { status: 200 });
+    if (url.endsWith("/preapproval/sub-race")) return new Response(JSON.stringify({
+      id: "sub-race", version: 2, status: "authorized", init_point: "https://www.mercadopago.com.br/checkout/race",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    }), { status: 200 });
+    throw new Error("chamada inesperada " + method + " " + url);
+  }) as typeof fetch;
+  const r = await MP.consultaCheckoutsDoUsuario(uid, ["teste@exemplo.com"], ["pro"], "token", {
+    pro: { preco: 24.9, periodo: "mes" },
+  }, null, f);
+  eq(r, { pendentes: [], autorizadas: [{ id: "sub-race", plano: "pro", criado: 0 }] }, "assinatura autorizada durante a corrida é detectada e bloqueia nova compra");
+  eq(chamadas.filter((x) => x.startsWith("PUT ")).length, 0);
+});
+
+Deno.test("Mercado Pago: sincronização busca por e-mails conhecidos e valida external_reference localmente", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    const email = new URL(url).searchParams.get("payer_email");
+    const results = email === "antigo@exemplo.com" ? [
+      { id: "sub-outro", status: "authorized", external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro", last_modified: "2026-11-19T12:00:00Z" },
+      { id: "sub-certo", status: "authorized", external_reference: "gv1:" + uid + ":pro", last_modified: "2026-11-18T12:00:00Z" },
+    ] : [];
+    return new Response(JSON.stringify({ paging: { total: results.length }, results }), { status: 200 });
+  }) as typeof fetch;
+  const id = await MP.ultimaAssinatura(uid, ["novo@exemplo.com", "antigo@exemplo.com"], ["pro"], "token", f);
+  eq(id, "sub-certo");
+  eq(chamadas.length, 2);
+  if (chamadas.some((x) => x.includes("external_reference="))) throw new Error("não deve usar filtro não documentado");
+  if (!chamadas.some((x) => x.includes("payer_email=antigo%40exemplo.com"))) throw new Error("e-mail histórico não consultado");
+});
+
+
+
+Deno.test("Mercado Pago: reconcilia diretamente preapproval persistido mesmo antes de aparecer na busca por e-mail", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    if (url.endsWith("/preapproval/sub-registrado")) return new Response(JSON.stringify({
+      id: "sub-registrado", version: 3, status: "pending",
+      init_point: "https://www.mercadopago.com.br/checkout/registrado",
+      payer_email: "pagador@exemplo.com",
+      external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      date_created: "2026-11-20T00:00:00Z",
+    }), { status: 200 });
+    throw new Error("consulta direta inesperada: " + url);
+  }) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados(uid, [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-registrado",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.pendentes.length, 1);
+  eq(r.pendentes[0].id, "sub-registrado");
+  eq(r.pendentes[0].url, "https://www.mercadopago.com.br/checkout/registrado");
+  eq(r.autorizadas.length, 0);
+  eq(chamadas.length, 1, "usa o ID persistido sem depender da busca por e-mail");
+});
+
+Deno.test("Mercado Pago: reconciliação direta bloqueia assinatura autorizada já persistida", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-autorizado", version: 4, status: "authorized",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    date_created: "2026-11-20T00:00:00Z",
+  }), { status: 200 })) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados(uid, [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-autorizado",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.autorizadas.length, 1);
+  eq(r.autorizadas[0].id, "sub-autorizado");
+  eq(r.pendentes.length, 0);
+});
+
+Deno.test("Mercado Pago: reconciliação direta rejeita vínculo ou e-mail divergente", async () => {
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-divergente", version: 1, status: "pending",
+    init_point: "https://www.mercadopago.com.br/checkout/divergente",
+    payer_email: "outro@exemplo.com",
+    external_reference: "gv1:00000000-0000-4000-8000-000000000002:pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  const r = await MP.consultaCheckoutsRegistrados("00000000-0000-4000-8000-000000000001", [{
+    plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-divergente",
+  }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  eq(r.pendentes.length, 0);
+  eq(r.autorizadas.length, 0);
+});
+
+Deno.test("Mercado Pago: falha fechada quando ID persistido ainda retorna 404", async () => {
+  const f = (async () => new Response(JSON.stringify({ message: "not found" }), { status: 404 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados("00000000-0000-4000-8000-000000000001", [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-ainda-nao-visivel",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_checkout_registrado_ainda_nao_localizado"), true, "404 em ID persistido bloqueia nova cobrança");
+});
+
+Deno.test("Mercado Pago: falha fechada quando preapproval persistido não tem versão", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-sem-versao", status: "pending",
+    init_point: "https://www.mercadopago.com.br/checkout/sem-versao",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados(uid, [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-sem-versao",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_checkout_registrado_estado_nao_confirmado:versao_ausente_ou_invalida"), true, "versão ausente bloqueia nova cobrança");
+});
+
+Deno.test("Mercado Pago: falha fechada em status desconhecido de preapproval persistido", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const f = (async () => new Response(JSON.stringify({
+    id: "sub-status-novo", version: 5, status: "processing",
+    payer_email: "pagador@exemplo.com",
+    external_reference: "gv1:" + uid + ":pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+  }), { status: 200 })) as typeof fetch;
+  let erro = "";
+  try {
+    await MP.consultaCheckoutsRegistrados(uid, [{
+      plano: "pro", email_pagador: "pagador@exemplo.com", provedor_preapproval_id: "sub-status-novo",
+    }], "token", { pro: { preco: 24.9, periodo: "mes" } }, f);
+  } catch (e) { erro = String(e); }
+  eq(erro.includes("mp_checkout_registrado_estado_nao_confirmado:status_desconhecido:processing"), true, "status desconhecido bloqueia nova cobrança");
 });

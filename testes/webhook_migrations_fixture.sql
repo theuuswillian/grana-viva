@@ -1,4 +1,4 @@
--- Stubs de extensões para testar as migrations sem executar cron, HTTP ou acessar segredos reais.
+-- Fixture isolado de extensões e tabelas para testar migrations de webhook em PostgreSQL local.
 DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -42,8 +42,6 @@ create table public.wa_vinculo (
   telefone text,
   vinculado_em timestamptz default now()
 );
-
--- Quota diária usada pelo webhook; a chave mantém um contador por usuário/dia/tipo.
 create table public.ia_uso (
   user_id uuid not null,
   dia date not null,
@@ -52,9 +50,23 @@ create table public.ia_uso (
   primary key (user_id, dia, k)
 );
 
-
 create table public.wa_codigo (
   codigo text primary key,
   user_id uuid not null,
   expira timestamptz not null
+);
+
+-- Estrutura mínima para validar as RPCs de pagamento e a aplicação transacional.
+create schema auth;
+create table auth.users (id uuid primary key, email text);
+create table public.assinaturas (
+  user_id uuid primary key references auth.users(id),
+  plano text not null,
+  status text not null,
+  periodo_fim timestamptz,
+  provedor text,
+  provedor_assinatura_id text,
+  provedor_cliente_id text,
+  provedor_versao bigint,
+  atualizado_em timestamptz not null default now()
 );
