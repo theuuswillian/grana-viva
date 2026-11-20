@@ -267,7 +267,7 @@ Deno.test("Mercado Pago: reutiliza checkout pendente do usuário sem enviar canc
     }), { status: 200 });
     throw new Error("chamada inesperada " + method + " " + url);
   }) as typeof fetch;
-  const r = await MP.consultaCheckoutsDoUsuario(uid, "teste@exemplo.com", ["pro", "pro_anual"], "token", {
+  const r = await MP.consultaCheckoutsDoUsuario(uid, ["teste@exemplo.com"], ["pro", "pro_anual"], "token", {
     pro: { preco: 24.9, periodo: "mes" }, pro_anual: { preco: 179, periodo: "ano" },
   }, null, f);
   eq(r, { pendentes: [{ id: "sub-pending", url: "https://www.mercadopago.com.br/checkout/pending", plano: "pro", criado: 0 }], autorizadas: [] });
@@ -289,7 +289,7 @@ Deno.test("Mercado Pago: ignora candidato que foi autorizado antes da confirmaç
     }), { status: 200 });
     throw new Error("chamada inesperada " + method + " " + url);
   }) as typeof fetch;
-  const r = await MP.consultaCheckoutsDoUsuario(uid, "teste@exemplo.com", ["pro"], "token", {
+  const r = await MP.consultaCheckoutsDoUsuario(uid, ["teste@exemplo.com"], ["pro"], "token", {
     pro: { preco: 24.9, periodo: "mes" },
   }, null, f);
   eq(r, { pendentes: [], autorizadas: [{ id: "sub-race", plano: "pro", criado: 0 }] }, "assinatura autorizada durante a corrida é detectada e bloqueia nova compra");
