@@ -30,7 +30,7 @@ begin
   if ok then raise exception 'worker A não pode finalizar após B assumir'; end if;
 
   v := public.pagamento_evento_aplica_assinatura(
-    v_id, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence'
+    v_id, token_a, v_uid, 'pro', 'ativo', now()+interval '30 days', 'mp-sub-fence', 'payer-fence', 1
   );
   if v <> 'perdido' then raise exception 'worker A não pode aplicar assinatura: %', v; end if;
   if exists(select 1 from public.assinaturas where user_id=v_uid) then
