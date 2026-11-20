@@ -147,6 +147,7 @@ Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do le
         external_reference: "gv1:" + uid + ":pro",
         auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
         status: "authorized",
+        version: 1,
         next_payment_date: "2026-12-19T00:00:00.000Z",
         payer_id: "payer-1",
       }), { status: 200, headers: { "content-type": "application/json" } });
@@ -168,6 +169,7 @@ Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento
       external_reference: "gv1:" + uid + ":pro",
       auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
       status: "authorized",
+      version: 1,
       next_payment_date: "2026-12-19T00:00:00.000Z",
       payer_id: "payer-1",
     }), { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
@@ -218,4 +220,19 @@ Deno.test("checkout MP: rejeita intenção sem UUID antes de chamar o provedor",
   } catch { falhou = true; }
   eq(falhou, true);
   eq(chamou, false, "não deve chamar o MP sem chave de idempotência válida");
+});
+
+
+Deno.test("Mercado Pago: exige versão numérica do preapproval para alterar assinatura", () => {
+  const PLANOS = { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } };
+  const base = {
+    id: "sub-versioned",
+    external_reference: "gv1:00000000-0000-4000-8000-000000000001:pro",
+    auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+    status: "authorized",
+    next_payment_date: "2026-12-19T00:00:00.000Z",
+  };
+  eq(MP.estadoDePreapproval({ ...base, version: 12 }, PLANOS).estado?.provedor_versao, 12);
+  eq(MP.estadoDePreapproval(base, PLANOS).ignorar, "versao_ausente_ou_invalida");
+  eq(MP.estadoDePreapproval({ ...base, version: -1 }, PLANOS).ignorar, "versao_ausente_ou_invalida");
 });
