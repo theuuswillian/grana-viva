@@ -95,6 +95,7 @@ ok(T.S.tx.filter(t=>t.demo).length===7,'7 lançamentos de exemplo');
 ok(/Limpar exemplo/.test(view()),'faixa "Limpar exemplo" no Início');
 ok(/omniF/.test(view())&&/omniCam/.test(view()),'barra com frase + câmera');
 ok(/lmCard/.test(view()),'termômetro no Início');
+ok(/Definir meta/.test(view()),'meta de renda passiva acessível diretamente no Início');
 const g=T.gsExtratoHTML();ok(/class="dayH"/.test(g)&&/Hoje/.test(g),'extrato agrupado por dia com "Hoje"');
 ok(/txOrg o-wa/.test(g)&&/txOrg o-rec/.test(g)&&/txOrg o-ia/.test(g),'selos de origem IA / WhatsApp / Recibo');
 console.log('  rótulos:',T.diaRotulo(T.hojeSP()),'|',(()=>{const d=new Date();d.setDate(d.getDate()-3);return T.diaRotulo(d.toISOString().slice(0,10));})());
