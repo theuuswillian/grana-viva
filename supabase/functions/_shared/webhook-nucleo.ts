@@ -37,13 +37,28 @@ export async function processaWebhook(req: Request, d: Deps): Promise<Response> 
   const n = MP.lerNotificacao(url, body, req.headers);
   if (!n.dataId || !ID_OK.test(n.dataId)) return resp({ erro: "sem id" }, 400);
 
+  // Este produto cria preapprovals sem plano associado. Eventos de plano (subscription_preapproval_plan)
+  // não alteram a assinatura da conta; confirme recebimento sem exigir segredo nem reservar evento.
+  const topicosSuportados = new Set(["subscription_preapproval", "subscription_authorized_payment", "payment"]);
+  if (!topicosSuportados.has(n.topico)) {
+    log("tópico não utilizado, ignorado", n.topico);
+    return resp({ ok: true, resultado: "topico_ignorado" });
+  }
+
   const xs = req.headers.get("x-signature");
+  // A exceção interna só vale para a função assinatura -> sincronizar, com HMAC próprio,
+  // chave service-role e data.id vinculada. Webhooks externos exigem o segredo do Mercado Pago.
   const interno = !xs && await confereInterno(req.headers.get("x-gv-interno"), d.env.INTERNO_KEY, "mp-sync", n.dataId, agora);
-  if (d.env.MP_WEBHOOK_SECRET && !interno) {
-    if (!xs) { log("x-signature ausente com MP_WEBHOOK_SECRET configurado: recusado"); await d.erro?.("assinatura", "x-signature ausente"); return resp({ erro: "assinatura ausente" }, 401); }
+  if (!interno) {
+    if (!d.env.MP_WEBHOOK_SECRET) {
+      log("MP_WEBHOOK_SECRET ausente: webhook externo recusado por configuração incompleta");
+      await d.erro?.("assinatura", "MP_WEBHOOK_SECRET ausente");
+      return resp({ erro: "webhook não configurado" }, 503);
+    }
+    if (!xs) { log("x-signature ausente: recusado"); await d.erro?.("assinatura", "x-signature ausente"); return resp({ erro: "assinatura ausente" }, 401); }
     const v = await MP.validaAssinatura({ xSignature: xs, xRequestId: n.reqId, dataId: n.dataIdQuery || n.dataId, secret: d.env.MP_WEBHOOK_SECRET });
     if (!v.ok) { log("assinatura inválida", v.motivo); await d.erro?.("assinatura", "assinatura inválida " + v.motivo); return resp({ erro: "assinatura inválida" }, 401); }
-  } else log(xs ? "x-signature recebido sem MP_WEBHOOK_SECRET configurado: seguindo pela consulta à API" : "MP_WEBHOOK_SECRET não configurado: aviso sem assinatura conferida, seguindo pela consulta à API");
+  }
 
   const chave = ["mp", n.topico || "?", n.dataId, n.notifId || n.reqId || "sem-id", n.acao].join(":").slice(0, 200);
   const reserva = await d.db.reservaEvento(chave, { provedor, topico: n.topico, recurso_id: n.dataId });

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-bSveZ7sf0ZGI1HMlGyEaZVgabLnEE5MFCchw6GQdeYw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-lH/zy84Ts5qwXP1oAJQxdZzpo8nq/zDIOwombi2aOpw=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f1a">
@@ -696,6 +696,11 @@ body:has(#modal.on) #fab{display:none}
 .impRow select{margin-top:6px;padding:6px 8px;font-size:13px;max-width:100%}
 .impRow .val{font-weight:700;white-space:nowrap}
 .impRow.off{opacity:.5}.val.neu{color:var(--mut,#94a3b8)}.impTr{display:block;margin-top:6px;font-size:12px;color:#38bdf8}.impIgn{color:#f59e0b}
+.impHist{margin-top:14px}.impHistIc{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--a1);background:color-mix(in srgb,var(--a1) 12%,transparent);flex:none}
+.impHistRow{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid color-mix(in srgb,var(--txt) 8%,transparent)}
+.impHistRow .txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}.impHistRow .txt b{font-size:13px}.impHistRow .txt small{font-size:11.5px;color:var(--mut);overflow-wrap:anywhere}
+.impHistRow button{flex:none}.impHistRow button:disabled{opacity:.4;cursor:not-allowed}
+
 .badge.ok{color:#34d399}
 .aviso-card.venc{box-shadow:0 0 0 1px #ef4444,var(--shadow)}
 /* iPhone: respeita a área da barra de status e do indicador inferior (app instalado em tela cheia) */
@@ -3215,6 +3220,22 @@ button.rpT{cursor:pointer}
 html.claro .rpFx .i{color:#15803d}
 .rpFx p{margin:0;font-size:13px;line-height:1.4}
 .rpFx p .nw{color:var(--mut);font-size:12px}
+.rpMeta{margin-top:12px;padding:12px 13px;border:1px solid color-mix(in srgb,var(--a1) 28%,transparent);border-radius:13px;background:color-mix(in srgb,var(--a1) 5%,transparent)}
+.rpMetaTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rpMetaTop>b{font-size:13px}
+.rpMetaNums{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:10px}
+.rpMetaNums>b{font-size:17px;font-variant-numeric:tabular-nums}
+.rpMetaNums small{font-size:12px;color:var(--mut);font-weight:500}
+.rpMetaNums strong{font-size:13px;color:var(--a1)}
+.rpMetaBar{height:8px;margin-top:8px;border-radius:99px;overflow:hidden;background:color-mix(in srgb,var(--txt) 10%,transparent)}
+.rpMetaBar i{display:block;height:100%;border-radius:99px;background:var(--a1);transition:width .25s ease}
+.rpMeta>p{margin:8px 0 0;font-size:12px;line-height:1.4}
+.rpMeta>small{display:block;margin-top:5px;color:var(--mut);font-size:10.5px;line-height:1.35}
+.rpMetaProj{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--txt) 10%,transparent)}
+.rpMetaProj>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rpMetaProj>div small{font-size:10.5px;color:var(--mut)}
+.rpMetaProj>div b{font-size:14px;font-variant-numeric:tabular-nums}
+.rpMetaProj>p{grid-column:1/-1;margin:0;color:var(--mut);font-size:10.5px;line-height:1.4}
 .rpNota{margin:10px 0 0;font-size:11.5px;color:var(--mut);line-height:1.35}
 .rpEmpty{display:flex;gap:12px;align-items:flex-start;margin-top:10px}
 .rpEi{width:40px;height:40px;border-radius:12px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--a1);background:color-mix(in srgb,var(--a1) 13%,transparent)}
@@ -4017,7 +4038,7 @@ html.claro .waCmdB .i{color:#15803d}
 </div>
 
 <script>
-const GV_BUILD='10.168'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.171'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -4043,8 +4064,8 @@ const GV_BUILD='10.168'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.js é servido diretamente e versionado pelo bump.sh. -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.168"></script>
-<script defer src="app.js?v=10.168"></script>
+<script defer src="planos.js?v=10.171"></script>
+<script defer src="app.js?v=10.171"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});

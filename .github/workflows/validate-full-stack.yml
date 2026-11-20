@@ -2,6 +2,8 @@ name: Validate full stack
 on:
   push:
     branches:
+      - main
+      - implementacao/plano-evolucao-2026-11-20
       - revisao-lancamento-v10.165
       - correcoes/webhook-idempotencia-2026-11-18
       - correcoes/whatsapp-preservar-pendente-2026-11-18
@@ -24,6 +26,7 @@ on:
       - integracao/pagamentos-whatsapp-2026-11-20
   pull_request:
     branches:
+      - main
       - revisao-lancamento-v10.165
       - correcoes/webhook-idempotencia-2026-11-18
       - correcoes/whatsapp-preservar-pendente-2026-11-18
@@ -39,10 +42,14 @@ on:
       - auditoria/whatsapp-vinculo-atomico-integrado-2026-11-19
       - correcoes/pagamento-lease-fencing-2026-11-19
       - correcoes/checkout-idempotencia-2026-11-19
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   validate:
+    name: Full stack validation
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -70,6 +77,8 @@ jobs:
         run: node --check app.js
       - name: Validate inline script CSP hashes
         run: python3 csp.py index.html
+      - name: Validate PWA asset versions
+        run: node testes/pwa_version.test.cjs
       - name: Validate complete Pluggy removal from frontend and deployment assets
         run: node scripts/validate-remocao-pluggy.mjs
       - name: Check plan rules

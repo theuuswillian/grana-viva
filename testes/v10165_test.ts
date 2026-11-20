@@ -77,12 +77,88 @@ Deno.test("webhook MP: com MP_WEBHOOK_SECRET, x-signature inválida = 401", asyn
   const r = await processaWebhook(req({ "x-signature": "ts=1,v1=00", "x-request-id": "r1" }), { db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "s" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404 });
   eq(r.status, 401);
 });
-Deno.test("webhook MP: sem MP_WEBHOOK_SECRET segue pela API (não quebra) e é idempotente", async () => {
+
+Deno.test("Mercado Pago: parcela recusada mantém acesso durante a janela documentada de retentativas", async () => {
+  const uid = "00000000-0000-4000-8000-000000000001";
+  const chamadas: string[] = [];
+  const fetchFake = (async (input: RequestInfo | URL) => {
+    const url = String(input); chamadas.push(url);
+    if (url.endsWith("/authorized_payments/invoice-1")) return new Response(JSON.stringify({
+      id: "invoice-1", preapproval_id: "sub-1", status: "scheduled", summarized: "recycling",
+      payment: { id: 1001, status: "rejected", status_detail: "cc_rejected_other_reason" },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+    if (url.endsWith("/preapproval/sub-1")) return new Response(JSON.stringify({
+      id: "sub-1", version: 7, external_reference: "gv1:" + uid + ":pro",
+      auto_recurring: { currency_id: "BRL", transaction_amount: 24.9, frequency: 1, frequency_type: "months" },
+      status: "authorized", next_payment_date: "2026-11-20T12:00:00.000Z",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+    throw new Error("endpoint inesperado " + url);
+  }) as typeof fetch;
+  const dentro = await MP.buscaEstado("subscription_authorized_payment", "invoice-1", "token",
+    { pro: { preco: 24.9, periodo: "mes" } }, fetchFake, Date.parse("2026-11-29T12:00:00.000Z"));
+  eq(dentro.estado?.status, "ativo", "não retirar acesso durante os 10 dias de retentativa");
+  eq(dentro.estado?.periodo_fim, "2026-11-30T12:00:00.000Z");
+  const depois = await MP.buscaEstado("subscription_authorized_payment", "invoice-1", "token",
+    { pro: { preco: 24.9, periodo: "mes" } }, fetchFake, Date.parse("2026-12-01T12:00:00.000Z"));
+  eq(depois.estado?.status, "inadimplente", "após a janela de retentativa, parcela recusada pode marcar inadimplência");
+  eq(chamadas.length, 4, "cada consulta busca a fatura e confirma a assinatura diretamente no MP");
+});
+
+Deno.test("Mercado Pago: HMAC válido usa data.id, x-request-id e ts no manifesto", async () => {
+  // Vetor independente pré-calculado: HMAC-SHA256("test-secret", "id:123abc;request-id:req-42;ts:1700000000;").
+  const xSignature = "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a";
+  const ok = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "123abc", secret: "test-secret" });
+  eq(ok.ok, true, "assinatura legítima");
+  const requestAlterado = await MP.validaAssinatura({ xSignature, xRequestId: "req-43", dataId: "123abc", secret: "test-secret" });
+  eq(requestAlterado.ok, false, "request-id alterado");
+  const idAlterado = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "999abc", secret: "test-secret" });
+  eq(idAlterado.ok, false, "data.id alterado");
+  const segredoErrado = await MP.validaAssinatura({ xSignature, xRequestId: "req-42", dataId: "123abc", secret: "outro-segredo" });
+  eq(segredoErrado.ok, false, "segredo diferente");
+});
+
+Deno.test("webhook MP: HMAC legítimo atravessa a validação e só então reserva o evento", async () => {
+  const f = dbFalso();
+  const xSignature = "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a";
+  const r = await processaWebhook(req({ "x-signature": xSignature, "x-request-id": "req-42" }), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
+    PLANOS: {}, efetivo: () => ({}), fetch: fetch404,
+  });
+  eq(r.status, 200);
+  eq((await r.json()).resultado, "nao_encontrado");
+  eq(f.ev.size, 1, "evento reservado somente depois de validar a assinatura");
+});
+
+Deno.test("webhook MP: evento de plano não associado é confirmado sem bloquear o webhook", async () => {
+  const f = dbFalso();
+  const r = await processaWebhook(new Request(
+    "https://x/functions/v1/pagamento-webhook?provedor=mercadopago&type=subscription_preapproval_plan&data.id=plan-123",
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "subscription_preapproval_plan", data: { id: "plan-123" } }) },
+  ), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "segredo-configurado" },
+    PLANOS: {}, efetivo: () => ({}), fetch: fetch404,
+  });
+  eq(r.status, 200);
+  eq((await r.json()).resultado, "topico_ignorado");
+  eq(f.ev.size, 0, "evento sem efeito não reserva nem altera assinatura");
+});
+Deno.test("webhook MP: sem MP_WEBHOOK_SECRET recusa evento externo antes de reservar", async () => {
   const f = dbFalso(); const logs: string[] = [];
   const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404, log: (...a: unknown[]) => logs.push(a.join(" ")) };
-  const r1 = await processaWebhook(req(), d); eq(r1.status, 200); eq((await r1.json()).resultado, "nao_encontrado");
-  const r2 = await processaWebhook(req(), d); eq((await r2.json()).repetido, true, "reenvio do mesmo aviso não processa de novo");
-  if (!logs.some((l) => /MP_WEBHOOK_SECRET não configurado/.test(l))) throw new Error("sem log do segredo ausente");
+  const r = await processaWebhook(req(), d);
+  eq(r.status, 503);
+  eq(f.ev.size, 0, "configuração ausente não pode reservar evento");
+  if (!logs.some((l) => /MP_WEBHOOK_SECRET ausente/.test(l))) throw new Error("sem log da configuração ausente");
+});
+Deno.test("webhook MP: sincronização interna assinada funciona sem segredo externo e é idempotente", async () => {
+  const f = dbFalso(), k = "service-role-falsa";
+  const h = await assinaInterno(k, "mp-sync", "123abc");
+  const d = { db: f.db, env: { MP_ACCESS_TOKEN: "t", INTERNO_KEY: k }, PLANOS: {}, efetivo: () => ({}), fetch: fetch404 };
+  const r1 = await processaWebhook(req({ "x-gv-interno": h }), d);
+  eq(r1.status, 200);
+  eq((await r1.json()).resultado, "nao_encontrado");
+  const r2 = await processaWebhook(req({ "x-gv-interno": h }), d);
+  eq((await r2.json()).repetido, true, "reenvio interno não processa duas vezes");
 });
 Deno.test("webhook MP: chamada interna assinada (assinatura {sincronizar}) passa com o segredo configurado", async () => {
   const f = dbFalso(), k = "service-role-falsa";
@@ -113,8 +189,8 @@ Deno.test("webhook MP: evento já reservado e ainda em processamento não roda e
   const f = dbFalso();
   const db: DB = { ...f.db, async reservaEvento() { return { status: "pendente", token: "lease-other" }; } };
   let consultou = false;
-  const r = await processaWebhook(req(), {
-    db, env: { MP_ACCESS_TOKEN: "t" }, PLANOS: {}, efetivo: () => ({}),
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" }, PLANOS: {}, efetivo: () => ({}),
     fetch: (async () => { consultou = true; return new Response("{}", { status: 404 }); }) as unknown as typeof fetch,
   });
   eq(r.status, 503);
@@ -136,8 +212,8 @@ Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do le
       aplicou = true; return "aplicado";
     },
   };
-  const r = await processaWebhook(req(), {
-    db, env: { MP_ACCESS_TOKEN: "t" },
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
     PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
     efetivo: () => ({ nivel: 1 }),
     fetch: (async () => {
@@ -160,8 +236,8 @@ Deno.test("webhook MP: worker antigo não aplica assinatura após retomada do le
 Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento", async () => {
   const f = dbFalso();
   const uid = "00000000-0000-4000-8000-000000000001";
-  const r = await processaWebhook(req(), {
-    db: f.db, env: { MP_ACCESS_TOKEN: "t" },
+  const r = await processaWebhook(req({ "x-signature": "ts=1700000000,v1=1c0f3b936e0437ec690a36cc8158467cab2aca2cd69c72923cb3c4b7f957de8a", "x-request-id": "req-42" }), {
+    db: f.db, env: { MP_ACCESS_TOKEN: "t", MP_WEBHOOK_SECRET: "test-secret" },
     PLANOS: { pro: { preco: 24.9, periodo: "mes", nome: "Pro" } },
     efetivo: () => ({ nivel: 1 }),
     fetch: (async () => new Response(JSON.stringify({
@@ -178,6 +254,20 @@ Deno.test("webhook MP: worker proprietário aplica assinatura e conclui o evento
   eq(f.grav, 1);
 });
 
+
+Deno.test("Mercado Pago: confirmação de cancelamento aceita status canônico canceled", async () => {
+  const chamadas: string[] = [];
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    chamadas.push((init?.method || "GET") + " " + String(input));
+    if ((init?.method || "GET") === "PUT") return new Response("falha transitória", { status: 500 });
+    return new Response(JSON.stringify({ id: "sub-cancelada", status: "canceled" }), {
+      status: 200, headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  eq(await MP.cancelaConfirmando("sub-cancelada", "token", f), "ja_cancelada");
+  eq(chamadas.length, 2, "PUT falha e GET confirma o estado encerrado");
+  eq(chamadas[1].startsWith("GET "), true);
+});
 
 Deno.test("checkout MP: retries da mesma intenção reutilizam a chave idempotente", async () => {
   const keys: string[] = [];

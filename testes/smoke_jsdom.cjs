@@ -14,7 +14,7 @@ const q=()=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lte:()=>o,order:()=>o,rang
 w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},from:q,rpc:async()=>({data:null,error:null}),functions:{invoke:async()=>({data:{},error:null})},storage:{from:()=>({upload:async()=>({}),remove:async()=>({})})},channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
 w.eval(fs.readFileSync(R+'planos.js','utf8'));
 w.eval("var GV_BUILD='test';");
-const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,montaImport,confirmaImport,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
+const HOOK="\n;window.__t={get S(){return S},set S(v){S=v},sanea,limpaLegadoLocal,saldoTotal,ccFaturasLista,rpPorCota,rpMetaHTML,yocCalc,calcOps,irVendas,hojeISO,resetMemo:()=>{MEMO={};},forceLocalSave:()=>{clearTimeout(GL_T);GL_T=null;GL_PEND=true;CR_OK=true;LOC_BLOQ=false;return gravaLocalJa();},forceCipherWrite:()=>gravaCifrado('gv-crypto-fail-test','sensitive financial data'),cancelLocalSave:()=>{clearTimeout(GL_T);GL_T=null;},localCopyKey:KEY,readLocalCopy:async()=>await dadosIdb('readonly',st=>st.get(KEY)).catch(()=>null)||localStorage.getItem(KEY),go:typeof go!=='undefined'?go:null,render,demoPreenche,demoLimpa,conquistasDivHTML,gsExtratoHTML,limiteMesHTML,salvaRapidoIA,qcFecha,diaRotulo,hojeSP,ritmoMes,mesAtual,setUser:u=>{USER=u;PLANO_LIDO=true;},setMvp:()=>MVP_MODE,saldoLivre,fixosDoImport,lerOFX,lerCSV,conciliarSaldoImportacao,abreImport,montaImport,confirmaImport,impLoteAnalisa,viewBancos,prcDetecta,get IMP(){return IMP;},set IMP(v){IMP=v;},waResumoHTML,waCmdHTML,faturasAbertasHTML,checkoutUrlMercadoPago};\n";
 try{const src=fs.readFileSync(R+'app.js','utf8');const k=src.lastIndexOf('})();');w.eval(src.slice(0,k)+HOOK+src.slice(k));}
 catch(e){console.log('ERRO ao carregar app.js:',e.stack.split('\n').slice(0,4).join('\n'));process.exit(1);}
 const T=w.__t;
@@ -73,6 +73,22 @@ const yieldTeste=T.yocCalc(hoje).lista[0];
 ok(Math.abs(yieldTeste.recebido-10)<0.01,'yield on cost exclui provento anterior à entrada na carteira');
 const legadoYield={cotas:10,ops:[{tipo:'provento',data:hoje,valor:10}]};
 ok(Math.abs(T.rpPorCota(legadoYield,legadoYield.ops[0])-1)<0.001,'yield mantém compatibilidade com posição manual sem histórico de operações');
+const metaOriginal=T.S.cfg.metaRendaPassiva, prazoOriginal=T.S.cfg.metaRendaPrazoAnos, fiisOriginais=T.S.fiis;
+T.S.cfg.metaRendaPassiva=2000;T.S.cfg.metaRendaPrazoAnos=10;
+const metaHtml=T.rpMetaHTML({media:1000,mesAtual:1000});
+ok(/50%/.test(metaHtml)&&/Faltam/.test(metaHtml),'meta de renda passiva calcula progresso e valor restante');
+T.S.fiis=[{id:'meta-fii',tipo:'fii',ticker:'TST11',cotas:1000,preco:100,ops:[]}];
+const metaProj=T.rpMetaHTML({media:500,mediaN:12,mesAtual:500});
+ok(/Capital estimado/.test(metaProj)&&/Aporte mensal em 10 anos/.test(metaProj)&&/2[.]500,00/.test(metaProj),'meta estima capital e aporte mensal usando 12 meses realizados');
+delete T.S.cfg.metaRendaPassiva;
+ok(/Definir meta/.test(T.rpMetaHTML({media:null,mesAtual:0})),'meta de renda passiva oferece configuração no estado vazio');
+const metaSanea=T.sanea({cfg:{metaRendaPassiva:2500,metaRendaPrazoAnos:20}});
+ok(metaSanea.cfg.metaRendaPassiva===2500&&metaSanea.cfg.metaRendaPrazoAnos===20,'meta e prazo persistem na configuração sincronizada');
+const metaInvalida=T.sanea({cfg:{metaRendaPassiva:-1,metaRendaPrazoAnos:60}});
+ok(!Object.prototype.hasOwnProperty.call(metaInvalida.cfg,'metaRendaPassiva')&&!Object.prototype.hasOwnProperty.call(metaInvalida.cfg,'metaRendaPrazoAnos'),'meta e prazo inválidos são descartados na sanitização');
+if(metaOriginal!=null)T.S.cfg.metaRendaPassiva=metaOriginal;else delete T.S.cfg.metaRendaPassiva;
+if(prazoOriginal!=null)T.S.cfg.metaRendaPrazoAnos=prazoOriginal;else delete T.S.cfg.metaRendaPrazoAnos;
+T.S.fiis=fiisOriginais;
 S.fiis=[];
 ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
@@ -84,6 +100,23 @@ ok(T.S.tx.filter(t=>t.demo).length===7,'7 lançamentos de exemplo');
 ok(/Limpar exemplo/.test(view()),'faixa "Limpar exemplo" no Início');
 ok(/omniF/.test(view())&&/omniCam/.test(view()),'barra com frase + câmera');
 ok(/lmCard/.test(view()),'termômetro no Início');
+ok(/Definir meta/.test(view()),'meta de renda passiva acessível diretamente no Início');
+const metaOriginalForm=T.S.cfg.metaRendaPassiva,prazoOriginalForm=T.S.cfg.metaRendaPrazoAnos;
+doc.querySelector('[data-act="rp-meta"]').click();
+const metaForm=doc.querySelector('#mf');
+ok(!!metaForm&&/Em quantos anos deseja alcançar/.test(doc.querySelector('#modal').textContent),'ação da meta abre formulário com prazo');
+if(metaForm){
+  metaForm.querySelector('[name="valor"]').value='2000';
+  metaForm.querySelector('[name="prazo"]').value='0';
+  metaForm.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  ok(T.S.cfg.metaRendaPassiva===metaOriginalForm&&doc.querySelector('#modal').classList.contains('on'),'prazo zero é rejeitado sem salvar a meta');
+  metaForm.querySelector('[name="prazo"]').value='10';
+  metaForm.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  ok(T.S.cfg.metaRendaPassiva===2000&&T.S.cfg.metaRendaPrazoAnos===10,'formulário salva meta e prazo válidos');
+}
+if(metaOriginalForm!=null)T.S.cfg.metaRendaPassiva=metaOriginalForm;else delete T.S.cfg.metaRendaPassiva;
+if(prazoOriginalForm!=null)T.S.cfg.metaRendaPrazoAnos=prazoOriginalForm;else delete T.S.cfg.metaRendaPrazoAnos;
+T.render();
 const g=T.gsExtratoHTML();ok(/class="dayH"/.test(g)&&/Hoje/.test(g),'extrato agrupado por dia com "Hoje"');
 ok(/txOrg o-wa/.test(g)&&/txOrg o-rec/.test(g)&&/txOrg o-ia/.test(g),'selos de origem IA / WhatsApp / Recibo');
 console.log('  rótulos:',T.diaRotulo(T.hojeSP()),'|',(()=>{const d=new Date();d.setDate(d.getDate()-3);return T.diaRotulo(d.toISOString().slice(0,10));})());
@@ -120,6 +153,53 @@ const impHtml=doc.querySelector('#modal').innerHTML;
 ok(/Importar extrato/.test(impHtml)&&!/Lançamentos do banco|pular esta conta|não importar esta conta/.test(impHtml),'importação local sem controles da integração bancária');
 T.confirmaImport();
 ok(T.S.tx.length===nImport+1&&T.S.tx[T.S.tx.length-1].importado&&T.S.tx[T.S.tx.length-1].conta==='b1','CSV/OFX importa lançamento na conta selecionada');
+
+const ofxTeste='OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\n<OFX><BANKMSGSRSV1><STMTRS><BANKTRANLIST><STMTTRN><TRNTYPE>DEBIT\n<DTPOSTED>20261119000000\n<TRNAMT>-12.50\n<FITID>FIT-123\n<NAME>PADARIA CENTRAL\n</STMTTRN></BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>';
+const ofxLido=T.lerOFX(ofxTeste);
+ok(ofxLido.linhas.length===1&&ofxLido.linhas[0].fitid==='FIT-123'&&ofxLido.linhas[0].data==='2026-11-19','OFX SGML lê data, valor e FITID');
+const csvLido=T.lerCSV('Data;Valor;Descrição;FITID\n19/11/2026;-12,50;PADARIA CENTRAL;CSV-123');
+ok(csvLido.linhas.length===1&&csvLido.linhas[0].fitid==='CSV-123'&&csvLido.linhas[0].valor===-12.5,'CSV brasileiro com ponto e vírgula e FITID');
+const csvSemCabecalhoPadrao='Quando;Histórico;Montante R$;Identificação\n19/11/2026;PADARIA CENTRAL;-12,50;MOV-9';
+const csvPedeMapa=T.lerCSV(csvSemCabecalhoPadrao);
+ok(csvPedeMapa.mapear&&csvPedeMapa.cabecalho.length===4,'CSV com cabeçalhos desconhecidos solicita mapeamento em vez de falhar');
+const csvMapeado=T.lerCSV(csvSemCabecalhoPadrao,{data:0,desc:1,valor:2,id:3});
+ok(csvMapeado.linhas.length===1&&csvMapeado.linhas[0].desc==='PADARIA CENTRAL'&&csvMapeado.linhas[0].fitid==='MOV-9'&&csvMapeado.linhas[0].valor===-12.5,'mapeamento manual converte data, descrição, valor e identificador');
+const saldoOk=T.conciliarSaldoImportacao('100,00','87,50',[{valor:-12.5}]);
+const saldoDivergente=T.conciliarSaldoImportacao('100,00','88,00',[{valor:-12.5}]);
+ok(saldoOk.ok&&saldoOk.esperado===87.5,'conciliação valida saldo inicial + movimentos = saldo final');
+ok(!saldoDivergente.ok&&Math.abs(saldoDivergente.diferenca-0.5)<0.001,'conciliação identifica divergência sem arredondamento indevido');
+T.abreImport('mapeamento.csv',csvSemCabecalhoPadrao);
+ok(/Configurar CSV/.test(doc.querySelector('#modal').innerHTML),'CSV desconhecido abre tela de mapeamento');
+doc.querySelector('#csvMapContinuar').click();
+ok(/Importar extrato/.test(doc.querySelector('#modal').innerHTML)&&T.IMP.linhas.length===1,'confirmar mapeamento leva à prévia, sem importar automaticamente');
+T.IMP={nome:'saldo-divergente.csv',cartao:false,linhas:[{desc:'COMPRA TESTE',valor:-12.5,data:T.hojeSP()}],destino:'b:b1',conciliacao:saldoDivergente,conciliacaoAceita:false};
+T.montaImport();
+ok(!!doc.querySelector('#impConciliacaoAceita')&&doc.querySelector('#impOk').disabled,'divergência exige reconhecimento explícito antes de importar');
+doc.querySelector('#impConciliacaoAceita').click();
+ok(!doc.querySelector('#impOk').disabled,'usuário pode continuar após reconhecer divergência');
+const linhasLote=[{desc:'PADARIA A',valor:-23.5,data:T.hojeSP()},{desc:'CAFETERIA B',valor:-23.5,data:T.hojeSP()}];
+T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas.every(x=>x.on&&!x.dup),'compras diferentes com mesmo dia e valor não são duplicatas');
+T.confirmaImport();
+const loteTeste=T.S.cfg.impLotes[T.S.cfg.impLotes.length-1],txLote=T.S.tx.filter(x=>x.impLote===loteTeste.id);
+ok(!!loteTeste&&loteTeste.qtd===2&&txLote.length===2,'lote guarda metadados e associa os dois lançamentos');
+const estadoAntesSan=T.S;T.S=T.sanea(T.S);
+const analiseSan=T.impLoteAnalisa(loteTeste.id);T.S=estadoAntesSan;
+ok(analiseSan.removiveis.length===2,'hash de desfazer sobrevive ao saneamento e à sincronização');
+txLote[0].descricao='PADARIA A - corrigida pelo usuário';
+const analiseEdit=T.impLoteAnalisa(loteTeste.id);
+ok(analiseEdit.removiveis.length===1&&analiseEdit.preservados.length===1,'desfazer protege lançamento editado depois da importação');
+ok(/Importações recentes/.test(T.viewBancos()),'histórico de importações aparece em Bancos');
+T.IMP={nome:'lote-teste.csv',cartao:false,linhas:linhasLote.map(x=>Object.assign({},x)),destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas.every(x=>x.dup&&!x.on),'reimportar o mesmo CSV identifica os registros já importados');
+T.IMP={nome:'fitid-repetido.ofx',cartao:false,linhas:[
+  {desc:'COMPRA 1',valor:-10,data:'2026-11-18',fitid:'FIT-DUP'},
+  {desc:'COMPRA 2',valor:-11,data:'2026-11-19',fitid:'FIT-DUP'}
+],destino:'b:b1'};
+T.montaImport();
+ok(T.IMP.linhas[0].on&&T.IMP.linhas[1].dup&&!T.IMP.linhas[1].on,'FITID repetido no mesmo extrato é sinalizado e desmarcado');
 // regressão: recuperação de parcelas antigas usa apenas o histórico local e não chama código removido
 const txAntesParc=T.S.tx,cartoesAntesParc=T.S.cartoes;
 T.S.cartoes=[{id:'prc-card',fechamento:20,vencimento:27}];
@@ -137,4 +217,14 @@ T.go('inicio');doc.querySelector('#btnEye').click();ok(/•••••/.test(vi
 doc.querySelector('#btnEye').click();
 const e2=erros.filter(x=>!/Not implemented|Could not parse CSS|navigation/.test(x));
 if(e2.length)console.log('erros do jsdom:',e2.slice(0,8));
-setTimeout(()=>process.exit(process.exitCode||0),300);
+(async()=>{
+  // Segurança: sem Web Crypto/IndexedDB, nunca substitui a cópia anterior por JSON em texto puro.
+  const chave=T.localCopyKey,anterior='gve1:copia-anterior-preservada';
+  w.localStorage.setItem(chave,anterior);
+  await T.forceLocalSave();
+  const copiaSalva=await T.readLocalCopy();ok(copiaSalva==null||copiaSalva===anterior||(typeof copiaSalva==='string'&&copiaSalva.startsWith('gve1:')),'sem criptografia local, não grava dados em texto puro; cópia local ausente ou cifrada');
+  await T.forceCipherWrite();
+  const copiaAux=w.localStorage.getItem('gv-crypto-fail-test');ok(copiaAux===null||(typeof copiaAux==='string'&&copiaAux.startsWith('gve1:')),'gravaCifrado não faz fallback para texto puro');
+  T.cancelLocalSave();
+  setTimeout(()=>process.exit(process.exitCode||0),300);
+})().catch(e=>{console.error('falha no teste de criptografia local:',e);process.exit(1);});

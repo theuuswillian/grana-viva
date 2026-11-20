@@ -419,12 +419,13 @@ function isoTsOk(v){if(v==null||v==='')return undefined;if(typeof v==='number'&&
 function sanea(d){
   const o=Object.assign(vazio(),d&&typeof d==='object'?d:{});
   const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x==='object'):[];
-  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
+  o.tx=arr(o.tx).filter(t=>!t.pluggyId&&DATA_OK.test(String(t.data))&&!!dataOk(...String(t.data).slice(0,10).split('-'))&&(t.tipo==='receita'||t.tipo==='despesa'||t.tipo==='transf')).map(t=>Object.assign({},t,{id:sid(t.id),de:/^[bc]:/.test(String(t.de||''))?String(t.de).slice(0,2)+sid(String(t.de).slice(2)):'',para:/^b:/.test(String(t.para||''))?'b:'+sid(String(t.para).slice(2)):'',importado:!!t.importado,impLote:/^[A-Za-z0-9_|:.-]{1,80}$/.test(String(t.impLote||''))?String(t.impLote):'',impHash:/^\d{1,10}:-?\d{1,12}$/.test(String(t.impHash||''))?String(t.impHash):'',valor:c2(Math.abs(n0(t.valor))),pagoValor:c2(Math.abs(n0(t.pagoValor))),pagaEm:DATA_OK.test(String(t.pagaEm))?t.pagaEm:'',pagoConta:t.pagoConta?sid(t.pagoConta):'',invOp:t.invOp?String(t.invOp).replace(/[^A-Za-z0-9_|-]/g,'').slice(0,80):'',invRf:t.invRf?sid(t.invRf):'',parcela:parseInt(t.parcela,10)||0,parcelas:parseInt(t.parcelas,10)||0,grupo:t.grupo?sid(t.grupo):'',categoria:str(t.categoria,60)||'Outros',descricao:str(t.descricao,140),sub:str(t.sub,60).trim(),obs:str(t.obs,300),tags:limpaTags(t.tags),multa:enc(t.multa),juros:enc(t.juros),desconto:enc(t.desconto),anexos:limpaAnexos(t.anexos),cartao:t.cartao?sid(t.cartao):'',conta:t.conta?sid(t.conta):''}));
   o.fiis=arr(o.fiis).filter(f=>!f.pluggyInv).map(f=>Object.assign({},f,{id:sid(f.id),ticker:str(f.ticker,12).toUpperCase().replace(/[^A-Z0-9.]/g,''),nome:str(f.nome,80),cotas:Math.max(0,n0(f.cotas)),preco:Math.max(0,n0(f.preco)),dpc:Math.max(0,n0(f.dpc)),pago:Math.max(0,c2(f.pago)),diaPag:dia31(f.diaPag),realizado:c2(n0(f.realizado)),proventos:Math.max(0,c2(f.proventos)),ops:arr(f.ops).slice(0,2000).map(o=>Object.assign({id:sid(o.id),tipo:['inicial','compra','venda','provento'].includes(o.tipo)?o.tipo:'compra',data:DATA_OK.test(String(o.data))?o.data:'',qtd:Math.max(0,n0(o.qtd)),preco:Math.max(0,n0(o.preco)),taxas:Math.max(0,c2(o.taxas)),valor:Math.max(0,c2(o.valor)),custo:Math.max(0,c2(o.custo)),tx:o.tx?sid(o.tx):'',conta:o.conta?sid(o.conta):''},o.g?{g:sid(o.g)}:{}))},f.ap?{ap:arr(f.ap).slice(0,500).map(a=>({v:Math.max(0,c2(a&&a.v)),d:DATA_OK.test(String(a&&a.d))?a.d:'',p:Math.max(0,c2(a&&a.p!=null?a.p:a&&a.v)),ir:DATA_OK.test(String(a&&a.ir))?a.ir:(a&&a.d)||''})).filter(a=>a.d&&a.v>0)}:{},f.taxa!=null?{taxa:Math.max(-50,Math.min(300,n0(f.taxa)))}:{},f.prod!=null?{prod:str(f.prod,12)}:{}));
   if(o.cfg)delete o.cfg.pluggyIgn;
   o.tx.forEach(t=>{delete t.pluggyId;if(t.par&&typeof t.par==='object')delete t.par.pluggyId;});
   o.fiis.forEach(f=>delete f.pluggyInv);
   if(o.cfg&&o.cfg.radar!==undefined)o.cfg.radar=radarSaneia(o.cfg.radar); // v10.155: Radar
+  if(o.cfg){const mr=n0(o.cfg.metaRendaPassiva),mp=Math.round(n0(o.cfg.metaRendaPrazoAnos));if(mr>0&&isFinite(mr))o.cfg.metaRendaPassiva=c2(Math.min(1000000000,mr));else delete o.cfg.metaRendaPassiva;if(mp>=1&&mp<=50)o.cfg.metaRendaPrazoAnos=mp;else delete o.cfg.metaRendaPrazoAnos;} // meta mensal de renda passiva
   o.fiis.forEach(f=>{const a=n0(f.alvoP);if(a>0&&isFinite(a)){f.alvoP=Math.round(a*100)/100;f.alvoDir=f.alvoDir==='abaixo'?'abaixo':'acima';}else{delete f.alvoP;delete f.alvoDir;}}); // v10.111: alerta de preço
   o.metas=arr(o.metas).map(m=>Object.assign({},m,{id:sid(m.id),nome:str(m.nome,80),alvo:Math.max(0,c2(m.alvo)),atual:Math.max(0,c2(m.atual)),aporteMes:Math.max(0,c2(n0(m.aporteMes))),cdi:!!m.cdi,pctCdi:Math.min(300,Math.max(0,n0(m.pctCdi))),prazo:ymOk(m.prazo)}));
   /* v10.87: campos novos da meta validados um a um; alocação de um ativo entre metas nunca passa de 100% */
@@ -473,6 +474,19 @@ function sanea(d){
   o.gerados=obj(o.gerados);
   o.cfgTs={};Object.entries(obj(d&&d.cfgTs)).forEach(([k,v])=>{if(n0(v)>0&&k.length<=60)o.cfgTs[k]=n0(v);});
   o.cfg=Object.assign({tema:'escuro',accent:'verde'},obj(o.cfg));
+  o.cfg.impLotes=arr(o.cfg.impLotes).slice(-50).map(x=>({
+    id:/^[A-Za-z0-9_|:.-]{1,80}$/.test(String(x.id||''))?String(x.id):'',
+    data:isoTsOk(x.data)||'',
+    arquivo:x.arquivo==='OFX'?'OFX':'CSV',
+    destino:/^(b|c):[A-Za-z0-9_|:.-]{1,80}$/.test(String(x.destino||''))?String(x.destino):'',
+    qtd:Math.max(0,Math.min(3000,parseInt(x.qtd,10)||0)),
+    ligados:Math.max(0,Math.min(3000,parseInt(x.ligados,10)||0)),
+    recebidas:Math.max(0,Math.min(3000,parseInt(x.recebidas,10)||0)),
+    ignorados:Math.max(0,Math.min(3000,parseInt(x.ignorados,10)||0)),
+    desfeitoEm:isoTsOk(x.desfeitoEm)||'',
+    removidos:Math.max(0,Math.min(3000,parseInt(x.removidos,10)||0)),
+    preservados:Math.max(0,Math.min(3000,parseInt(x.preservados,10)||0))
+  })).filter(x=>x.id&&x.data);
   if(!(o.cfg.catsV>=2)){const i=o.cats.indexOf('Outros');const novas=CATS_NOVAS.filter(c=>!o.cats.includes(c));if(i>=0)o.cats.splice(i,0,...novas);else o.cats.push(...novas);o.cfg.catsV=2;}
   /* v10.95: a "meta de cotas" saiu de Investimentos. o número antigo (metaFii, de backups e da nuvem antiga) não se perde:
      fica em cfg.metaCotas {n, fim:''|'criada'|'dispensada'} e a aba Metas oferece virar uma meta comum (só se for diferente de 100, o padrão) */
@@ -495,7 +509,7 @@ const OWNER_KEY='gv-owner';
 function sessaoGuardadaId(){try{const r=JSON.parse(localStorage.getItem('sb-hydvhpfpvhopetqqjido-auth-token')||'null');return r&&r.user&&r.user.id||null;}catch(e){return null;}}
 /* ---------- v10.64: dados deste aparelho criptografados ----------
    AES-GCM 256. a chave é uma CryptoKey NÃO exportável guardada no IndexedDB: o app usa, mas ela não pode ser lida nem copiada.
-   quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. sem WebCrypto/IndexedDB, grava como antes. */
+   quem copiar o localStorage (backup, extensão, outro app) leva só texto embaralhado. se Web Crypto ou IndexedDB não estiver disponível, a cópia anterior é preservada e nenhum dado financeiro novo é gravado em texto puro. */
 const CR_PFX='gve1:';
 let CR_RAW=null,CR_OK=true,CR_KEY=null,CR_FALHOU=false,CR_TELA=false;const CR_G={};
 function crIdbOp(modo,fn){return new Promise((ok,er)=>{const r=indexedDB.open('gv-cripto',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onerror=()=>er(r.error);
@@ -509,13 +523,13 @@ async function crChave(criar){
 }
 function crB64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);}
 function crBin(s){const b=atob(s),n=b.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=b.charCodeAt(i);return u;} // v10.73: ~10x mais rápido que Uint8Array.from com função
-async function crCifra(txt){const k=await crChave(true);if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));
+async function crCifra(txt){const k=await crChave(true);if(!k)throw new Error('criptografia local indisponível');const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(txt)));return CR_PFX+crB64(iv)+':'+crB64(ct);}
 async function crDecifra(raw){const k=await crChave(false);if(!k)throw new Error('sem chave');const [iv,ct]=raw.slice(CR_PFX.length).split(':');
   return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:crBin(iv)},k,crBin(ct)));}
 /* grava cifrado; gravações mais novas da mesma chave vencem as antigas que ainda estavam cifrando */
 function gravaCifrado(chave,txt){const g=CR_G[chave]=(CR_G[chave]||0)+1;
-  return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;localStorage.setItem(chave,c||txt);},()=>{if(CR_G[chave]!==g)return;try{localStorage.setItem(chave,txt);}catch(e){}});}
+  return crCifra(txt).then(c=>{if(CR_G[chave]!==g)return;if(typeof c!=='string'||c.indexOf(CR_PFX)!==0)throw new Error('criptografia local indisponível; cópia anterior preservada');localStorage.setItem(chave,c);}).catch(e=>{if(CR_G[chave]!==g)return;avisoArmazenamento(e);});}
 function crCancela(chave){CR_G[chave]=(CR_G[chave]||0)+1;if(chave===KEY){clearTimeout(GL_T);GL_T=null;GL_PEND=false;}}
 async function leTalvezCifrado(chave){const raw=localStorage.getItem(chave);if(!raw)return null;return JSON.parse(raw.indexOf(CR_PFX)===0?await crDecifra(raw):raw);}
 /* v10.99: gravação agrupada. Vários salvar() seguidos (importar extrato, gerar parcelas, sincronizar) viram uma só
@@ -533,7 +547,7 @@ function gravaLocalJa(){
   if(!GL_PEND||!CR_OK||LOC_BLOQ)return;GL_PEND=false;
   try{const ac=ACCENTS[S.cfg.accent]||ACCENTS.verde,u=JSON.stringify({tema:S.cfg.tema,accent:S.cfg.accent,a1:ac[0],a2:ac[1]});if(localStorage.getItem('gv-ui')!==u)localStorage.setItem('gv-ui',u);}catch(e){}
   const g=CR_G[KEY]=(CR_G[KEY]||0)+1,txt=JSON.stringify(S);
-  return crCifra(txt).catch(()=>null).then(c=>{if(CR_G[KEY]!==g)return;return guardaCopia(c||txt);}).then(()=>{LOC_AVISOU=false;},e=>avisoArmazenamento(e));
+  return crCifra(txt).then(c=>{if(CR_G[KEY]!==g)return;if(typeof c!=='string'||c.indexOf(CR_PFX)!==0)throw new Error('criptografia local indisponível; cópia anterior preservada');return guardaCopia(c);}).then(()=>{LOC_AVISOU=false;},e=>avisoArmazenamento(e));
 }
 /* v10.106: a cópia local fica no localStorage (rápido). quando ele enche (QuotaExceededError; no Safari ~5 MB),
    a cópia passa para o IndexedDB (gv-dados), que tem bem mais espaço. ordem: grava no IndexedDB, marca gv-loc=idb,
@@ -3237,6 +3251,7 @@ function viewInicioMVP(){
   ${faturasAbertasHTML(true)}
   ${proxVencHTML()}
   ${patTotalHTML()}
+  ${rpMetaHTML(rpCalc())}
   ${dicaInstalarHTML(false)}`;
 }
 /* barra inteligente: frase (IA ou compra de ativo) + câmera do recibo no mesmo campo + lançamento manual */
@@ -3806,6 +3821,7 @@ function viewInicio(){
     <div class="legend"><span><i class="dot" style="background:${COR_REC()}"></i>receitas</span><span><i class="dot" style="background:${COR_DES()}"></i>despesas</span></div>
   </div>
   ${cartHTML}
+  ${rpMetaHTML(rpCalc())}
   ${dicaInstalarHTML(false)}`;
 }
 function proximosVenc(dias){const h=new Date();return vencEntre(hojeISO(),isoDe(new Date(h.getFullYear(),h.getMonth(),h.getDate()+dias)),true);}
@@ -4347,12 +4363,45 @@ function rpDetHTML(R,sel){
   ${m.ativos.length?m.ativos.map(a=>`<div class="rpRow" style="--tc:${TCOR[tipoOf(a.f)]||'var(--a1)'}">${assetIco(a.f.ticker,tipoOf(a.f))}<span class="rpRN"><b>${esc(a.f.ticker)}${a.f.cotas>0?'':' <em class="rpVend">vendido</em>'}</b><i class="rpRb"><i style="width:${(a.v/mx*100).toFixed(1)}%"></i></i></span><b class="nw">${brl(a.v)}</b></div>`).join(''):`<p class="rpVaz">Nenhum provento registrado em ${esc(nomeMesMin(m.ym))}.</p>`}`;
 }
 function rpSelPadrao(R){if(RP_SEL&&R.meses.some(m=>m.ym===RP_SEL))return RP_SEL;const c=R.meses.slice().reverse().find(m=>m.tot>0);return c?c.ym:R.atual;}
+function rpMetaHTML(R){
+  const meta=+S.cfg.metaRendaPassiva||0;
+  if(!(meta>0))return '<div class="rpMeta"><div class="rpMetaTop"><b>Meta de renda passiva</b><button type="button" class="btn2 sm" data-act="rp-meta">Definir meta</button></div><p>Defina quanto deseja receber por mês e acompanhe seu progresso com os proventos registrados.</p></div>';
+  const atual=R.media!=null?Math.max(0,+R.media||0):Math.max(0,+R.mesAtual||0);
+  const pct=Math.max(0,Math.min(100,atual/meta*100)),falta=Math.max(0,meta-atual);
+  const v=x=>OCULTO?'R$ •••••':brl(x);
+  const ativos=S.fiis.filter(f=>RP_TIPOS.includes(tipoOf(f))&&f.cotas>0);
+  const capital=ativos.reduce((a,f)=>a+cents(Math.max(0,+f.cotas||0)*Math.max(0,+f.preco||0)),0)/100;
+  const prazo=Math.max(1,Math.min(50,Math.round(+S.cfg.metaRendaPrazoAnos||10)));
+  const dy=R.mediaN>=12&&R.media>0&&capital>0?(R.media*12)/capital:0;
+  const capAlvo=dy>0?meta*12/dy:0;
+  const aporte=dy>0?Math.max(0,capAlvo-capital)/(prazo*12):null;
+  const proj=aporte==null
+    ?'<div class="rpMetaProj"><p>O aporte de referência aparecerá após 12 meses de histórico de proventos registrados.</p></div>'
+    :'<div class="rpMetaProj"><div><small>Capital estimado para a meta</small><b>'+v(capAlvo)+'</b></div><div><small>Aporte mensal em '+prazo+' anos</small><b>'+v(aporte)+'</b></div><p>Estimativa linear baseada no yield histórico dos últimos 12 meses. Não considera valorização, reinvestimento, impostos ou taxas e não representa garantia.</p></div>';
+  return '<div class="rpMeta"><div class="rpMetaTop"><b>Meta mensal</b><button type="button" class="btn2 sm" data-act="rp-meta">Editar</button></div>'
+    +'<div class="rpMetaNums"><b>'+v(atual)+' <small>de '+v(meta)+'</small></b><strong>'+(OCULTO?'•••%':Math.round(pct)+'%')+'</strong></div>'
+    +'<div class="rpMetaBar" role="progressbar" aria-label="Progresso da meta de renda passiva" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div>'
+    +'<p>'+(falta>0?'Faltam '+v(falta)+' por mês para atingir sua meta.':'Meta mensal atingida com base na renda registrada.')+'</p>'
+    +proj
+    +'<small>Base: '+(R.media!=null?'média dos proventos realizados':'proventos recebidos neste mês')+'; inclui FIIs, ações, ETFs e BDRs; não inclui projeções.</small></div>';
+}
+function rpMetaForm(){
+  const atual=+S.cfg.metaRendaPassiva||0;
+  form('Meta de renda passiva',[{name:'valor',label:'Quanto deseja receber por mês (R$)',value:atual?num(atual):'',inputmode:'decimal',placeholder:'ex.: 2000'},{name:'prazo',label:'Em quantos anos deseja alcançar (1 a 50)',value:S.cfg.metaRendaPrazoAnos||10,inputmode:'numeric'}],v=>{
+    const raw=String(v.valor||'').trim();
+    if(!raw){delete S.cfg.metaRendaPassiva;delete S.cfg.metaRendaPrazoAnos;salvar();render();toast('Meta removida');return;}
+    const prazoRaw=String(v.prazo==null?'':v.prazo).trim(),n=parseBR(raw),anos=prazoRaw===''?10:Math.round(n0(prazoRaw));
+    if(!(n>0)||n>1000000000)return 'Informe uma meta mensal válida.';
+    if(anos<1||anos>50)return 'Informe um prazo entre 1 e 50 anos.';
+    S.cfg.metaRendaPassiva=c2(n);S.cfg.metaRendaPrazoAnos=anos;salvar();render();toast('Meta de renda passiva salva');
+  });
+}
 function rpCardHTML(R){
   if(!R.temProv){
     const f=S.fiis.find(x=>RP_TIPOS.includes(tipoOf(x))&&x.cotas>0);
     return `<div class="card rpCard rpVazio"><div class="rpHead"><small>renda passiva</small></div>
       <div class="rpEmpty"><span class="rpEi">${I('chart')}</span><div><b>Sua renda passiva aparece aqui</b><p>${f?'Registre os proventos que caírem na conta: o app soma mês a mês, mostra quem pagou e estima o próximo mês.':'Adicione FIIs, ações, ETFs ou BDRs e registre os proventos para acompanhar quanto eles pagam por mês.'}</p>
-      ${f?`<button class="btn2 sm" data-act="prov-receber" data-id="${f.id}">${I('arrowDown')} registrar provento de ${esc(f.ticker)}</button>`:`<button class="btn2 sm" data-act="novo-fii">${I('plus')} adicionar ativo</button>`}</div></div></div>`;
+      ${f?`<button class="btn2 sm" data-act="prov-receber" data-id="${f.id}">${I('arrowDown')} registrar provento de ${esc(f.ticker)}</button>`:`<button class="btn2 sm" data-act="novo-fii">${I('plus')} adicionar ativo</button>`}</div>${rpMetaHTML(R)}</div></div>`;
   }
   const sel=rpSelPadrao(R),v=R.vari;
   const bt=x=>Math.abs(x)>=1e4?brlK(x):brl(x); // valores grandes encurtados para caber nos 3 blocos a 390 px
@@ -4361,6 +4410,7 @@ function rpCardHTML(R){
     <div class="rpHead"><small>renda passiva</small><span class="rpPill">${R.mediaN&&R.mediaN<12?'desde '+esc(nomeMesMin(R.primeiro)):'últimos 12 meses'}</span></div>
     <div class="rpTop"><div class="rpMain"><b class="nw">${R.media!=null?brl(R.media):brl(R.mesAtual)}</b><small>${R.media!=null?'por mês, em média'+(R.mediaN<12?' ('+R.mediaN+(R.mediaN===1?' mês':' meses')+')':''):'recebido este mês'} · <span class="nw">${brl(R.tot12)}</span> em 12 meses</small></div>
       ${v?`<span class="plPill ${v.pct>=0?'pos':'neg'}" title="12 meses contra os 12 anteriores">${v.pct>=0?'▲ +':'▼ '}${OCULTO?'•••%':num(v.pct)+'%'} <em>vs ano anterior</em></span>`:''}</div>
+    ${rpMetaHTML(R)}
     <div class="rpTiles">
       ${tile(esc(MESES_LONGO[+R.atual.slice(5,7)-1]),bt(R.mesAtual),'até hoje','rp-mes" data-id="'+R.atual,RP_VER==='mes'&&sel===R.atual)}
       ${tile('próximo mês',R.proj.tot>0?bt(R.proj.tot):'—','estimativa','rp-proj',RP_VER==='proj')}
@@ -5618,6 +5668,41 @@ function ccVira(id){
   document.addEventListener('click',e=>{if(dis&&e.target.closest&&e.target.closest('.ccCard')){dis=false;e.stopPropagation();e.preventDefault();}},true);
   document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.ccCard'))e.preventDefault();});
 })();
+function impLoteHash(t){
+  const x={id:t.id||'',tipo:t.tipo||'',valor:c2(t.valor),categoria:t.categoria||'',descricao:t.descricao||'',data:t.data||'',
+    conta:t.conta||'',cartao:t.cartao||'',forma:t.forma||'',de:t.de||'',para:t.para||'',status:t.status||'',trab:t.trab||'',
+    dataCompra:t.dataCompra||'',faturaKey:t.faturaKey||'',emp:t.emp||'',empDir:t.empDir||'',obs:t.obs||'',
+    tags:Array.isArray(t.tags)?t.tags:[],anexos:Array.isArray(t.anexos)?t.anexos:[],split:Array.isArray(t.split)?t.split:null,
+    importado:!!t.importado,impLote:t.impLote||''};
+  return hashObj(x);
+}
+function impLoteAnalisa(id){
+  const linhas=(S.tx||[]).filter(t=>t&&t.impLote===id);
+  const removiveis=linhas.filter(t=>t.impHash&&t.impHash===impLoteHash(t));
+  return {total:linhas.length,removiveis,preservados:linhas.filter(t=>!removiveis.includes(t))};
+}
+function impLoteHTML(){
+  const L=(S.cfg.impLotes||[]).slice(-8).reverse();if(!L.length)return '';
+  return `<div class="card impHist"><div class="row"><div class="txt"><h4>Importações recentes</h4><small>Desfaça um lote sem apagar lançamentos que você editou depois</small></div><span class="impHistIc">${I('refresh')}</span></div>
+    ${L.map(x=>{
+      const a=impLoteAnalisa(x.id),dest=x.destino.indexOf('b:')===0?S.bancos.find(b=>b.id===x.destino.slice(2)):S.cartoes.find(b=>b.id===x.destino.slice(2));
+      const tipo=x.destino.indexOf('c:')===0?'cartão':'conta',nome=dest?dest.nome:tipo;
+      const data=x.data.slice(0,10);
+      const resumo=x.desfeitoEm?'Desfeito: '+x.removidos+' removidos · '+x.preservados+' preservados':a.removiveis.length+' podem ser desfeitos'+(a.preservados.length?' · '+a.preservados.length+' protegidos':'');
+      return `<div class="impHistRow"><div class="txt"><b>${x.arquivo} · ${fmtData(data)}</b><small>${esc(nome)} · ${x.qtd} importados · ${x.ligados+x.recebidas} vinculados · ${x.ignorados} ignorados</small><small>${esc(resumo)}</small></div><button class="btn2 sm danger" data-act="imp-desfazer" data-id="${esc(x.id)}" ${x.desfeitoEm||!a.removiveis.length?'disabled':''}>Desfazer</button></div>`;
+    }).join('')}
+  </div>`;
+}
+function impLoteDesfazer(id){
+  const lote=(S.cfg.impLotes||[]).find(x=>x.id===id);if(!lote||lote.desfeitoEm)return;
+  const a=impLoteAnalisa(id);if(!a.removiveis.length){toast('Nenhum lançamento original sem alterações para desfazer.',true);return;}
+  confirma({titulo:'Desfazer importação?',texto:'Serão removidos '+a.removiveis.length+' lançamentos que continuam exatamente como foram importados. '+(a.preservados.length?a.preservados.length+' lançamento(s) editado(s) serão preservados.':'')+' O restante do extrato não será alterado.',ok:'Desfazer importação',perigo:true},()=>{
+    const ids=new Set(a.removiveis.map(t=>t.id));
+    S.tx=S.tx.filter(t=>!ids.has(t.id));
+    lote.desfeitoEm=new Date().toISOString();lote.removidos=a.removiveis.length;lote.preservados=a.preservados.length;
+    salvar();render();toast(lote.removidos+' removidos · '+lote.preservados+' preservados');
+  });
+}
 function viewBancos(){
   const total=S.bancos.reduce((a,b)=>a+saldoBanco(b),0);
   const pos=S.bancos.reduce((a,b)=>a+Math.max(0,saldoBanco(b)),0);
@@ -5643,7 +5728,8 @@ function viewBancos(){
     <div class="bkMeta"><div><small>contas</small><b>${ativos.length}${arqs.length?` <em>+${arqs.length} arq.</em>`:''}</b></div><div><small>principal</small><b>${main?esc(main.nome):'nenhuma'}</b></div>${sc?`<div><small>fora de banco</small><b class="${sc<0?'neg':''}">${sc<0?'−':'+'}${brl(Math.abs(sc))}</b></div>`:''}${sc?`<div><small>saldo total</small><b class="${st<0?'neg':''}">${brl(st)}</b></div>`:''}</div></div>`;})()+`
     <div class="grid2">${lst||'<div class="card"><p class="vazio">todas as contas estão arquivadas.</p></div>'}</div>
     ${arqs.length?`<details class="card arqBox"><summary>contas arquivadas (${arqs.length})</summary>${arqs.map(b=>`<div class="tx arqRow"><div class="txt"><b>${esc(b.nome)}</b><small>${esc(b.tipo||'conta')}${b.arqEm?' · arquivada em '+fmtData(b.arqEm):''}</small></div><div class="val ${saldoBanco(b)<0?'neg':''}">${brl(saldoBanco(b))}</div><div class="acts2"><button class="btn2 sm" data-act="desarq-banco" data-id="${b.id}">desarquivar</button><button class="btn2 sm danger" data-act="del-banco" data-id="${b.id}">excluir</button></div></div>`).join('')}<p class="small" style="margin:8px 0 0">o histórico continua no extrato e nos relatórios. o saldo delas ainda entra no total.</p></details>`:''}`
-    :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}`;
+    :vazioHTML('bank','Nenhuma conta ainda','Adicione seus bancos para ver quanto você tem no total e o saldo de cada um.','<button class="btn sm" data-act="novo-banco">+ conta</button>')}
+    ${impLoteHTML()}`;
 }
 /* v10.81: DM (emissora de cartões de loja) não é banco, mas aparece na escolha do cartão */
 const CC_EXTRA=[{c:'',n:'DM',d:'',t:'',sub:'cartão de loja · DMCard'}];
@@ -5855,25 +5941,27 @@ function splitCSV(line,sep){
     else if(ch==='"')q=true;else if(ch===sep){r.push(cur);cur='';}else cur+=ch;}
   r.push(cur);return r.map(x=>x.trim());
 }
-function lerCSV(txt){
-  const ls=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+function lerCSV(txt,mapa){
+  const ls=String(txt||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
   if(ls.length<2)return {linhas:[],cartao:false,erro:'Arquivo sem linhas.'};
-  const sep=(ls[0].split(';').length>ls[0].split(',').length)?';':',';
-  const h=splitCSV(ls[0],sep).map(norm);
-  const idx=re=>h.findIndex(x=>re.test(x));
-  const iD=idx(/^(data|date|dt)/),iV=idx(/^(valor|amount|value|quantia)/),iDesc=idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento)/),iId=idx(/^(identificador|id|fitid)$/);
-  /* v10.84: a planilha do próprio app tem "Dia trabalhado" (dd/mm/aaaa ou ISO); sem a coluna, segue como antes */
-  const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/);
-  const iTipo=idx(/^tipo$/); // v10.88: planilha do próprio app traz o tipo (transferência, empréstimo...)
-  if(iD<0||iV<0)return {linhas:[],cartao:false,erro:'Não encontrei as colunas de data e valor no CSV.'};
-  // Nubank cartão (date,title,amount): compras vêm positivas
-  const cartao=h[iD]==='date'&&h[iV]==='amount'&&h[iDesc]==='title';
-  const out=[];
-  ls.slice(1).forEach(l=>{const c=splitCSV(l,sep);const data=dataExt(c[iD]);let valor=numExt(c[iV]);
-    if(!data||isNaN(valor))return;if(cartao)valor=-valor;
-    /* v10.52: fitid vem do arquivo: só caracteres seguros (senão vira id novo na importação) */
-    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]).replace(/[^A-Za-z0-9_.\-:|]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
-  return {linhas:out,cartao};
+  const primeira=ls[0],sep=splitCSV(primeira,';').length>=splitCSV(primeira,',').length?';':',';
+  const cab=splitCSV(primeira,sep),h=cab.map(norm),idx=re=>h.findIndex(x=>re.test(x));
+  const auto={data:idx(/^(data|date|dt)/),valor:idx(/^(valor|amount|value|quantia|montante|total)/),desc:idx(/(descri|title|titulo|historico|memo|estabelecimento|lancamento|detalhe|nome)/),id:idx(/^(identificador|id|fitid|codigo|referencia|documento)$/)};
+  if(!mapa&&(auto.data<0||auto.valor<0))return {linhas:[],cartao:false,mapear:true,cabecalho:cab,separador:sep,sugestoes:auto};
+  const m=mapa||auto,iD=Number(m.data),iV=Number(m.valor),valido=i=>Number.isInteger(i)&&i>=0&&i<cab.length;
+  if(!valido(iD)||!valido(iV)||iD===iV)return {linhas:[],cartao:false,erro:'Selecione colunas diferentes e válidas para data e valor.'};
+  const iDesc=valido(Number(m.desc))?Number(m.desc):auto.desc,iId=valido(Number(m.id))?Number(m.id):auto.id;
+  const iTrab=idx(/^(dia trabalhado|data trabalhada|trabalhado em|competencia)$/),iTipo=idx(/^tipo$/);
+  const cartao=h[iD]==='date'&&h[iV]==='amount'&&iDesc>=0&&h[iDesc]==='title';
+  const out=[];let invalidas=0;
+  ls.slice(1).forEach(l=>{const c=splitCSV(l,sep),data=dataExt(c[iD]);let valor=numExt(c[iV]);if(!data||isNaN(valor)){invalidas++;return;}if(cartao)valor=-valor;
+    out.push({data,valor,desc:iDesc>=0?c[iDesc]:'',fitid:iId>=0?String(c[iId]||'').replace(/[^A-Za-z0-9_.:|-]/g,'').slice(0,90):'',trab:iTrab>=0&&!cartao&&valor>0?dataExt(c[iTrab]):'',tipoPlan:iTipo>=0?norm(c[iTipo]).slice(0,30):''});});
+  return {linhas:out,cartao,invalidas,colunas:cab.length};
+}
+function conciliarSaldoImportacao(inicial,final,linhas){
+  const ini=numExt(inicial),fim=numExt(final);if(!isFinite(ini)||!isFinite(fim))return {disponivel:false,ok:true};
+  const movimento=(linhas||[]).reduce((s,l)=>s+cents(Number(l&&l.valor)||0),0),esperado=cents(ini)+movimento,diferenca=cents(fim)-esperado;
+  return {disponivel:true,ok:Math.abs(diferenca)<=1,inicial:cents(ini)/100,final:cents(fim)/100,movimento:movimento/100,esperado:esperado/100,diferenca:diferenca/100};
 }
 const REGRAS_CAT=[
   [/ifood|rappi|99 ?food|ze delivery|aiqfome|james delivery|delivery/,'Delivery'],
@@ -5930,7 +6018,12 @@ function catSugerida(desc,tipo){
   return S.cats.includes('Outros')?'Outros':S.cats[0];
 }
 const IGNORA_RE=[[/pagamento (de )?fatura|pgto fatura|pag fatura|fatura (do )?cartao/,'pagamento de fatura (as compras do cartão já contam)'],[/aplicacao|resgat|rdb|cdb|poupanca|caixinha|guardad|renda variavel|renda fixa|de investimentos|saldo de investimentos/,'movimentação de investimento ou caixinha'],[/transferencia (enviada|recebida) .*(mesma titularidade|propria)|entre contas/,'transferência entre suas contas']];
-function idImport(destino,l){const k=destino+'|'+(l.fitid||(l.data+'|'+l.valor+'|'+norm(l.desc)));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
+function idImport(destino,l){const k=destino+'|'+(l.fitid?'FITID:'+l.fitid:'FP:'+l.data+'|'+cents(l.valor)+'|'+norm(l.desc));let h=2166136261;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619);}return 'imp-'+(h>>>0).toString(36)+'-'+k.length.toString(36);}
+function impMesmoDestino(t,d){
+  const id=String(d||'').slice(2);if(!id)return false;
+  if(d.indexOf('c:')===0)return t.cartao===id;
+  const k='b:'+id;return t.conta===id||t.de===k||t.para===k;
+}
 let IMP=null;
 /* v10.17: dinheiro entre contas suas (seu nome, corretoras, câmbio) não é receita nem despesa */
 function nomeProprio(){const md=(USER&&USER.user_metadata)||{};const n=norm(String(md.full_name||md.name||S.cfg.nomeCompleto||''));return n.split(/\s+/).filter(Boolean).length>=2?n:'';}
@@ -6050,13 +6143,42 @@ async function importarExtratoIA(f){
   finally{iaTrava('extrato',false);}
 }
 function abreImport(nome,txt){
-  const r=/<OFX>|OFXHEADER/i.test(txt)?lerOFX(txt):lerCSV(txt);
+  const ofx=/<OFX>|OFXHEADER/i.test(txt),r=ofx?lerOFX(txt):lerCSV(txt);
+  if(r.mapear){abreMapeamentoCSV(nome,txt,r);return;}
   if(r.erro){toast(r.erro,true);return;}
-  if(!r.linhas.length){toast('Não encontrei lançamentos nesse arquivo.',true);return;}
-  IMP={nome,cartao:r.cartao,linhas:r.linhas.slice(0,3000),destino:''};
-  if(r.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
-  else if(!r.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
+  abreImportParsed(nome,r);
+}
+function abreImportParsed(nome,r,conciliacao){
+  if(!r||!r.linhas||!r.linhas.length){toast('Não encontrei lançamentos válidos nesse arquivo.',true);return;}
+  IMP={nome,cartao:!!r.cartao,linhas:r.linhas.slice(0,3000),destino:'',conciliacao:conciliacao||null,conciliacaoAceita:false};
+  if(IMP.cartao&&cartoesAtivos().length)IMP.destino='c:'+cartoesAtivos()[0].id;
+  else if(!IMP.cartao&&bancosAtivos().length)IMP.destino='b:'+((S.bancos.find(b=>b.principal)||bancosAtivos()[0]).id);
   montaImport();
+}
+function abreMapeamentoCSV(nome,txt,r){
+  const box=$('#modal'),cols=r.cabecalho||[],opts=cols.map((c,i)=>'<option value="'+i+'">'+(i+1)+'. '+esc(c||'(sem título)')+'</option>').join('');
+  const field=(id,label,required)=>'<label>'+label+(required?' *':'')+'<select id="'+id+'">'+(required?'':'<option value="">não importar</option>')+opts+'</select></label>';
+  box.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="Mapear colunas do CSV"><div class="sh-head"><h3>Configurar CSV</h3><button class="x" data-act="fechar" aria-label="fechar">'+I('close')+'</button></div>'+
+    '<p class="small">'+esc(nome)+' · '+cols.length+' colunas detectadas. Escolha onde estão os dados; nada será importado nesta etapa.</p>'+
+    '<div class="formGrid">'+field('csvColData','Data',true)+field('csvColValor','Valor',true)+field('csvColDesc','Descrição',false)+field('csvColId','Identificador (FITID)',false)+'</div>'+
+    '<p class="small"><b>Conciliação opcional</b> · saldo inicial + movimentações deve resultar no saldo final.</p>'+
+    '<div class="formGrid"><label>Saldo inicial (R$)<input id="csvSaldoInicial" inputmode="decimal" placeholder="ex.: 1.250,00"></label><label>Saldo final (R$)<input id="csvSaldoFinal" inputmode="decimal" placeholder="ex.: 980,00"></label></div>'+
+    '<p class="small" id="csvMapErro" role="status"></p><button class="btn full" id="csvMapContinuar">Conferir lançamentos</button></div>';
+  box.classList.add('on');
+  const set=(id,v)=>{const el=box.querySelector('#'+id);if(el&&Number.isInteger(v)&&v>=0)el.value=String(v);};
+  set('csvColData',r.sugestoes.data);set('csvColValor',r.sugestoes.valor);set('csvColDesc',r.sugestoes.desc);set('csvColId',r.sugestoes.id);
+  box.querySelector('#csvMapContinuar').onclick=()=>{
+    const data=box.querySelector('#csvColData').value,valor=box.querySelector('#csvColValor').value;
+    if(data===''||valor===''||data===valor){box.querySelector('#csvMapErro').textContent='Selecione colunas diferentes para data e valor.';return;}
+    const mapa={data:+data,valor:+valor,desc:box.querySelector('#csvColDesc').value===''?-1:+box.querySelector('#csvColDesc').value,id:box.querySelector('#csvColId').value===''?-1:+box.querySelector('#csvColId').value};
+    const parsed=lerCSV(txt,mapa);
+    if(parsed.erro||!parsed.linhas.length){box.querySelector('#csvMapErro').textContent=parsed.erro||'Nenhuma linha válida. Confira as colunas e o formato das datas/valores.';return;}
+    const si=box.querySelector('#csvSaldoInicial').value.trim(),sf=box.querySelector('#csvSaldoFinal').value.trim();
+    if(!!si!==!!sf){box.querySelector('#csvMapErro').textContent='Para conciliar, informe os dois saldos ou deixe ambos vazios.';return;}
+    const conc=si&&sf?conciliarSaldoImportacao(si,sf,parsed.linhas):null;
+    if(conc&&!conc.disponivel){box.querySelector('#csvMapErro').textContent='Não consegui interpretar os saldos. Use valores como 1.250,00.';return;}
+    abreImportParsed(nome,parsed,conc);
+  };
 }
 /* v10.95: número da parcela escrito na descrição do banco. só com a palavra parc/parcela (dd/mm solto é data, não parcela) */
 function parcelaDesc(desc){const m=String(desc||'').match(/parc(?:ela)?\.?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i);if(!m)return null;const k=+m[1],n=+m[2];return k>=1&&n>=2&&n<=48&&k<=n?{k,n}:null;}
@@ -6075,7 +6197,7 @@ function parcelaDataBanco(c,l,linhas){
 }
 function montaImport(){
   const d=IMP.destino,ehCartao=d.indexOf('c:')===0,ehConta=d.indexOf('b:')===0,usados=new Set();
-  const idOcc=new Map(); // v10.123: linhas iguais no mesmo arquivo ganham ids diferentes (antes viravam um lançamento só)
+  const idOcc=new Map(),fitids=new Set(); // mantém linhas distintas e detecta FITID repetido dentro do mesmo extrato
   IMP.linhas.forEach(l=>{
     l.tipo=l.valor<0?'despesa':'receita';
     l.transf=ehCartao&&l.valor<0&&/limite convertido|credito do limite|saldo .*limite/.test(norm(l.desc));
@@ -6089,7 +6211,9 @@ function montaImport(){
     l.parc=ehCartao&&l.tipo==='despesa'?parcelaDesc(l.desc):null;
     if(l.parc&&l.parc.k>=2){const cc=S.cartoes.find(x=>x.id===d.slice(2));const nd=cc?parcelaDataBanco(cc,l,IMP.linhas):l.data;if(nd!==l.data){l.data0=l.data;l.data=nd;}}
     const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&!(t.tipo==='receita'&&t.status==='previsto'&&!t.importado&&!t.impId)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&parcelaIgual(t,l));
+    const fk=l.fitid?d+'|'+l.fitid:'',dupFitid=!!fk&&fitids.has(fk);if(fk)fitids.add(fk);
+    const descNorm=norm(l.desc||'').replace(/\s+/g,' ').trim();
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&impMesmoDestino(t,d)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&norm(t.bancoDesc||t.descricao||'').replace(/\s+/g,' ').trim()===descNorm&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
@@ -6110,8 +6234,9 @@ function montaImport(){
        (antes as faturas viravam despesas duplicadas e a transferência virava receita) */
     const trPlan=/transfer|emprest|devolu/.test(l.tipoPlan||'');
     const dupPlan=!dup&&((trPlan&&S.tx.some(t=>t.tipo==='transf'&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))))||(/^fatura\b/.test(n)&&S.tx.some(t=>t.faturaKey&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor)))));
-    if(dup||dupT||dupPlan)l.dup=true; // v10.54: linha repetida no arquivo continua marcada, só com aviso
-    if(dup||dupPlan)ign='já está no app';
+    if(dup||dupT||dupPlan||dupFitid)l.dup=true;
+    if(dupFitid)ign='FITID repetido neste arquivo';
+    else if(dup||dupPlan)ign='já está no app';
     else if(trPlan)ign='transferência ou empréstimo na planilha · confira antes de importar';
     else if(pv)ign='é a receita prevista '+(nomeTx(pv).n||pv.descricao||pv.categoria).slice(0,40)+' (recebe '+fmtDataCurta(pv.data)+') · fica marcada como recebida';
     else if(vmt)ign='já lançado como guardado na meta '+((S.metas.find(x=>x.id===vmt.meta)||{}).nome||'').slice(0,30)+' · fica ligado ao do banco';
@@ -6121,8 +6246,8 @@ function montaImport(){
     else if(ehCartao&&l.valor>0)ign='pagamento ou estorno no cartão';
     else for(const [re,m] of IGNORA_RE){if(re.test(n)){ign=m;break;}}
     if(l.cat==null||l._d!==d){l.cat=l.transf||l.propria?'Transferência':catSugerida(l.desc,l.tipo);l.cat0=l.cat;}
-    if(l._d!==d){l.on=!ign||dupLinha;l._d=d;}
-    l.ign=ign;l.dup=dup||dupT||dupPlan||!!vm||!!pv||!!vmt;if(vm||pv||vmt)l.on=false;
+    if(l._d!==d){l.on=!ign||dupLinha&&!dupFitid;l._d=d;}
+    l.ign=ign;l.dup=dup||dupT||dupPlan||dupFitid||!!vm||!!pv||!!vmt;if(vm||pv||vmt||dupFitid)l.on=false;
   });
   if(IMP.silent)return; // v10.56: conta já conhecida, entra direto e vai para Revisar
   const opts=[].concat(bancosAtivos().map(b=>`<option value="b:${b.id}" ${d==='b:'+b.id?'selected':''}>conta · ${esc(b.nome)}</option>`),cartoesAtivos(d.indexOf('c:')===0&&d.slice(2)).map(c=>`<option value="c:${c.id}" ${d==='c:'+c.id?'selected':''}>cartão · ${esc(c.nome)}</option>`)).join('');
@@ -6132,16 +6257,18 @@ function montaImport(){
   box.innerHTML=`<div class="sheet impSheet" role="dialog" aria-modal="true" aria-label="Importar extrato"><div class="sh-head"><h3>Importar extrato</h3><button class="x" data-act="fechar" aria-label="fechar">${I('close')}</button></div>
     <p class="small">${esc(IMP.nome)} · ${IMP.linhas.length} lançamentos${IMP.cartao?' · extrato de cartão':''}</p>
     ${opts?`<label>Lançar em<select id="impDest">${opts}</select></label>`:'<p class="aviso">Cadastre uma conta em Bancos ou um cartão antes de importar.</p>'}
+    ${IMP.conciliacao&&IMP.conciliacao.disponivel?( !IMP.conciliacao.ok ? '<div class="aviso warn">Atenção: saldo inicial + movimentações = '+brl(IMP.conciliacao.esperado)+', mas o extrato informa '+brl(IMP.conciliacao.final)+'. Diferença: '+brl(IMP.conciliacao.diferenca)+'. Confira antes de continuar.</div><label class="small"><input type="checkbox" id="impConciliacaoAceita" '+(IMP.conciliacaoAceita?'checked':'')+'> Conferi a divergência e quero continuar mesmo assim.</label>' : '<p class="small">Saldo conciliado: '+brl(IMP.conciliacao.final)+' ✓</p>') : ''}
     <div class="row small impTop"><span id="impResumo">${sel.length} selecionados · saldo ${tot>=0?'+':''}${brl(tot)}</span><span class="row" style="gap:6px"><button class="btn2 sm" data-imp="todos">marcar todos</button><button class="btn2 sm" data-imp="nenhum">nenhum</button></span></div>
     <div class="lista impList">${IMP.linhas.map((l,i)=>`<div class="tx impRow ${l.on?'':'off'}">
       <input type="checkbox" data-i="${i}" ${l.on?'checked':''} aria-label="importar ${esc(l.desc)}">
       <div class="txt"><b>${esc(l.desc||'(sem descrição)')}</b><small>${fmtData(l.data)}${l.trab&&l.valor>0?' · trabalhado '+fmtDataCurta(l.trab):''}${l.ign?' · <span class="impIgn">'+esc(l.ign)+'</span>':''}</small>
         ${l.propria?`<span class="impTr">entre contas suas · não conta como ${l.valor>0?'receita':'despesa'}</span>`:l.transf?`<span class="impTr">transferência para</span><select data-p="${i}" aria-label="conta de destino">${bancosAtivos().map(b=>`<option value="b:${b.id}" ${l.para==='b:'+b.id?'selected':''}>${esc(b.nome)}</option>`).join('')}</select>`:`<select data-c="${i}" aria-label="categoria">${catOpts(l.cat,l.tipo)}</select>`}${l.empSug&&!l.vinc?(()=>{const e=empPorId(l.empSug);if(!e)return '';return `<label class="impEmp"><input type="checkbox" data-emp="${i}" ${l.empOk?'checked':''}><span>${l.valor>0?'É devolução do empréstimo de '+esc(primeiroNome(e.pessoa))+'?':'É empréstimo para '+esc(primeiroNome(e.pessoa))+' (vai voltar)?'}<small>${l.valor>0?'falta '+brl(empTot(e.id).aberto)+' · ':''}não conta como ${l.valor>0?'receita':'gasto'}</small></span></label>`;})():''}</div>
       <div class="val ${l.valor<0?'neg':'pos'}">${l.valor<0?'-':'+'}${brl(Math.abs(l.valor))}</div></div>`).join('')}</div>
-    <button class="btn full" id="impOk" ${opts&&sel.length?'':'disabled'}>importar ${sel.length} lançamentos</button>
+    <button class="btn full" id="impOk" ${opts&&sel.length&&(!IMP.conciliacao||IMP.conciliacao.ok||IMP.conciliacaoAceita)?'':'disabled'}>importar ${sel.length} lançamentos</button>
   </div>`;
   box.classList.add('on');
   const ds=$('#impDest');if(ds)ds.onchange=()=>{IMP.destino=ds.value;montaImport();};
+  const conc=$('#impConciliacaoAceita');if(conc)conc.onchange=()=>{IMP.conciliacaoAceita=conc.checked;resumoImp();};
   box.querySelectorAll('input[data-i]').forEach(c=>c.onchange=()=>{IMP.linhas[+c.dataset.i].on=c.checked;c.closest('.impRow').classList.toggle('off',!c.checked);resumoImp();});
   box.querySelectorAll('select[data-c]').forEach(s=>s.onchange=()=>{IMP.linhas[+s.dataset.c].cat=s.value;});
   box.querySelectorAll('input[data-emp]').forEach(c=>c.onchange=()=>{const l=IMP.linhas[+c.dataset.emp];l.empOk=c.checked;if(c.checked&&!l.on){l.on=true;const ck=box.querySelector('input[data-i="'+c.dataset.emp+'"]');if(ck){ck.checked=true;ck.closest('.impRow').classList.remove('off');}resumoImp();}});
@@ -6150,7 +6277,7 @@ function montaImport(){
     const v=b.dataset.imp==='todos';IMP.linhas.forEach(l=>{if(!l.dup)l.on=v;});montaImport();});
   const ok=$('#impOk');if(ok)ok.onclick=confirmaImport;
 }
-function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length;}
+function resumoImp(){const sel=IMP.linhas.filter(l=>l.on),tot=sel.reduce((a,l)=>a+cents(l.valor),0)/100;$('#impResumo').textContent=sel.length+' selecionados · saldo '+(tot>=0?'+':'')+brl(tot);const ok=$('#impOk');ok.textContent='importar '+sel.length+' lançamentos';ok.disabled=!sel.length||!!(IMP.conciliacao&&IMP.conciliacao.disponivel&&!IMP.conciliacao.ok&&!IMP.conciliacaoAceita);}
 /* v10.165: assinaturas sugeridas a partir do extrato da IA. uma por descrição (a data mais recente), só despesas importadas
    agora, que ainda não são conta fixa. conta=true: extrato de conta (sai via pix da conta); senão, fatura do cartão alvo */
 function fixosDoImport(linhas,alvo,conta){
@@ -6187,13 +6314,14 @@ function fixosImportAbre(L){
 }
 function confirmaImport(){
   const d=IMP.destino;if(!d)return;const ehCartao=d.indexOf('c:')===0,alvo=d.slice(2);
-  let n=0,lig=0,rcb=0;
+  const loteId=uid(),arquivo=/\\.ofx$/i.test(IMP.nome||'')?'OFX':'CSV',totalLinhas=IMP.linhas.length;
+  let n=0,lig=0,rcb=0,ignorados=0;
   IMP.linhas.forEach(l=>{
     /* v10.79: liga o lançamento manual de empréstimo ao do banco (o saldo do banco já inclui esse Pix) */
-    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}return;}
-    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}return;}
-    if(!l.on||S.tx.some(t=>t.id===l.id))return;
+    if(l.vincPrev){const m=S.tx.find(t=>t.id===l.vincPrev);if(m&&m.status==='previsto'&&!m.importado&&!m.impId){m.status='pago';if(l.trab&&!m.trab&&m.tipo==='receita')m.trab=l.trab;delete m.fxAuto;m.data=l.data;if(!m.conta){m.conta=alvo;m.forma='pix';}m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);rcb++;}else ignorados++;return;}
+    if(l.vincMeta){const m=S.tx.find(t=>t.id===l.vincMeta);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}else ignorados++;return;}
+    if(l.vinc){const m=S.tx.find(t=>t.id===l.vinc);if(m&&!m.importado&&!m.impId){m.impId=l.id;m.bancoDesc=String(l.desc||'').slice(0,120);lig++;}else ignorados++;return;}
+    if(!l.on||S.tx.some(t=>t.id===l.id)){ignorados++;return;}
     const t={id:sid(l.id),tipo:l.tipo,valor:Math.abs(c2(l.valor)),categoria:l.cat,descricao:String(l.desc||'').slice(0,120),data:l.data,importado:true};
     if(l.data0&&l.data0!==l.data&&ISO_RE.test(l.data0))t.dataCompra=l.data0; // v10.95: parcela do banco no ciclo dela; a data da compra fica guardada
     if(IMP.silent&&!l.propria&&!l.transf)t.rev=1;
@@ -6204,11 +6332,17 @@ function confirmaImport(){
       t.empOrig={tipo:t.tipo,categoria:t.categoria,conta:alvo};Object.assign(t,{tipo:'transf',emp:l.empSug,empDir:dir,categoria:'Empréstimo',de:dir==='out'?d:'',para:dir==='in'?d:'',conta:'',forma:'',cartao:''});delete t.rev;}
     else if(!l.transf&&!l.propria&&l.cat!==l.cat0){const k=chaveRegra(l.desc);if(k){if(!S.cfg.regras)S.cfg.regras={};S.cfg.regras[l.tipo[0]+':'+k]=l.cat;}}
     if(l.trab&&t.tipo==='receita'&&ISO_RE.test(l.trab))t.trab=l.trab; // v10.84: dia trabalhado vindo da planilha
+    t.impLote=loteId;t.impHash=impLoteHash(t);
     S.tx.push(t);n++;});
   const mudo=!!IMP.silent;
   /* v10.165: extrato lido pela IA com linhas marcadas como provável conta fixa (assinatura, streaming, academia...):
      depois de importar, oferece salvar como contas fixas mensais, com uma caixa de seleção por assinatura */
   const sugFixos=IMP.ia?fixosDoImport(IMP.linhas,alvo,!ehCartao):[];
+  if(n){
+    if(!S.cfg.impLotes)S.cfg.impLotes=[];
+    S.cfg.impLotes.push({id:loteId,data:new Date().toISOString(),arquivo,destino:d,qtd:n,ligados:lig,recebidas:rcb,ignorados:Math.max(0,totalLinhas-n-lig-rcb)});
+    S.cfg.impLotes=S.cfg.impLotes.slice(-50);
+  }
   IMP=null;geraRecorrentes();salvar();if(!mudo)closeModal();render();
   if(sugFixos.length&&!mudo)setTimeout(()=>fixosImportAbre(sugFixos),400);
   if(!mudo)toast(n+' lançamentos importados'+(lig?' · '+lig+(lig>1?' empréstimos ligados':' empréstimo ligado')+' ao banco':'')+(rcb?' · '+rcb+(rcb>1?' receitas previstas marcadas como recebidas':' receita prevista marcada como recebida'):''));
@@ -9285,6 +9419,7 @@ const ACT={
   'instalar':async()=>{if(!PROMPT_INST)return;PROMPT_INST.prompt();try{await PROMPT_INST.userChoice;}catch(e){}PROMPT_INST=null;render();},
   'inst-ok':()=>{try{localStorage.setItem('gv-inst-ok','1');}catch(e){}render();},
   'importar':()=>importarExtrato(),
+  'imp-desfazer':id=>impLoteDesfazer(id),
   'wa-ligar':()=>waLigar(),
   'wa-abrir':()=>{const n=WA_ST&&WA_ST.st&&String(WA_ST.st.numero||'').replace(/\D/g,'');if(n)location.href='https://wa.me/'+n;},
   'wa-desligar':()=>waDesligar(),
@@ -9490,6 +9625,7 @@ const ACT={
   /* v10.108: renda passiva (toque na barra mostra quem pagou; "próximo mês" mostra a estimativa) e yield on cost */
   'rp-mes':id=>{RP_VER='mes';RP_SEL=id;rpAtualiza();},
   'rp-proj':()=>{RP_VER=RP_VER==='proj'?'mes':'proj';rpAtualiza();},
+  'rp-meta':()=>rpMetaForm(),
   'yoc-ord':id=>{YOC_ORD=id;const c=document.querySelector('#view .yocCard');if(!c){render();return;}const t=document.createElement('div');t.innerHTML=yocCardHTML(yocCalc());c.replaceWith(t.firstElementChild);},
   'yoc-info':()=>yocInfo(),
   'brapi-token':()=>form('Token brapi (opcional)',[{name:'tok',label:'Token gratuito do brapi.dev (cadastro grátis)',value:S.cfg.brapi||''}],v=>{S.cfg.brapi=String(v.tok).trim();salvar();render();atualizaCotacoes(true);toast('Token salvo');}),
