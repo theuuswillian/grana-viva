@@ -8,9 +8,9 @@
 //  - https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/get-authorized-payment/get
 //  - SDK oficial npm "mercadopago" 3.6.1, dist/utils/webhook/index.js (WebhookSignatureValidator), portado abaixo sem mudar a regra.
 //
-// Regra de confiança: a assinatura do webhook (x-signature) é conferida QUANDO vem (uma inválida é recusada), mas não é
-// a fonte da verdade, porque a doc diz que a configuração por "Suas integrações" (de onde vem a chave secreta) não vale
-// para Assinaturas. O plano só muda a partir do objeto buscado na API do Mercado Pago com o token do servidor.
+// Regra de confiança: o endpoint exige x-signature HMAC para todo webhook externo suportado.
+// A autenticação do evento não substitui a consulta autenticada à API: o plano só muda a partir
+// do objeto buscado no Mercado Pago com o token do servidor. Chamadas internas usam HMAC próprio.
 
 const API = "https://api.mercadopago.com";
 export const CARENCIA_DIAS = 3; // depois da data da próxima cobrança, mantém o acesso por 3 dias enquanto o MP tenta cobrar
