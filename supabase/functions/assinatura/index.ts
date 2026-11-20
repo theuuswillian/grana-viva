@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
           .select("user_id,plano,email_pagador,status,init_point")
           .eq("id", intentId).maybeSingle();
         if (error) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+        if (!data) return json({ erro: "Já existe outra tentativa de pagamento em andamento para sua conta. Aguarde alguns instantes e tente novamente." }, 409);
         if (!validaIntencao(data)) return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
         intencao = data;
       } else if (ie) {
