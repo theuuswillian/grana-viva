@@ -1,9 +1,62 @@
-// Fase 2: idempotência das mensagens do WhatsApp (separada do whatsapp-webhook para o teste).
-// O id da mensagem (wamid) é gravado em public.wa_msg (chave primária) ANTES de processar: o insert é o "on conflict do nothing"
-// atômico. 23505 = a Meta reenviou uma mensagem já processada -> "repetida" (o webhook responde 200 e não faz nada).
-// Outro erro -> "erro" (registra e também não processa: melhor perder do que gravar duas vezes).
-export async function reservaMensagem(sb: { from(t: string): any }, id: string): Promise<"nova" | "repetida" | "erro"> {
-  const { error } = await sb.from("wa_msg").insert({ id: String(id).slice(0, 200) });
-  if (!error) return "nova";
-  return error.code === "23505" ? "repetida" : "erro";
+// Fila recuperável do WhatsApp: reserva com lease e finalização explícita.
+// A RPC serializa concorrência no Postgres; leases expirados e falhas podem ser retomados.
+type SupabaseRpc = { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> };
+
+export type ReservaMensagem = "nova" | "retomada" | "repetida" | "ocupada" | "esgotada" | "erro";
+export type ResultadoReservaMensagem = { status: ReservaMensagem; token: string };
+
+export async function reservaMensagem(
+  sb: SupabaseRpc,
+  id: string,
+  leaseSeconds = 180,
+): Promise<ResultadoReservaMensagem> {
+  const token = crypto.randomUUID();
+  const { data, error } = await sb.rpc("wa_reserva_mensagem", {
+    p_id: String(id).slice(0, 200),
+    p_token: token,
+    p_lease_seconds: leaseSeconds,
+  });
+  if (error) return { status: "erro", token };
+  if (data === "nova" || data === "retomada" || data === "repetida" || data === "ocupada" || data === "esgotada") return { status: data, token };
+  return { status: "erro", token };
+}
+
+export async function finalizaMensagem(
+  sb: SupabaseRpc,
+  id: string,
+  token: string,
+  sucesso: boolean,
+  erro?: unknown,
+): Promise<boolean> {
+  const detalhe = erro instanceof Error ? erro.message : erro == null ? null : String(erro);
+  const { data, error } = await sb.rpc("wa_finaliza_mensagem", {
+    p_id: String(id).slice(0, 200),
+    p_token: token,
+    p_sucesso: sucesso,
+    p_erro: detalhe,
+  });
+  return !error && data === true;
+}
+
+/** HTTP 429 e 5xx são falhas transitórias; 4xx restantes exigem correção/configuração, não retry automático. */
+export function erroEnvioRecuperavel(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/** Consome a cota de leitura apenas uma vez por wamid, mesmo após retries do webhook. */
+export async function contaLeituraMensagem(
+  sb: SupabaseRpc,
+  userId: string,
+  messageId: string,
+  dia: string,
+  limite: number,
+): Promise<boolean> {
+  const { data, error } = await sb.rpc("wa_conta_leitura_ia", {
+    p_uid: userId,
+    p_msg_id: String(messageId).slice(0, 200),
+    p_dia: dia,
+    p_lim: limite,
+  });
+  if (error) throw error;
+  return data === true;
 }

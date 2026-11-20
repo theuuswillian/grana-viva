@@ -1,4 +1,4 @@
-import { confereArquivo, confereBytes, tipoPorBytes, audioPorBytes } from "../supabase/functions/_shared/arquivo.ts";
+import { confereArquivo, confereBytes, tipoPorBytes, audioPorBytes, leStreamLimitado } from "../supabase/functions/_shared/arquivo.ts";
 
 const b64 = (s: string) => btoa(s);
 const bytes = (...xs: number[]) => new Uint8Array(xs);
@@ -35,4 +35,29 @@ Deno.test("reconhece áudio OGG e rejeita bytes desconhecidos", () => {
   if (audioPorBytes(bytes(0x4f,0x67,0x67,0x53)) !== "audio/ogg") throw new Error("OGG não reconhecido");
   if (audioPorBytes(bytes(0x00,0x01,0x02)) !== "") throw new Error("áudio inválido aceito");
   if (tipoPorBytes(bytes(0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a)) !== "image/png") throw new Error("PNG não identificado");
+});
+
+Deno.test("lê stream até o limite e monta os bytes na ordem", async () => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes(1, 2, 3));
+      controller.enqueue(bytes(4, 5));
+      controller.close();
+    },
+  });
+  const result = await leStreamLimitado(stream, 5);
+  if (!result || result.length !== 5 || result.join(",") !== "1,2,3,4,5") {
+    throw new Error("stream dentro do limite foi lido incorretamente");
+  }
+});
+
+Deno.test("cancela e rejeita stream que excede o limite real", async () => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes(1, 2, 3));
+      controller.enqueue(bytes(4, 5, 6));
+    },
+  });
+  const result = await leStreamLimitado(stream, 5);
+  if (result !== null) throw new Error("stream acima do limite foi aceito");
 });
