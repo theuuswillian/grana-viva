@@ -55,36 +55,40 @@ Deno.serve(async (req) => {
     const { data: okH } = await sb.rpc("rl_conta", { p_uid: user.id, p_k: "checkout", p_lim: 6, p_seg: 3600 });
     if (!okH) return json({ erro: "Muitas tentativas. Espere alguns minutos." }, 429);
 
-    // A intenção é persistida ANTES de chamar o Mercado Pago. Retries do mesmo clique
-    // reutilizam o mesmo UUID como X-Idempotency-Key; novo checkout exige novo intentId.
-    const { error: ie } = await sb.from("pagamento_checkout_intencoes").insert({
-      id: intentId, user_id: user.id, plano, email_pagador: emailPagador, status: "pendente",
-    });
-    let intencao: any = null;
-    if (ie?.code === "23505") {
-      const { data, error } = await sb.from("pagamento_checkout_intencoes")
-        .select("user_id,plano,email_pagador,status,init_point")
-        .eq("id", intentId).maybeSingle();
-      if (error) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
-      if (!data || data.user_id !== user.id || data.plano !== plano || data.email_pagador !== emailPagador) {
-        return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
-      }
-      intencao = data;
-    } else if (ie) {
-      console.log("checkout_intencao", String(ie.message || ie.code));
-      return json({ erro: "não consegui preparar o pagamento agora" }, 503);
+    // Consulta primeiro a intenção: retries preservam o mesmo preapproval e não o cancelam.
+    const { data: existente, error: ce } = await sb.from("pagamento_checkout_intencoes")
+      .select("user_id,plano,email_pagador,status,init_point")
+      .eq("id", intentId).maybeSingle();
+    if (ce) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+    let intencao: any = existente;
+    const validaIntencao = (data: any) => data && data.user_id === user.id && data.plano === plano && data.email_pagador === emailPagador;
+    if (intencao && !validaIntencao(intencao)) {
+      return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
     }
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
-    // Em um checkout novo, limpa apenas tentativas antigas ainda pendentes.
-    // Retry de uma intenção existente preserva a chave idempotente e não cancela o próprio checkout.
     if (!intencao) {
+      // Limpeza ocorre antes de persistir a nova intenção: se falhar, o retry poderá tentar novamente.
       try {
         await MP.cancelaPendentesDoUsuario(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
       } catch (e) {
         console.log("reconciliacao_checkout", String(e));
         await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
         return json({ erro: "não consegui verificar pagamentos anteriores. Tente novamente em instantes." }, 503);
+      }
+      const { error: ie } = await sb.from("pagamento_checkout_intencoes").insert({
+        id: intentId, user_id: user.id, plano, email_pagador: emailPagador, status: "pendente",
+      });
+      if (ie?.code === "23505") {
+        const { data, error } = await sb.from("pagamento_checkout_intencoes")
+          .select("user_id,plano,email_pagador,status,init_point")
+          .eq("id", intentId).maybeSingle();
+        if (error) return json({ erro: "não consegui recuperar sua tentativa de pagamento" }, 503);
+        if (!validaIntencao(data)) return json({ erro: "esta tentativa de pagamento não corresponde aos dados atuais. Inicie outra." }, 409);
+        intencao = data;
+      } else if (ie) {
+        console.log("checkout_intencao", String(ie.message || ie.code));
+        return json({ erro: "não consegui preparar o pagamento agora" }, 503);
       }
     }
     const app = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
