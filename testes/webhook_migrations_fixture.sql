@@ -61,5 +61,6 @@ create table public.assinaturas (
   provedor text,
   provedor_assinatura_id text,
   provedor_cliente_id text,
+  provedor_versao bigint,
   atualizado_em timestamptz not null default now()
 );
