@@ -76,6 +76,17 @@ Deno.serve(async (req) => {
     }
     if (intencao?.status === "criado" && intencao.init_point) return json({ url: intencao.init_point, reutilizado: true });
 
+    // Em um checkout novo, limpa apenas tentativas antigas ainda pendentes.
+    // Retry de uma intenção existente preserva a chave idempotente e não cancela o próprio checkout.
+    if (!intencao) {
+      try {
+        await MP.cancelaPendentesDoUsuario(user.id, [...GVP.PAGOS, ...GVP.LEGADOS], token, GVP.PLANOS);
+      } catch (e) {
+        console.log("reconciliacao_checkout", String(e));
+        await registraErro(sb, "assinatura", "reconciliacao_checkout", e);
+        return json({ erro: "não consegui verificar pagamentos anteriores. Tente novamente em instantes." }, 503);
+      }
+    }
     const app = (Deno.env.get("APP_URL") || "https://theuuswillian.github.io/grana-viva/").replace(/\/?$/, "/");
     try {
       const c = await MP.criaCheckout({
