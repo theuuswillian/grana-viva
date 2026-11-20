@@ -6182,7 +6182,7 @@ function montaImport(){
     const b=idImport(d,l),k=idOcc.get(b)||0;idOcc.set(b,k+1);l.id=k?b+'-'+k:b;
     const fk=l.fitid?d+'|'+l.fitid:'',dupFitid=!!fk&&fitids.has(fk);if(fk)fitids.add(fk);
     const descNorm=norm(l.desc||'').replace(/\s+/g,' ').trim();
-    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&impMesmoDestino(t,d)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&norm(t.bancoDesc||t.descricao||'').replace(/\\s+/g,' ').trim()===descNorm&&parcelaIgual(t,l));
+    const dup=S.tx.some(t=>t.id===l.id||(t.impId&&t.impId===l.id)||(t.par&&t.par.id===l.id))||S.tx.some(t=>!t.faturaKey&&impMesmoDestino(t,d)&&t.data===l.data&&cents(t.valor)===cents(Math.abs(l.valor))&&t.tipo===l.tipo&&norm(t.bancoDesc||t.descricao||'').replace(/\s+/g,' ').trim()===descNorm&&parcelaIgual(t,l));
     /* v10.52: em CSV próprio, duas compras iguais são reais (ex.: dois cafés no mesmo dia): entram selecionadas, com aviso */
     const dupLinha=(IMP.linhas||[]).some(x=>x!==l&&x.data===l.data&&cents(x.valor)===cents(l.valor)&&x.desc===(l.desc||''));
     const n=norm(l.desc);let ign='';
