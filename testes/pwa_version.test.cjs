@@ -7,6 +7,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'design-system.css'), 'utf8');
+const visualCss = fs.readFileSync(path.join(root, 'visual-reference.css'), 'utf8');
 
 const build = html.match(/const GV_BUILD='([^']+)'/);
 if (!build) throw new Error('GV_BUILD não encontrado em index.html');
@@ -19,6 +20,10 @@ const checks = [
   ['planos.js no precache', sw.includes(`planos.js?v=${version}`)],
   ['design-system.css no HTML', html.includes(`design-system.css?v=${version}`)],
   ['design-system.css no precache', sw.includes(`design-system.css?v=${version}`)],
+  ['visual-reference.css no HTML', html.includes(`visual-reference.css?v=${version}`)],
+  ['visual-reference.css no precache', sw.includes(`visual-reference.css?v=${version}`)],
+  ['referência visual All Black', visualCss.includes('#20d879') && visualCss.includes('.hB-spark')],
+  ['atalhos da tela inicial conforme referência', app.includes("['gastos','minus-circle','Adicionar despesa'") && app.includes("['metas','target','Metas'")],
   ['tour.min.js no precache', sw.includes(`tour.min.js?v=${version}`)],
   ['dashboard usa composição principal', app.includes('const TOPO=HV?homeTopo') && app.includes("${TOPO||''}")],
   ['dashboard sem fallback visual legado', !app.includes("${TOPO!==null?TOPO+'<!--':''}") && !app.includes("${TOPO!==null?'-->':''}")],
