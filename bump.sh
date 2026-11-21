@@ -26,5 +26,8 @@ for f in tour; do
 done
 # v10.82: planos.js (fonte única dos planos) tem a mesma versão
 sed -i "s/planos\.js?v=[0-9.]*/planos.js?v=$novo/g" index.html sw.js
+# O design system também é asset versionado e acompanha o build no HTML e no precache.
+sed -i "s/design-system\.css?v=[0-9.]*/design-system.css?v=$novo/g" index.html sw.js
+sed -i "1s/Design System v[0-9.]*/Design System v$novo/" design-system.css
 # v10.79: o GV_BUILD fica num script inline, então os hashes da CSP precisam ser recalculados junto
 python3 ./csp.py index.html --fix
