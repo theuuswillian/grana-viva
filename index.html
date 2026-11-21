@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-22cBiA4ziZk3Q0WSrkgcNwI+vwBZjKTCwWjldMOwgZ0=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VwEgqMUWy7K/GJfjHAlioiq4Q2E/J6XXHNhQERQ6fWA=' 'sha256-XO9RHNpYE09T+moAjVe1NKKQsLa0fy+UPRibf+IpEAE=' 'sha256-R0RFE/0AagP1uEjfKKhLJLNLuGq78gb9Y5BnHHoECKs=' 'sha256-LqcEMobXSKx8ZLp3relTAi+sWnB5cj9vdWAN98y/H40=' 'sha256-4ieJgTsXZZNW7Zz8EiHDMZHrJN+TI/AJrZB8q0sd140='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://hydvhpfpvhopetqqjido.supabase.co wss://hydvhpfpvhopetqqjido.supabase.co https://brapi.dev https://api.coingecko.com https://api.bcb.gov.br https://fipe.parallelum.com.br https://parallelum.com.br; base-uri 'self'; form-action 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0f1a">
+<meta name="theme-color" content="#07090A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -4068,6 +4068,35 @@ html.claro .waCmdB .i{color:#15803d}
 }
 </style>
 
+<style id="v174-mobile">
+/* v10.177: experiência mobile em tela cheia e cabeçalho simplificado */
+html,body{min-height:100%;min-height:100dvh}
+html.mvp body{min-height:100dvh}
+html.mvp #app{min-height:100dvh;display:flex;flex-direction:column}
+html.mvp #view{flex:1 0 auto}
+html.mvp .tabbar{padding-top:8px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px);min-height:calc(66px + env(safe-area-inset-bottom,0px));align-items:center}
+html.mvp .tbItem{min-height:48px;gap:4px;padding:5px 2px}
+html.mvp .tbItem .i{width:21px;height:21px;stroke-width:1.8}
+html.mvp .tbItem span{font-size:10px;letter-spacing:0}
+html.mvp #view{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 132px)}
+.top{margin-bottom:14px!important}
+.topBar{gap:8px!important;padding:7px!important;border-radius:20px!important;background:color-mix(in srgb,var(--card) 82%,transparent)!important;border-color:color-mix(in srgb,var(--txt) 7%,transparent)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important}
+.topBar::after{opacity:.35}
+.topBar .ham,.topBar .eyeBtn,.topBar .bell,.topBar .syncPill{width:38px!important;min-width:38px!important;height:38px!important;border-radius:50%!important;background:transparent!important;border:1px solid color-mix(in srgb,var(--txt) 9%,transparent)!important;box-shadow:none!important;color:var(--mut)!important}
+.topBar .ham .i,.topBar .eyeBtn .i,.topBar .bell .i{width:18px!important;height:18px!important;stroke-width:1.8}
+.topBar .ham:active,.topBar .eyeBtn:active,.topBar .bell:active,.topBar .syncPill:active{background:color-mix(in srgb,var(--a1) 12%,transparent)!important;transform:scale(.96)}
+.topBar .eyeBtn.on{color:var(--a1)!important;background:color-mix(in srgb,var(--a1) 10%,transparent)!important}
+.topBar .hdSaldo{padding:0 2px!important;gap:3px}
+.topBar .hdSaldo small{font-size:10px!important;letter-spacing:.08em;text-transform:uppercase!important;color:var(--mut)!important}
+.topBar .hdSaldo b{font-size:15px!important;font-weight:750!important;letter-spacing:-.02em}
+.top .logo{font-size:26px!important;filter:none!important;animation:none!important}
+.top small#sub{font-size:10px!important;letter-spacing:.10em!important}
+@media(max-width:560px){.top{margin-bottom:12px!important}.topBar .ham{width:38px!important;height:38px!important;margin-right:0!important}.topBar .tr{gap:6px!important}.topBar .eyeBtn,.topBar .bell,.topBar .syncPill{width:36px!important;min-width:36px!important;height:36px!important}.topBar .hdSaldo{padding-left:2px!important}.topBar .hdSaldo small{font-size:9px!important}.topBar .hdSaldo b{font-size:14px!important}}
+@media(max-width:360px){.topBar .ham,.topBar .eyeBtn,.topBar .bell,.topBar .syncPill{width:34px!important;min-width:34px!important;height:34px!important}.top .logo{font-size:22px!important}}
+@media(min-width:900px){html.mvp #app{min-height:100vh}html.mvp #view{flex:1 0 auto}}
+@media(prefers-reduced-motion:reduce){.top .logo{animation:none!important;filter:none!important}}
+</style>
+<link rel="stylesheet" href="design-system.css?v=10.177">
 </head>
 <body>
 <aside class="side" id="side">
@@ -4111,7 +4140,7 @@ html.claro .waCmdB .i{color:#15803d}
 </div>
 
 <script>
-const GV_BUILD='10.173'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.177'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -4137,8 +4166,8 @@ const GV_BUILD='10.173'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.js é servido diretamente e versionado pelo bump.sh. -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.173"></script>
-<script defer src="app.js?v=10.173"></script>
+<script defer src="planos.js?v=10.177"></script>
+<script defer src="app.js?v=10.177"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
