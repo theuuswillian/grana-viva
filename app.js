@@ -3695,7 +3695,7 @@ function sparkSVG(vals,w,h,id){
   return `<svg class="spk" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".35"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient><linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--sk1)"/><stop offset="1" stop-color="var(--sk2)"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h} Z" fill="url(#${id}f)"/><path d="${d}" fill="none" stroke="url(#${id}l)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${L[0]}" cy="${L[1]}" r="4" class="spkDot"/></svg>`;
 }
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
-const HM_AT=[['gastos','minus-circle','Adicionar despesa','#ef646b','Gastos'],['lanc','plus-circle','Adicionar receita','#20d879','Receita'],['metas','target','Metas','#20d879','Metas'],['rel','chart','Relatórios','#20d879','Relatório']];
+const HM_AT=[['hm-add-despesa','minus-circle','Adicionar despesa','#ef646b','Gastos'],['hm-add-receita','plus-circle','Adicionar receita','#20d879','Receita'],['metas','target','Metas','#20d879','Metas'],['rel','chart','Relatórios','#20d879','Relatório']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
 
 /* v10.173: resumo compacto das metas na tela inicial, sem duplicar a lógica de cálculo da aba Metas. */
@@ -9419,6 +9419,8 @@ const ACT={
   'per-atual':()=>{PER_ATUAL=1;render();},
   'hm-per':k=>{const atual=periodo();if(k==='mes'&&PER.k==='mes'&&mesAntAuto())PER_ATUAL=1;PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
   'novo-tx':()=>novoTx(),
+  'hm-add-despesa':()=>novoTx(null,'despesa'),
+  'hm-add-receita':()=>novoTx(null,'receita'),
   'push-on':()=>ativarPush(),
   'push-off':()=>desativarPush(),
   'ia-ler':()=>lerComprovanteIA(),
