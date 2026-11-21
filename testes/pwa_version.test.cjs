@@ -38,6 +38,14 @@ checks.push(['design system sem acentos roxos herdados', !/rgba\(139,92,246|#a85
   ['Conta e Configurações com perfil e seções',app.includes('gvProfile')&&app.includes('Conexões')&&app.includes('Personalização')&&app.includes('Dados e privacidade')],
   ['perfil usa dados da sessão autenticada',app.includes('USER.user_metadata')&&app.includes('USER.email')],
   ['acabamento da Conta e Configurações v10.189',css.includes('v10.189')&&css.includes('.gvProfile')&&css.includes('.gvCfgSection')],['telas internas com refinamento All Black', ['data-v=\"gastos\"','data-v=\"plan\"','data-v=\"rel\"','data-v=\"metas\"','data-v=\"cartoes\"','data-v=\"fii\"','data-v=\"pat\"'].every(x=>css.includes(x))]);
+checks.push(
+  ['gastos com gráfico de categorias real', app.includes('function gastosReferenciaHTML()') && app.includes('despesasPorCat(per)')],
+  ['patrimônio com distribuição por classe', app.includes('gvRefInvestGrid') && app.includes('conic-gradient(${donutStops.join(\',\')})')],
+  ['metas com progresso e valor faltante', app.includes('gvRefGoalFoot') && app.includes('brl(faltante)')],
+  ['relatórios com receitas, despesas e saldo', app.includes('gvRefReportKpis') && app.includes('brl(ra.rec)') && app.includes('brl(ra.des)') && app.includes('brl(ra.sal)')],
+  ['tema claro preservado no CSS de referência', visualCss.includes('html:not(.claro)')],
+  ['build 10.191 com assets sincronizados', html.includes('GV_BUILD=\\'10.191\\'') && sw.includes('gv-v10.191')]
+);
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
   console.log('ok', name, version);
