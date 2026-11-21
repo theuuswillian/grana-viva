@@ -151,7 +151,7 @@ let LOGO_N=0;
 const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
 const NAV_FULL=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
 /* v10.160: no MVP a navegação principal tem 4 abas; as telas de detalhe ficam em "mais" (barra lateral) e dentro de cada aba */
-const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'WhatsApp & Conta',i:'chat'}];
+const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'Conta',i:'chat'}];
 const NAV_MVP_MAIS=[{t:'lanc',l:'Extrato',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'cartoes',l:'Cartões e faturas',i:'card'},{t:'plan',l:'Planejamento',i:'compass'},{t:'rel',l:'Relatório',i:'report'},{t:'pat',l:'Patrimônio líquido',i:'scale'},{t:'metas',l:'Metas',i:'flag'},{t:'bancos',l:'Contas e bancos',i:'bank'}];
 const NAV=MVP_MODE?NAV_MVP:NAV_FULL;
 /* ---------- v10.82: planos (v10.161: Grátis e Pro; o Plus antigo vale como Pro) ----------
@@ -2477,6 +2477,7 @@ function viewRel(){
     <div class="rsPills" id="rsPills">${Array.from({length:12},(_,k)=>mesOff(11-k)).map(m=>`<button class="rsPill${m===a?' on':''}" data-act="rel-mes" data-id="${m}"><span>${MESES[+m.slice(5,7)-1]}</span><small>${m.slice(2,4)}</small></button>`).join('')}</div>
     <label class="rsCmp"><span>${I('swap')}comparar com</span><select data-filter="relB">${Array.from({length:24},(_,k)=>mesAdd(a,-(k+1))).map(m=>`<option value="${m}"${m===b?' selected':''}>${m===mesAdd(a,-1)?'mês anterior · ':m===mesAdd(a,-12)?'mesmo mês do ano passado · ':''}${mesCurto(m)}</option>`).join('')}${b>a||b<mesAdd(a,-24)?`<option value="${b}" selected>${mesCurto(b)}</option>`:''}</select></label>
   </div>
+  <section class="gvRefReportKpis"><div class="card"><small>Receitas</small><b class="pos">${brl(ra.rec)}</b></div><div class="card"><small>Despesas</small><b class="neg">${brl(ra.des)}</b></div><div class="card"><small>Saldo do mês</small><b class="${ra.sal>=0?'pos':'neg'}">${brl(ra.sal)}</b></div></section>
   ${relResumo(a,b,ra,rb)}
   ${relDestaques(a,b,ra,rb)}
   ${relDiario(a,b)}
@@ -3283,10 +3284,18 @@ function gsPlanHTML(){
   return `<details class="card gsAcc" data-acc="plan"${GS_PLAN?' open':''}><summary>${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses, simulações e dia a dia</small></span>${I('chevD','gsAccCh')}</summary><div class="gsAccIn">${corpo}</div></details>`;
 }
 document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.dataset||d.dataset.acc!=='plan'||GS_PLAN===d.open)return;GS_PLAN=d.open;if(TAB==='gastos')render();},true);
+function gastosReferenciaHTML(){
+  const per=periodo(),L=despesasPorCat(per),total=L.reduce((a,x)=>a+x.v,0);
+  let cursor=0;
+  const stops=L.slice(0,6).map(x=>{const ini=cursor;cursor+=total?x.v/total*100:0;return `${x.color} ${ini.toFixed(2)}% ${cursor.toFixed(2)}%`;});
+  const donut=stops.length?`<div class="gvRefDonut" style="background:conic-gradient(${stops.join(',')})"><span><b>${brl(total)}</b><small>Total de gastos</small></span></div>`:'<div class="gvRefDonut gvRefEmpty"><span><b>—</b><small>Sem despesas</small></span></div>';
+  return `<section class="gvRefSpend card"><div class="gvRefSectionHead"><div><small>Despesas do período</small><h3>Para onde foi seu dinheiro</h3></div><button class="gvRefTextAction" data-act="nav-rel">Ver relatório ›</button></div><div class="gvRefSpendGrid">${donut}<div class="gvRefLegend">${L.slice(0,5).map(x=>`<div><i style="background:${x.color}"></i><span>${esc(x.l)}</span><b>${total?Math.round(x.v/total*100):0}%</b></div>`).join('')||'<p class="small">Seus gastos por categoria aparecerão aqui.</p>'}</div></div></section>`;
+}
 function viewGastos(){
   const links=[['gs-extrato','receipt','Extrato completo'],['nav-orc','gauge','Orçamentos'],['nav-cartoes','card','Cartões e parcelas'],['nav-rel','report','Relatório'],['nova-fixa','calendar','Conta fixa'],['importar','up','Importar extrato']];
   return `
   <div class="head gsHead"><h2>Gastos &amp; Cartões</h2><button class="btn" data-act="lanc-manual">+ lançar</button></div>
+  ${gastosReferenciaHTML()}
   ${temDemo()?demoHTML():''}
   ${limiteMesHTML()}
   ${pode('orcamentos')?orcInicioHTML():''}
@@ -3397,7 +3406,7 @@ function go(t){
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
 const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes',gastos:'Gastos & Cartões'};
-if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'WhatsApp & Conta'});
+if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'Conta'});
 const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
@@ -3695,7 +3704,7 @@ function sparkSVG(vals,w,h,id){
   return `<svg class="spk" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".35"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient><linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--sk1)"/><stop offset="1" stop-color="var(--sk2)"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h} Z" fill="url(#${id}f)"/><path d="${d}" fill="none" stroke="url(#${id}l)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${L[0]}" cy="${L[1]}" r="4" class="spkDot"/></svg>`;
 }
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
-const HM_AT=[['lanc','receipt','Despesas','#94a3b8','Gastos'],['orc','gauge','Orçamentos','#94a3b8','Orçamento'],['cartoes','card','Cartões','#94a3b8','Cartões'],['rel','report','Relatório','#94a3b8','Relatório'],['plan','compass','Planejamento','#94a3b8','Planejar'],['pat','scale','Patrimônio','#22c55e','Patrimônio']];
+const HM_AT=[['hm-add-despesa','minus-circle','Adicionar despesa','#ef646b','Gastos'],['hm-add-receita','plus-circle','Adicionar receita','#20d879','Receita'],['metas','target','Metas','#20d879','Metas'],['rel','chart','Relatórios','#20d879','Relatório']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
 
 /* v10.173: resumo compacto das metas na tela inicial, sem duplicar a lógica de cálculo da aba Metas. */
@@ -3739,6 +3748,7 @@ function homeTopo(v,o){
     <div class="hB-top">${saldo<0?'<span class="hB-brand hB-brandNeg"><i class="hB-led"></i>Saldo negativo</span>':`<span class="hB-brand">${I('wallet')}Saldo total</span>`}${eye}</div>
     <div class="hB-tap tap" data-act="nav-contas" role="button" tabindex="0" aria-label="ver suas contas"><div class="hB-saldo nw fit${bp.s?' hB-saldoNeg':''}" aria-label="${OCULTO?'saldo oculto':(bp.s?'saldo negativo de ':'saldo de ')+brl(Math.abs(saldo))}"><span class="hB-cur">R$</span><span class="hB-num">${OCULTO?'•••••':bp.i+bp.d}</span></div>
     <div class="hB-sub">${Math.abs(var30)<0.005?'<span class="hB-var">sem variação</span> nos últimos 30 dias':`<span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias`}</div>
+    <div class="hB-spark" aria-hidden="true">${sparkSVG(ser,360,76,'gvSpark')}</div>
     ${I('chevR','hB-tapCh')}</div>
     ${(()=>{const r=mtReservado();return r>0?`<button type="button" class="hB-mt" data-act="hm-go" data-id="metas" aria-label="${OCULTO?'valor oculto':brl(r)} reservado em metas, abrir metas">${I('piggy')}<span><b class="nw">${brl(r)}</b> reservado em metas</span>${I('chevR')}</button>`:'';})()}
     ${semanasHTML()}
@@ -4475,8 +4485,10 @@ function viewFiiCarteira(modo){
   // alocação por tipo
   const aloc={};S.fiis.forEach(f=>{const t=tipoOf(f);aloc[t]=(aloc[t]||0)+f.cotas*f.preco;});
   const al=Object.keys(aloc).filter(t=>aloc[t]>0).sort((x,y)=>aloc[y]-aloc[x]);
-  const barra=pat>0?`<div class="wAloc" role="img" aria-label="distribuição da carteira">${al.map(t=>`<i style="width:${aloc[t]/pat*100}%;background:${TCOR[t]||'var(--a1)'}"></i>`).join('')}</div>
-    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${pctAloc(aloc[t]/pat*100)}</b></span>`).join('')}</div>`:'';
+  let donutCursor=0;
+  const donutStops=al.map(t=>{const ini=donutCursor;donutCursor+=pat?aloc[t]/pat*100:0;return `${TCOR[t]||'var(--a1)'} ${ini.toFixed(2)}% ${donutCursor.toFixed(2)}%`;});
+  const barra=pat>0?`<div class="gvRefInvestGrid"><div class="gvRefDonut" role="img" aria-label="distribuição dos investimentos" style="background:conic-gradient(${donutStops.join(',')})"><span><b>${brl(pat)}</b><small>Patrimônio investido</small></span></div>
+    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${pctAloc(aloc[t]/pat*100)}</b></span>`).join('')}</div></div>`:'';
   const plPill=(v,pc)=>`<span class="plPill ${v>=0?'pos':'neg'}">${v>=0?'▲ +':'▼ '}${brl(v)} <em>${num(pc)}%</em></span>`;
   const lista=filtrados.map(f=>{
     const t=tipoOf(f),cri=t==='cripto',rf=t==='rf';
@@ -8691,8 +8703,12 @@ function viewMetas(){
     <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
     <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}. é o mesmo número do Planejamento.</p>
     ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
+  const pctGeral=tAlvo?Math.min(100,tAt/tAlvo*100):0;
+  const faltante=Math.max(0,tAlvo-tAt);
+  const destaqueMeta=`<section class="gvRefGoal card"><div class="gvRefSectionHead"><div><small>Visão geral</small><h3>Metas e planejamento</h3></div><button class="gvRefTextAction" data-act="nova-meta">+ Nova meta</button></div><div class="gvRefGoalNumbers"><div><small>Já guardado</small><b>${brl(tAt)}</b></div><div><small>Objetivo total</small><b>${brl(tAlvo)}</b></div></div><div class="gvRefProgress"><i style="width:${pctGeral}%"></i></div><div class="gvRefGoalFoot"><b>${pctGeral.toFixed(0)}% concluído</b><span>Faltam ${brl(faltante)}</span></div></section>`;
   return `
-  <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  <div class="head"><h2>Metas e Planejamento</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  ${destaqueMeta}
   ${metaCotasHTML()}
   ${ritmo}
   ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
@@ -9418,6 +9434,8 @@ const ACT={
   'per-atual':()=>{PER_ATUAL=1;render();},
   'hm-per':k=>{const atual=periodo();if(k==='mes'&&PER.k==='mes'&&mesAntAuto())PER_ATUAL=1;PER.k=k;if(k==='custom'&&!PER.ini){PER.ini=atual.ini;PER.fim=atual.fim;}salvaPer();render();},
   'novo-tx':()=>novoTx(),
+  'hm-add-despesa':()=>novoTx(null,'despesa'),
+  'hm-add-receita':()=>novoTx(null,'receita'),
   'push-on':()=>ativarPush(),
   'push-off':()=>desativarPush(),
   'ia-ler':()=>lerComprovanteIA(),
