@@ -3804,11 +3804,7 @@ function viewInicio(){
   const desAnt=ehMes?despAte(mesOff(1),dia):per.auto?somaMes(mesOff(2),'despesa'):0;
   const dDes=(ehMes||per.auto)&&desAnt?Math.round((des-desAnt)/desAnt*100):null;
   const pou=rec>0?Math.round(sal/rec*100):null;
-  const mxF=Math.max(rec,des,1);
-  const tile=(cls,ic,lb,val,sub)=>`<div class="rsT ${cls}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b>${sub}</div>`;
-  const nome=nomeUsuario();
-  const dataLonga=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  /* últimos lançamentos */
+    /* últimos lançamentos */
   const ult=S.tx.filter(t=>t.data&&t.data<=hojeISO()&&(t.tipo==='receita'||t.tipo==='despesa')).sort((a,b)=>b.data<a.data?-1:b.data>a.data?1:0).slice(0,5);
   const ultHTML=ult.length?`<div class="card hmUlt"><div class="hmH"><h4>últimos lançamentos</h4><button class="hmLink" data-act="ir-lanc">ver todos${I('chevR')}</button></div>${ult.map(t=>{const r=t.tipo==='receita';const cc=r?'#4ade80':corCat(t.categoria);return `<div class="rmRow tap" data-act="tx-menu" data-id="${t.id}" role="button" tabindex="0" aria-label="abrir lançamento"><span class="rmI" style="--cc:${cc}">${I(catIcon(t.categoria))}</span><div class="rmT"><b>${esc(nomeTx(t).n||t.categoria||(r?'receita':'despesa'))}</b><small>${esc(t.categoria||'')} · ${t.data.slice(8,10)}/${t.data.slice(5,7)}${t.status&&t.status!=='pago'?' · '+esc(t.status):''}</small></div><span class="rmV nw ${r?'pos':''}">${r?'+':'−'} ${brl(t.valor)}</span></div>`;}).join('')}</div>`:'';
   /* categorias */
@@ -3827,25 +3823,10 @@ function viewInicio(){
   const cartHTML=(patr||dm||p)?carteiraInicioHTML(patr,dm,p):'';
   const HV=homeVar();
   const TOPO=HV?homeTopo(HV,{saldo,rec,des,sal,pou,dDes,desAnt,dia,pl,per}):null;
-  const avisoMesAnt=mesAntHTML(per);
   return `
   <div class="hmHead hmHeadCompact"><h2>Visão geral</h2><span>${esc(pl)}</span></div>
   ${omniHTML()}
-  ${TOPO!==null?TOPO+'<!--':''}<div class="hmHero ${saldo<0?'neg':''}">
-    <div class="hmHeroTop"><span>saldo total</span><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
-    <div class="hmSaldo nw">${brl(saldo)}</div>
-    <p class="hmHeroSub">${saldo<0?'você está no negativo. ':''}receitas menos despesas pagas, desde o começo</p>
-  </div>
-  <div class="atalhos" role="navigation" aria-label="atalhos">${[['ir-lanc','receipt','Despesas','#94a3b8'],['ir-orc','gauge','Orçamentos','#94a3b8'],['ir-cartoes','card','Cartões','#94a3b8'],['ir-rel','report','Relatório','#94a3b8'],['ir-plan','compass','Planejamento','#94a3b8'],['ir-pat','scale','Patrimônio','#22c55e']].map(([a,ic,l,c])=>`<button class="atalho" data-act="${a}" style="--c:${c}"><span class="atIc">${I(ic)}</span><span class="atLb">${l}</span></button>`).join('')}</div>
-  ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  ${avisoMesAnt}<div class="perBar"><span class="perLbl">${I('calendar')}Período</span><label class="perSel"><select data-per="k" aria-label="período">${PER_OPS.map(([k,l])=>`<option value="${k}" ${PER.k===k?'selected':''}>${l}</option>`).join('')}</select>${I('chevD')}</label>
-    ${PER.k==='custom'?`<input type="date" data-per="ini" value="${esc(PER.ini||per.ini)}" aria-label="de"><input type="date" data-per="fim" value="${esc(PER.fim||per.fim)}" aria-label="até">`:''}</div>
-  <div class="relRes hmRes">
-    ${tile('rec','arrowUp','receitas',brl(rec),'<span class="rsD">entradas pagas</span>')}
-    ${tile('des','arrowDown','despesas',brl(des),dDes===null?'<span class="rsD">saídas pagas</span>':`<span class="rsD ${dDes>0?'neg':'pos'}">${dDes>0?'▲':dDes<0?'▼':'='} ${Math.abs(dDes)}% vs ${MESES[+mesOff(1).slice(5,7)-1]} até dia ${dia}</span>`)}
-    ${tile('sal '+(sal<0?'neg':''),'wallet','saldo do período',brl(sal),`<span class="rsD">${sal<0?'gastou mais do que entrou':'sobrou no período'}</span>`)}
-    ${tile('pou','piggy','você guardou',pou===null?'—':(OCULTO?'••%':pou+'%'),`<span class="rsD">${pou===null?'sem receitas no período':'da renda do período'}</span>`)}
-  </div>${TOPO!==null?'-->':''}
+  ${TOPO||''}
   <div class="hmDuo">${prevHTML}
   <div class="card hmSpark tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}${I('chevR','tapCh')}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]" id="cSpark">${gastoSVG(per)}</div></div></div>
   <div class="hmDuo">${catHTML}<div>${proxVencHTML()}${assinHTML()}${orcInicioHTML()}${ultHTML}</div></div>

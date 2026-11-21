@@ -5,6 +5,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
 const build = html.match(/const GV_BUILD='([^']+)'/);
 if (!build) throw new Error('GV_BUILD não encontrado em index.html');
@@ -18,6 +19,8 @@ const checks = [
   ['design-system.css no HTML', html.includes(`design-system.css?v=${version}`)],
   ['design-system.css no precache', sw.includes(`design-system.css?v=${version}`)],
   ['tour.min.js no precache', sw.includes(`tour.min.js?v=${version}`)],
+  ['dashboard usa composição principal', app.includes('const TOPO=HV?homeTopo') && app.includes("${TOPO||''}")],
+  ['dashboard sem fallback visual legado', !app.includes("${TOPO!==null?TOPO+'<!--':''}") && !app.includes("${TOPO!==null?'-->':''}")],
   ['aviso de atualização anexado ao body', app.includes('document.body.appendChild(d);') && !app.includes('document.documentElement.appendChild(d);')],
 ];
 for (const [name, ok] of checks) {
