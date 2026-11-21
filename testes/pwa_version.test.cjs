@@ -44,7 +44,7 @@ checks.push(
   ['metas com progresso e valor faltante', app.includes('gvRefGoalFoot') && app.includes('brl(faltante)')],
   ['relatórios com receitas, despesas e saldo', app.includes('gvRefReportKpis') && app.includes('brl(ra.rec)') && app.includes('brl(ra.des)') && app.includes('brl(ra.sal)')],
   ['tema claro preservado no CSS de referência', visualCss.includes('html:not(.claro)')],
-  ['build 10.191 com assets sincronizados', html.includes('GV_BUILD=\\'10.191\\'') && sw.includes('gv-v10.191')]
+  ['build 10.191 com assets sincronizados', html.includes("GV_BUILD='10.191'") && sw.includes("gv-v10.191")]
 );
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
