@@ -151,7 +151,7 @@ let LOGO_N=0;
 const logoSVG=()=>{const g='gLogo'+(++LOGO_N);return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs><rect x="4" y="10" width="30" height="22" rx="6.5" fill="url(#'+g+')" fill-opacity=".16" stroke="url(#'+g+')" stroke-width="2"/><path d="M8.5 10V8.6A3.6 3.6 0 0 1 12.1 5h14.4" fill="none" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round"/><rect x="23" y="17.5" width="11" height="9" rx="3.2" fill="url(#'+g+')"/><circle cx="27.2" cy="22" r="1.6" fill="#fff"/><path d="M10.5 19.5h6.5M10.5 24h4" stroke="url(#'+g+')" stroke-width="2" stroke-linecap="round" opacity=".85"/></svg>';};
 const NAV_FULL=[{t:'inicio',l:'Início',i:'home'},{t:'lanc',l:'Despesas',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'fii',l:'Investimentos',i:'chart'},{t:'metas',l:'Metas',i:'flag'},{t:'pat',l:'Patrimônio',i:'scale'},{t:'plan',l:'Planejamento',i:'compass'},{t:'cartoes',l:'Cartões',i:'card'},{t:'bancos',l:'Bancos',i:'bank'},{t:'rel',l:'Relatório',i:'report'},{t:'cfg',l:'Ajustes',i:'sliders'}];
 /* v10.160: no MVP a navegação principal tem 4 abas; as telas de detalhe ficam em "mais" (barra lateral) e dentro de cada aba */
-const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'WhatsApp & Conta',i:'chat'}];
+const NAV_MVP=[{t:'inicio',l:'Início',i:'home'},{t:'gastos',l:'Gastos & Cartões',i:'card'},{t:'fii',l:'Patrimônio',i:'scale'},{t:'cfg',l:'Conta',i:'chat'}];
 const NAV_MVP_MAIS=[{t:'lanc',l:'Extrato',i:'receipt'},{t:'orc',l:'Orçamentos',i:'gauge'},{t:'cartoes',l:'Cartões e faturas',i:'card'},{t:'plan',l:'Planejamento',i:'compass'},{t:'rel',l:'Relatório',i:'report'},{t:'pat',l:'Patrimônio líquido',i:'scale'},{t:'metas',l:'Metas',i:'flag'},{t:'bancos',l:'Contas e bancos',i:'bank'}];
 const NAV=MVP_MODE?NAV_MVP:NAV_FULL;
 /* ---------- v10.82: planos (v10.161: Grátis e Pro; o Plus antigo vale como Pro) ----------
@@ -3397,7 +3397,7 @@ function go(t){
    navega() guarda onde a pessoa estava (aba, filtros, rolagem) e empilha no histórico do navegador:
    o voltar do celular (ou o botão "voltar" da tela) devolve exatamente para lá. */
 const TAB_NOME={inicio:'Início',lanc:'Lançamentos',orc:'Orçamentos',fii:'Investimentos',metas:'Metas',pat:'Patrimônio',plan:'Planejamento',cartoes:'Cartões',bancos:'Bancos',rel:'Relatório',cfg:'Ajustes',gastos:'Gastos & Cartões'};
-if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'WhatsApp & Conta'});
+if(MVP_MODE)Object.assign(TAB_NOME,{lanc:'Extrato',fii:'Patrimônio',pat:'Patrimônio líquido',bancos:'Contas e bancos',cfg:'Conta'});
 const F_LIMPO={mes:'',cat:'',tipo:'',q:'',tag:'',ini:'',fim:'',perL:'',conta:'',st:'',comp:''};
 let NAV_PILHA=[];
 function navega(tab,f,depois){
@@ -3695,7 +3695,7 @@ function sparkSVG(vals,w,h,id){
   return `<svg class="spk" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".35"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient><linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--sk1)"/><stop offset="1" stop-color="var(--sk2)"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h} Z" fill="url(#${id}f)"/><path d="${d}" fill="none" stroke="url(#${id}l)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${L[0]}" cy="${L[1]}" r="4" class="spkDot"/></svg>`;
 }
 function brlParts(v){const t=brl(v);const m=t.match(/^(-?)R\$\s?(.*?)(,\d\d)$/);return m?{s:m[1],i:m[2],d:m[3]}:{s:'',i:t.replace('R$',''),d:''};}
-const HM_AT=[['lanc','receipt','Despesas','#94a3b8','Gastos'],['orc','gauge','Orçamentos','#94a3b8','Orçamento'],['cartoes','card','Cartões','#94a3b8','Cartões'],['rel','report','Relatório','#94a3b8','Relatório'],['plan','compass','Planejamento','#94a3b8','Planejar'],['pat','scale','Patrimônio','#22c55e','Patrimônio']];
+const HM_AT=[['gastos','minus-circle','Adicionar despesa','#ef646b','Gastos'],['lanc','plus-circle','Adicionar receita','#20d879','Receita'],['metas','target','Metas','#20d879','Metas'],['rel','chart','Relatórios','#20d879','Relatório']];
 const PER_CURTO={mes:'Este mês',ant:'Mês passado','3m':'3 meses','6m':'6 meses','12m':'12 meses',custom:'Personalizado'};
 
 /* v10.173: resumo compacto das metas na tela inicial, sem duplicar a lógica de cálculo da aba Metas. */
@@ -3739,6 +3739,7 @@ function homeTopo(v,o){
     <div class="hB-top">${saldo<0?'<span class="hB-brand hB-brandNeg"><i class="hB-led"></i>Saldo negativo</span>':`<span class="hB-brand">${I('wallet')}Saldo total</span>`}${eye}</div>
     <div class="hB-tap tap" data-act="nav-contas" role="button" tabindex="0" aria-label="ver suas contas"><div class="hB-saldo nw fit${bp.s?' hB-saldoNeg':''}" aria-label="${OCULTO?'saldo oculto':(bp.s?'saldo negativo de ':'saldo de ')+brl(Math.abs(saldo))}"><span class="hB-cur">R$</span><span class="hB-num">${OCULTO?'•••••':bp.i+bp.d}</span></div>
     <div class="hB-sub">${Math.abs(var30)<0.005?'<span class="hB-var">sem variação</span> nos últimos 30 dias':`<span class="hB-var ${var30>=0?'up':'dn'}">${I(var30>=0?'up':'down')}${var30>=0?'subiu':'caiu'} ${OCULTO?'•••':brl(Math.abs(var30))}</span> nos últimos 30 dias`}</div>
+    <div class="hB-spark" aria-hidden="true">${sparkSVG(ser,360,76,'gvSpark')}</div>
     ${I('chevR','hB-tapCh')}</div>
     ${(()=>{const r=mtReservado();return r>0?`<button type="button" class="hB-mt" data-act="hm-go" data-id="metas" aria-label="${OCULTO?'valor oculto':brl(r)} reservado em metas, abrir metas">${I('piggy')}<span><b class="nw">${brl(r)}</b> reservado em metas</span>${I('chevR')}</button>`:'';})()}
     ${semanasHTML()}
