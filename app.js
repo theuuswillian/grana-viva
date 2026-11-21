@@ -10318,9 +10318,14 @@ sb.auth.getSession().then(({data})=>{
     /* v10.52: limite de sessão por inatividade (o Supabase só permite isso no plano pago, então o app mesmo desloga):
        7 dias sem abrir o app pede login de novo. os dados continuam salvos na nuvem. */
     try{
-      const ult=+(localStorage.getItem('gv-last-act')||0);
-      if(ult&&Date.now()-ult>7*864e5&&data.session)sb.auth.signOut().catch(()=>{});
-      else localStorage.setItem('gv-last-act',String(Date.now()));
+      const agora=Date.now(),ult=+(localStorage.getItem('gv-last-act')||0);
+      const ultimoLogin=Date.parse(data.session.user&&data.session.user.last_sign_in_at||'')||0;
+      const loginRecente=ultimoLogin>0&&agora-ultimoLogin<7*864e5;
+      /* Uma autenticação concluída agora (senha ou OAuth) sempre inicia uma sessão válida.
+         Não derrube o login recém-concluído por causa de um marcador local antigo do app/PWA.
+         Para sessões antigas, mantém o limite de 7 dias sem atividade, apenas neste aparelho. */
+      if(ult&&agora-ult>7*864e5&&!loginRecente)sb.auth.signOut({scope:'local'}).catch(()=>{});
+      else localStorage.setItem('gv-last-act',String(agora));
     }catch(e){}
     entraComSessao(data.session);
   }else{
