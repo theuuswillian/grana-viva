@@ -4096,7 +4096,7 @@ html.mvp #view{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 132px)}
 @media(min-width:900px){html.mvp #app{min-height:100vh}html.mvp #view{flex:1 0 auto}}
 @media(prefers-reduced-motion:reduce){.top .logo{animation:none!important;filter:none!important}}
 </style>
-<link rel="stylesheet" href="design-system.css?v=10.182">
+<link rel="stylesheet" href="design-system.css?v=10.183">
 </head>
 <body>
 <aside class="side" id="side">
@@ -4140,7 +4140,7 @@ html.mvp #view{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 132px)}
 </div>
 
 <script>
-const GV_BUILD='10.182'; // versão publicada (./bump.sh troca aqui e no sw.js)
+const GV_BUILD='10.183'; // versão publicada (./bump.sh troca aqui e no sw.js)
 (function(){
   function ajusta(){
     var ua=navigator.userAgent||'',ios=/iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1&&screen.width<500);
@@ -4166,8 +4166,8 @@ const GV_BUILD='10.182'; // versão publicada (./bump.sh troca aqui e no sw.js)
      Os scripts embutidos acima (tema, bloqueio por PIN, GV_BUILD) rodam antes e não dependem deles.
      app.js é servido diretamente e versionado pelo bump.sh. -->
 <script defer src="vendor/supabase.min.js" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp"></script>
-<script defer src="planos.js?v=10.182"></script>
-<script defer src="app.js?v=10.182"></script>
+<script defer src="planos.js?v=10.183"></script>
+<script defer src="app.js?v=10.183"></script>
 <script>/* v10.8: trava o zoom de pinça/duplo toque no iOS */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
