@@ -1,4 +1,4 @@
-/* GranaViva Design System v10.188
+/* GranaViva Design System v10.189
    Sistema visual consolidado — All Black, mobile-first, sem alterar regras financeiras. */
 :root{
   color-scheme:dark;
@@ -352,3 +352,17 @@ html.claro .logo .lgA{color:var(--hd)!important}html.claro .logo .lgB{color:var(
   #view[data-v="metas"] .mtx{padding:14px}
   #view[data-v="pat"] .ptRow{gap:9px}
 }
+
+/* v10.189 — Conta e Configurações: perfil e hierarquia mobile. */
+#view .gvCfgHead{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin:2px 0 16px}
+#view .gvCfgHead small{font-size:12px;color:var(--mut)}
+#view .gvCfgSection{margin:18px 3px 9px;color:var(--mut);font-size:10px;font-weight:750;letter-spacing:.11em;text-transform:uppercase}
+#view .gvProfile{display:flex;align-items:center;gap:12px;min-height:82px;margin-bottom:16px;padding:15px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(115deg,var(--card),var(--card2))}
+#view .gvProfileAvatar{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:50%;background:#343B43;color:#F3F4F6;font-size:14px;font-weight:750}
+#view .gvProfileInfo{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+#view .gvProfileInfo b{overflow:hidden;color:var(--hd);font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+#view .gvProfileInfo small{overflow:hidden;color:var(--mut);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+#view .gvProfileInfo em{color:#4ADE80;font-size:10px;font-style:normal;font-weight:650}
+#view .gvProfileArrow{display:flex;align-items:center;color:var(--mut)}
+#view .gvCfgCard{border:1px solid var(--line);background:var(--card);box-shadow:none}
+@media(max-width:600px){#view .gvProfile{min-height:78px;padding:13px}#view .gvCfgSection{margin-top:16px}}
