@@ -5041,10 +5041,17 @@ function notifCardHTML(){return `  <div class="card">
   </div>`;}
 function viewCfg(){
   const claro=S.cfg.tema==='claro';
+  const meta=USER&&USER.user_metadata||{};
+  const nome=String(meta.full_name||meta.name||meta.nome||'Minha conta');
+  const iniciais=nome.trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'GV';
+  const email=USER&&USER.email?String(USER.email):'Entre para sincronizar seus dados';
   return `
-  <div class="head"><h2>${MVP_MODE?'WhatsApp &amp; Conta':'Ajustes'}</h2></div>
-  ${MVP_MODE?waHeroHTML()+notifCardHTML()+cardPlanoCfg():cardPlanoCfg()}
-  <div class="card">
+  <div class="head gvCfgHead"><h2>Conta e Configurações</h2><small>Seu perfil, segurança e preferências</small></div>
+  ${USER?`<section class="card gvProfile" aria-label="Perfil da conta"><span class="gvProfileAvatar" aria-hidden="true">${esc(iniciais)}</span><span class="gvProfileInfo"><b>${esc(nome)}</b><small>${esc(email)}</small><em>Conta conectada</em></span></section>`:''}
+  ${MVP_MODE?'<div class="gvCfgSection">Conexões</div>'+waHeroHTML()+notifCardHTML():cardPlanoCfg()}
+  ${MVP_MODE?cardPlanoCfg():''}
+  <div class="gvCfgSection">Personalização</div>
+  <div class="card gvCfgCard">
     <h4>Tema</h4>
     <div class="seg">
       <button data-act="tema" data-id="escuro" class="${S.cfg.tema==='escuro'?'on':''}">Escuro</button>
@@ -5054,13 +5061,15 @@ function viewCfg(){
     <h4 style="margin-top:16px">Cor de destaque</h4>
     <div class="swatches">${Object.keys(ACCENTS).map(k=>`<button class="sw ${S.cfg.accent===k?'on':''}" data-act="accent" data-id="${k}" title="${k}" style="background:linear-gradient(135deg,${ACCENTS[k][0]},${ACCENTS[k][1]})"></button>`).join('')}</div>
   </div>
-  <div class="card">
+  <div class="gvCfgSection">Categorias e organização</div>
+  <div class="card gvCfgCard">
     <div class="catHead"><h4>Categorias <span class="catQt">${S.cats.length}</span></h4><button class="btn2 sm" data-act="nova-cat">${I('plus')} nova</button></div>
     ${S.cats.length>8?`<label class="catBusca">${I('search')}<input type="search" id="catBusca" placeholder="buscar categoria" autocomplete="off" aria-label="buscar categoria"></label>`:''}
     <div class="catList${CATS_ABERTAS?' aberta':''}">${(()=>{const n={};S.tx.forEach(t=>{if(t.categoria)n[t.categoria]=(n[t.categoria]||0)+1;});return S.cats.map((c,i)=>`<button type="button" class="catRow${i>=10?' crMais':''}" data-act="edit-cat" data-id="${esc(c)}" data-q="${esc(c.toLowerCase())}" style="--cc:${corCat(c)}"><span class="cr-i">${I(catIcon(c))}</span><span class="cr-n">${esc(c)}</span><span class="cr-q">${n[c]?n[c]:''}</span></button>`).join('');})()}</div>
     <p class="catVazio" hidden>Nenhuma categoria com esse nome.</p>
     ${S.cats.length>10?`<button type="button" class="catMaisBtn" data-act="cats-toggle">${CATS_ABERTAS?'mostrar menos':'ver todas as '+S.cats.length+' categorias'}</button>`:''}
   </div>
+  <div class="gvCfgSection">Segurança</div>
   ${lockCardHTML()}
   ${MVP_MODE?'':notifCardHTML()}
   ${MVP_MODE?'':`
@@ -5069,6 +5078,7 @@ function viewCfg(){
     <div class="pushTxt" id="waTxt">${USER?'verificando…':'entre na sua conta para usar o WhatsApp.'}</div>
     <div class="pushBtns" id="waBtns"></div>
   </div>`}
+  <div class="gvCfgSection">Preferências do aplicativo</div>
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('lu_chart_candlestick')}</span><div><h4>Cotações</h4><small>preços de ações e FIIs da carteira</small></div></div>
     <div class="lkList"><button class="lkRow" data-act="brapi-token"><span class="lkRi">${I('lu_key_round')}</span><span class="lkRt"><b>Token brapi</b><small>opcional, deixa as cotações mais rápidas</small></span><span class="dkSt${S.cfg.brapi?' on':''}">${S.cfg.brapi?'configurado':'não configurado'}</span><span class="lkCh">${I('chevR')}</span></button></div>
@@ -5076,6 +5086,7 @@ function viewCfg(){
   <div class="card lkCard">
     <div class="lkList"><button class="lkRow" data-act="tour"><span class="lkRi">${I('compass')}</span><span class="lkRt"><b>Fazer o tour do app</b><small>um minuto para conhecer cada seção</small></span><span class="lkCh">${I('chevR')}</span></button></div>
   </div>
+  <div class="gvCfgSection">Dados e privacidade</div>
   <div class="card lkCard">
     <div class="lkHead"><span class="lkIc dkIc">${I('cloud')}</span><div><h4>Dados e backup</h4><small>tudo salvo na sua conta e sincronizado</small></div></div>
     <div class="lkList">
