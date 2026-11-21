@@ -18,6 +18,7 @@ const checks = [
   ['design-system.css no HTML', html.includes(`design-system.css?v=${version}`)],
   ['design-system.css no precache', sw.includes(`design-system.css?v=${version}`)],
   ['tour.min.js no precache', sw.includes(`tour.min.js?v=${version}`)],
+  ['aviso de atualização anexado ao body', app.includes('document.body.appendChild(d);') && !app.includes('document.documentElement.appendChild(d);')],
 ];
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
