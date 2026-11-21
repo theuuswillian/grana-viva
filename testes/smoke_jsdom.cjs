@@ -102,6 +102,7 @@ ok(T.setMvp()===true,'MVP_MODE ligado');
 const doc=w.document;
 const view=()=>doc.querySelector('#view').innerHTML;
 try{T.render();}catch(e){console.log('render inicio',e.stack.split('\n').slice(0,3).join(' | '));}
+ok(/class="hB-hero/.test(view()),'MVP renderiza o dashboard principal All Black');
 ok(/Preencher exemplo para explorar/.test(view()),'conta vazia mostra "Preencher exemplo"');
 T.demoPreenche();
 ok(T.S.tx.filter(t=>t.demo).length===7,'7 lançamentos de exemplo');
