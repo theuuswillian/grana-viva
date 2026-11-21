@@ -1,4 +1,4 @@
-/* GranaViva Design System v10.186
+/* GranaViva Design System v10.187
    Sistema visual consolidado — All Black, mobile-first, sem alterar regras financeiras. */
 :root{
   color-scheme:dark;
@@ -265,3 +265,20 @@ html.claro #view .hB-hero{background:linear-gradient(145deg,#202728,#111718)!imp
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+/* v10.187 — acabamento All Black: remove resíduos do tema antigo e uniformiza a identidade. */
+:root{--a1:#22C55E;--a2:#16A34A;--bg:#07090A;--card:#111416;--card2:#0B0E0F;--txt:#F3F4F6;--mut:#9CA3AF;--hd:#FFF;--line:rgba(255,255,255,.085);--gv-accent-soft:rgba(34,197,94,.09);--gv-accent-line:rgba(34,197,94,.20)}
+html.claro{--a1:#16A34A;--a2:#15803D;--bg:#F4F5F6;--card:#FFF;--card2:#F0F2F3;--txt:#171B1D;--mut:#687176;--hd:#171B1D;--line:rgba(20,30,34,.10);--gv-accent-soft:rgba(22,163,74,.07);--gv-accent-line:rgba(22,163,74,.16)}
+.side::before{display:none!important;content:none!important}.logo-mark{filter:none!important}
+.sb-item.on{background:var(--gv-accent-soft)!important;border-color:var(--gv-accent-line)!important;box-shadow:none!important}
+.sb-item.on::before{background:var(--a1)!important;box-shadow:none!important}.sb-item.on .i{color:var(--a1)!important;filter:none!important}
+.btn{background:var(--a1)!important;color:#06110A!important;box-shadow:0 5px 16px rgba(34,197,94,.12)!important}.btn:active{filter:brightness(.94)}
+.logo{background:none!important;-webkit-text-fill-color:initial!important;color:var(--hd)!important}.logo .lgA{color:var(--hd)!important}.logo .lgB{color:var(--a1)!important}
+html.claro .logo .lgA{color:var(--hd)!important}html.claro .logo .lgB{color:var(--a2)!important}
+#view .hB-hero{background:#101413!important;border:1px solid rgba(34,197,94,.16)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important}
+#view .hB-hero.hNeg{background:#171112!important;border-color:rgba(248,113,113,.22)!important}
+#view .hB-hero .hB-blob,#view .hB-hero .hB-noise{display:none!important}
+#view .hB-at .hB-a{background:var(--card)!important;border-color:var(--line)!important;box-shadow:none!important}
+#view .hB-ai{background:var(--gv-accent-soft)!important;color:#86EFAC!important}
+#view .card,#view .panel,#view .acard,#view .boxCard{box-shadow:var(--shadow-soft)}
+#view button:focus-visible,#view a:focus-visible,#view input:focus-visible,#view select:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
+@media(max-width:600px){#view .hB-hero{border-radius:18px!important}#view .hB-a{border-radius:13px!important}}
