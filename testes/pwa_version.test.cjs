@@ -22,7 +22,7 @@ const checks = [
   ['design-system.css no precache', sw.includes(`design-system.css?v=${version}`)],
   ['visual-reference.css no HTML', html.includes(`visual-reference.css?v=${version}`)],
   ['visual-reference.css no precache', sw.includes(`visual-reference.css?v=${version}`)],
-  ['referência visual All Black', visualCss.includes('#20d879') && visualCss.includes('.hB-spark')],
+  ['seis telas da referência All Black', visualCss.includes('#20d879') && visualCss.includes('.hB-spark')],
   ['atalhos da tela inicial conforme referência', app.includes("['hm-add-despesa','minus-circle','Adicionar despesa'") && app.includes("['metas','target','Metas'") && app.includes("'hm-add-despesa':()=>novoTx(null,'despesa')") && app.includes("'hm-add-receita':()=>novoTx(null,'receita')")],
   ['tour.min.js no precache', sw.includes(`tour.min.js?v=${version}`)],
   ['dashboard usa composição principal', app.includes('const TOPO=HV?homeTopo') && app.includes("${TOPO||''}")],
