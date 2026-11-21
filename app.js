@@ -9883,7 +9883,7 @@ function avisoVersao(){
   },{passive:false});
   d.style.setProperty('z-index','2147483647','important');
   d.style.setProperty('pointer-events','auto','important');
-  document.documentElement.appendChild(d);
+  document.body.appendChild(d);
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible')confereVersao();
