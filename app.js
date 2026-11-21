@@ -2477,6 +2477,7 @@ function viewRel(){
     <div class="rsPills" id="rsPills">${Array.from({length:12},(_,k)=>mesOff(11-k)).map(m=>`<button class="rsPill${m===a?' on':''}" data-act="rel-mes" data-id="${m}"><span>${MESES[+m.slice(5,7)-1]}</span><small>${m.slice(2,4)}</small></button>`).join('')}</div>
     <label class="rsCmp"><span>${I('swap')}comparar com</span><select data-filter="relB">${Array.from({length:24},(_,k)=>mesAdd(a,-(k+1))).map(m=>`<option value="${m}"${m===b?' selected':''}>${m===mesAdd(a,-1)?'mês anterior · ':m===mesAdd(a,-12)?'mesmo mês do ano passado · ':''}${mesCurto(m)}</option>`).join('')}${b>a||b<mesAdd(a,-24)?`<option value="${b}" selected>${mesCurto(b)}</option>`:''}</select></label>
   </div>
+  <section class="gvRefReportKpis"><div class="card"><small>Receitas</small><b class="pos">${brl(ra.rec)}</b></div><div class="card"><small>Despesas</small><b class="neg">${brl(ra.des)}</b></div><div class="card"><small>Saldo do mês</small><b class="${ra.sal>=0?'pos':'neg'}">${brl(ra.sal)}</b></div></section>
   ${relResumo(a,b,ra,rb)}
   ${relDestaques(a,b,ra,rb)}
   ${relDiario(a,b)}
@@ -3283,10 +3284,18 @@ function gsPlanHTML(){
   return `<details class="card gsAcc" data-acc="plan"${GS_PLAN?' open':''}><summary>${I('compass')}<span><b>Planejamento</b><small>saldo dos próximos meses, simulações e dia a dia</small></span>${I('chevD','gsAccCh')}</summary><div class="gsAccIn">${corpo}</div></details>`;
 }
 document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.dataset||d.dataset.acc!=='plan'||GS_PLAN===d.open)return;GS_PLAN=d.open;if(TAB==='gastos')render();},true);
+function gastosReferenciaHTML(){
+  const per=periodo(),L=despesasPorCat(per),total=L.reduce((a,x)=>a+x.v,0);
+  let cursor=0;
+  const stops=L.slice(0,6).map(x=>{const ini=cursor;cursor+=total?x.v/total*100:0;return `${x.color} ${ini.toFixed(2)}% ${cursor.toFixed(2)}%`;});
+  const donut=stops.length?`<div class="gvRefDonut" style="background:conic-gradient(${stops.join(',')})"><span><b>${brl(total)}</b><small>Total de gastos</small></span></div>`:'<div class="gvRefDonut gvRefEmpty"><span><b>—</b><small>Sem despesas</small></span></div>';
+  return `<section class="gvRefSpend card"><div class="gvRefSectionHead"><div><small>Despesas do período</small><h3>Para onde foi seu dinheiro</h3></div><button class="gvRefTextAction" data-act="nav-rel">Ver relatório ›</button></div><div class="gvRefSpendGrid">${donut}<div class="gvRefLegend">${L.slice(0,5).map(x=>`<div><i style="background:${x.color}"></i><span>${esc(x.l)}</span><b>${total?Math.round(x.v/total*100):0}%</b></div>`).join('')||'<p class="small">Seus gastos por categoria aparecerão aqui.</p>'}</div></div></section>`;
+}
 function viewGastos(){
   const links=[['gs-extrato','receipt','Extrato completo'],['nav-orc','gauge','Orçamentos'],['nav-cartoes','card','Cartões e parcelas'],['nav-rel','report','Relatório'],['nova-fixa','calendar','Conta fixa'],['importar','up','Importar extrato']];
   return `
   <div class="head gsHead"><h2>Gastos &amp; Cartões</h2><button class="btn" data-act="lanc-manual">+ lançar</button></div>
+  ${gastosReferenciaHTML()}
   ${temDemo()?demoHTML():''}
   ${limiteMesHTML()}
   ${pode('orcamentos')?orcInicioHTML():''}
@@ -4476,8 +4485,10 @@ function viewFiiCarteira(modo){
   // alocação por tipo
   const aloc={};S.fiis.forEach(f=>{const t=tipoOf(f);aloc[t]=(aloc[t]||0)+f.cotas*f.preco;});
   const al=Object.keys(aloc).filter(t=>aloc[t]>0).sort((x,y)=>aloc[y]-aloc[x]);
-  const barra=pat>0?`<div class="wAloc" role="img" aria-label="distribuição da carteira">${al.map(t=>`<i style="width:${aloc[t]/pat*100}%;background:${TCOR[t]||'var(--a1)'}"></i>`).join('')}</div>
-    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${pctAloc(aloc[t]/pat*100)}</b></span>`).join('')}</div>`:'';
+  let donutCursor=0;
+  const donutStops=al.map(t=>{const ini=donutCursor;donutCursor+=pat?aloc[t]/pat*100:0;return `${TCOR[t]||'var(--a1)'} ${ini.toFixed(2)}% ${donutCursor.toFixed(2)}%`;});
+  const barra=pat>0?`<div class="gvRefInvestGrid"><div class="gvRefDonut" role="img" aria-label="distribuição dos investimentos" style="background:conic-gradient(${donutStops.join(',')})"><span><b>${brl(pat)}</b><small>Patrimônio investido</small></span></div>
+    <div class="wLeg">${al.map(t=>`<span><i style="background:${TCOR[t]||'var(--a1)'}"></i>${TIPO_L[t]||t} <b>${pctAloc(aloc[t]/pat*100)}</b></span>`).join('')}</div></div>`:'';
   const plPill=(v,pc)=>`<span class="plPill ${v>=0?'pos':'neg'}">${v>=0?'▲ +':'▼ '}${brl(v)} <em>${num(pc)}%</em></span>`;
   const lista=filtrados.map(f=>{
     const t=tipoOf(f),cri=t==='cripto',rf=t==='rf';
@@ -8692,8 +8703,12 @@ function viewMetas(){
     <div class="mtRV ${R.media<0?'neg':''} nw">${brl(R.media)}<small>/mês</small></div>
     <p class="hmNota">média do que sobrou nos últimos ${R.n} ${R.n>1?'meses':'mês'} (receitas menos despesas pagas). em ${mesCurto(R.mesUlt)} sobrou ${brl(R.ult)}. é o mesmo número do Planejamento.</p>
     ${R.media<=0?'<p class="mtPlano warn">'+I('alert')+'<span>suas despesas estão comendo toda a renda. cortar um pouco libera espaço para as metas.</span></p>':''}</div>`:'';
+  const pctGeral=tAlvo?Math.min(100,tAt/tAlvo*100):0;
+  const faltante=Math.max(0,tAlvo-tAt);
+  const destaqueMeta=`<section class="gvRefGoal card"><div class="gvRefSectionHead"><div><small>Visão geral</small><h3>Metas e planejamento</h3></div><button class="gvRefTextAction" data-act="nova-meta">+ Nova meta</button></div><div class="gvRefGoalNumbers"><div><small>Já guardado</small><b>${brl(tAt)}</b></div><div><small>Objetivo total</small><b>${brl(tAlvo)}</b></div></div><div class="gvRefProgress"><i style="width:${pctGeral}%"></i></div><div class="gvRefGoalFoot"><b>${pctGeral.toFixed(0)}% concluído</b><span>Faltam ${brl(faltante)}</span></div></section>`;
   return `
-  <div class="head"><h2>Metas</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  <div class="head"><h2>Metas e Planejamento</h2><button class="btn" data-act="nova-meta">+ meta</button></div>
+  ${destaqueMeta}
   ${metaCotasHTML()}
   ${ritmo}
   ${S.metas.length?`<div class="card mtSum"><div><small>guardado</small><b class="pos nw fit">${brl(tAt)}</b></div><div><small>alvo somado</small><b class="nw fit">${brl(tAlvo)}</b></div><div><small>metas</small><b>${S.metas.length}</b></div><div class="mtSumBar"><div class="bar"><i data-w="${tAlvo?Math.min(100,tAt/tAlvo*100):0}"></i></div><small>${tAlvo?String(Math.round(tAt/tAlvo*1000)/10).replace('.',','):0}% do total</small></div></div>`:''}
