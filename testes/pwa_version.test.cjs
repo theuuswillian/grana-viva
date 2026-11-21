@@ -6,6 +6,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'design-system.css'), 'utf8');
 
 const build = html.match(/const GV_BUILD='([^']+)'/);
 if (!build) throw new Error('GV_BUILD não encontrado em index.html');
@@ -28,7 +29,7 @@ const checks = [
   ['falha de atualização permite tentar novamente', app.includes("d.disabled=false") && app.includes("status('tentar novamente')")],
 
 ];
-checks.push(['design system sem acentos roxos herdados', !/rgba\(139,92,246|#a855f7|#6366f1/i.test(c)],['acabamento All Black v10.187',c.includes('v10.187')&&c.includes('#101413')]);
+checks.push(['design system sem acentos roxos herdados', !/rgba\(139,92,246|#a855f7|#6366f1/i.test(css)],['acabamento All Black v10.187',css.includes('v10.187')&&css.includes('#101413')]);
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
   console.log('ok', name, version);
