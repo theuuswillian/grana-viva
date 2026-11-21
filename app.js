@@ -9823,44 +9823,67 @@ function avisoVersao(){
   const d=document.createElement('button');
   d.id='gvAtu';d.type='button';d.className='gvAtu';
   d.innerHTML=I('refresh')+'<span>Nova versão<em> pronta</em></span><b>atualizar</b>';
+  d.setAttribute('aria-live','polite');
   let iniciado=false;
+  const diagnostico=etapa=>{
+    window.__gvUpdateDiag={etapa,em:new Date().toISOString()};
+  };
+  const status=texto=>{
+    const alvo=d.querySelector('b');
+    if(alvo)alvo.textContent=texto;
+  };
+  const esperar= (alvo,evento,condicao,limite=20000)=>new Promise((resolve,reject)=>{
+    let timer;
+    const limpar=()=>{clearTimeout(timer);alvo.removeEventListener(evento,verificar);};
+    const verificar=()=>{
+      if(condicao()){limpar();resolve();}
+      else if(alvo.state==='redundant'){limpar();reject(new Error('service worker redundante'));}
+    };
+    timer=setTimeout(()=>{limpar();reject(new Error('tempo esgotado aguardando '+evento));},limite);
+    alvo.addEventListener(evento,verificar);verificar();
+  });
   const atualizar=async()=>{
     if(iniciado||d.disabled)return;
     iniciado=true;d.disabled=true;d.setAttribute('aria-busy','true');
-    d.querySelector('b').textContent='preparando';
+    status('iniciando');diagnostico('acionado');
     const sw=navigator.serviceWorker,anterior=sw&&sw.controller;
-    let timeoutId;
-    const mudou=anterior?new Promise(resolve=>sw.addEventListener('controllerchange',resolve,{once:true})):Promise.resolve();
+    let mudou=null;
+    if(sw&&anterior)mudou=new Promise(resolve=>sw.addEventListener('controllerchange',resolve,{once:true}));
     try{
-      const reg=sw&&await sw.getRegistration();
-      if(!reg){window.__gvRecarrega=1;location.reload();return;}
+      if(!sw)throw new Error('service worker indisponível');
+      const reg=await sw.getRegistration();
+      if(!reg)throw new Error('registro do service worker não encontrado');
+      status('verificando');diagnostico('verificando-atualizacao');
       await reg.update();
       let novo=reg.installing||reg.waiting;
       if(novo&&novo.state!=='activated'){
-        await new Promise((resolve,reject)=>{
-          const fim=()=>{clearTimeout(timeoutId);novo.removeEventListener('statechange',verifica);};
-          const verifica=()=>{if(novo.state==='activated'){fim();resolve();}else if(novo.state==='redundant'){fim();reject(new Error('worker redundante'));}};
-          timeoutId=setTimeout(()=>{fim();reject(new Error('tempo esgotado'));},20000);
-          novo.addEventListener('statechange',verifica);verifica();
-        });
+        status('baixando atualização');diagnostico('baixando');
+        await esperar(novo,'statechange',()=>novo.state==='activated');
       }
-      if(anterior&&sw.controller===anterior)
-        await Promise.race([mudou,new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(new Error('ativação não confirmada')),20000);})]);
-      if(sw&&reg.active&&reg.active.state!=='activated')throw new Error('worker ainda não ativado');
+      if(anterior&&sw.controller===anterior){
+        status('ativando');diagnostico('aguardando-controlador');
+        await Promise.race([mudou,new Promise((_,reject)=>setTimeout(()=>reject(new Error('controlador não mudou')),20000))]);
+      }
+      if(!reg.active||reg.active.state!=='activated')throw new Error('service worker ainda não está ativo');
+      status('recarregando');diagnostico('recarregando');
       window.__gvRecarrega=1;location.reload();
     }catch(e){
-      clearTimeout(timeoutId);iniciado=false;d.disabled=false;d.removeAttribute('aria-busy');
-      d.querySelector('b').textContent='tentar novamente';
-      toast('A atualização ainda não ficou pronta. Confira sua conexão e tente novamente.',true);
+      iniciado=false;d.disabled=false;d.removeAttribute('aria-busy');
+      status('tentar novamente');diagnostico('falha');
+      console.warn('[GranaViva] Falha ao atualizar PWA:',e);
+      toast('A atualização não foi concluída. Tente novamente em alguns instantes.',true);
     }
   };
-  /* Captura click e eventos de toque; trava evita disparo duplo em iOS. */
+  /* O toque inicia a rotina diretamente, sem depender de um click sintético no Safari. */
+  d.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='touch'||e.pointerType==='pen'){status('toque detectado');diagnostico('toque-detectado');}
+  },{passive:true});
   d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();atualizar();},{capture:true});
   d.addEventListener('pointerup',e=>{
-    if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();d.click();}
+    if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();atualizar();}
   },{passive:false});
   d.addEventListener('touchend',e=>{
-    if(!('PointerEvent' in window)){e.preventDefault();d.click();}
+    if(!('PointerEvent' in window)){e.preventDefault();atualizar();}
   },{passive:false});
   d.style.setProperty('z-index','2147483647','important');
   d.style.setProperty('pointer-events','auto','important');
