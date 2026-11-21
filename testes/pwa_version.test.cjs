@@ -43,7 +43,7 @@ checks.push(
   ['patrimônio com distribuição por classe', app.includes('gvRefInvestGrid') && app.includes('conic-gradient(${donutStops.join(\',\')})')],
   ['metas com progresso e valor faltante', app.includes('gvRefGoalFoot') && app.includes('brl(faltante)')],
   ['relatórios com receitas, despesas e saldo', app.includes('gvRefReportKpis') && app.includes('brl(ra.rec)') && app.includes('brl(ra.des)') && app.includes('brl(ra.sal)')],
-  ['tema claro com superfícies e textos próprios', /html\\.claro #view \\.gvRefSpend/.test(visualCss) && visualCss.includes('html.claro #view .gvRefDonut:before') && visualCss.includes('html.claro #view .gvRefLegend span')],
+  ['tema claro com superfícies e textos próprios', visualCss.includes('html.claro #view .gvRefSpend') && visualCss.includes('html.claro #view .gvRefDonut:before') && visualCss.includes('html.claro #view .gvRefLegend span')],
   ['build 10.191 com assets sincronizados', html.includes("GV_BUILD='10.191'") && sw.includes("gv-v10.191")]
 );
 for (const [name, ok] of checks) {
