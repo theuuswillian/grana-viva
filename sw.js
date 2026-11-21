@@ -3,7 +3,7 @@
    - página: cópia salva primeiro (abre na hora), atualiza em segundo plano
    - fontes, ícones, logos de bancos e bibliotecas (vendor/): cópia salva primeiro
    - Supabase, cotações e qualquer outro domínio: nunca passam pelo cache */
-const V='gv-v10.179'; // troque junto com GV_BUILD no index.html (./bump.sh)
+const V='gv-v10.180'; // troque junto com GV_BUILD no index.html (./bump.sh)
 const BASE=new URL('./',self.location).pathname;
 /* v10.99: dois caches.
    - V (troca a cada versão): página, app.js, planos.js, partes sob demanda (tour.min.js) e manifesto.
