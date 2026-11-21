@@ -29,7 +29,7 @@ const checks = [
   ['falha de atualização permite tentar novamente', app.includes("d.disabled=false") && app.includes("status('tentar novamente')")],
 
 ];
-checks.push(['design system sem acentos roxos herdados', !/rgba\(139,92,246|#a855f7|#6366f1/i.test(css)],['acabamento All Black v10.187',css.includes('v10.187')&&css.includes('#101413')]);
+checks.push(['design system sem acentos roxos herdados', !/rgba\(139,92,246|#a855f7|#6366f1/i.test(css)],['acabamento All Black v10.188',css.includes('v10.188')&&css.includes('#101413')],['telas internas com refinamento All Black', ['data-v=\"gastos\"','data-v=\"plan\"','data-v=\"rel\"','data-v=\"metas\"','data-v=\"cartoes\"','data-v=\"fii\"','data-v=\"pat\"'].every(x=>css.includes(x))]);
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
   console.log('ok', name, version);
