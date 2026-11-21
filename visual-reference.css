@@ -94,3 +94,55 @@ html:not(.claro) body,html:not(.claro) #app{background:#07090b}
  #view .gvRefReportKpis{gap:6px}
  #view .gvRefReportKpis>.card{padding:10px 7px!important}
 }
+
+
+/* Tema claro: os componentes da referência respeitam os tokens claros do design system. */
+html.claro #view .card,
+html.claro #view .hB-goals,
+html.claro #view .hB-res,
+html.claro #view .hmDuo>.card,
+html.claro #view .relWrap>.card,
+html.claro #view .gvProfile,
+html.claro #view .gvCfgCard{
+  background:#fff!important;
+  border-color:rgba(20,30,34,.10)!important;
+  box-shadow:0 5px 18px rgba(20,30,34,.06)!important;
+}
+html.claro #view .hB-a,
+html.claro #view .gsLk,
+html.claro #view .ast,
+html.claro #view .mtx,
+html.claro #view .mtRitmo,
+html.claro #view .mtSum,
+html.claro #view .relSel,
+html.claro #view .relChart,
+html.claro #view .relDia,
+html.claro #view .relComp,
+html.claro #view .rsT{
+  background:#f0f2f3!important;
+  border-color:rgba(20,30,34,.10)!important;
+}
+html.claro #view .hB-ai{background:#e5f5eb!important;color:#15803d!important}
+html.claro #view .hB-ask{background:#eaf6ee!important}
+html.claro #view .hB-goal{background:#f4f7f5!important;border-color:rgba(20,30,34,.10)!important}
+html.claro #view .wHero{background:linear-gradient(150deg,#f2f7f3,#e8f1eb)!important;border-color:rgba(22,163,74,.18)!important}
+html.claro #view .astVal b{color:#171b1d}
+html.claro #view .gvRefSectionHead small,
+html.claro #view .gvRefReportKpis small,
+html.claro #view .gvRefGoalNumbers small,
+html.claro #view .gvRefDonut>span small{color:#687176}
+html.claro #view .gvRefSectionHead h3,
+html.claro #view .gvRefDonut>span b,
+html.claro #view .gvRefLegend b,
+html.claro #view .gvRefGoalNumbers b{color:#171b1d}
+html.claro #view .gvRefDonut:before{background:#fff}
+html.claro #view .gvRefLegend span{color:#394247}
+html.claro #view .gvRefProgress{background:#dfe5e1}
+html.claro #view .gvRefGoalFoot{color:#687176}
+html.claro #view .gvRefGoalFoot b,
+html.claro #view .gvRefTextAction{color:#15803d}
+html.claro #view .gvCfgSection{color:#687176!important}
+html.claro #view .gvProfileAvatar{background:#e1e6e3!important}
+html.claro #view .gvProfileInfo em{color:#15803d!important}
+html.claro #view .pos{color:#15803d!important}
+html.claro #view .neg{color:#dc2626!important}
