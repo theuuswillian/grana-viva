@@ -22,6 +22,11 @@ const checks = [
   ['dashboard usa composição principal', app.includes('const TOPO=HV?homeTopo') && app.includes("${TOPO||''}")],
   ['dashboard sem fallback visual legado', !app.includes("${TOPO!==null?TOPO+'<!--':''}") && !app.includes("${TOPO!==null?'-->':''}")],
   ['aviso de atualização anexado ao body', app.includes('document.body.appendChild(d);') && !app.includes('document.documentElement.appendChild(d);')],
+  ['diagnóstico visível de toque no aviso', app.includes("status('toque detectado')") && app.includes("diagnostico('toque-detectado')")],
+  ['toque inicia atualização sem click sintético', app.includes("e.preventDefault();atualizar();")],
+  ['estados da atualização anunciados', app.includes("d.setAttribute('aria-live','polite')") && app.includes("status('baixando atualização')") && app.includes("status('recarregando')")],
+  ['falha de atualização permite tentar novamente', app.includes("d.disabled=false") && app.includes("status('tentar novamente')")],
+
 ];
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
