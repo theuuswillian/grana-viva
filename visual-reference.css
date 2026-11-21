@@ -97,6 +97,7 @@ html:not(.claro) body,html:not(.claro) #app{background:#07090b}
 
 
 /* Tema claro: os componentes da referência respeitam os tokens claros do design system. */
+html.claro #view .gvRefSpend,
 html.claro #view .card,
 html.claro #view .hB-goals,
 html.claro #view .hB-res,
