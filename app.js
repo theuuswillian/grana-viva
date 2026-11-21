@@ -9837,14 +9837,19 @@ async function confereVersao(){
   }catch(e){}
 }
 let VERSAO_NOVA=null;
-function avisoVersao(){if(document.getElementById('gvAtu'))return;const d=document.createElement('button');d.id='gvAtu';d.type='button';d.className='gvAtu';
+function avisoVersao(){
+  if(document.getElementById('gvAtu'))return;
+  const d=document.createElement('button');
+  d.id='gvAtu';d.type='button';d.className='gvAtu';
   d.innerHTML=I('refresh')+'<span>Nova versão<em> pronta</em></span><b>atualizar</b>';
-  d.onclick=async()=>{
-    if(d.disabled)return;
-    d.disabled=true;d.setAttribute('aria-busy','true');d.querySelector('b').textContent='preparando';
+  let iniciado=false;
+  const atualizar=async()=>{
+    if(iniciado||d.disabled)return;
+    iniciado=true;d.disabled=true;d.setAttribute('aria-busy','true');
+    d.querySelector('b').textContent='preparando';
     const sw=navigator.serviceWorker,anterior=sw&&sw.controller;
-    let mudouResolve,timeoutId;
-    const mudou=anterior?new Promise(resolve=>{mudouResolve=resolve;sw.addEventListener('controllerchange',resolve,{once:true});}):Promise.resolve();
+    let timeoutId;
+    const mudou=anterior?new Promise(resolve=>sw.addEventListener('controllerchange',resolve,{once:true})):Promise.resolve();
     try{
       const reg=sw&&await sw.getRegistration();
       if(!reg){window.__gvRecarrega=1;location.reload();return;}
@@ -9858,17 +9863,27 @@ function avisoVersao(){if(document.getElementById('gvAtu'))return;const d=docume
           novo.addEventListener('statechange',verifica);verifica();
         });
       }
-      if(anterior&&sw.controller===anterior){
+      if(anterior&&sw.controller===anterior)
         await Promise.race([mudou,new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(new Error('ativação não confirmada')),20000);})]);
-      }
       if(sw&&reg.active&&reg.active.state!=='activated')throw new Error('worker ainda não ativado');
       window.__gvRecarrega=1;location.reload();
     }catch(e){
-      clearTimeout(timeoutId);d.disabled=false;d.removeAttribute('aria-busy');d.querySelector('b').textContent='tentar novamente';
+      clearTimeout(timeoutId);iniciado=false;d.disabled=false;d.removeAttribute('aria-busy');
+      d.querySelector('b').textContent='tentar novamente';
       toast('A atualização ainda não ficou pronta. Confira sua conexão e tente novamente.',true);
     }
   };
-  document.body.appendChild(d);
+  /* Captura click e eventos de toque; trava evita disparo duplo em iOS. */
+  d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();atualizar();},{capture:true});
+  d.addEventListener('pointerup',e=>{
+    if(e.pointerType==='touch'||e.pointerType==='pen'){e.preventDefault();d.click();}
+  },{passive:false});
+  d.addEventListener('touchend',e=>{
+    if(!('PointerEvent' in window)){e.preventDefault();d.click();}
+  },{passive:false});
+  d.style.setProperty('z-index','2147483647','important');
+  d.style.setProperty('pointer-events','auto','important');
+  document.documentElement.appendChild(d);
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible')confereVersao();
