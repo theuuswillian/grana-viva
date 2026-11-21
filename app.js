@@ -9838,7 +9838,38 @@ async function confereVersao(){
 }
 let VERSAO_NOVA=null;
 function avisoVersao(){if(document.getElementById('gvAtu'))return;const d=document.createElement('button');d.id='gvAtu';d.type='button';d.className='gvAtu';
-  d.innerHTML=I('refresh')+'<span>Nova versão<em> pronta</em></span><b>atualizar</b>';d.onclick=()=>{window.__gvRecarrega=1;location.reload();};document.body.appendChild(d);}
+  d.innerHTML=I('refresh')+'<span>Nova versão<em> pronta</em></span><b>atualizar</b>';
+  d.onclick=async()=>{
+    if(d.disabled)return;
+    d.disabled=true;d.setAttribute('aria-busy','true');d.querySelector('b').textContent='preparando';
+    const sw=navigator.serviceWorker,anterior=sw&&sw.controller;
+    let mudouResolve,timeoutId;
+    const mudou=anterior?new Promise(resolve=>{mudouResolve=resolve;sw.addEventListener('controllerchange',resolve,{once:true});}):Promise.resolve();
+    try{
+      const reg=sw&&await sw.getRegistration();
+      if(!reg){window.__gvRecarrega=1;location.reload();return;}
+      await reg.update();
+      let novo=reg.installing||reg.waiting;
+      if(novo&&novo.state!=='activated'){
+        await new Promise((resolve,reject)=>{
+          const fim=()=>{clearTimeout(timeoutId);novo.removeEventListener('statechange',verifica);};
+          const verifica=()=>{if(novo.state==='activated'){fim();resolve();}else if(novo.state==='redundant'){fim();reject(new Error('worker redundante'));}};
+          timeoutId=setTimeout(()=>{fim();reject(new Error('tempo esgotado'));},20000);
+          novo.addEventListener('statechange',verifica);verifica();
+        });
+      }
+      if(anterior&&sw.controller===anterior){
+        await Promise.race([mudou,new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(new Error('ativação não confirmada')),20000);})]);
+      }
+      if(sw&&reg.active&&reg.active.state!=='activated')throw new Error('worker ainda não ativado');
+      window.__gvRecarrega=1;location.reload();
+    }catch(e){
+      clearTimeout(timeoutId);d.disabled=false;d.removeAttribute('aria-busy');d.querySelector('b').textContent='tentar novamente';
+      toast('A atualização ainda não ficou pronta. Confira sua conexão e tente novamente.',true);
+    }
+  };
+  document.body.appendChild(d);
+}
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible')confereVersao();
   else if(VERSAO_NOVA&&!$('#modal').classList.contains('on')&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){window.__gvRecarrega=1;try{location.reload();}catch(e){}}
