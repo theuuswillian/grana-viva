@@ -1,4 +1,4 @@
-/* GranaViva Design System v10.187
+/* GranaViva Design System v10.188
    Sistema visual consolidado — All Black, mobile-first, sem alterar regras financeiras. */
 :root{
   color-scheme:dark;
@@ -282,3 +282,73 @@ html.claro .logo .lgA{color:var(--hd)!important}html.claro .logo .lgB{color:var(
 #view .card,#view .panel,#view .acard,#view .boxCard{box-shadow:var(--shadow-soft)}
 #view button:focus-visible,#view a:focus-visible,#view input:focus-visible,#view select:focus-visible{outline:2px solid var(--a1);outline-offset:2px}
 @media(max-width:600px){#view .hB-hero{border-radius:18px!important}#view .hB-a{border-radius:13px!important}}
+
+
+/* v10.188 — telas internas: hierarquia por área, mantendo a linguagem All Black. */
+#view[data-v="gastos"] .gsHead,
+#view[data-v="cartoes"] .ccHead,
+#view[data-v="fii"] .fiiHead,
+#view[data-v="rel"] .relHead{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+#view[data-v="gastos"] .gsHead .btn,
+#view[data-v="cartoes"] .ccHead .ccPlus{flex:none}
+#view[data-v="gastos"] .gsLinks{gap:9px}
+#view[data-v="gastos"] .gsLk{
+  min-height:54px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;
+  background:var(--card);color:var(--txt);box-shadow:none;font-weight:600;
+}
+#view[data-v="gastos"] .gsLk .i{color:var(--a1)}
+#view[data-v="gastos"] .gsLk:active{background:var(--gv-accent-soft);border-color:var(--gv-accent-line)}
+#view[data-v="orc"] .orcHero{border-color:var(--gv-accent-line);background:var(--card)}
+#view[data-v="orc"] .orcHist,#view[data-v="orc"] .orcSec{margin-top:var(--gv-gap)}
+#view[data-v="orc"] .orc{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="orc"] .orcTop{gap:12px}
+#view[data-v="orc"] .orcEd{border:1px solid var(--line);border-radius:10px;background:var(--card2)}
+#view[data-v="plan"] .planCard{overflow:hidden}
+#view[data-v="plan"] .planHead{color:var(--mut);letter-spacing:.06em;text-transform:uppercase;font-size:10px}
+#view[data-v="plan"] .planRow{min-height:44px;border-top:1px solid var(--line)}
+#view[data-v="plan"] .planRow.low{background:rgba(248,113,113,.055)}
+#view[data-v="plan"] .planPremBox{border:1px solid var(--line)}
+#view[data-v="rel"] .relWrap{row-gap:var(--gv-gap)}
+#view[data-v="rel"] .relSel,#view[data-v="rel"] .relChart,
+#view[data-v="rel"] .relDia,#view[data-v="rel"] .relComp{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="rel"] .relRes{gap:8px}
+#view[data-v="rel"] .rsT{min-width:0;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+#view[data-v="rel"] .rsT .rsL{color:var(--mut)}
+#view[data-v="rel"] .rsT b{font-size:clamp(15px,4vw,19px);letter-spacing:-.025em}
+#view[data-v="rel"] .tcRow{padding:11px 0;border-bottom:1px solid var(--line)}
+#view[data-v="rel"] .tcBar{height:6px;border-radius:99px;background:var(--card2);overflow:hidden}
+#view[data-v="metas"] .mtx{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="metas"] .mtx .mtIc{border:1px solid var(--line);background:var(--card2)}
+#view[data-v="metas"] .mtx .mtBar{height:7px;border-radius:99px;background:var(--card2);overflow:hidden}
+#view[data-v="metas"] .mtx .mtActs{border-top:1px solid var(--line)}
+#view[data-v="metas"] .mtRitmo,#view[data-v="metas"] .mtSum{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="cartoes"] .ccFat,#view[data-v="cartoes"] .ccMais,
+#view[data-v="cartoes"] .ccBest,#view[data-v="cartoes"] .ccAgW{min-width:0}
+#view[data-v="cartoes"] .ccMais{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="fii"] .wKpi>.card,#view[data-v="fii"] .ptGrid>.card{
+  background:var(--card);border:1px solid var(--line);box-shadow:none
+}
+#view[data-v="fii"] .fiiHead{margin-bottom:14px}
+#view[data-v="fii"] .fiiHead h2{letter-spacing:-.04em}
+#view[data-v="pat"] .ptGrid{gap:10px}
+#view[data-v="pat"] .ptRow{border-bottom:1px solid var(--line)}
+#view[data-v="pat"] .ptIc{border:1px solid var(--line);background:var(--card2)}
+#view[data-v="pat"] .ptTot,#view[data-v="pat"] .ptHist{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#view[data-v="gastos"] .gsAcc,#view[data-v="plan"] .planCard,
+#view[data-v="orc"] .orcHist,#view[data-v="orc"] .orcPlano{
+  border:1px solid var(--line);box-shadow:none
+}
+#view[data-v="gastos"] .gsAcc>summary{min-height:58px}
+#view[data-v="gastos"] .gsAcc[open]>summary{border-bottom:1px solid var(--line)}
+#view[data-v="gastos"] .gsAccIn{padding-top:14px}
+@media(max-width:600px){
+  #view[data-v="gastos"] .gsHead{align-items:center}
+  #view[data-v="gastos"] .gsLk{min-height:52px}
+  #view[data-v="rel"] .relWrap{row-gap:10px}
+  #view[data-v="rel"] .rsT{padding:11px}
+  #view[data-v="plan"] .planRow{grid-template-columns:48px repeat(3,minmax(0,1fr));gap:5px;font-size:11px}
+  #view[data-v="metas"] .mtx{padding:14px}
+  #view[data-v="pat"] .ptRow{gap:9px}
+}
