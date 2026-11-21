@@ -15,6 +15,9 @@ const checks = [
   ['planos.js no HTML', html.includes(`planos.js?v=${version}`)],
   ['app.js no precache', sw.includes(`app.js?v=${version}`)],
   ['planos.js no precache', sw.includes(`planos.js?v=${version}`)],
+  ['design-system.css no HTML', html.includes(`design-system.css?v=${version}`)],
+  ['design-system.css no precache', sw.includes(`design-system.css?v=${version}`)],
+  ['tour.min.js no precache', sw.includes(`tour.min.js?v=${version}`)],
 ];
 for (const [name, ok] of checks) {
   if (!ok) throw new Error(`Versão PWA divergente: ${name} não acompanha ${version}`);
