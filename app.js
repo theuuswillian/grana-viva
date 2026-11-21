@@ -5047,7 +5047,7 @@ function viewCfg(){
   const email=USER&&USER.email?String(USER.email):'Entre para sincronizar seus dados';
   return `
   <div class="head gvCfgHead"><h2>Conta e Configurações</h2><small>Seu perfil, segurança e preferências</small></div>
-  ${USER?`<section class="card gvProfile" aria-label="Perfil da conta"><span class="gvProfileAvatar" aria-hidden="true">${esc(iniciais)}</span><span class="gvProfileInfo"><b>${esc(nome)}</b><small>${esc(email)}</small><em>Conta conectada</em></span><span class="gvProfileArrow" aria-hidden="true">${I('chevR')}</span></section>`:''}
+  ${USER?`<section class="card gvProfile" aria-label="Perfil da conta"><span class="gvProfileAvatar" aria-hidden="true">${esc(iniciais)}</span><span class="gvProfileInfo"><b>${esc(nome)}</b><small>${esc(email)}</small><em>Conta conectada</em></span></section>`:''}
   ${MVP_MODE?'<div class="gvCfgSection">Conexões</div>'+waHeroHTML()+notifCardHTML():cardPlanoCfg()}
   ${MVP_MODE?cardPlanoCfg():''}
   <div class="gvCfgSection">Personalização</div>
