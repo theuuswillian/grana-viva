@@ -1,4 +1,4 @@
-/* v10.190 — referência visual All Black aprovada */
+/* v10.191 — seis telas com hierarquia e gráficos da referência All Black */
 :root{--bg:#07090b;--card:#111316;--card2:#0b0d10;--line:rgba(255,255,255,.075);--a1:#20d879;--a2:#0fa968;--gv-accent-soft:rgba(32,216,121,.10);--gv-accent-line:rgba(32,216,121,.22);--txt:#f4f6f7;--hd:#fff;--mut:#9ba3ad}
 html:not(.claro) body,html:not(.claro) #app{background:#07090b}
 #view{max-width:520px;margin-inline:auto;gap:12px}
@@ -50,3 +50,47 @@ html:not(.claro) body,html:not(.claro) #app{background:#07090b}
 #view .pos{color:#35df91!important}#view .neg{color:#ff777d!important}
 @media(max-width:600px){#app{max-width:none!important;padding:calc(env(safe-area-inset-top,0px) + 7px) 13px 0!important}#view{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 118px)!important}#view .hB-spark{height:67px}#view .hB-at{gap:7px!important}#view .hB-a{min-height:76px!important}#view .hB-metrics{gap:4px!important}}
 @media(min-width:700px){#view{max-width:560px}}
+
+/* Estruturas específicas das telas da referência */
+#view .gvRefSpend,#view .gvRefGoal{padding:16px!important;margin:0 0 12px!important}
+#view .gvRefSectionHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+#view .gvRefSectionHead small,#view .gvRefReportKpis small{display:block;color:#9ba3ad;font-size:11px}
+#view .gvRefSectionHead h3{font-size:16px;font-weight:750;letter-spacing:-.025em;margin:3px 0 0;color:#f4f6f7}
+#view .gvRefTextAction{border:0;background:transparent;color:#35df91;font-size:11px;font-weight:700;padding:7px 0;white-space:nowrap}
+#view .gvRefSpendGrid,#view .gvRefInvestGrid{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:18px}
+#view .gvRefDonut{width:124px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;flex:none}
+#view .gvRefDonut:before{content:"";position:absolute;inset:13px;border-radius:50%;background:#111316}
+#view .gvRefDonut>span{position:relative;z-index:1;text-align:center;max-width:90px}
+#view .gvRefDonut>span b{display:block;font-size:12px;line-height:1.2;color:#fff}
+#view .gvRefDonut>span small{display:block;font-size:9px;color:#9ba3ad;margin-top:4px}
+#view .gvRefDonut.gvRefEmpty{background:#292e33}
+#view .gvRefLegend{display:grid;gap:10px;min-width:0}
+#view .gvRefLegend>div{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:11px}
+#view .gvRefLegend i{width:8px;height:8px;border-radius:50%}
+#view .gvRefLegend span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7dce0}
+#view .gvRefLegend b{color:#f4f6f7;font-variant-numeric:tabular-nums}
+#view .gvRefInvestGrid{grid-template-columns:140px minmax(0,1fr);margin-top:8px}
+#view .gvRefInvestGrid .gvRefDonut{width:132px}
+#view .gvRefGoalNumbers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 14px}
+#view .gvRefGoalNumbers small{display:block;color:#9ba3ad;font-size:10px;margin-bottom:4px}
+#view .gvRefGoalNumbers b{font-size:clamp(17px,4.5vw,22px);letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+#view .gvRefProgress{height:9px;border-radius:99px;background:#282d31;overflow:hidden}
+#view .gvRefProgress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#12b96b,#50e59a)}
+#view .gvRefGoalFoot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:10px;color:#aab2b8}
+#view .gvRefGoalFoot b{color:#35df91}
+#view .gvRefReportKpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+#view .gvRefReportKpis>.card{min-width:0;padding:12px 10px!important;border-radius:14px!important}
+#view .gvRefReportKpis b{display:block;margin-top:6px;font-size:clamp(12px,3.5vw,16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#view .gsHead{margin-bottom:2px}
+#view .gvProfileInfo{min-width:0}
+#view .gvCfgSection{margin:18px 2px 8px}
+@media(max-width:380px){
+ #view .gvRefSpendGrid{grid-template-columns:112px minmax(0,1fr);gap:12px}
+ #view .gvRefDonut{width:108px}
+ #view .gvRefDonut:before{inset:12px}
+ #view .gvRefInvestGrid{grid-template-columns:116px minmax(0,1fr)}
+ #view .gvRefInvestGrid .gvRefDonut{width:112px}
+ #view .gvRefLegend>div{font-size:10px}
+ #view .gvRefReportKpis{gap:6px}
+ #view .gvRefReportKpis>.card{padding:10px 7px!important}
+}
