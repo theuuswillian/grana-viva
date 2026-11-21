@@ -1,5 +1,5 @@
 /* v10.191 — seis telas com hierarquia e gráficos da referência All Black */
-:root{--bg:#07090b;--card:#111316;--card2:#0b0d10;--line:rgba(255,255,255,.075);--a1:#20d879;--a2:#0fa968;--gv-accent-soft:rgba(32,216,121,.10);--gv-accent-line:rgba(32,216,121,.22);--txt:#f4f6f7;--hd:#fff;--mut:#9ba3ad}
+html:not(.claro){--bg:#07090b;--card:#111316;--card2:#0b0d10;--line:rgba(255,255,255,.075);--a1:#20d879;--a2:#0fa968;--gv-accent-soft:rgba(32,216,121,.10);--gv-accent-line:rgba(32,216,121,.22);--txt:#f4f6f7;--hd:#fff;--mut:#9ba3ad}
 html:not(.claro) body,html:not(.claro) #app{background:#07090b}
 #view{max-width:520px;margin-inline:auto;gap:12px}
 #view .card,#view .hB-goals,#view .hB-res,#view .hmDuo>.card,#view .relWrap>.card,#view .gvProfile,#view .gvCfgCard{background:linear-gradient(145deg,#14171a,#0d1012)!important;border:1px solid rgba(255,255,255,.075)!important;border-radius:17px!important;box-shadow:0 8px 24px rgba(0,0,0,.20)!important}
