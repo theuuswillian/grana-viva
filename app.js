@@ -3231,29 +3231,10 @@ function demoHTML(){
 }
 /* ---------- Aba 1: Início ---------- */
 function viewInicioMVP(){
-  const per=periodo(),pl=per.label;
-  const rec=somaMes(per,'receita'),des=somaMes(per,'despesa'),sal=(cents(rec)-cents(des))/100;
-  const tile=(cls,ic,lb,val,sub,act)=>`<div class="rsT ${cls} tap" data-act="${act}" role="button" tabindex="0" aria-label="${esc(lb)}"><span class="rsL">${I(ic)}${lb}</span><b class="nw">${val}</b><span class="rsD">${sub}</span></div>`;
-  const nome=nomeUsuario();
-  return `
-  <div class="hmHead hmHeadCompact"><h2>Visão geral</h2><span>${esc(pl)}</span></div>
-  ${omniHTML()}
-  ${demoHTML()}
-  ${blocosInicioHTML()}${alertasHTML()}${alertaVermelhoHTML()}
-  ${limiteMesHTML()}
-  <div class="hmH hmResH"><h4>resumo · ${esc(pl)}</h4><button class="olhoBtn" data-act="oculta" aria-label="${OCULTO?'mostrar valores':'ocultar valores'}">${I(OCULTO?'eyeOff':'eye')}</button></div>
-  <div class="relRes hmRes">
-    ${tile('rec','arrowUp','receitas',brl(rec),'entradas pagas','nav-rec')}
-    ${tile('des','arrowDown','despesas',brl(des),'saídas pagas','nav-des')}
-    ${tile('sal '+(sal<0?'neg':''),'wallet','saldo do período',brl(sal),sal<0?'gastou mais do que entrou':'sobrou no período','nav-tudo')}
-    ${tile('pou','bank','saldo nas contas',brl(saldoTotal()),'todas as contas','nav-contas')}
-  </div>
-  ${faturasAbertasHTML(true)}
-  ${proxVencHTML()}
-  ${patTotalHTML()}
-  ${rpMetaHTML(rpCalc())}
-  ${dicaInstalarHTML(false)}`;
+  /* O MVP usa a mesma tela inicial principal; mantém apenas o fluxo de demonstração. */
+  return viewInicio();
 }
+
 /* barra inteligente: frase (IA ou compra de ativo) + câmera do recibo no mesmo campo + lançamento manual */
 function smartBarHTML(){
   return `<div class="omniWrap">
@@ -3826,6 +3807,7 @@ function viewInicio(){
   return `
   <div class="hmHead hmHeadCompact"><h2>Visão geral</h2><span>${esc(pl)}</span></div>
   ${omniHTML()}
+  ${demoHTML()}
   ${TOPO||''}
   <div class="hmDuo">${prevHTML}
   <div class="card hmSpark tap" data-act="nav-des" role="button" tabindex="0" aria-label="ver despesas · ${esc(pl)}"><div class="hmH"><h4>gastos acumulados</h4><span class="hmSub">${pl}${I('chevR','tapCh')}</span></div><div class="hmSparkV nw">${brl(des)}</div><div class="relative mt-3 h-[120px]" id="cSpark">${gastoSVG(per)}</div></div></div>
